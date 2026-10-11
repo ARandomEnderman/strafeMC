@@ -4,17 +4,24 @@ A Fabric mod for Minecraft (26.1.2) that brings Counter-Strike 2 movement and we
 strafing, bhopping and surfing, plus CS2 guns and knives with their real models, animations, sounds, spray patterns
 and impact effects.
 
-## Not affiliated with Valve
+> [!IMPORTANT]
+> **Requires your own copy of Counter-Strike 2.** strafeMC does not work without CS2 installed through Steam on the
+> same PC. The mod contains no CS2 files; it reads them from your installation.
 
-**strafeMC is an unofficial fan project. It is not affiliated with, endorsed by, sponsored by or approved by Valve
-Corporation.** Counter-Strike, Counter-Strike 2, CS2, Steam and Valve are trademarks of Valve Corporation, used here
-only to describe what the mod is compatible with. strafeMC is free, and always will be.
+> [!IMPORTANT]
+> **Not affiliated with Valve.** strafeMC is an unofficial fan project. It is not affiliated with, endorsed by,
+> sponsored by or approved by Valve Corporation.
+
+## Trademarks
+
+Counter-Strike, Counter-Strike 2, CS2, Steam and Valve are trademarks of Valve Corporation, used here only to describe
+what the mod is compatible with. strafeMC is free, and always will be.
 
 ## No Valve content is included
 
 This repository and the mod contain **no** files from Counter-Strike 2. strafeMC reads models, sounds, animations and
 game data from **your own** CS2 installation and converts them locally on your PC. Nothing from CS2 is uploaded,
-bundled or redistributed. You need your own copy of CS2 for the mod to work.
+bundled or redistributed.
 
 ## Status
 
