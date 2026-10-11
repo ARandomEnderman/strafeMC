@@ -1,0 +1,25 @@
+{
+	"required": true,
+	"package": "dev.strafemc.mixin.client",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"PlayerTravelMixin",
+		"LivingEntityJumpMixin",
+		"EntityEyeHeightMixin",
+		"LocalPlayerSprintMixin",
+		"MouseHandlerScrollMixin",
+		"GameRendererFrameMixin",
+		"OptionsScreenMixin",
+		"PlayerJumpTriggerAccessor",
+		"LocalPlayerDoubleTapFlyMixin",
+		"LocalPlayerPushOutMixin",
+		"SoundBufferLibraryMixin",
+		"ClientMotionPacketMixin",
+		"GameRendererHandFovMixin",
+		"MinecraftAttackMixin",
+		"PackRepositoryMixin",
+		"PlayerFovMixin",
+		"ItemInHandRendererMixin", "GameRendererHandViewMixin", "GameRendererInvoker", "CameraRecoilMixin"
+	],
+	"injectors": { "defaultRequire": 1 }
+}

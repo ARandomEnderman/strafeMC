@@ -1,0 +1,39 @@
+# build output
+mod/build/
+mod/.gradle/
+mod/run/
+mod/out/
+mod/bin/
+**/bin/
+**/obj/
+*.class
+
+# third-party tools and downloads (VRF, Metamod, CounterStrikeSharp...) - fetched, never committed
+tools/
+downloads/
+
+# Valve files: never commit anything from CS2
+gameinfo.gi.orig
+*.vpk
+*.vmdl_c
+*.vtex_c
+*.vsnd_c
+*.vpcf_c
+
+# runtime logs
+logs/
+*.log
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+Thumbs.db
+
+# CS2 data dumps from research scripts (Valve content) and build outputs
+spikes/out/
+cs2-plugin/out/
+__pycache__/
+
+# private dev notes (personal paths, RE details) - local only
+NOTES.md

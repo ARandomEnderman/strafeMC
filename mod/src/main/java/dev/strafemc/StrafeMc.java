@@ -1,0 +1,65 @@
+package dev.strafemc;
+
+import dev.strafemc.net.StrafePayloads.NoclipRequest;
+import dev.strafemc.net.StrafePayloads.NoclipState;
+import dev.strafemc.server.Access;
+import dev.strafemc.server.Noclip;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class StrafeMc implements ModInitializer {
+	public static final String MOD_ID = "strafemc";
+	public static final Logger LOG = LoggerFactory.getLogger(MOD_ID);
+
+	@Override
+	public void onInitialize() {
+		dev.strafemc.weapon.WeaponItems.register();
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Action.TYPE,
+				(msg, ctx) -> dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg()));
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Fire.TYPE, dev.strafemc.net.StrafePayloads.Fire.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Reload.TYPE, dev.strafemc.net.StrafePayloads.Reload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Knife.TYPE, dev.strafemc.net.StrafePayloads.Knife.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Knife.TYPE,
+				(msg, ctx) -> dev.strafemc.weapon.GunServer.knife(ctx.player(), msg.heavy()));
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Fire.TYPE,
+				(msg, ctx) -> dev.strafemc.weapon.GunServer.fire(ctx.player(), msg.yaw(), msg.pitch()));
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Reload.TYPE,
+				(msg, ctx) -> dev.strafemc.weapon.GunServer.reload(ctx.player(), msg.action()));
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.CsSound.TYPE, dev.strafemc.net.StrafePayloads.CsSound.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.BulletImpact.TYPE, dev.strafemc.net.StrafePayloads.BulletImpact.CODEC);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.GunServer::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.GunServer.forget(handler.getPlayer().getUUID()));
+		PayloadTypeRegistry.serverboundPlay().register(NoclipRequest.TYPE, NoclipRequest.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(NoclipState.TYPE, NoclipState.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.SourceMovement.TYPE, dev.strafemc.net.StrafePayloads.SourceMovement.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.SourceMovement.TYPE, (msg, ctx) -> {
+			if (msg.on()) Noclip.SOURCE.add(ctx.player().getUUID());
+			else Noclip.SOURCE.remove(ctx.player().getUUID());
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(NoclipRequest.TYPE, (msg, ctx) -> {
+			var p = ctx.player();
+			if (msg.on() && !Access.isOperator(p)) {
+				Noclip.SERVER.remove(p.getUUID());
+				ServerPlayNetworking.send(p, new NoclipState(false, "noclip needs operator permission"));
+				LOG.info("[strafemc] noclip denied for {} (not op)", p.getScoreboardName());
+				return;
+			}
+			if (msg.on()) Noclip.SERVER.add(p.getUUID());
+			else Noclip.SERVER.remove(p.getUUID());
+			ServerPlayNetworking.send(p, new NoclipState(msg.on(), msg.on() ? "noclip ON" : "noclip OFF"));
+			LOG.info("[strafemc] noclip {} for {}", msg.on() ? "ON" : "OFF", p.getScoreboardName());
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Noclip.SERVER.remove(handler.getPlayer().getUUID()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Noclip.SOURCE.remove(handler.getPlayer().getUUID()));
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.FallDamage.TYPE, dev.strafemc.net.StrafePayloads.FallDamage.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.FallDamage.TYPE,
+				(msg, ctx) -> dev.strafemc.server.CsFallDamage.apply(ctx.player(), msg.impactSpeed(), msg.scale()));
+		LOG.info("[strafemc] common init");
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"key.category.strafemc.main": "strafeMC",
+	"key.strafemc.console": "Open CS2 console",
+	"strafemc.options.button": "strafeMC...",
+	"strafemc.options.title": "strafeMC",
+	"strafemc.options.movement": "Source movement",
+	"strafemc.options.scrolljump": "Mouse wheel jumps",
+	"strafemc.options.showspeed": "cl_showpos (speed/position readout)",
+	"strafemc.options.doubletapfly": "Double-tap jump flies",
+	"strafemc.options.cssounds": "CS2 movement sounds",
+	"strafemc.options.footstepteam_t": "T footsteps (off = CT)",
+	"strafemc.options.binds": "Console binds (bind <key> \"<command>\")",
+	"strafemc.options.nobinds": "No binds yet",
+	"strafemc.options.removebind": "Remove",
+	"item.strafemc.weapon_ak47": "AK-47",
+	"item.strafemc.mag_ak47": "AK-47 Magazine",
+	"item.strafemc.weapon_knife_falchion": "Falchion Knife",
+	"itemGroup.strafemc.weapons": "strafeMC Weapons",
+	"key.strafemc.reload": "Reload (CS weapons)",
+	"block.strafemc.surf_ramp": "Surf Ramp"
+}

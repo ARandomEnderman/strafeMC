@@ -1,0 +1,76 @@
+package dev.strafemc.client.assets;
+
+import dev.strafemc.StrafeMc;
+import dev.strafemc.config.StrafeConfig;
+import dev.strafemc.data.AssetCache;
+
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/**
+ * A resource pack generated on the user's machine from their own CS2 install (never shipped with the mod):
+ * item icons and HUD icons converted from CS2's Panorama images. Minecraft loads it as an always-on pack.
+ */
+public final class RuntimePack {
+	public static final Path DIR = StrafeConfig.RUNTIME_DIR.resolve("pack");
+	/** 26.1.2 resource pack format (version.json resource_major). */
+	private static final int FORMAT = 84;
+
+	private RuntimePack() {}
+
+	/** Builds missing files (first run extracts a few images with VRF, ~1 s). Safe to call every start. */
+	public static void build() {
+		try {
+			Files.createDirectories(DIR);
+			Files.writeString(DIR.resolve("pack.mcmeta"), "{\"pack\":{\"description\":\"strafeMC: assets converted from your CS2 install\","
+					+ "\"pack_format\":" + FORMAT + ",\"min_format\":" + FORMAT + ",\"max_format\":" + FORMAT + "}}");
+			Path tex = DIR.resolve("assets/strafemc/textures");
+			icon("panorama/images/econ/weapons/base_weapons/weapon_ak47_png.vtex_c", "panorama/images/econ/weapons/base_weapons/weapon_ak47_png.png",
+					tex.resolve("item/weapon_ak47.png"), 128);
+			icon("panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.vtex_c",
+					"panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.png", tex.resolve("item/weapon_knife_falchion.png"), 128);
+			svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32);
+			svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64);
+			svg("panorama/images/hud/ammo_fullauto.vsvg_c", "panorama/images/hud/ammo_fullauto.svg", tex.resolve("gui/hud/ammo_fullauto.png"), 64);
+			svg("panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c", "panorama/images/hud/ammo_reserve_generic_bullet.svg",
+					tex.resolve("gui/hud/ammo_bullet.png"), 64);
+			StrafeMc.LOG.info("[strafemc] runtime resource pack ready at {}", DIR);
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] could not build the CS2 asset pack (CS2 copy missing?): {}", e.toString());
+		}
+	}
+
+	/** Raster image -> square, transparent-padded, downscaled item texture. */
+	private static void icon(String vpk, String exported, Path out, int size) throws Exception {
+		if (Files.exists(out)) return;
+		Path src = StrafeConfig.cacheDir().resolve(exported);
+		AssetCache.ensureDecompiled(vpk, src);
+		BufferedImage in = ImageIO.read(src.toFile());
+		int side = Math.max(in.getWidth(), in.getHeight());
+		BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = img.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		double sc = (double) size / side;
+		int w = (int) Math.round(in.getWidth() * sc), h = (int) Math.round(in.getHeight() * sc);
+		g.drawImage(in, (size - w) / 2, (size - h) / 2, w, h, null);
+		g.dispose();
+		write(img, out);
+	}
+
+	private static void svg(String vpk, String exported, Path out, int size) throws Exception {
+		if (Files.exists(out)) return;
+		Path src = StrafeConfig.cacheDir().resolve(exported);
+		AssetCache.ensureDecompiled(vpk, src);
+		write(SvgIcon.rasterize(src, size), out);
+	}
+
+	private static void write(BufferedImage img, Path out) throws Exception {
+		Files.createDirectories(out.getParent());
+		ImageIO.write(img, "png", out.toFile());
+	}
+}

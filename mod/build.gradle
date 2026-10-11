@@ -1,0 +1,53 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+base { archivesName = 'strafemc' }
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	// The profile has no Fabric API installed and only our jar may be added to it,
+	// so the few Fabric API modules we use are nested inside our jar (jar-in-jar).
+	def fapi = { String m -> fabricApi.module(m, project.fabric_api_version) }
+	['fabric-api-base', 'fabric-lifecycle-events-v1', 'fabric-key-mapping-api-v1', 'fabric-rendering-v1',
+	 'fabric-resource-loader-v1', 'fabric-networking-api-v1', 'fabric-creative-tab-api-v1', 'fabric-registry-sync-v0'].each { m ->
+		implementation fapi(m)
+		include fapi(m)
+	}
+
+	// MP3 decoding for the few CS2 sounds VRF extracts as MP3 (LGPL, nested unmodified)
+	implementation 'javazoom:jlayer:1.0.1'
+	include 'javazoom:jlayer:1.0.1'
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") { expand "version": version }
+}
+
+tasks.withType(JavaCompile).configureEach { it.options.release = 25 }
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Headless movement sanity check against the cached live cvars: gradlew flatGroundCheck
+tasks.register('flatGroundCheck', JavaExec) {
+	dependsOn 'testClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'dev.strafemc.client.movement.FlatGroundCheck'
+	args System.getProperty('user.home') + '/strafemc/cvars-cache.json'
+}
+
+test { failOnNoDiscoveredTests = false }
+
+// Headless viewmodel geometry check (camera-space bounds of arms + AK): gradlew vmCheck
+tasks.register('vmCheck', JavaExec) {
+	dependsOn 'testClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = (project.findProperty('vmMain') ?: 'dev.strafemc.client.viewmodel.VmCheck')
+	if (project.hasProperty('vmArgs')) args((project.findProperty('vmArgs') as String).split(','))
+}

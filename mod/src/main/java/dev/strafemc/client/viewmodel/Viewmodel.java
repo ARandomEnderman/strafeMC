@@ -1,0 +1,402 @@
+package dev.strafemc.client.viewmodel;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.strafemc.StrafeMc;
+import dev.strafemc.config.StrafeConfig;
+import dev.strafemc.data.AssetCache;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
+import org.joml.Matrix4f;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * First-person CS2 viewmodel: the real arms (glove model) and weapon model, skinned on the CPU to the real viewmodel
+ * animation clips (draw / idle / shoot / reload / inspect), drawn in place of Minecraft's hand. All assets are exported
+ * from the user's CS2 copy by VRF into the local cache.
+ *
+ * Space: VRF glTF (y up, z forward, x left; meters) -> Minecraft camera space (vmAxes, default "-x,y,-z"), scaled by
+ * 39.37 units per meter / unitsPerBlock. The weapon skeleton is mounted on the viewmodel's "wpn" bone (its root is static).
+ */
+public final class Viewmodel {
+	public static final Viewmodel INSTANCE = new Viewmodel();
+	/** Default first-person arms (CS2 glove model that also contains the bare arms). */
+	public static final String ARMS = "agents/models/shared/arms/glove_fingerless/glove_fingerless.vmdl_c";
+
+	/** mesh: the model's mesh node to draw; clips: the animations loaded (files via GunServer.clipPath). */
+	private record Weapon(String cls, String model, String mesh, String[] clips) {}
+
+	private static final Map<String, Weapon> WEAPONS = Map.of(
+			"weapon_ak47", new Weapon("weapon_ak47", "weapons/models/ak47/weapon_rif_ak47.vmdl_c", ".body_hd",
+					new String[] {"draw", "idle", "shoot1", "reload", "lookat01"}),
+			"weapon_knife_falchion", new Weapon("weapon_knife_falchion", "weapons/models/knife/knife_falchion/weapon_knife_falchion.vmdl_c",
+					".body_legacy", new String[] {"draw", "idle", "lookat01", "lookat02", "light_miss1", "light_miss2", "light_hit1", "light_hit2",
+					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"}));
+
+	private volatile Loaded loaded;
+	/** Set after any rendering error: the vanilla hand is used from then on (logged once). */
+	private volatile boolean broken;
+	private volatile String loading;
+	private final Map<Path, Identifier> textures = new HashMap<>();
+	/** The camera rotation GameRenderer.renderItemInHand starts the hand pose from (inverted); captured by a mixin. */
+	public static final Matrix4f HAND_VIEW = new Matrix4f();
+	private VmClip clip;
+	private long clipStart;
+	/** Clip time at clipStart and playback rate since then (m_flWeaponActionPlaybackRate: CS2 silent reload plays at 0.5). */
+	private float clipBase, rate = 1;
+
+	private static final class Loaded {
+		String cls;
+		VmModel arms, gun;
+		Map<String, VmClip> clips = new HashMap<>();
+		/** Model attachments (vmdl MDAT m_attachments): bone, offset in the bone frame (meters), rotation. */
+		Map<String, Attachment> attachments = new HashMap<>();
+	}
+
+	private record Attachment(String bone, org.joml.Vector3f offset, org.joml.Quaternionf rotation) {}
+
+	/** Camera-space transforms (blocks; +X of the attachment = its forward) of the weapon's attachments this frame. */
+	public final Map<String, Matrix4f> attachmentTransforms = new java.util.concurrent.ConcurrentHashMap<>();
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, Attachment> attachments(String vmdl) {
+		Map<String, Attachment> out = new HashMap<>();
+		try {
+			String text = java.nio.file.Files.readString(AssetCache.block(vmdl, "MDAT"));
+			int h = text.indexOf("-->"), i = text.indexOf('{', h < 0 ? 0 : h + 3);
+			Map<String, Object> d = dev.strafemc.data.Kv3.parseObject(text.substring(i));
+			if (d.get("m_attachments") instanceof java.util.List<?> l)
+				for (Object o : l) {
+					if (!(o instanceof Map<?, ?> e) || !(e.get("value") instanceof Map<?, ?> v)) continue;
+					java.util.List<Object> names = (java.util.List<Object>) v.get("m_influenceNames");
+					java.util.List<Object> offs = (java.util.List<Object>) v.get("m_vInfluenceOffsets");
+					java.util.List<Object> rots = (java.util.List<Object>) v.get("m_vInfluenceRotations");
+					if (names == null || offs == null || rots == null || names.isEmpty()) continue;
+					java.util.List<Number> off = (java.util.List<Number>) offs.get(0), rot = (java.util.List<Number>) rots.get(0);
+					// offsets are in inches in the bone's own frame (verified: muzzle_flash lands on the barrel tip)
+					out.put(String.valueOf(e.get("key")), new Attachment(String.valueOf(names.get(0)),
+							new org.joml.Vector3f(off.get(0).floatValue(), off.get(1).floatValue(), off.get(2).floatValue()).mul(0.0254f),
+							new org.joml.Quaternionf(rot.get(0).floatValue(), rot.get(1).floatValue(), rot.get(2).floatValue(), rot.get(3).floatValue())));
+				}
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] attachments of {} unavailable: {}", vmdl, e.toString());
+		}
+		return out;
+	}
+
+	private Viewmodel() {}
+
+	/** Every weapon loaded so far (switching back is instant). */
+	private final Map<String, Loaded> cache = new java.util.concurrent.ConcurrentHashMap<>();
+
+	public boolean ready(String cls) {
+		Loaded l = loaded;
+		if (l != null && l.cls.equals(cls)) return true;
+		Loaded c = cache.get(cls);
+		if (c != null) { // another weapon's clip must not drive this skeleton: start from its draw
+			loaded = c;
+			clip = null;
+			return true;
+		}
+		if (!cls.equals(loading)) loadAsync(cls);
+		return false;
+	}
+
+	private void loadAsync(String cls) {
+		Weapon w = WEAPONS.get(cls);
+		if (w == null) return;
+		loading = cls;
+		Thread t = new Thread(() -> {
+			try {
+				Loaded l = new Loaded();
+				l.cls = cls;
+				l.arms = VmModel.load(Glb.read(AssetCache.exportGlb(ARMS, true)), ".viewmodel");
+				l.gun = VmModel.load(Glb.read(AssetCache.exportGlb(w.model, true)), w.mesh);
+				l.attachments = attachments(w.model);
+				for (String a : w.clips) {
+					String p = dev.strafemc.weapon.GunServer.clipPath(cls, a);
+					l.clips.put(a, new VmClip(a, Glb.read(AssetCache.exportGlb(p, false))));
+				}
+				for (VmModel m : new VmModel[] {l.arms, l.gun}) for (VmModel.Part part : m.parts) if (part.texture != null) downscaled(part.texture);
+				cache.put(cls, l);
+				StrafeMc.LOG.info("[strafemc] viewmodel ready for {} ({} clips)", cls, l.clips.size());
+			} catch (Exception e) {
+				StrafeMc.LOG.error("[strafemc] viewmodel for " + cls + " failed", e);
+			}
+		}, "strafemc-viewmodel");
+		t.setDaemon(true);
+		t.start();
+	}
+
+	/** World-of-the-bone (camera space) transforms of the weapon's attachments for this frame. */
+	private void updateAttachments(Loaded l, Matrix4f[][] gunSkin, Matrix4f toView) {
+		if (l.gun.parts.isEmpty()) return;
+		int si = l.gun.parts.get(0).skin;
+		if (si < 0 || si >= l.gun.skins.size()) return;
+		VmModel.Skin skin = l.gun.skins.get(si);
+		for (var e : l.attachments.entrySet()) {
+			int j = java.util.Arrays.asList(skin.joints).indexOf(e.getValue().bone());
+			if (j < 0) continue;
+			// bone world = skin matrix x bind pose (inverse of the inverse bind)
+			Matrix4f bone = new Matrix4f(gunSkin[si][j]).mul(new Matrix4f(skin.inverseBind[j]).invert());
+			Matrix4f m = new Matrix4f(toView).mul(bone).translate(e.getValue().offset()).rotate(e.getValue().rotation());
+			attachmentTransforms.put(e.getKey(), m);
+		}
+	}
+
+	/** Starts an animation ("draw", "idle", "shoot1", "reload", "lookat01"). */
+	public void play(String anim) {
+		Loaded l = loaded;
+		if (l == null) return;
+		VmClip c = l.clips.get(anim);
+		if (c == null) return;
+		clip = c;
+		clipStart = System.nanoTime();
+		clipBase = 0;
+		rate = 1;
+	}
+
+	/** Weapon put away: the next render starts from its draw. */
+	public void stop() {
+		clip = null;
+	}
+
+	private float clipTime() {
+		return clipBase + (System.nanoTime() - clipStart) / 1e9f * rate;
+	}
+
+	/** Changes the playback rate of the current clip without a jump in time. */
+	public void setRate(float r) {
+		if (r == rate) return;
+		clipBase = clipTime();
+		clipStart = System.nanoTime();
+		rate = r;
+	}
+
+	/** Renders the viewmodel; false if not ready (vanilla hand renders instead). */
+	public boolean render(String cls, PoseStack ps, SubmitNodeCollector out, int light) {
+		if (broken || !ready(cls)) return false;
+		Loaded l = loaded;
+		if (clip == null) play("draw");
+		float t = clipTime();
+		if (t > clip.duration && !clip.name.equals("idle")) {
+			play("idle");
+			t = 0;
+		}
+		if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
+		Matrix4f[] pose = clip.pose(t);
+		Matrix4f wpn = mount(clip, pose);
+
+		Matrix4f[][] armSkin = skins(l.arms, clip, pose, null);
+		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
+		Matrix4f toView = toView();
+		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
+		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
+		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());
+		emit(l.arms, armSkin, toView, cam, ps, out, light);
+		emit(l.gun, gunSkin, toView, cam, ps, out, light);
+		updateAttachments(l, gunSkin, toView);
+		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
+		return true;
+	}
+
+	/**
+	 * The weapon skeleton rides on the viewmodel's "wpn" bone: CS2 treats the weapon root bone as the wpn bone. Both carry
+	 * the same axis conversion in the export, so the mount is wpn * inverse(weapon root) (not wpn * weapon, which applies it twice).
+	 */
+	static Matrix4f mount(VmClip c, Matrix4f[] pose) {
+		Integer w = c.node("wpn"), r = c.node("weapon");
+		Matrix4f m = w != null ? new Matrix4f(pose[w]) : new Matrix4f();
+		if (r != null) m.mul(new Matrix4f(pose[r]).invert());
+		return m;
+	}
+
+	/** Per-joint skinning matrices: animated joint (clip space; weapon joints relative to the wpn mount) x inverse bind. */
+	static Matrix4f[][] skins(VmModel m, VmClip c, Matrix4f[] pose, Matrix4f mount) {
+		Matrix4f[][] out = new Matrix4f[m.skins.size()][];
+		for (int i = 0; i < out.length; i++) out[i] = skin(m.skins.get(i), c, pose, mount);
+		return out;
+	}
+
+	static Matrix4f[] skin(VmModel.Skin m, VmClip c, Matrix4f[] pose, Matrix4f mount) {
+		Matrix4f[] s = new Matrix4f[m.joints.length];
+		for (int j = 0; j < m.joints.length; j++) {
+			String name = m.joints[j];
+			Integer n = c.node(name);
+			Matrix4f ibm = m.inverseBind[j];
+			if (n == null && name.contains("_TWIST")) {
+				// twist helpers aren't animated: they ride rigidly on their bone, so they take that bone's bind matrix too
+				String base = name.substring(0, name.indexOf("_TWIST"));
+				n = c.node(base);
+				int bj = java.util.Arrays.asList(m.joints).indexOf(base);
+				if (bj >= 0) ibm = m.inverseBind[bj];
+			}
+			if (n == null && mount != null) n = c.node("weapon");
+			Matrix4f jm = n != null ? new Matrix4f(pose[n]) : new Matrix4f();
+			if (mount != null) jm = new Matrix4f(mount).mul(jm);
+			s[j] = jm.mul(ibm);
+		}
+		return s;
+	}
+
+	static Matrix4f toView() {
+		String[] ax = StrafeConfig.vmAxes.split(",");
+		float k = (float) (39.3701 / StrafeConfig.unitsPerBlock);
+		Matrix4f m = new Matrix4f().zero();
+		for (int row = 0; row < 3; row++) {
+			String a = ax[row].trim();
+			float sign = a.startsWith("-") ? -1 : 1;
+			int col = switch (a.replace("-", "")) {
+				case "x" -> 0;
+				case "y" -> 1;
+				default -> 2;
+			};
+			m.setRowColumn(row, col, sign * k);
+		}
+		m.m33(1);
+		return m;
+	}
+
+	/** Skins one model on the CPU into camera space; static so the headless check runs the exact production math. */
+	static float[][] skinVertices(VmModel.Part p, Matrix4f[] skin, Matrix4f toView) {
+		int verts = p.pos.length / 3;
+		// per joint: toView * skin as a row-major 3x4 block (once per frame), then a weighted blend per vertex
+		int nj = Math.max(1, skin.length);
+		float[] jm = new float[nj * 12];
+		for (int j = 0; j < nj; j++) {
+			Matrix4f c = skin.length > 0 ? new Matrix4f(toView).mul(skin[j]) : new Matrix4f(toView);
+			int o = j * 12; // JOML mCR = column C, row R
+			jm[o] = c.m00(); jm[o + 1] = c.m10(); jm[o + 2] = c.m20(); jm[o + 3] = c.m30();
+			jm[o + 4] = c.m01(); jm[o + 5] = c.m11(); jm[o + 6] = c.m21(); jm[o + 7] = c.m31();
+			jm[o + 8] = c.m02(); jm[o + 9] = c.m12(); jm[o + 10] = c.m22(); jm[o + 11] = c.m32();
+		}
+		float[] sp = new float[verts * 3], sn = new float[verts * 3], b = new float[12];
+		for (int i = 0; i < verts; i++) {
+			java.util.Arrays.fill(b, 0);
+			if (p.jnt != null && skin.length > 0) {
+				for (int k = 0; k < 4; k++) {
+					float w = p.wts[i * 4 + k];
+					if (w <= 0) continue;
+					int o = Math.min(p.jnt[i * 4 + k], nj - 1) * 12;
+					for (int q = 0; q < 12; q++) b[q] += jm[o + q] * w;
+				}
+			} else System.arraycopy(jm, 0, b, 0, 12);
+			float x = p.pos[i * 3], y = p.pos[i * 3 + 1], z = p.pos[i * 3 + 2];
+			sp[i * 3] = b[0] * x + b[1] * y + b[2] * z + b[3];
+			sp[i * 3 + 1] = b[4] * x + b[5] * y + b[6] * z + b[7];
+			sp[i * 3 + 2] = b[8] * x + b[9] * y + b[10] * z + b[11];
+			float nx = p.nrm[i * 3], ny = p.nrm[i * 3 + 1], nz = p.nrm[i * 3 + 2];
+			float tx = b[0] * nx + b[1] * ny + b[2] * nz, ty = b[4] * nx + b[5] * ny + b[6] * nz, tz = b[8] * nx + b[9] * ny + b[10] * nz;
+			float l = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
+			if (l > 1e-6f) { tx /= l; ty /= l; tz /= l; }
+			sn[i * 3] = tx;
+			sn[i * 3 + 1] = ty;
+			sn[i * 3 + 2] = tz;
+		}
+		return new float[][] {sp, sn};
+	}
+
+	private void emit(VmModel m, Matrix4f[][] skins, Matrix4f toView, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
+		for (VmModel.Part p : m.parts) {
+			if (p.alphaMode.equals("BLEND")) continue; // sticker/decal overlays (sticker_gaps) need CS2's composite shader
+			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
+			if (tex == null) continue;
+			Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : new Matrix4f[0];
+			float[][] sk = skinVertices(p, skin, toView);
+			float[] sp = sk[0], sn = sk[1];
+			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (ignored, vc) -> {
+				if (broken) return;
+				PoseStack.Pose pose = new PoseStack.Pose();
+				pose.pose().set(RenderSystem.getModelViewMatrix()).invert().mul(cam);
+				pose.normal().set(pose.pose()).invert().transpose();
+				int[] idx = p.idx;
+				try {
+				for (int i = 0; i + 2 < idx.length; i += 3) {
+					vertex(vc, pose, sp, sn, p.uv, idx[i], light);
+					vertex(vc, pose, sp, sn, p.uv, idx[i + 1], light);
+					vertex(vc, pose, sp, sn, p.uv, idx[i + 2], light);
+					vertex(vc, pose, sp, sn, p.uv, idx[i + 2], light); // entity render types draw quads
+				}
+				} catch (RuntimeException e) { // never crash the game over the viewmodel: fall back to the vanilla hand
+					broken = true;
+					StrafeMc.LOG.error("[strafemc] viewmodel rendering failed, using the vanilla hand", e);
+				}
+			});
+		}
+	}
+
+	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, float[] uv, int i, int light) {
+		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(-1).setUv(uv[i * 2], uv[i * 2 + 1])
+				.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, sn[i * 3], sn[i * 3 + 1], sn[i * 3 + 2]);
+	}
+
+	/** Uploads a cached texture once (render thread). */
+	private Identifier texture(Path png, boolean opaque) {
+		if (png == null) return null;
+		return textures.computeIfAbsent(png, p -> {
+			try (InputStream in = Files.newInputStream(downscaledPath(p))) {
+				NativeImage img = NativeImage.read(in);
+				// CS2 color textures carry the paint/skin mask in alpha: for opaque materials it isn't transparency
+				if (opaque)
+					for (int y = 0; y < img.getHeight(); y++)
+						for (int x = 0; x < img.getWidth(); x++) img.setPixel(x, y, img.getPixel(x, y) | 0xFF000000);
+				Identifier id = Identifier.fromNamespaceAndPath("strafemc", "vm/" + Integer.toHexString(p.toString().hashCode()));
+				Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "strafemc viewmodel " + p.getFileName(), img));
+				return id;
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] viewmodel texture {} failed: {}", p, e.toString());
+				return null;
+			}
+		});
+	}
+
+	private static Path downscaledPath(Path p) {
+		return p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024b.png"));
+	}
+
+	/**
+	 * CS2 textures are up to 4096 px; keep a 1024 px copy for the viewmodel. Box filter per channel without premultiplying:
+	 * CS2 color alpha is metalness, and a premultiplied (Java2D) scale wipes the color wherever it is 0.
+	 */
+	private static void downscaled(Path p) throws Exception {
+		Path out = downscaledPath(p);
+		if (Files.exists(out) || !Files.exists(p)) return;
+		BufferedImage in = ImageIO.read(p.toFile());
+		int w = in.getWidth(), h = in.getHeight(), max = 1024;
+		int f = 1;
+		while (Math.max(w, h) / f > max) f *= 2;
+		int ow = w / f, oh = h / f;
+		int[] src = in.getRGB(0, 0, w, h, null, 0, w); // non-premultiplied ARGB
+		int[] dst = new int[ow * oh];
+		int n = f * f;
+		for (int y = 0; y < oh; y++)
+			for (int x = 0; x < ow; x++) {
+				long sa = 0, sr = 0, sg = 0, sb = 0;
+				for (int dy = 0; dy < f; dy++)
+					for (int dx = 0; dx < f; dx++) {
+						int c = src[(y * f + dy) * w + x * f + dx];
+						sa += c >>> 24;
+						sr += (c >> 16) & 255;
+						sg += (c >> 8) & 255;
+						sb += c & 255;
+					}
+				dst[y * ow + x] = (int) (sa / n) << 24 | (int) (sr / n) << 16 | (int) (sg / n) << 8 | (int) (sb / n);
+			}
+		BufferedImage img = new BufferedImage(ow, oh, BufferedImage.TYPE_INT_ARGB);
+		img.setRGB(0, 0, ow, oh, dst, 0, ow);
+		ImageIO.write(img, "png", out.toFile());
+	}
+}
