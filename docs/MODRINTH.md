@@ -37,7 +37,7 @@ CS2 install.
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects per block material
 
 ### Console and multiplayer
-- In-game developer console (default key: `) with autocomplete, binds, movement presets, speed and jump stats
+- In-game developer console (default key: the one under Esc, left of 1) with autocomplete, binds, movement presets, speed and jump stats
 - Per-world CS2 settings controlled by server operators (`/strafeop` to give players console rights)
 - The server decides spread, recoil and fall damage
 - Friends without CS2 can still join and play, with placeholder icons and Minecraft sounds
