@@ -21,7 +21,7 @@ import java.util.UUID;
 
 /**
  * The Minecraft server is the authority for gameplay data. On join, and whenever it changes, every player gets the
- * server's weapon definitions (weapons.vdata entries of the registered CS weapons), the gameplay timings inside weapon
+ * server's weapon numbers (the gameplay fields of the registered CS weapons' weapons.vdata entries), the gameplay timings inside weapon
  * animations (silent reload window, ammo-add point) and the CS2 cvars from the server's own CS2 bridge. Clients predict
  * with these (ClientGameplay) and use their own CS2 files only for looks and sound. Singleplayer goes through the same
  * path via the integrated server.
@@ -31,6 +31,18 @@ public final class GameplaySync {
 	/** Joined players still waiting for the first sync (weapons.vdata loads in the background). */
 	private static final Set<UUID> PENDING = new HashSet<>();
 	private static String lastCvars = "";
+	/**
+	 * The weapons.vdata fields gameplay reads (WeaponStats, Recoil, move speed). Only these are sent: numbers and flags,
+	 * no asset paths or sound names, so the sync never hands out Valve's data file. Cosmetic fields (shoot sounds,
+	 * tracer particle) come from each player's own CS2 files.
+	 */
+	static final Set<String> GAMEPLAY_KEYS = Set.of("m_iMaxClip1", "m_nPrimaryReserveAmmoMax", "m_bReserveAmmoAsClips", "m_flCycleTime",
+			"m_bIsFullAuto", "m_nDamage", "m_flRangeModifier", "m_flRange", "m_flHeadshotMultiplier", "m_flArmorRatio", "m_flPenetration",
+			"m_flDeployDuration", "m_flDisallowAttackAfterReloadStartDuration", "m_nNumBullets", "m_flSpread", "m_flInaccuracyStand",
+			"m_flInaccuracyCrouch", "m_flInaccuracyMove", "m_flInaccuracyJump", "m_flInaccuracyLand", "m_flInaccuracyLadder",
+			"m_flInaccuracyFire", "m_flRecoveryTimeStand", "m_flRecoveryTimeCrouch", "m_flRecoveryTimeStandFinal",
+			"m_flRecoveryTimeCrouchFinal", "m_nRecoveryTransitionStartBullet", "m_nRecoveryTransitionEndBullet", "m_flMaxSpeed",
+			"m_flRecoilAngle", "m_flRecoilAngleVariance", "m_flRecoilMagnitude", "m_flRecoilMagnitudeVariance", "m_nRecoilSeed");
 	private static int tick;
 
 	private GameplaySync() {}
@@ -49,14 +61,28 @@ public final class GameplaySync {
 		String cvars = GSON.toJson(new java.util.TreeMap<>(Cs2Bridge.INSTANCE.cvars()));
 		boolean changed = !cvars.equals(lastCvars);
 		if (!changed && PENDING.isEmpty()) return;
+		if (building) return;
 		lastCvars = cvars;
-		StrafePayloads.GameplaySync msg = new StrafePayloads.GameplaySync(snapshot());
-		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-			if (!changed && !PENDING.contains(p.getUUID())) continue;
-			if (ServerPlayNetworking.canSend(p, StrafePayloads.GameplaySync.TYPE)) ServerPlayNetworking.send(p, msg);
-		}
+		building = true;
+		Set<UUID> targets = changed ? null : new HashSet<>(PENDING);
 		PENDING.clear();
+		// built off the server thread: the first snapshot loads reload animations (asset conversion, ~1 s)
+		java.util.concurrent.CompletableFuture.supplyAsync(GameplaySync::snapshot).whenComplete((json, err) -> server.execute(() -> {
+			building = false;
+			if (err != null) {
+				StrafeMc.LOG.error("[strafemc] gameplay sync failed", err);
+				if (targets != null) PENDING.addAll(targets);
+				return;
+			}
+			StrafePayloads.GameplaySync msg = new StrafePayloads.GameplaySync(json);
+			for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+				if (targets != null && !targets.contains(p.getUUID())) continue;
+				if (ServerPlayNetworking.canSend(p, StrafePayloads.GameplaySync.TYPE)) ServerPlayNetworking.send(p, msg);
+			}
+		}));
 	}
+
+	private static volatile boolean building;
 
 	/** JSON: {"weapons": {cls: vdata entry}, "timings": {cls: {name: seconds}}, "cvars": {name: value}}. */
 	static String snapshot() {
@@ -66,7 +92,11 @@ public final class GameplaySync {
 		for (var item : BuiltInRegistries.ITEM) if (item instanceof GunItem g) classes.add(g.weaponClass);
 		for (String cls : classes) {
 			Map<String, Object> w = WeaponData.get(cls);
-			if (w != null) weapons.put(cls, w);
+			if (w != null) {
+				Map<String, Object> g = new LinkedHashMap<>();
+				for (String k : GAMEPLAY_KEYS) if (w.containsKey(k)) g.put(k, w.get(k));
+				weapons.put(cls, g);
+			}
 			Map<String, Double> t = timings(cls);
 			if (!t.isEmpty()) timings.put(cls, t);
 		}

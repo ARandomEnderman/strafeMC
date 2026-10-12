@@ -25,6 +25,8 @@ public final class ClientGameplay {
 	private static volatile Map<String, String> cvars;
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
+	/** Local vdata entry with the server's gameplay fields on top. */
+	private static final Map<String, Map<String, Object>> MERGED = new ConcurrentHashMap<>();
 
 	private ClientGameplay() {}
 
@@ -39,6 +41,7 @@ public final class ClientGameplay {
 			cvars = cv;
 			STATS.clear();
 			RECOIL.clear();
+			MERGED.clear();
 			StrafeMc.LOG.info("[strafemc] gameplay data from the server: {} weapons, {} cvars", weapons.size(), cv.size());
 		} catch (Exception e) {
 			StrafeMc.LOG.error("[strafemc] bad gameplay sync", e);
@@ -52,16 +55,29 @@ public final class ClientGameplay {
 		cvars = null;
 		STATS.clear();
 		RECOIL.clear();
+		MERGED.clear();
 	}
 
 	public static boolean synced() {
 		return weapons != null;
 	}
 
-	/** The weapon's vdata entry: the server's, else the local one. */
+	/**
+	 * The weapon's vdata entry as the client should use it: the local entry (cosmetic fields: sounds, tracer) with the
+	 * server's gameplay fields on top. A weapon the server doesn't have stays unknown (null).
+	 */
 	public static Map<String, Object> weapon(String cls) {
 		Map<String, Map<String, Object>> w = weapons;
-		return w != null ? w.get(cls) : WeaponData.get(cls);
+		if (w == null) return WeaponData.get(cls);
+		Map<String, Object> server = w.get(cls);
+		if (server == null) return null;
+		return MERGED.computeIfAbsent(cls, c -> {
+			Map<String, Object> m = new java.util.LinkedHashMap<>();
+			Map<String, Object> local = WeaponData.get(c);
+			if (local != null) m.putAll(local);
+			m.putAll(server);
+			return m;
+		});
 	}
 
 	public static WeaponStats stats(String cls) {
