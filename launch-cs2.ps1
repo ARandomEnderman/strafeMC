@@ -9,8 +9,7 @@
     * -dedicated -insecure +sv_lan 1 +ip 127.0.0.1 are present; nothing that could re-enable secure mode
       or connect anywhere is allowed in extra args
     * the CS2MC-COPY firewall block rules exist, are enabled, and are Block rules
-    * Steam is not running (stops Steam relaunching app 730 from the REAL install and keeps any
-      traffic attributable to cs2.exe instead of steam.exe)
+    * Steam may be running (allowed since 2026-10-12); the server still never logs on to Steam or VAC
     * while running: every 500 ms, kill on any non-loopback/non-LAN TCP peer, kill on any console-log line
       showing secure mode / Steam logon, kill if insecure mode is not confirmed in the log within the timeout
     * if this script exits for any reason, the CS2 process is killed (it is never left unmonitored)
@@ -69,7 +68,7 @@ foreach ($n in $RuleNames) {
 
 # ---------- 3. environment ----------
 $steamProcs = Get-Process -Name steam, steamwebhelper, steamservice -ErrorAction SilentlyContinue
-if ($steamProcs) { Fail "Steam is running ($(($steamProcs.Name | Sort-Object -Unique) -join ', ')). Exit Steam fully (tray > Exit) and retry." }
+if ($steamProcs) { Log "Steam is running ($(($steamProcs.Name | Sort-Object -Unique) -join ', ')): allowed; the server still runs insecure and LAN-only" 'Yellow' }
 if (Get-Process -Name cs2 -ErrorAction SilentlyContinue) { Fail "a cs2.exe process is already running" }
 
 # ---------- 4. arguments ----------
