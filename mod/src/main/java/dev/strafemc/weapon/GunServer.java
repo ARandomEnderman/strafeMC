@@ -193,11 +193,14 @@ public final class GunServer {
 			if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, impactMessage(p.level(), bh, eye, IMPACT_SEEDS.nextInt())); // the real hole
 		}
-		if (hit == null || !(hit.getEntity() instanceof LivingEntity target)) return;
-
+		if (hit == null) return;
 		Vec3 at = hit.getLocation();
 		double distUnits = at.distanceTo(eye) * units;
 		double dmg = w.damage() * Math.pow(w.rangeModifier(), distUnits / FALLOFF_UNITS);
+		if (!(hit.getEntity() instanceof LivingEntity target)) { // dragon body parts, end crystals, boats...: Minecraft's own damage path
+			hurtOther(p, hit.getEntity(), (float) (dmg * StrafeConfig.hpScale));
+			return;
+		}
 		String group = hitgroup(target, at);
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
@@ -220,6 +223,8 @@ public final class GunServer {
 	 * the target (2D attacker-to-target direction dot target forward > 0.475).
 	 */
 	public static final double KNIFE_RANGE_LIGHT = 48, KNIFE_RANGE_HEAVY = 32, BACKSTAB_DOT = 0.475;
+	/** Extra knife reach the server allows for network delay (units; ~0.4 blocks). */
+	public static final double KNIFE_LAG_SLACK = 16;
 
 	/** Seconds until the next {slash, stab} after: light miss, light hit, heavy miss, heavy hit (CS:GO, FLAGGED). */
 	public static final double[][] KNIFE_COOLDOWN = {{0.4, 0.5}, {0.5, 0.5}, {1.0, 1.0}, {1.1, 1.1}};
@@ -227,16 +232,20 @@ public final class GunServer {
 	/** What a knife attack along the view hits: the entity (or null), else the block (or null); backstab for entities. */
 	public record KnifeHit(Entity entity, net.minecraft.world.phys.BlockHitResult block, boolean backstab) {}
 
-	public static KnifeHit knifeTrace(net.minecraft.world.entity.player.Player p, boolean heavy) {
+	/**
+	 * slack: extra reach in units. The server checks with some (KNIFE_LAG_SLACK) because it sees targets where they were
+	 * a moment ago; without it, hits the client showed (hit / backstab animation) were sometimes misses on the server.
+	 */
+	public static KnifeHit knifeTrace(net.minecraft.world.entity.player.Player p, boolean heavy, double slack) {
 		double units = StrafeConfig.unitsPerBlock;
-		Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale((heavy ? KNIFE_RANGE_HEAVY : KNIFE_RANGE_LIGHT) / units));
+		Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale(((heavy ? KNIFE_RANGE_HEAVY : KNIFE_RANGE_LIGHT) + slack) / units));
 		HitResult block = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
 		EntityHitResult hit = ProjectileUtil.getEntityHitResult(p, eye, end, new AABB(eye, end).inflate(1.0),
 				e -> e != p && e.isPickable() && !e.isSpectator(), eye.distanceToSqr(end) + 0.3);
 		if (hit == null) { // CS falls back to a hull trace when the line misses: entities near the end of the reach
-			AABB box = new AABB(end, end).inflate(8 / units);
-			for (Entity e : p.level().getEntities(p, box, e -> e.isPickable() && !e.isSpectator() && e instanceof LivingEntity))
+			AABB box = new AABB(end, end).inflate((8 + slack) / units);
+			for (Entity e : p.level().getEntities(p, box, e -> e.isPickable() && !e.isSpectator()))
 				if (hit == null || e.distanceToSqr(eye) < hit.getEntity().distanceToSqr(eye)) hit = new EntityHitResult(e);
 		}
 		if (hit != null) {
@@ -252,24 +261,35 @@ public final class GunServer {
 		ItemStack held = p.getMainHandItem();
 		if (!(held.getItem() instanceof KnifeItem)) return;
 		State st = state(p);
-		long now = System.nanoTime(), tolerance = 30_000_000L;
+		// 120 ms: covers network jitter and client/server disagreeing on hit vs miss (0.4 vs 0.5 s cooldown after a slash)
+		long now = System.nanoTime(), tolerance = 120_000_000L;
 		if (now < st.deployUntil - tolerance || now < (heavy ? st.knifeNextHeavy : st.knifeNextLight) - tolerance) return;
 		boolean firstSwing = now > st.knifeNextLight + sec(0.4);
-		KnifeHit k = knifeTrace(p, heavy);
+		KnifeHit k = knifeTrace(p, heavy, KNIFE_LAG_SLACK);
 		boolean didHit = k.entity() != null || k.block() != null;
 		double[] cd = KNIFE_COOLDOWN[(heavy ? 2 : 0) + (didHit ? 1 : 0)];
 		st.knifeNextLight = now + sec(cd[0]);
 		st.knifeNextHeavy = now + sec(cd[1]);
 		broadcast(p, heavy ? "Weapon_Knife.Swish.Heavy" : "Weapon_Knife.Swish.Light");
 		if (k.block() != null) broadcast(p, "Weapon_Knife.HitWall");
-		if (!(k.entity() instanceof LivingEntity target)) return;
+		if (k.entity() == null) return;
 		double dmg = heavy ? (k.backstab() ? 180 : 65) : k.backstab() ? 90 : firstSwing ? 40 : 25;
+		if (!(k.entity() instanceof LivingEntity target)) { // dragon parts, crystals...
+			hurtOther(p, k.entity(), (float) (dmg * StrafeConfig.hpScale));
+			return;
+		}
 		broadcast(p, heavy ? (k.backstab() ? "Weapon_Knife.Hit.Heavy.Backstab" : "Weapon_Knife.Hit.Heavy")
 				: k.backstab() ? "Weapon_Knife.Hit.Light.Backstab" : "Weapon_Knife.Hit.Slice");
 		target.invulnerableTime = 0;
 		target.hurtServer(p.level(), p.damageSources().playerAttack(p), (float) (dmg * StrafeConfig.hpScale));
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
+	}
+
+	/** Damage to a non-living entity: dragon parts pass it to the dragon (no hit cooldown, like bullets on mobs), crystals explode. */
+	static void hurtOther(ServerPlayer p, Entity e, float mcDamage) {
+		if (e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragonPart part) part.parentMob.invulnerableTime = 0;
+		e.hurtServer(p.level(), p.damageSources().playerAttack(p), mcDamage);
 	}
 
 	/** Vertical hitgroups on the target's box, using its eye height to find the head. */

@@ -180,7 +180,7 @@ public final class GunClient {
 		if (mc.screen != null || now < deployUntil) return;
 		boolean heavy = mc.options.keyUse.isDown() && now >= knifeNextHeavy, light = !heavy && mc.options.keyAttack.isDown() && now >= knifeNextLight;
 		if (!heavy && !light) return;
-		GunServer.KnifeHit hit = GunServer.knifeTrace(p, heavy);
+		GunServer.KnifeHit hit = GunServer.knifeTrace(p, heavy, 0);
 		boolean didHit = hit.entity() != null || hit.block() != null;
 		double[] cd = GunServer.KNIFE_COOLDOWN[(heavy ? 2 : 0) + (didHit ? 1 : 0)];
 		knifeNextLight = now + sec(cd[0]);

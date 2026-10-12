@@ -21,7 +21,7 @@ public class MagazineItem extends Item {
 	}
 
 	public int capacity() {
-		WeaponStats st = GunServer.stats(weaponClass);
+		WeaponStats st = GunItem.statsOf(weaponClass); // client: the server's synced numbers
 		return st == null ? 0 : st.clip();
 	}
 

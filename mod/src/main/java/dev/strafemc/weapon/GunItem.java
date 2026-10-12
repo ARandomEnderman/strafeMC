@@ -24,7 +24,21 @@ public class GunItem extends Item {
 	}
 
 	public WeaponStats stats() {
-		return GunServer.stats(weaponClass);
+		return statsOf(weaponClass);
+	}
+
+	/** The client's render thread and its stats lookup (the server's synced numbers), set by the client init. */
+	public static volatile Thread clientThread;
+	public static volatile java.util.function.Function<String, WeaponStats> clientStats;
+
+	/**
+	 * Stats as the calling side must see them: on the client thread the server's synced numbers (a player without CS2
+	 * files has no local ones), elsewhere (dedicated or integrated server) the server's own data.
+	 */
+	public static WeaponStats statsOf(String cls) {
+		var f = clientStats;
+		if (f != null && Thread.currentThread() == clientThread) return f.apply(cls);
+		return GunServer.stats(cls);
 	}
 
 	/** Rounds loaded; a gun that never had its clip set starts with a full magazine. */
