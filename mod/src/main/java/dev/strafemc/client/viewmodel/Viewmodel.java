@@ -164,14 +164,14 @@ public final class Viewmodel {
 
 	/**
 	 * CS2's transition times from the viewmodel graphs (viewmodel_gun / viewmodel_knife): into a draw is a cut, so are
-	 * shots and knife attacks out of anything but another attack; inspects blend in over 0.3 s (0.2 s on knives and
+	 * shots and knife attacks (also one knife attack into the next); inspects blend in over 0.3 s (0.2 s on knives and
 	 * after a draw) and out to idle over 0.3 s; a shot settles to idle over 0.1 s; everything else 0.2 s.
 	 */
 	private static float blendTime(String from, String to, boolean knife) {
 		boolean toAttack = to.startsWith("shoot") || to.startsWith("light_") || to.startsWith("heavy_");
 		boolean fromAttack = from.startsWith("shoot") || from.startsWith("light_") || from.startsWith("heavy_");
 		if (to.equals("draw")) return 0;
-		if (toAttack) return knife && fromAttack ? 0.2f : 0;
+		if (toAttack) return 0;
 		if (to.startsWith("lookat")) return knife || from.equals("draw") ? 0.2f : 0.3f;
 		if (to.equals("idle")) {
 			if (from.startsWith("lookat")) return 0.3f;
