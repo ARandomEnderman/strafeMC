@@ -17,6 +17,7 @@ public final class ConsoleActions {
 
 	public static void run(ServerPlayer p, String cmd, String arg) {
 		boolean op = Access.isOperator(p);
+		boolean cheat = op && Access.cheats(); // cheat commands: operator AND sv_cheats 1, checked here, not just on the client
 		switch (cmd) {
 			case "kill" -> p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			case "explode" -> {
@@ -25,19 +26,19 @@ public final class ConsoleActions {
 				p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			}
 			case "god" -> {
-				if (!op) break;
+				if (!cheat) break;
 				var ab = p.getAbilities();
 				ab.invulnerable = !ab.invulnerable;
 				p.onUpdateAbilities();
 				p.sendSystemMessage(Component.literal("godmode " + (ab.invulnerable ? "ON" : "OFF")));
 			}
 			case "hurtme" -> {
-				if (!op) break;
+				if (!cheat) break;
 				double cs = parse(arg, 10);
 				p.hurtServer(p.level(), p.damageSources().generic(), (float) (cs * StrafeConfig.hpScale));
 			}
 			case "give" -> {
-				if (!op) break;
+				if (!cheat) break;
 				ItemStack s = switch (arg) {
 					case "weapon_ak47" -> new ItemStack(WeaponItems.AK47);
 					case "mag_ak47" -> new ItemStack(WeaponItems.MAG_AK47);
@@ -47,7 +48,7 @@ public final class ConsoleActions {
 				else p.getInventory().placeItemBackInInventory(s);
 			}
 			case "impulse" -> {
-				if (!op || !arg.equals("101")) break;
+				if (!cheat || !arg.equals("101")) break;
 				// impulse 101: every weapon + full ammo
 				p.getInventory().placeItemBackInInventory(new ItemStack(WeaponItems.AK47));
 				for (int i = 0; i < 3; i++) p.getInventory().placeItemBackInInventory(new ItemStack(WeaponItems.MAG_AK47));
@@ -56,7 +57,7 @@ public final class ConsoleActions {
 				return;
 			}
 		}
-		StrafeMc.LOG.info("[strafemc] console action {} {} by {} (op={})", cmd, arg, p.getScoreboardName(), op);
+		StrafeMc.LOG.info("[strafemc] console action {} {} by {} (op={}, cheats={})", cmd, arg, p.getScoreboardName(), op, Access.cheats());
 	}
 
 	private static double parse(String s, double d) {

@@ -28,7 +28,7 @@ public final class Presets {
 		try {
 			Map<String, String> m = new LinkedHashMap<>();
 			for (String c : ConsoleCommands.MOVEMENT_CVARS) {
-				String v = Cs2Bridge.INSTANCE.cvar(c);
+				String v = dev.strafemc.client.ClientGameplay.cvar(c);
 				if (v != null) m.put(c, v);
 			}
 			if (m.isEmpty()) return false;

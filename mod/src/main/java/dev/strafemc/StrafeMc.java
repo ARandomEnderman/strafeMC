@@ -21,6 +21,10 @@ public class StrafeMc implements ModInitializer {
 		// gameplay data lives on the server side (dedicated or integrated): weapons.vdata and the CS2 bridge start here
 		dev.strafemc.data.WeaponData.loadAsync();
 		dev.strafemc.bridge.Cs2Bridge.INSTANCE.start();
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleCommand.TYPE, dev.strafemc.net.StrafePayloads.ConsoleCommand.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleReply.TYPE, dev.strafemc.net.StrafePayloads.ConsoleReply.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ConsoleCommand.TYPE,
+				(msg, ctx) -> dev.strafemc.server.ConsoleRelay.handle(ctx.player(), msg.line()));
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE, dev.strafemc.net.StrafePayloads.GameplaySync.CODEC);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.server.GameplaySync.onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
@@ -51,9 +55,9 @@ public class StrafeMc implements ModInitializer {
 
 		ServerPlayNetworking.registerGlobalReceiver(NoclipRequest.TYPE, (msg, ctx) -> {
 			var p = ctx.player();
-			if (msg.on() && !Access.isOperator(p)) {
+			if (msg.on() && (!Access.isOperator(p) || !Access.cheats())) {
 				Noclip.SERVER.remove(p.getUUID());
-				ServerPlayNetworking.send(p, new NoclipState(false, "noclip needs operator permission"));
+				ServerPlayNetworking.send(p, new NoclipState(false, Access.isOperator(p) ? "noclip needs sv_cheats 1" : "noclip needs operator permission"));
 				LOG.info("[strafemc] noclip denied for {} (not op)", p.getScoreboardName());
 				return;
 			}

@@ -46,6 +46,30 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Client -> server: one CS2 console command for the server's own CS2 (server.ConsoleRelay checks permission). */
+	public record ConsoleCommand(String line) implements CustomPacketPayload {
+		public static final Type<ConsoleCommand> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "console_command"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ConsoleCommand> CODEC =
+				StreamCodec.composite(ByteBufCodecs.stringUtf8(512), ConsoleCommand::line, ConsoleCommand::new);
+
+		@Override
+		public Type<ConsoleCommand> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: a console line for the player who ran a relayed command (kind 0 output, 1 ok, 2 error). */
+	public record ConsoleReply(String text, int kind) implements CustomPacketPayload {
+		public static final Type<ConsoleReply> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "console_reply"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ConsoleReply> CODEC =
+				StreamCodec.composite(ByteBufCodecs.stringUtf8(4096), ConsoleReply::text, ByteBufCodecs.VAR_INT, ConsoleReply::kind, ConsoleReply::new);
+
+		@Override
+		public Type<ConsoleReply> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: the server's gameplay data as JSON (server/GameplaySync, client/ClientGameplay). */
 	public record GameplaySync(String json) implements CustomPacketPayload {
 		public static final Type<GameplaySync> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "gameplay_sync"));

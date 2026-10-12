@@ -110,7 +110,7 @@ public final class ConsoleScreen extends Screen {
 		addRenderableWidget(menuEdit);
 		layoutMenu();
 
-		NetconTransport.INSTANCE.ensureConnected();
+		if (!RelayTransport.remote()) NetconTransport.INSTANCE.ensureConnected(); // on someone else's server, commands are relayed
 		updateSuggestions();
 	}
 
@@ -211,12 +211,12 @@ public final class ConsoleScreen extends Screen {
 	}
 
 	private static String cvStr(String n) {
-		String v = Cs2Bridge.INSTANCE.cvar(n);
+		String v = dev.strafemc.client.ClientGameplay.cvar(n);
 		return v == null ? "?" : v;
 	}
 
 	private static boolean cvBool(String n) {
-		String v = Cs2Bridge.INSTANCE.cvar(n);
+		String v = dev.strafemc.client.ClientGameplay.cvar(n);
 		return "1".equals(v) || "true".equals(v);
 	}
 

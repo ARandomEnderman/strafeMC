@@ -17,7 +17,7 @@ import java.util.function.Consumer;
  * real CS2 server through the {@link ConsoleTransport}, so real cvars/commands work.
  */
 public final class ConsoleCommands {
-	public static ConsoleTransport transport = NetconTransport.INSTANCE;
+	public static ConsoleTransport transport = RelayTransport.INSTANCE;
 
 	public record Local(String name, String help, Consumer<String[]> run) {}
 
@@ -198,8 +198,14 @@ public final class ConsoleCommands {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
 		});
-		local("strafemc_startserver", "Start the local CS2 server through launch-cs2.bat (Steam must be closed).", a -> ServerLauncher.start());
-		local("strafemc_stopserver", "Ask the local CS2 server to quit.", a -> ServerLauncher.stop());
+		local("strafemc_startserver", "Start the local CS2 server through launch-cs2.bat (Steam must be closed).", a -> {
+			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
+			else ServerLauncher.start();
+		});
+		local("strafemc_stopserver", "Ask the local CS2 server to quit.", a -> {
+			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
+			else ServerLauncher.stop();
+		});
 		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
 		local("explode", "Explode (CS explode).", a -> action("explode", "", false));
 		local("god", "Toggle godmode (needs sv_cheats 1 and operator).", a -> action("god", "", true));
@@ -264,7 +270,7 @@ public final class ConsoleCommands {
 	}
 
 	public static boolean cheats() {
-		String v = Cs2Bridge.INSTANCE.cvar("sv_cheats");
+		String v = dev.strafemc.client.ClientGameplay.cvar("sv_cheats"); // the server's, on someone else's server
 		return "1".equals(v) || "true".equals(v);
 	}
 
