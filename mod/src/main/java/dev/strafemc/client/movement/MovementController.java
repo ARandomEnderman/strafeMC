@@ -113,8 +113,13 @@ public final class MovementController {
 		}
 		double s = StrafeConfig.unitsPerBlock;
 		if (!active || lastWritten == null || p.position().distanceToSqr(lastWritten) > 1e-8) {
-			if (active) StrafeMc.LOG.info("[strafemc] external position change ({} -> {}), resyncing sim", lastWritten, p.position());
-			resync(p, s, !active);
+			if (active) StrafeMc.LOG.info("[strafemc] external position change ({} -> {}), resyncing sim (pose {}, ground {})", lastWritten, p.position(),
+					p.getPose(), p.onGround());
+			// a correction by Minecraft (or the server) only moves you: keep your Source velocity, and don't read the
+			// velocity it cleared as an outside push (that used to throw players backwards at their own speed)
+			boolean wasActive = active;
+			resync(p, s, !active, wasActive);
+			if (wasActive) lastVelWritten = p.getDeltaMovement();
 			if (!active) StrafeMc.LOG.info("[strafemc] Source movement ACTIVE (unitsPerBlock={})", s);
 			active = true;
 			inactiveReason = "";
@@ -220,12 +225,15 @@ public final class MovementController {
 		if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] server knockback ({}, {}, {}) u/s", f(v.x * 20 * s), f(v.y * 20 * s), f(v.z * 20 * s));
 	}
 
-	private void resync(LocalPlayer p, double s, boolean keepMomentum) {
+	/** keepMomentum: take MC's velocity (just turned on); keepSim: keep the Source velocity (a position correction). */
+	private void resync(LocalPlayer p, double s, boolean keepMomentum, boolean keepSim) {
 		sim.x = px = p.getX() * s;
 		sim.y = py = p.getY() * s;
 		sim.z = pz = p.getZ() * s;
 		Vec3 d = p.getDeltaMovement();
-		if (keepMomentum) {
+		if (keepSim) {
+			// unchanged
+		} else if (keepMomentum) {
 			sim.vx = d.x * s * 20.0;
 			sim.vy = d.y * s * 20.0;
 			sim.vz = d.z * s * 20.0;
