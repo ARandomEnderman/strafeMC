@@ -54,7 +54,7 @@ public final class GameplaySync {
 		if (++tick % 10 != 0 || !WeaponData.loaded()) return;
 		// anything players need to see change: the cvars, whether the server's CS2 is up, the server-wide settings
 		String cvars = GSON.toJson(new java.util.TreeMap<>(Cs2Bridge.INSTANCE.cvars())) + Cs2Bridge.INSTANCE.connected()
-				+ StrafeSettings.sourceMovement() + forceSeq;
+				+ StrafeSettings.sourceMovement() + StrafeSettings.playerChoice() + StrafeSettings.personal() + forceSeq;
 		boolean changed = !cvars.equals(lastCvars);
 		if (!changed && PENDING.isEmpty()) return;
 		if (building) return;
@@ -102,6 +102,8 @@ public final class GameplaySync {
 		root.put("cvars", new LinkedHashMap<>(Cs2Bridge.INSTANCE.cvars()));
 		root.put("cs2Online", Cs2Bridge.INSTANCE.connected());
 		root.put("sourceMovement", StrafeSettings.sourceMovement());
+		root.put("movementChoice", StrafeSettings.playerChoice());
+		root.put("movementPersonal", StrafeSettings.personal());
 		String json = GSON.toJson(root);
 		if (dev.strafemc.config.StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] gameplay sync: {} weapons, {} chars", weapons.size(), json.length());
 		return json;

@@ -19,7 +19,22 @@ public final class ConsoleActions {
 		boolean op = Access.isOperator(p);
 		boolean cheat = op && Access.cheats(); // cheat commands: operator AND sv_cheats 1, checked here, not just on the client
 		switch (cmd) {
+			case "strafemc_movement_choice" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change who decides Source movement."));
+					break;
+				}
+				StrafeSettings.setPlayerChoice(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal(StrafeSettings.playerChoice()
+						? "Everyone can now turn Source movement on or off for themselves (strafemc_movement). Set by " + p.getScoreboardName()
+						: "Operators decide Source movement for everyone again: " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + ". Set by " + p.getScoreboardName()), false);
+			}
 			case "strafemc_movement" -> {
+				if (StrafeSettings.playerChoice()) { // players choose: this only changes your own
+					StrafeSettings.setPersonal(p.getUUID(), !arg.equals("0"));
+					p.sendSystemMessage(Component.literal("Your Source movement: " + (StrafeSettings.sourceMovement(p) ? "ON" : "OFF")));
+					break;
+				}
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change Source movement for the server."));
 					break;

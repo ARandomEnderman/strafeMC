@@ -24,6 +24,8 @@ public final class ClientGameplay {
 	private static volatile Map<String, Map<String, Double>> timings;
 	private static volatile Map<String, String> cvars;
 	private static volatile Boolean cs2Online, sourceMovement;
+	private static volatile boolean movementChoice;
+	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
 	/** Local vdata entry with the server's gameplay fields on top. */
@@ -42,6 +44,11 @@ public final class ClientGameplay {
 			cvars = cv;
 			cs2Online = root.get("cs2Online") instanceof Boolean b ? b : null;
 			sourceMovement = root.get("sourceMovement") instanceof Boolean b ? b : null;
+			movementChoice = Boolean.TRUE.equals(root.get("movementChoice"));
+			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
+			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
+				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
+			movementPersonal = pers;
 			STATS.clear();
 			RECOIL.clear();
 			MERGED.clear();
@@ -58,6 +65,8 @@ public final class ClientGameplay {
 		cvars = null;
 		cs2Online = null;
 		sourceMovement = null;
+		movementChoice = false;
+		movementPersonal = java.util.Map.of();
 		STATS.clear();
 		RECOIL.clear();
 		MERGED.clear();
@@ -133,7 +142,17 @@ public final class ClientGameplay {
 	}
 
 	/** Server-wide Source movement setting (on until a server says otherwise). */
+	/** Players may choose their own Source movement on this server (strafemc_movement_choice). */
+	public static boolean movementChoice() {
+		return movementChoice;
+	}
+
 	public static boolean sourceMovement() {
+		if (movementChoice) {
+			var mc = net.minecraft.client.Minecraft.getInstance();
+			Boolean mine = mc.player == null ? null : movementPersonal.get(mc.player.getUUID().toString());
+			if (mine != null) return mine;
+		}
 		Boolean b = sourceMovement;
 		return b == null || b;
 	}

@@ -43,7 +43,7 @@ public final class ServerFall {
 			double y = p.getY();
 			boolean teleport = !Double.isNaN(s.prevY) && Math.abs(y - s.prevY) * units > maxVel; // > 20 ticks' worth of max speed in one
 			s.prevY = y;
-			if (!StrafeSettings.sourceMovement() || Noclip.active(p) || p.isSpectator() || p.getAbilities().flying || p.isPassenger()
+			if (!StrafeSettings.sourceMovement(p) || Noclip.active(p) || p.isSpectator() || p.getAbilities().flying || p.isPassenger()
 					|| p.isFallFlying() || p.isInWater() || p.onClimbable() || teleport || inSlowingBlock(p)) {
 				s.air = false; // nothing to land from (or the fall was stopped / is a teleport)
 				s.lastY = y;

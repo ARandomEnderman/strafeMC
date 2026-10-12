@@ -24,7 +24,7 @@ public final class Noclip {
 	 * noPhysics while they touch stairs so neither the client push-out nor the server move check fights the ramp.
 	 */
 	public static boolean onStairs(Player p) {
-		boolean source = p.level().isClientSide() ? clientSource.test(p) : StrafeSettings.sourceMovement();
+		boolean source = p.level().isClientSide() ? clientSource.test(p) : StrafeSettings.sourceMovement(p);
 		if (!source) return false;
 		var box = p.getBoundingBox().inflate(0.45, 0.1, 0.45);
 		var m = new net.minecraft.core.BlockPos.MutableBlockPos();
@@ -39,7 +39,7 @@ public final class Noclip {
 
 	/** Is this player driven by Source movement (server: announced by its client; client: the local controller)? */
 	public static boolean usesSource(Player p) {
-		return p.level().isClientSide() ? clientSource.test(p) : StrafeSettings.sourceMovement(); // the server's setting, not the client's word
+		return p.level().isClientSide() ? clientSource.test(p) : StrafeSettings.sourceMovement(p); // the server's setting (or the player's choice there), not the client's word
 	}
 
 	public static boolean active(Player p) {

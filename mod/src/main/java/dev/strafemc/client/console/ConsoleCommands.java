@@ -100,7 +100,14 @@ public final class ConsoleCommands {
 			StrafeConfig.doubleTapFly = bool(a, !StrafeConfig.doubleTapFly);
 			saved("cl_doubletapfly", StrafeConfig.doubleTapFly);
 		});
-		local("strafemc_movement", "Source movement on (1) / vanilla movement (0) for the whole server (operators).", a -> {
+		local("strafemc_movement_choice", "1: every player turns Source movement on/off for themselves; 0: operators decide for everyone (operators).", a -> {
+			if (a.length == 0) {
+				ConsoleLog.error("strafemc_movement_choice 1 (each player chooses) or 0 (operators decide)");
+				return;
+			}
+			action("strafemc_movement_choice", bool(a, false) ? "1" : "0", false);
+		});
+		local("strafemc_movement", "Source movement on (1) / vanilla movement (0): your own if the server lets players choose, else for the whole server (operators).", a -> {
 			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
 			action("strafemc_movement", on ? "1" : "0", false);
 		});
