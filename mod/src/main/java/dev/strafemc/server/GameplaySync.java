@@ -31,18 +31,6 @@ public final class GameplaySync {
 	/** Joined players still waiting for the first sync (weapons.vdata loads in the background). */
 	private static final Set<UUID> PENDING = new HashSet<>();
 	private static String lastCvars = "";
-	/**
-	 * The weapons.vdata fields gameplay reads (WeaponStats, Recoil, move speed). Only these are sent: numbers and flags,
-	 * no asset paths or sound names, so the sync never hands out Valve's data file. Cosmetic fields (shoot sounds,
-	 * tracer particle) come from each player's own CS2 files.
-	 */
-	static final Set<String> GAMEPLAY_KEYS = Set.of("m_iMaxClip1", "m_nPrimaryReserveAmmoMax", "m_bReserveAmmoAsClips", "m_flCycleTime",
-			"m_bIsFullAuto", "m_nDamage", "m_flRangeModifier", "m_flRange", "m_flHeadshotMultiplier", "m_flArmorRatio", "m_flPenetration",
-			"m_flDeployDuration", "m_flDisallowAttackAfterReloadStartDuration", "m_nNumBullets", "m_flSpread", "m_flInaccuracyStand",
-			"m_flInaccuracyCrouch", "m_flInaccuracyMove", "m_flInaccuracyJump", "m_flInaccuracyLand", "m_flInaccuracyLadder",
-			"m_flInaccuracyFire", "m_flRecoveryTimeStand", "m_flRecoveryTimeCrouch", "m_flRecoveryTimeStandFinal",
-			"m_flRecoveryTimeCrouchFinal", "m_nRecoveryTransitionStartBullet", "m_nRecoveryTransitionEndBullet", "m_flMaxSpeed",
-			"m_flRecoilAngle", "m_flRecoilAngleVariance", "m_flRecoilMagnitude", "m_flRecoilMagnitudeVariance", "m_nRecoilSeed");
 	private static int tick;
 
 	private GameplaySync() {}
@@ -94,7 +82,7 @@ public final class GameplaySync {
 			Map<String, Object> w = WeaponData.get(cls);
 			if (w != null) {
 				Map<String, Object> g = new LinkedHashMap<>();
-				for (String k : GAMEPLAY_KEYS) if (w.containsKey(k)) g.put(k, w.get(k));
+				for (String k : dev.strafemc.weapon.GameplayKeys.SYNCED) if (w.containsKey(k)) g.put(k, w.get(k));
 				weapons.put(cls, g);
 			}
 			Map<String, Double> t = timings(cls);

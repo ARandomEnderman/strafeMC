@@ -51,3 +51,24 @@ tasks.register('vmCheck', JavaExec) {
 	mainClass = (project.findProperty('vmMain') ?: 'dev.strafemc.client.viewmodel.VmCheck')
 	if (project.hasProperty('vmArgs')) args((project.findProperty('vmArgs') as String).split(','))
 }
+
+// Every weapons.vdata field the gameplay classes read must be synced by the server (weapon/GameplayKeys.java), or
+// clients would silently use their own local value for it. Fails the build when one is missing.
+tasks.register('checkGameplayKeys') {
+	def gameplay = ['weapon/WeaponStats.java', 'weapon/Recoil.java', 'weapon/GunServer.java', 'client/ClientGameplay.java',
+					'client/movement/MovementController.java', 'client/movement/SourceMovement.java']
+	def root = file('src/main/java/dev/strafemc')
+	inputs.files(gameplay.collect { new File(root, it) } + new File(root, 'weapon/GameplayKeys.java'))
+	outputs.upToDateWhen { true }
+	doLast {
+		def keysSrc = new File(root, 'weapon/GameplayKeys.java').text
+		def listed = (keysSrc =~ /"(m_[A-Za-z0-9_]+)"/).collect { it[1] } as Set
+		def missing = []
+		gameplay.each { f ->
+			def src = new File(root, f).text
+			(src =~ /"(m_[A-Za-z0-9_]+)"/).collect { it[1] }.unique().each { k -> if (!listed.contains(k)) missing << "${f}: ${k}" }
+		}
+		if (!missing.isEmpty()) throw new GradleException("vdata fields read by gameplay code but not in GameplayKeys (add to SYNCED or COSMETIC):\n  " + missing.join('\n  '))
+	}
+}
+compileJava.dependsOn 'checkGameplayKeys'
