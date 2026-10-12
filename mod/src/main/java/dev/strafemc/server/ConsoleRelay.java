@@ -47,7 +47,7 @@ public final class ConsoleRelay {
 		if (cmd.isEmpty() || cmd.length() > 512 || cmd.contains("\n") || cmd.contains("\r")) return;
 		String[] tok = cmd.split("\\s+");
 		boolean op = Access.isOperator(p);
-		StrafeMc.LOG.info("[strafemc] console relay from {} (op={}): {}", p.getScoreboardName(), op, cmd);
+		if (op || RateLimit.logDenied(p)) StrafeMc.LOG.info("[strafemc] console relay from {} (op={}): {}", p.getScoreboardName(), op, cmd);
 		if (!op) {
 			// reading a cvar is allowed for everyone: answered from the server's bridge values, never sent to CS2
 			String v = tok.length == 1 && NAME.matcher(tok[0]).matches() ? Cs2Bridge.INSTANCE.cvar(tok[0].toLowerCase()) : null;

@@ -30,23 +30,23 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleCommand.TYPE, dev.strafemc.net.StrafePayloads.ConsoleCommand.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleReply.TYPE, dev.strafemc.net.StrafePayloads.ConsoleReply.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ConsoleCommand.TYPE,
-				(msg, ctx) -> dev.strafemc.server.ConsoleRelay.handle(ctx.player(), msg.line()));
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "console", 5)) dev.strafemc.server.ConsoleRelay.handle(ctx.player(), msg.line()); });
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE, dev.strafemc.net.StrafePayloads.GameplaySync.CODEC);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.server.GameplaySync.onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Action.TYPE,
-				(msg, ctx) -> dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg()));
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "action", 5)) dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg()); });
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Fire.TYPE, dev.strafemc.net.StrafePayloads.Fire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Reload.TYPE, dev.strafemc.net.StrafePayloads.Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Knife.TYPE, dev.strafemc.net.StrafePayloads.Knife.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Knife.TYPE,
-				(msg, ctx) -> dev.strafemc.weapon.GunServer.knife(ctx.player(), msg.heavy()));
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "knife", 10)) dev.strafemc.weapon.GunServer.knife(ctx.player(), msg.heavy()); });
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Fire.TYPE,
-				(msg, ctx) -> dev.strafemc.weapon.GunServer.fire(ctx.player(), msg.yaw(), msg.pitch()));
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "fire", 40)) dev.strafemc.weapon.GunServer.fire(ctx.player(), msg.yaw(), msg.pitch()); });
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Reload.TYPE,
-				(msg, ctx) -> dev.strafemc.weapon.GunServer.reload(ctx.player(), msg.action()));
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "reload", 10)) dev.strafemc.weapon.GunServer.reload(ctx.player(), msg.action()); });
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.CsSound.TYPE, dev.strafemc.net.StrafePayloads.CsSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.BulletImpact.TYPE, dev.strafemc.net.StrafePayloads.BulletImpact.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.GunServer::tick);
@@ -55,11 +55,13 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(NoclipState.TYPE, NoclipState.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.SourceMovement.TYPE, dev.strafemc.net.StrafePayloads.SourceMovement.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.SourceMovement.TYPE, (msg, ctx) -> {
+			if (!dev.strafemc.server.RateLimit.allow(ctx.player(), "source", 4)) return;
 			if (msg.on()) Noclip.SOURCE.add(ctx.player().getUUID());
 			else Noclip.SOURCE.remove(ctx.player().getUUID());
 		});
 
 		ServerPlayNetworking.registerGlobalReceiver(NoclipRequest.TYPE, (msg, ctx) -> {
+			if (!dev.strafemc.server.RateLimit.allow(ctx.player(), "noclip", 4)) return;
 			var p = ctx.player();
 			if (msg.on() && (!Access.isOperator(p) || !Access.cheats())) {
 				Noclip.SERVER.remove(p.getUUID());
@@ -75,8 +77,13 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Noclip.SERVER.remove(handler.getPlayer().getUUID()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> Noclip.SOURCE.remove(handler.getPlayer().getUUID()));
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.FallDamage.TYPE, dev.strafemc.net.StrafePayloads.FallDamage.CODEC);
-		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.FallDamage.TYPE,
-				(msg, ctx) -> dev.strafemc.server.CsFallDamage.apply(ctx.player(), msg.impactSpeed(), msg.scale()));
+		// fall damage is measured by the server (ServerFall); client reports are no longer trusted and are ignored
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.FallDamage.TYPE, (msg, ctx) -> {});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.ServerFall::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			dev.strafemc.server.ServerFall.forget(handler.getPlayer());
+			dev.strafemc.server.RateLimit.forget(handler.getPlayer());
+		});
 		LOG.info("[strafemc] common init");
 	}
 }

@@ -145,12 +145,7 @@ public final class MovementController {
 			sim.step(input, params, world, TICK);
 			footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s);
 			dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side);
-			if (sim.landedThisStep && sim.landSpeed > dev.strafemc.server.CsFallDamage.SAFE_SPEED && !sim.noclip && sim.vy <= 0 /* slime bounce: no damage */
-					&& !p.getAbilities().invulnerable
-					&& net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.FallDamage.TYPE)) {
-				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
-						new dev.strafemc.net.StrafePayloads.FallDamage((float) sim.landSpeed, (float) cvOr("sv_falldamage_scale", 1)));
-			}
+			// fall damage: measured by the server (server/ServerFall), never reported from here
 			input.jumpImpulse = false;
 			acc -= TICK;
 			stepsSinceLog++;
