@@ -210,7 +210,11 @@ public final class SourceMovement {
 		if (stuck != null) { // cobweb etc.: MC drains momentum every tick while inside
 			vx *= stuck[0];
 			vz *= stuck[0];
-			vy *= stuck[1];
+			// MC scales one tick's movement by the vertical factor and then zeroes the velocity, so a stuck entity never
+			// builds vertical speed: it moves at most one tick of gravity x factor (powder snow 1.5 = a slow sink, not
+			// a speed-up). Multiplying vy by 1.5 every step instead made powder snow accelerate falls into lethal landings.
+			double cap = p.gravity / 20 * stuck[1];
+			vy = Math.max(-cap, Math.min(cap, vy * Math.min(1, stuck[1])));
 		}
 		checkVelocity(p);
 
