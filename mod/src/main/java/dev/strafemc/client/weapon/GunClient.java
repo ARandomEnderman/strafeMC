@@ -198,7 +198,8 @@ public final class GunClient {
 			CsSounds.playOn("Weapon_Knife.HitWall", p, 1.0, false);
 			dev.strafemc.client.impact.BulletHoles.onImpact(GunServer.impactMessage(p.level(), hit.block(), p.getEyePosition(), IMPACT_RNG.nextInt(), true));
 		}
-		if (ClientPlayNetworking.canSend(StrafePayloads.Knife.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Knife(heavy));
+		if (ClientPlayNetworking.canSend(StrafePayloads.Knife.TYPE))
+			ClientPlayNetworking.send(new StrafePayloads.Knife(heavy, dev.strafemc.client.LagClock.viewTick(), hit.entity() != null ? hit.entity().getId() : -1));
 	}
 
 	/** Base inaccuracy from stance/movement, recovering toward it with the weapon's recovery time (CS model). */
@@ -233,7 +234,8 @@ public final class GunClient {
 		int shot = shotNumber++;
 		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
-			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1]));
+			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
+					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d)));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
 			sounds.clear();
@@ -294,6 +296,17 @@ public final class GunClient {
 	}
 
 	private static final java.util.Random IMPACT_RNG = new java.util.Random();
+
+	/** The entity this shot hits on this screen (what the player saw), or -1: the server checks it against its history. */
+	private static int claim(LocalPlayer p, WeaponStats w, Vec3 dir) {
+		Vec3 eye = p.getEyePosition(), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
+		var block = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+		if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = block.getLocation();
+		var ent = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(p, eye, end, new net.minecraft.world.phys.AABB(eye, end).inflate(1),
+				e -> e != p && e.isPickable() && !e.isSpectator(), eye.distanceToSqr(end));
+		return ent == null ? -1 : ent.getEntity().getId();
+	}
 
 	/** The shooter's own bullet impact, shown immediately (as CS predicts it) instead of after the server round trip. */
 	private static void predictImpact(LocalPlayer p, WeaponStats w, Vec3 dir, int shot) {

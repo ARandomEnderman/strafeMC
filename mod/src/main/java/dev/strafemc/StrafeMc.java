@@ -44,12 +44,20 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Reload.TYPE, dev.strafemc.net.StrafePayloads.Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Knife.TYPE, dev.strafemc.net.StrafePayloads.Knife.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Knife.TYPE,
-				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "knife", 10)) dev.strafemc.weapon.GunServer.knife(ctx.player(), msg.heavy()); });
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "knife", 10)) dev.strafemc.weapon.GunServer.knife(ctx.player(), msg); });
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Fire.TYPE,
 				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "fire", 40)) dev.strafemc.weapon.GunServer.fire(ctx.player(), msg); });
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE, dev.strafemc.net.StrafePayloads.ShotSeed.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE, dev.strafemc.net.StrafePayloads.ShotCorrection.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Tagged.TYPE, dev.strafemc.net.StrafePayloads.Tagged.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ServerTick.TYPE, dev.strafemc.net.StrafePayloads.ServerTick.CODEC);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+			dev.strafemc.server.LagHistory.tick(server);
+			var msg = new dev.strafemc.net.StrafePayloads.ServerTick(server.getTickCount());
+			for (var pl : server.getPlayerList().getPlayers())
+				if (ServerPlayNetworking.canSend(pl, dev.strafemc.net.StrafePayloads.ServerTick.TYPE)) ServerPlayNetworking.send(pl, msg);
+		});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.LagHistory.clear());
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.ServerShots.sendSeed(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.ServerShots.forget(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.ServerShots::tick);

@@ -196,8 +196,14 @@ public final class GunServer {
 		Vec3 end = eye.add(dir.scale(w.range() / units));
 		HitResult block = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
+		// living targets: rewound to what the shooter saw (lag compensation); everything else (crystals, dragon parts) as it is now
+		boolean lag = dev.strafemc.server.StrafeSettings.lagComp();
 		EntityHitResult hit = ProjectileUtil.getEntityHitResult(p, eye, end, new AABB(eye, end).inflate(1.0),
-				e -> e != p && e.isPickable() && !e.isSpectator(), eye.distanceToSqr(end));
+				e -> e != p && e.isPickable() && !e.isSpectator() && !(lag && e instanceof LivingEntity), eye.distanceToSqr(end));
+		dev.strafemc.server.LagHistory.Hit rewound = lag ? rewound(p, eye, end, f.viewTick(), f.claim(), 0.05) : null;
+		if (rewound != null && (hit == null || rewound.at().distanceToSqr(eye) < hit.getLocation().distanceToSqr(eye)))
+			hit = new EntityHitResult(rewound.entity(), rewound.at());
+		else rewound = null;
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
 		if (hit == null && block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) {
@@ -213,7 +219,8 @@ public final class GunServer {
 			hurtOther(p, hit.getEntity(), (float) (dmg * StrafeConfig.hpScale));
 			return;
 		}
-		String group = hitgroup(target, at);
+		String group = rewound != null ? hitgroup(rewound.box(), rewound.eyeHeight(), at)
+				: hitgroup(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at);
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
 			case "stomach" -> STOMACH_MULT;
@@ -269,7 +276,21 @@ public final class GunServer {
 		return new KnifeHit(null, block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK ? bh : null, false);
 	}
 
-	public static void knife(ServerPlayer p, boolean heavy) {
+	/** The knife with lag compensation: living targets as the attacker saw them (CS's hull fallback as slack), else as now. */
+	private static KnifeHit knifeRewound(ServerPlayer p, boolean heavy, dev.strafemc.net.StrafePayloads.Knife msg) {
+		double units = StrafeConfig.unitsPerBlock;
+		Vec3 eye = p.getEyePosition(), end = eye.add(p.getLookAngle().scale((heavy ? KNIFE_RANGE_HEAVY : KNIFE_RANGE_LIGHT) / units));
+		HitResult block = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
+		dev.strafemc.server.LagHistory.Hit h = rewound(p, eye, end, msg.viewTick(), msg.claim(), 8 / units);
+		if (h == null) return knifeTrace(p, heavy, 0);
+		Vec3 c = h.box().getCenter();
+		Vec3 los = new Vec3(c.x - p.getX(), 0, c.z - p.getZ()).normalize();
+		return new KnifeHit(h.entity(), null, los.dot(Vec3.directionFromRotation(0, h.entity().getYRot())) > BACKSTAB_DOT);
+	}
+
+	public static void knife(ServerPlayer p, dev.strafemc.net.StrafePayloads.Knife msg) {
+		boolean heavy = msg.heavy();
 		ItemStack held = p.getMainHandItem();
 		if (!(held.getItem() instanceof KnifeItem)) return;
 		State st = state(p);
@@ -277,7 +298,7 @@ public final class GunServer {
 		long now = System.nanoTime(), tolerance = 120_000_000L;
 		if (now < st.deployUntil - tolerance || now < (heavy ? st.knifeNextHeavy : st.knifeNextLight) - tolerance) return;
 		boolean firstSwing = now > st.knifeNextLight + sec(0.4);
-		KnifeHit k = knifeTrace(p, heavy, KNIFE_LAG_SLACK);
+		KnifeHit k = dev.strafemc.server.StrafeSettings.lagComp() ? knifeRewound(p, heavy, msg) : knifeTrace(p, heavy, KNIFE_LAG_SLACK);
 		boolean didHit = k.entity() != null || k.block() != null;
 		double[] cd = KNIFE_COOLDOWN[(heavy ? 2 : 0) + (didHit ? 1 : 0)];
 		st.knifeNextLight = now + sec(cd[0]);
@@ -299,6 +320,25 @@ public final class GunServer {
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
+	}
+
+	/**
+	 * Lag compensation: the living entity along eye -> end as the shooter saw it. The shooter's claim is checked first
+	 * (its box anywhere within -2..+1 ticks of their view tick, inflated by slack blocks), else the closest box at the
+	 * view tick. The view tick is clamped to the server's max rewind.
+	 */
+	static dev.strafemc.server.LagHistory.Hit rewound(ServerPlayer p, Vec3 eye, Vec3 end, float viewTick, int claim, double slack) {
+		int now = p.level().getServer().getTickCount();
+		float oldest = now - dev.strafemc.server.StrafeSettings.maxUnlagMs() / 50f;
+		float view = viewTick < 0 ? now : Math.max(oldest, Math.min(now, viewTick));
+		dev.strafemc.server.LagHistory.Hit h = claim >= 0
+				? dev.strafemc.server.LagHistory.claim(p.level(), claim, eye, end, Math.max(oldest, view - 2), Math.min(now, view + 1), slack) : null;
+		boolean claimed = h != null;
+		if (h == null) h = dev.strafemc.server.LagHistory.trace(p.level(), p, eye, end, view);
+		if (StrafeConfig.debug)
+			StrafeMc.LOG.info("[strafemc] lagcomp {}: view {} ({} ms back), claim {} -> {}{}", p.getScoreboardName(), String.format("%.1f", view),
+					Math.round((now - view) * 50), claim, h == null ? "miss" : h.entity().getType().toShortString(), claimed ? " (claim ok)" : "");
+		return h;
 	}
 
 	/**
@@ -338,9 +378,8 @@ public final class GunServer {
 	}
 
 	/** Vertical hitgroups on the target's box, using its eye height to find the head. */
-	static String hitgroup(Entity t, Vec3 at) {
-		AABB b = t.getBoundingBox();
-		double h = b.getYsize(), rel = at.y - b.minY, eye = t.getEyeY() - b.minY;
+	static String hitgroup(AABB b, double eye, Vec3 at) {
+		double h = b.getYsize(), rel = at.y - b.minY;
 		if (rel >= eye - Math.min(0.25, h * 0.15)) return "head";
 		if (rel < h * 0.45) return "legs";
 		if (rel < h * 0.6) return "stomach";

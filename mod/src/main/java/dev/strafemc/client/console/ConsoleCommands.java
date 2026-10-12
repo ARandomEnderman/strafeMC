@@ -111,6 +111,20 @@ public final class ConsoleCommands {
 			}
 			action("strafemc_knockback", bool(a, false) ? "1" : "0", false);
 		});
+		local("strafemc_lagcomp", "Lag compensation for the whole server: shots are checked against what the shooter saw (1, default) or the present (0) (operators).", a -> {
+			if (a.length == 0) {
+				ConsoleLog.error("strafemc_lagcomp 1 (on) or 0 (off)");
+				return;
+			}
+			action("strafemc_lagcomp", bool(a, true) ? "1" : "0", false);
+		});
+		local("strafemc_maxunlag", "How far back lag compensation may rewind, in milliseconds (default 300; CS2 uses 200) (operators).", a -> {
+			if (a.length == 0) {
+				ConsoleLog.error("strafemc_maxunlag <milliseconds>");
+				return;
+			}
+			action("strafemc_maxunlag", a[0], false);
+		});
 		local("strafemc_reset_movement", "Restore every movement cvar to the CS2 server's default.", a -> {
 			Map<String, String> d = Cs2Bridge.INSTANCE.defaults();
 			if (d.isEmpty()) {

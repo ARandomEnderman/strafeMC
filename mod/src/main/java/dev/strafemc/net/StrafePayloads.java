@@ -94,6 +94,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client, every tick: the server's tick number (lag compensation: client.LagClock). */
+	public record ServerTick(int tick) implements CustomPacketPayload {
+		public static final Type<ServerTick> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "server_tick"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ServerTick> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, ServerTick::tick, ServerTick::new);
+
+		@Override
+		public Type<ServerTick> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: you were hit; CS2 tagging slows you with the weapon's flinch velocity modifiers (large: first hit). */
 	public record Tagged(float large, float small) implements CustomPacketPayload {
 		public static final Type<Tagged> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "tagged"));
@@ -119,9 +130,14 @@ public final class StrafePayloads {
 	}
 
 	/** Knife attack with the held CS knife: heavy = secondary (stab), else primary (slash); aimed along the player's view. */
-	public record Knife(boolean heavy) implements CustomPacketPayload {
+	/** viewTick / claim: as in Fire. */
+	public record Knife(boolean heavy, float viewTick, int claim) implements CustomPacketPayload {
 		public static final Type<Knife> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "knife"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, Knife> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, Knife::heavy, Knife::new);
+		public static final StreamCodec<RegistryFriendlyByteBuf, Knife> CODEC = StreamCodec.of((b, v) -> {
+			b.writeBoolean(v.heavy);
+			b.writeFloat(v.viewTick);
+			b.writeVarInt(v.claim + 1);
+		}, b -> new Knife(b.readBoolean(), b.readFloat(), b.readVarInt() - 1));
 
 		@Override
 		public Type<Knife> type() {
@@ -133,7 +149,12 @@ public final class StrafePayloads {
 	 * Fire one shot of the held CS gun: the view angles, the shot number, and the client's inaccuracy and aim punch as it
 	 * predicted them. The server decides the actual direction (weapon.ServerShots, weapon.ShotMath).
 	 */
-	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw) implements CustomPacketPayload {
+	/**
+	 * viewTick: the server tick the shooter's screen showed (client.LagClock; -1 unknown), claim: the entity id their own
+	 * trace hit (-1 none). Both only guide the server's rewind (server.LagHistory), which checks them.
+	 */
+	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw, float viewTick, int claim)
+			implements CustomPacketPayload {
 		public static final Type<Fire> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "fire"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Fire> CODEC = StreamCodec.of((b, v) -> {
 			b.writeFloat(v.yaw);
@@ -142,7 +163,9 @@ public final class StrafePayloads {
 			b.writeFloat(v.inaccuracy);
 			b.writeFloat(v.punchPitch);
 			b.writeFloat(v.punchYaw);
-		}, b -> new Fire(b.readFloat(), b.readFloat(), b.readVarInt(), b.readFloat(), b.readFloat(), b.readFloat()));
+			b.writeFloat(v.viewTick);
+			b.writeVarInt(v.claim + 1);
+		}, b -> new Fire(b.readFloat(), b.readFloat(), b.readVarInt(), b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat(), b.readVarInt() - 1));
 
 		@Override
 		public Type<Fire> type() {
