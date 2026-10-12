@@ -29,6 +29,15 @@ public class StrafeMcClient implements ClientModInitializer {
 					default -> dev.strafemc.client.console.ConsoleLog.WHITE;
 				}));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ClientGameplay.clear());
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
+			if (mc.getSingleplayerServer() != null) return; // your own world: your CS2 server is its CS2 server
+			boolean local = handler.getConnection().getRemoteAddress() instanceof java.net.InetSocketAddress a && a.getAddress() != null
+					&& a.getAddress().isLoopbackAddress();
+			if (local || !dev.strafemc.bridge.Cs2Bridge.INSTANCE.connected()) return; // a server on this PC owns that CS2 server
+			dev.strafemc.client.console.ConsoleLog.add("Joined another server: stopping your local CS2 server (it isn't used there).",
+					dev.strafemc.client.console.ConsoleLog.WARN);
+			dev.strafemc.client.console.ServerLauncher.stop();
+		});
 		WeaponData.loadAsync();
 		dev.strafemc.client.sound.CsAudio.prepareAsync();
 		ConsoleKeys.register();

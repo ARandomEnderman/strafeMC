@@ -76,6 +76,21 @@ public final class ConsoleRelay {
 		}
 	}
 
+	/** Runs a command on this server's CS2 server (server-internal use: world cvars). False if CS2 isn't reachable. */
+	public static boolean exec(String cmd) {
+		if (!connect()) return false;
+		try {
+			synchronized (ConsoleRelay.class) {
+				out.write((cmd + "\n").getBytes(StandardCharsets.UTF_8));
+				out.flush();
+			}
+			return true;
+		} catch (IOException e) {
+			drop();
+			return false;
+		}
+	}
+
 	private static synchronized boolean connect() {
 		if (socket != null && socket.isConnected() && !socket.isClosed()) return true;
 		try {

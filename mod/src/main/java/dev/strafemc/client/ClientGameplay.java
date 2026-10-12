@@ -58,6 +58,11 @@ public final class ClientGameplay {
 		MERGED.clear();
 	}
 
+	/** Local CS2 data may stand in only in your own world: on someone else's server, nothing local is ever used. */
+	private static boolean localAllowed() {
+		return !dev.strafemc.client.console.RelayTransport.remote();
+	}
+
 	public static boolean synced() {
 		return weapons != null;
 	}
@@ -68,7 +73,7 @@ public final class ClientGameplay {
 	 */
 	public static Map<String, Object> weapon(String cls) {
 		Map<String, Map<String, Object>> w = weapons;
-		if (w == null) return WeaponData.get(cls);
+		if (w == null) return localAllowed() ? WeaponData.get(cls) : null;
 		Map<String, Object> server = w.get(cls);
 		if (server == null) return null;
 		return MERGED.computeIfAbsent(cls, c -> {
@@ -81,13 +86,13 @@ public final class ClientGameplay {
 	}
 
 	public static WeaponStats stats(String cls) {
-		if (weapons == null) return GunServer.stats(cls);
+		if (weapons == null) return localAllowed() ? GunServer.stats(cls) : null;
 		Map<String, Object> w = weapon(cls);
 		return w == null ? null : STATS.computeIfAbsent(cls, c -> WeaponStats.of(c, w));
 	}
 
 	public static Recoil recoil(String cls) {
-		if (weapons == null) return Recoil.of(cls);
+		if (weapons == null) return localAllowed() ? Recoil.of(cls) : null;
 		Map<String, Object> w = weapon(cls);
 		return w == null ? null : RECOIL.computeIfAbsent(cls, c -> Recoil.from(w));
 	}
@@ -112,11 +117,11 @@ public final class ClientGameplay {
 	/** A CS2 cvar as the server reports it; before a sync (or without one), the local bridge's value. */
 	public static String cvar(String name) {
 		Map<String, String> c = cvars;
-		return c != null ? c.get(name) : Cs2Bridge.INSTANCE.cvar(name);
+		return c != null ? c.get(name) : localAllowed() ? Cs2Bridge.INSTANCE.cvar(name) : null;
 	}
 
 	public static boolean hasCvars() {
 		Map<String, String> c = cvars;
-		return c != null ? !c.isEmpty() : Cs2Bridge.INSTANCE.hasCvars();
+		return c != null ? !c.isEmpty() : localAllowed() && Cs2Bridge.INSTANCE.hasCvars();
 	}
 }
