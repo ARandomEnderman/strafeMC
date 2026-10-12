@@ -1,4 +1,5 @@
-<!-- Modrinth project description for strafeMC. Paste everything below this comment into the project's Description. -->
+<!-- Modrinth project description for strafeMC. Paste everything below this comment into the project's Description.
+     Modrinth doesn't support GitHub's [!WARNING] boxes: plain quote blocks are used instead. -->
 
 # strafeMC
 
@@ -6,12 +7,14 @@
 guns and knives with their real models, animations, sounds and spray patterns, built from the files in **your own**
 CS2 install.
 
-> [!WARNING]
-> **Requires your own copy of Counter-Strike 2** (free on Steam), installed on the same PC. strafeMC contains no CS2
-> files: it converts what it needs from your installation, locally on your PC.
+![strafeMC in Minecraft](https://cdn.modrinth.com/data/xu9Tirxr/images/6519fe52df669b11c0eaddcff3aed21b0c32a84e.jpeg)
 
-> [!IMPORTANT]
-> **Development build.** First-time setup is currently manual; follow the
+*Shown with models from the player's own CS2 install; strafeMC doesn't include them.*
+
+> ⚠️ **Requires your own copy of Counter-Strike 2** (free on Steam), installed on the same PC. strafeMC contains no
+> CS2 files: it converts what it needs from your installation, locally on your PC.
+
+> 🛠️ **Development build.** First-time setup is currently manual; follow the
 > [setup guide](https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md). A guided setup inside the
 > game is coming.
 
