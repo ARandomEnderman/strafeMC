@@ -83,18 +83,22 @@ public final class Cs2Bridge {
 		return version;
 	}
 
+	/** Always true: CS2's built-in defaults stand in until a CS2 server reports its values. */
 	public boolean hasCvars() {
-		return !cvars.isEmpty();
+		return true;
 	}
 
 	/** Snapshot of every cvar the CS2 server reported (or the cached ones). */
 	public Map<String, String> cvars() {
-		return new java.util.HashMap<>(cvars);
+		Map<String, String> m = new java.util.HashMap<>(Cs2Defaults.VALUES);
+		m.putAll(cvars);
+		return m;
 	}
 
 	/** Raw cvar string, or null if the server never reported it. */
 	public String cvar(String name) {
-		return cvars.get(name);
+		String v = cvars.get(name);
+		return v != null ? v : Cs2Defaults.VALUES.get(name);
 	}
 
 	public void send(String msg) {
@@ -192,8 +196,9 @@ public final class Cs2Bridge {
 		}
 	}
 
+	/** CS2's defaults: as the CS2 server reported them at boot, else the built-in table. */
 	public Map<String, String> defaults() {
-		return defaults;
+		return defaults.isEmpty() ? Cs2Defaults.VALUES : defaults;
 	}
 
 	/** Defaults come from the plugin, which snapshots its watched cvars while the server boots. */
@@ -219,7 +224,7 @@ public final class Cs2Bridge {
 				if (m != null) cvars.putAll(m);
 				StrafeMc.LOG.info("[strafemc] loaded {} cached cvars from {}", cvars.size(), CACHE);
 			} else {
-				StrafeMc.LOG.warn("[strafemc] no cvar cache yet; start CS2 via launch-cs2.bat -Metamod once so real values can be read");
+				StrafeMc.LOG.info("[strafemc] no CS2 server values yet; using CS2's defaults");
 			}
 		} catch (Exception e) {
 			StrafeMc.LOG.error("[strafemc] cvar cache unreadable", e);

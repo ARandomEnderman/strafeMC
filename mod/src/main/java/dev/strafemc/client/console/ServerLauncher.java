@@ -15,7 +15,16 @@ import java.nio.file.Path;
 public final class ServerLauncher {
 	private ServerLauncher() {}
 
+	/** A local CS2 server is an optional extra for hosts: only offered when a launcher is set up. */
+	public static boolean configured() {
+		return !StrafeConfig.launcherPath.isBlank() && Files.isRegularFile(Path.of(StrafeConfig.launcherPath));
+	}
+
 	public static void start() {
+		if (!configured()) {
+			ConsoleLog.add("No local CS2 server is set up on this PC (optional, for hosts). CS2's default settings are used.", ConsoleLog.WARN);
+			return;
+		}
 		if (Cs2Bridge.INSTANCE.connected()) {
 			ConsoleLog.add("The CS2 server is already running.", ConsoleLog.OK);
 			return;
@@ -42,6 +51,6 @@ public final class ServerLauncher {
 			return;
 		}
 		ConsoleCommands.quiet("quit");
-		ConsoleLog.add("Asked the CS2 server to quit (the launcher then restores gameinfo.gi).", ConsoleLog.OK);
+		ConsoleLog.add("Asked the CS2 server to quit.", ConsoleLog.OK);
 	}
 }

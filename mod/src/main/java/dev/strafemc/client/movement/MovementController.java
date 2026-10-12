@@ -253,7 +253,7 @@ public final class MovementController {
 
 	private String blockReason(LocalPlayer p) {
 		if (!dev.strafemc.client.ClientGameplay.sourceMovement()) return "turned off on this server (strafemc_movement)";
-		if (!dev.strafemc.client.ClientGameplay.hasCvars()) return "no CS2 cvars yet (start CS2 via launch-cs2.bat -Metamod once)";
+		if (!dev.strafemc.client.ClientGameplay.hasCvars()) return "no CS2 settings yet";
 		if (!dev.strafemc.client.ClientGameplay.weaponsReady()) return "weapon data not loaded yet";
 		if (p.isSpectator()) return "spectator";
 		if (p.getAbilities().flying && !sim.noclip) return "flying";

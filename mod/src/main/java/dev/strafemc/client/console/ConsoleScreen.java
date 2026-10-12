@@ -88,8 +88,9 @@ public final class ConsoleScreen extends Screen {
 		header("Presets");
 		toggle(() -> "Presets...", () -> minecraft.setScreen(new PresetScreen(this)));
 		header("CS2 server");
-		toggle(() -> Cs2Bridge.INSTANCE.connected() ? "§cStop CS2 server" : "§aStart CS2 server",
-				() -> { if (Cs2Bridge.INSTANCE.connected()) ServerLauncher.stop(); else ServerLauncher.start(); });
+		if (ServerLauncher.configured()) // optional host extra
+			toggle(() -> Cs2Bridge.INSTANCE.connected() ? "§cStop CS2 server" : "§aStart CS2 server",
+					() -> { if (Cs2Bridge.INSTANCE.connected()) ServerLauncher.stop(); else ServerLauncher.start(); });
 		cvarToggle("Auto bunnyhop", "sv_autobunnyhopping", false);
 		cvarToggle("Bhop speed cap", "sv_enablebunnyhopping", true);
 		number("Max velocity", "sv_maxvelocity");

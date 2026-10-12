@@ -35,10 +35,10 @@ strafeMC uses the open-source ValveResourceFormat converter to read CS2's files.
 This creates strafeMC's settings file:
 
 ```
-%USERPROFILE%\strafemc\strafemc.properties
+<your profile>\strafemc\strafemc.properties
 ```
 
-(for example `C:\Users\<you>\strafemc\strafemc.properties`).
+(`<your profile>` is the Minecraft profile folder, the one that contains `mods`. In the Modrinth App: open the profile, then the ⋯ menu → Open folder.)
 
 ## 4. Point strafeMC at CS2 and the converter
 
@@ -55,7 +55,7 @@ Save the file.
 ## 5. Play
 
 Start Minecraft and open a world. strafeMC converts what it needs the first time it needs it (gun models, sounds,
-effects) and keeps the results in `%USERPROFILE%\strafemc\cache`. The first time you draw a weapon, shoot or hear a
+effects) and keeps the results in `<your profile>\strafemc\cache`. The first time you draw a weapon, shoot or hear a
 sound can take a moment; after that it's instant.
 
 Give yourself the weapons from the **strafeMC Weapons** creative tab.
@@ -66,8 +66,8 @@ Give yourself the weapons from the **strafeMC Weapons** creative tab.
   `game\csgo\pak01_dir.vpk` and that `vrfPath` points to `Source2Viewer-CLI.exe`. The game log
   (`logs\latest.log` in your profile) names the path it tried.
 - **Placeholder sounds and icons:** same cause; strafeMC falls back to placeholders when it can't find CS2 or the converter.
-- **After a CS2 update something looks wrong:** delete `%USERPROFILE%\strafemc\cache`; strafeMC converts the files again.
+- **After a CS2 update something looks wrong:** delete `<your profile>\strafemc\cache`; strafeMC converts the files again.
 
 ## Removing it
 
-Delete the jar from `mods` and the `%USERPROFILE%\strafemc` folder. Your CS2 install was never changed.
+Delete the jar from `mods` and the `strafemc` folder in your profile. Your CS2 install was never changed.

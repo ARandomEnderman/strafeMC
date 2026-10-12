@@ -53,7 +53,7 @@ So you know exactly what to expect:
 - **Reads your CS2 files** (read-only) from the folder you set, and never changes your CS2 install.
 - **Runs the open-source ValveResourceFormat converter** (`Source2Viewer-CLI`), which you download yourself from its
   [official releases](https://github.com/ValveResourceFormat/ValveResourceFormat/releases), to convert CS2's models,
-  textures, sounds and animations into a cache in `%USERPROFILE%\strafemc`.
+  textures, sounds and animations into a cache in your Minecraft profile's `strafemc` folder.
 - **Uploads nothing.** Converted files stay on your PC. On a server, only gameplay numbers (like weapon damage and
   movement settings) are sent from the server to its players.
 - **Never connects to Valve's servers**, matchmaking or anti-cheat. Hosts can optionally run a local CS2 dedicated

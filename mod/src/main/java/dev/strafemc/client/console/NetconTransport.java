@@ -71,7 +71,7 @@ public final class NetconTransport implements ConsoleTransport {
 			if (known.isEmpty()) learnCommands();
 		} catch (IOException e) {
 			connected = false;
-			ConsoleLog.add("CS2 server not reachable on netcon port " + StrafeConfig.netconPort + " (start it with launch-cs2.bat -Metamod)", ConsoleLog.WARN);
+			ConsoleLog.add("CS2 server not reachable on netcon port " + StrafeConfig.netconPort + " (no local CS2 server running)", ConsoleLog.WARN);
 		}
 	}
 

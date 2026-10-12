@@ -71,7 +71,7 @@ The full step-by-step guide is in [docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md). 
 
 1. Download the ValveResourceFormat command-line converter (`Source2Viewer-CLI`) from its
    [official releases](https://github.com/ValveResourceFormat/ValveResourceFormat/releases).
-2. Start Minecraft with strafeMC once, then close it. This creates `%USERPROFILE%\strafemc\strafemc.properties`.
+2. Start Minecraft with strafeMC once, then close it. This creates `<your profile>\strafemc\strafemc.properties`.
 3. In that file, set `cs2Path` to your CS2 folder and `vrfPath` to the converter.
 4. Start Minecraft again. strafeMC converts files the first time it needs them, so the first shots and sounds can lag
    for a moment.

@@ -10,15 +10,25 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /**
- * User-tunable settings. Lives OUTSIDE the Minecraft profile (rule: only the jar goes into the profile):
- * %USERPROFILE%\strafemc\strafemc.properties, override the directory with -Dstrafemc.runtime=...
+ * User-tunable settings in strafemc.properties, in strafeMC's folder (see runtimeDir): a "strafemc" folder inside the
+ * Minecraft profile for new installs; older setups keep their existing folder.
  */
 public final class StrafeConfig {
-	public static final Path RUNTIME_DIR = Path.of(System.getProperty("strafemc.runtime",
-			Path.of(System.getProperty("user.home"), "strafemc").toString()));
+	public static final Path RUNTIME_DIR = runtimeDir();
+
+	/**
+	 * strafeMC's folder (settings, converted CS2 files): "strafemc" inside the Minecraft profile. Setups made before that
+	 * (a %USERPROFILE%\\strafemc with a settings file) keep using their folder; -Dstrafemc.runtime=... overrides both.
+	 */
+	private static Path runtimeDir() {
+		String prop = System.getProperty("strafemc.runtime");
+		if (prop != null) return Path.of(prop);
+		Path legacy = Path.of(System.getProperty("user.home"), "strafemc");
+		if (Files.exists(legacy.resolve("strafemc.properties"))) return legacy;
+		return net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("strafemc");
+	}
+
 	private static final Path FILE = RUNTIME_DIR.resolve("strafemc.properties");
-	/** Pre-rename location (cs2mc era); migrated once on first start. */
-	private static final Path OLD_RUNTIME_DIR = Path.of(System.getProperty("user.home"), "cs2mc", "runtime");
 
 	/** Master switch for Source movement. */
 	public static boolean movementEnabled = true;
@@ -65,10 +75,12 @@ public final class StrafeConfig {
 
 	public static int bridgePort = 29016;
 	public static int netconPort = 29015;
-	public static String cs2Path = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive - MINECRAFT INTEGRATION";
+	/** The player's CS2 folder (contains game\\csgo\\pak01_dir.vpk); empty until set up. */
+	public static String cs2Path = "";
 	/** launch-cs2.bat used by "Start CS2 server" (all safety checks live there). */
-	public static String launcherPath = Path.of(System.getProperty("user.home"), "cs2mc", "launch-cs2.bat").toString();
-	public static String vrfPath = Path.of(System.getProperty("user.home"), "cs2mc", "tools", "vrf", "Source2Viewer-CLI.exe").toString();
+	public static String launcherPath = "";
+	/** The ValveResourceFormat converter (Source2Viewer-CLI); empty until set up. */
+	public static String vrfPath = "";
 
 	private StrafeConfig() {}
 
@@ -76,22 +88,7 @@ public final class StrafeConfig {
 		return RUNTIME_DIR.resolve("cache");
 	}
 
-	/** Moves the old %USERPROFILE%\\cs2mc\\runtime (settings, binds, caches) to the strafeMC location once. */
-	private static void migrate() {
-		try {
-			if (Files.exists(RUNTIME_DIR) || !Files.isDirectory(OLD_RUNTIME_DIR)) return;
-			Files.createDirectories(RUNTIME_DIR.getParent());
-			Files.move(OLD_RUNTIME_DIR, RUNTIME_DIR);
-			Path oldCfg = RUNTIME_DIR.resolve("cs2mc.properties");
-			if (Files.exists(oldCfg)) Files.move(oldCfg, FILE);
-			StrafeMc.LOG.info("[strafemc] moved runtime files from {} to {}", OLD_RUNTIME_DIR, RUNTIME_DIR);
-		} catch (IOException e) {
-			StrafeMc.LOG.warn("[strafemc] could not migrate {}: {}", OLD_RUNTIME_DIR, e.toString());
-		}
-	}
-
 	public static void load() {
-		migrate();
 		try {
 			Files.createDirectories(RUNTIME_DIR);
 			Properties p = new Properties();

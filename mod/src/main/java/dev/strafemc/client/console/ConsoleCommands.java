@@ -107,7 +107,7 @@ public final class ConsoleCommands {
 		local("strafemc_reset_movement", "Restore every movement cvar to the CS2 server's default.", a -> {
 			Map<String, String> d = Cs2Bridge.INSTANCE.defaults();
 			if (d.isEmpty()) {
-				ConsoleLog.error("No defaults received from the CS2 server yet (is it running with -Metamod?).");
+				ConsoleLog.error("No CS2 default values available.");
 				return;
 			}
 			StringBuilder cmd = new StringBuilder();
@@ -198,7 +198,7 @@ public final class ConsoleCommands {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
 		});
-		local("strafemc_startserver", "Start the local CS2 server through launch-cs2.bat (Steam must be closed).", a -> {
+		local("strafemc_startserver", "Start the local CS2 server (optional host extra, if set up).", a -> {
 			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
 			else ServerLauncher.start();
 		});
