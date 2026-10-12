@@ -1,6 +1,7 @@
 package dev.strafemc.client.assets;
 
 import dev.strafemc.StrafeMc;
+import dev.strafemc.client.Placeholders;
 import dev.strafemc.config.StrafeConfig;
 import dev.strafemc.data.AssetCache;
 
@@ -29,18 +30,51 @@ public final class RuntimePack {
 			Files.writeString(DIR.resolve("pack.mcmeta"), "{\"pack\":{\"description\":\"strafeMC: assets converted from your CS2 install\","
 					+ "\"pack_format\":" + FORMAT + ",\"min_format\":" + FORMAT + ",\"max_format\":" + FORMAT + "}}");
 			Path tex = DIR.resolve("assets/strafemc/textures");
-			icon("panorama/images/econ/weapons/base_weapons/weapon_ak47_png.vtex_c", "panorama/images/econ/weapons/base_weapons/weapon_ak47_png.png",
-					tex.resolve("item/weapon_ak47.png"), 128);
-			icon("panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.vtex_c",
-					"panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.png", tex.resolve("item/weapon_knife_falchion.png"), 128);
-			svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32);
-			svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64);
-			svg("panorama/images/hud/ammo_fullauto.vsvg_c", "panorama/images/hud/ammo_fullauto.svg", tex.resolve("gui/hud/ammo_fullauto.png"), 64);
-			svg("panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c", "panorama/images/hud/ammo_reserve_generic_bullet.svg",
-					tex.resolve("gui/hud/ammo_bullet.png"), 64);
+			// each icon falls back to a drawn placeholder without CS2 files (replaced once the real one converts)
+			safe(() -> icon("panorama/images/econ/weapons/base_weapons/weapon_ak47_png.vtex_c", "panorama/images/econ/weapons/base_weapons/weapon_ak47_png.png",
+					tex.resolve("item/weapon_ak47.png"), 128), tex.resolve("item/weapon_ak47.png"), Placeholders.Icon.GUN, 32);
+			safe(() -> icon("panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.vtex_c",
+					"panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.png", tex.resolve("item/weapon_knife_falchion.png"), 128),
+					tex.resolve("item/weapon_knife_falchion.png"), Placeholders.Icon.KNIFE, 32);
+			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32),
+					tex.resolve("item/mag_ak47.png"), Placeholders.Icon.MAG, 32);
+			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64),
+					tex.resolve("gui/hud/ammo_reserve_magazine.png"), Placeholders.Icon.MAG, 64);
+			safe(() -> svg("panorama/images/hud/ammo_fullauto.vsvg_c", "panorama/images/hud/ammo_fullauto.svg", tex.resolve("gui/hud/ammo_fullauto.png"), 64),
+					tex.resolve("gui/hud/ammo_fullauto.png"), Placeholders.Icon.FULLAUTO, 64);
+			safe(() -> svg("panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c", "panorama/images/hud/ammo_reserve_generic_bullet.svg",
+					tex.resolve("gui/hud/ammo_bullet.png"), 64), tex.resolve("gui/hud/ammo_bullet.png"), Placeholders.Icon.BULLET, 64);
 			StrafeMc.LOG.info("[strafemc] runtime resource pack ready at {}", DIR);
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] could not build the CS2 asset pack (CS2 copy missing?): {}", e.toString());
+		}
+	}
+
+	private interface Step {
+		void run() throws Exception;
+	}
+
+	/**
+	 * Converts one icon; if that fails (no CS2 files), writes a drawn placeholder plus a marker, so the real icon replaces
+	 * it on a later start once CS2 files are available.
+	 */
+	private static void safe(Step step, Path out, Placeholders.Icon kind, int size) {
+		Path marker = Path.of(out + ".placeholder");
+		try {
+			if (Files.exists(marker) && AssetCache.available()) {
+				Files.deleteIfExists(out);
+				Files.deleteIfExists(marker);
+			}
+			step.run();
+		} catch (Exception e) {
+			try {
+				if (Files.exists(out) && !Files.exists(marker)) return;
+				Files.createDirectories(out.getParent());
+				write(Placeholders.icon(kind, size), out);
+				Files.writeString(marker, "drawn placeholder: " + e);
+			} catch (Exception e2) {
+				StrafeMc.LOG.warn("[strafemc] placeholder icon {} failed: {}", out, e2.toString());
+			}
 		}
 	}
 

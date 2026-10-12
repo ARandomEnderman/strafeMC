@@ -47,6 +47,10 @@ public final class CsSounds {
 	}
 
 	private static boolean playOwn(String event, double gain, boolean suppressed) {
+		if (dev.strafemc.client.Placeholders.active()) {
+			var p = net.minecraft.client.Minecraft.getInstance().player;
+			return p != null && dev.strafemc.client.Placeholders.sound(event, p.getX(), p.getEyeY(), p.getZ(), gain);
+		}
 		own(event, gain, suppressed);
 		return CsSoundEvents.get(event) != null || !CsAudio.ready();
 	}
@@ -65,6 +69,7 @@ public final class CsSounds {
 
 	public static boolean play(String event, double x, double y, double z, double gain, boolean suppressed,
 							   net.minecraft.world.entity.Entity follow) {
+		if (dev.strafemc.client.Placeholders.active()) return dev.strafemc.client.Placeholders.sound(event, x, y, z, gain);
 		if (!CsAudio.ready()) return true;
 		CsSoundEvents.Event e = CsSoundEvents.get(event);
 		if (e == null) {

@@ -20,6 +20,9 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.weapon.WeaponItems.register();
 		// gameplay data lives on the server side (dedicated or integrated): weapons.vdata and the CS2 bridge start here
 		dev.strafemc.data.WeaponData.loadAsync();
+		dev.strafemc.server.StrafeOps.register();
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.StrafeOps::load);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeOps.unload());
 		dev.strafemc.bridge.Cs2Bridge.INSTANCE.start();
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleCommand.TYPE, dev.strafemc.net.StrafePayloads.ConsoleCommand.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ConsoleReply.TYPE, dev.strafemc.net.StrafePayloads.ConsoleReply.CODEC);

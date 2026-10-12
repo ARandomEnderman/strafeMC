@@ -51,6 +51,10 @@ public final class BulletHoles {
 	public static void onImpact(StrafePayloads.BulletImpact m) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) return;
+		if (dev.strafemc.client.Placeholders.active()) {
+			dev.strafemc.client.Placeholders.impact(m);
+			return;
+		}
 		Surfaces.Surface s = Surfaces.get(m.surface());
 		if (s != null && s.bulletImpactSound() != null && !s.bulletImpactSound().isEmpty())
 			CsSounds.play(s.bulletImpactSound(), m.x(), m.y(), m.z(), 1.0);

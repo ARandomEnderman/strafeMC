@@ -97,7 +97,7 @@ public final class Footsteps {
 	}
 
 	private boolean play(String event, double x, double y, double z, double units, double gain) {
-		if (!CsAudio.ready()) return true;
+		if (!CsAudio.ready()) return !dev.strafemc.client.Placeholders.active(); // no CS2 files: vanilla footsteps instead
 		CsSoundEvents.Event e = CsSoundEvents.get(event);
 		if (e == null) return false;
 		var mc = Minecraft.getInstance();

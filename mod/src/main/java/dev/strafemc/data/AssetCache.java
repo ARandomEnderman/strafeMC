@@ -17,6 +17,19 @@ import java.util.concurrent.TimeUnit;
 public final class AssetCache {
 	private AssetCache() {}
 
+	private static volatile boolean availableCache;
+	private static volatile long availableAt;
+
+	/** A usable CS2 install and converter exist (rechecked every few seconds). Without them, the client uses placeholders. */
+	public static boolean available() {
+		long now = System.currentTimeMillis();
+		if (now - availableAt > 5000) {
+			availableCache = Files.isRegularFile(vpk()) && Files.isRegularFile(Path.of(StrafeConfig.vrfPath));
+			availableAt = now;
+		}
+		return availableCache;
+	}
+
 	public static Path vpk() {
 		return Path.of(StrafeConfig.cs2Path, "game", "csgo", "pak01_dir.vpk");
 	}
@@ -46,6 +59,7 @@ public final class AssetCache {
 	public static synchronized Path block(String vpkPath, String blockName) throws IOException {
 		Path out = StrafeConfig.cacheDir().resolve(vpkPath + "." + blockName + ".kv3");
 		if (Files.exists(out) && Files.size(out) > 0) return out;
+		if (!available()) throw new IOException("no CS2 install / converter (" + vpk() + ")");
 		Files.createDirectories(out.getParent());
 		Path exe = Path.of(StrafeConfig.vrfPath);
 		Process p = new ProcessBuilder(exe.toString(), "-i", vpk().toString(), "--vpk_filepath", vpkPath, "--block", blockName)
