@@ -52,6 +52,15 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Gun/knife hits: "
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "strafemc_slabstep" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change stepping up slabs for the server."));
+					break;
+				}
+				StrafeSettings.setSlabStep(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Step up slabs: "
+						+ (StrafeSettings.slabStep() ? "ON (half a block)" : "OFF (CS2's 18 units)") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "strafemc_lagcomp", "strafemc_maxunlag" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change lag compensation for the server."));

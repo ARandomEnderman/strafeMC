@@ -22,7 +22,9 @@ public final class WorldCvars {
 	private static Path file;
 	/** Values to apply once the CS2 server is reachable (null = already applied). */
 	private static Map<String, String> pending;
-	private static int tick;
+	private static int tick, connectedTicks, verifyAt, tries;
+	/** The world's values just applied, re-checked once the server has settled. */
+	private static Map<String, String> applied;
 
 	private WorldCvars() {}
 
@@ -43,7 +45,26 @@ public final class WorldCvars {
 	/** Server tick: applies the world's cvars once CS2 is up; saves every minute. */
 	public static void tick(MinecraftServer server) {
 		if (file == null) return;
-		if (pending != null && Cs2Bridge.INSTANCE.connected() && !Cs2Bridge.INSTANCE.defaults().isEmpty()) apply();
+		// wait until CS2 has been up for 5 s: a server still loading its map runs its game-mode config afterwards, which
+		// resets settings like sv_infinite_ammo; then check 5 s later and apply again what didn't stick (twice at most)
+		connectedTicks = Cs2Bridge.INSTANCE.connected() ? connectedTicks + 1 : 0;
+		if (pending != null && connectedTicks >= 100 && !Cs2Bridge.INSTANCE.defaults().isEmpty()) {
+			applied = new TreeMap<>(pending);
+			apply();
+			verifyAt = tick + 100;
+			tries = 0;
+		} else if (applied != null && tick >= verifyAt && connectedTicks > 0) {
+			Map<String, String> again = new TreeMap<>();
+			applied.forEach((k, v) -> {
+				if (Cs2Bridge.INSTANCE.reported(k) && Cs2Bridge.INSTANCE.settable(k) && !v.equals(Cs2Bridge.INSTANCE.cvar(k))) again.put(k, v);
+			});
+			if (again.isEmpty() || ++tries > 2) applied = null;
+			else {
+				StrafeMc.LOG.info("[strafemc] world cvars didn't stick, applying again: {}", again.keySet());
+				again.forEach((k, v) -> ConsoleRelay.exec(k + " \"" + v.replace("\"", "") + "\""));
+				verifyAt = tick + 100;
+			}
+		}
 		if (++tick % 1200 == 0) save();
 	}
 
@@ -53,7 +74,7 @@ public final class WorldCvars {
 		int changed = 0;
 		for (var e : want.entrySet()) {
 			String now = Cs2Bridge.INSTANCE.cvar(e.getKey());
-			if (e.getValue().equals(now)) continue;
+			if (e.getValue().equals(now) || !Cs2Bridge.INSTANCE.settable(e.getKey())) continue;
 			if (ConsoleRelay.exec(e.getKey() + " \"" + e.getValue().replace("\"", "") + "\"")) changed++;
 		}
 		StrafeMc.LOG.info("[strafemc] world cvars applied: {} saved, {} changed on the CS2 server", pending.size(), changed);
@@ -80,5 +101,7 @@ public final class WorldCvars {
 		save();
 		file = null;
 		pending = null;
+		applied = null;
+		connectedTicks = 0;
 	}
 }

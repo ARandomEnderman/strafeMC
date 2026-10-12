@@ -285,7 +285,8 @@ public final class MovementController {
 		params.maxSpeed = cv("sv_maxspeed");
 		params.gravity = cv("sv_gravity");
 		params.jumpImpulse = cv("sv_jump_impulse");
-		params.stepSize = cv("sv_stepsize");
+		// the server's "step up slabs": half a block (a slab is 20 u at 40 u/block) instead of sv_stepsize
+		params.stepSize = dev.strafemc.client.ClientGameplay.slabStep() ? Math.max(cv("sv_stepsize"), StrafeConfig.unitsPerBlock / 2) : cv("sv_stepsize");
 		params.maxVelocity = cv("sv_maxvelocity");
 		params.timeBetweenDucks = cv("sv_timebetweenducks");
 		params.bhopTimeWindow = cvOr("sv_bhop_time_window", 0);

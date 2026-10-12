@@ -79,6 +79,16 @@ public final class Cs2Bridge {
 		return pluginAlive() || netcon.alive();
 	}
 
+	/** False for a watched setting this CS2 server doesn't have (developer-only without the plugin). */
+	public boolean settable(String name) {
+		return pluginAlive() || !NetconPoll.MISSING.contains(name);
+	}
+
+	/** True once the CS2 server itself reported this setting (not just CS2's built-in default). */
+	public boolean reported(String name) {
+		return cvars.containsKey(name);
+	}
+
 	private boolean pluginAlive() {
 		return System.currentTimeMillis() - lastRxMs < 3000;
 	}

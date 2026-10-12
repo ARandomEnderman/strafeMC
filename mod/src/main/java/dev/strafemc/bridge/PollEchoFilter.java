@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
  */
 public final class PollEchoFilter {
 	private static final Pattern VALUE_LINE = Pattern.compile("^([a-z0-9_]+) = ");
+	private static final Pattern UNKNOWN_LINE = Pattern.compile("^Unknown command '([a-z0-9_]+)'");
 	private volatile String asked = "";
 	private boolean inStatus;
 
@@ -25,6 +26,8 @@ public final class PollEchoFilter {
 			if (t.equals("#end")) inStatus = false;
 			return true;
 		}
+		Matcher u = UNKNOWN_LINE.matcher(t);
+		if (u.find()) return NetconPoll.WATCHED.contains(u.group(1)) && !u.group(1).equals(asked);
 		Matcher m = VALUE_LINE.matcher(t);
 		return m.find() && NetconPoll.WATCHED.contains(m.group(1)) && !m.group(1).equals(asked);
 	}

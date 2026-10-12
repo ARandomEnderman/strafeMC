@@ -118,6 +118,8 @@ public final class ConsoleCommands {
 			}
 			action("strafemc_knockback", bool(a, false) ? "1" : "0", false);
 		});
+		local("strafemc_slabstep", "Step up slabs: half-block step height (1) or CS2's 18 units (0, default), for the whole server (operators).", a ->
+				action("strafemc_slabstep", bool(a, !dev.strafemc.client.ClientGameplay.slabStep()) ? "1" : "0", false));
 		local("strafemc_lagcomp", "Lag compensation for the whole server: shots are checked against what the shooter saw (1, default) or the present (0) (operators).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_lagcomp 1 (on) or 0 (off)");

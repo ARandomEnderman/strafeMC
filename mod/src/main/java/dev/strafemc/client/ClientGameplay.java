@@ -24,7 +24,7 @@ public final class ClientGameplay {
 	private static volatile Map<String, Map<String, Double>> timings;
 	private static volatile Map<String, String> cvars;
 	private static volatile Boolean cs2Online, sourceMovement;
-	private static volatile boolean movementChoice;
+	private static volatile boolean movementChoice, slabStep;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
@@ -45,6 +45,7 @@ public final class ClientGameplay {
 			cs2Online = root.get("cs2Online") instanceof Boolean b ? b : null;
 			sourceMovement = root.get("sourceMovement") instanceof Boolean b ? b : null;
 			movementChoice = Boolean.TRUE.equals(root.get("movementChoice"));
+			slabStep = Boolean.TRUE.equals(root.get("slabStep"));
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
@@ -66,6 +67,7 @@ public final class ClientGameplay {
 		cs2Online = null;
 		sourceMovement = null;
 		movementChoice = false;
+		slabStep = false;
 		movementPersonal = java.util.Map.of();
 		STATS.clear();
 		RECOIL.clear();
@@ -142,6 +144,11 @@ public final class ClientGameplay {
 	}
 
 	/** Server-wide Source movement setting (on until a server says otherwise). */
+	/** The server's "step up slabs" setting (strafemc_slabstep). */
+	public static boolean slabStep() {
+		return slabStep;
+	}
+
 	/** Players may choose their own Source movement on this server (strafemc_movement_choice). */
 	public static boolean movementChoice() {
 		return movementChoice;

@@ -24,6 +24,8 @@ public final class StrafeSettings {
 	private static final java.util.Map<java.util.UUID, Boolean> PERSONAL = new java.util.concurrent.ConcurrentHashMap<>();
 	/** Lag compensation (rewind shots to what the shooter saw) and how far back it may go (CS2's sv_maxunlag is 0.2 s). */
 	private static volatile boolean lagComp = true;
+	/** Step height of half a block (a slab) instead of CS2's sv_stepsize 18; works on any CS2 server (sv_stepsize is developer-only without the plugin). */
+	private static volatile boolean slabStep = false;
 	private static volatile int maxUnlagMs = 300;
 	private static Path file;
 
@@ -78,6 +80,16 @@ public final class StrafeSettings {
 		save();
 	}
 
+	public static boolean slabStep() {
+		return slabStep;
+	}
+
+	public static void setSlabStep(boolean on) {
+		slabStep = on;
+		save();
+		GameplaySync.resendAll();
+	}
+
 	public static boolean lagComp() {
 		return lagComp;
 	}
@@ -102,6 +114,7 @@ public final class StrafeSettings {
 		mcKnockback = false;
 		lagComp = true;
 		maxUnlagMs = 300;
+		slabStep = false;
 		playerChoice = false;
 		PERSONAL.clear();
 		try {
@@ -110,6 +123,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("sourceMovement")) sourceMovement = o.get("sourceMovement").getAsBoolean();
 				if (o != null && o.has("mcKnockback")) mcKnockback = o.get("mcKnockback").getAsBoolean();
 				if (o != null && o.has("lagComp")) lagComp = o.get("lagComp").getAsBoolean();
+				if (o != null && o.has("slabStep")) slabStep = o.get("slabStep").getAsBoolean();
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
@@ -126,6 +140,7 @@ public final class StrafeSettings {
 		o.addProperty("sourceMovement", sourceMovement);
 		o.addProperty("mcKnockback", mcKnockback);
 		o.addProperty("lagComp", lagComp);
+		o.addProperty("slabStep", slabStep);
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
 		JsonObject pers = new JsonObject();

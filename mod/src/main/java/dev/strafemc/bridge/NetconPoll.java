@@ -32,6 +32,9 @@ final class NetconPoll {
 
 	private static final Pattern ANSI = Pattern.compile("\u001B\\[[0-9;]*[A-Za-z]");
 	private static final Pattern VALUE = Pattern.compile("^([a-z0-9_]+) = (.*?)\\s*$");
+	private static final Pattern UNKNOWN = Pattern.compile("^Unknown command '([a-z0-9_]+)'");
+	/** Watched settings this server doesn't have (developer-only ones on a server without the plugin): not asked again. */
+	static final Set<String> MISSING = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	private static final Pattern PLAYERS = Pattern.compile("^players\\s*:\\s*(\\d+) humans?, (\\d+) bots?");
 
 	private final BiConsumer<String, String> onCvar;
@@ -54,7 +57,7 @@ final class NetconPoll {
 	void poll() {
 		if (!connect()) return;
 		StringBuilder b = new StringBuilder();
-		if (round++ % 2 == 0) for (String n : WATCHED) b.append(n).append('\n');
+		if (round++ % 2 == 0) for (String n : WATCHED) if (!MISSING.contains(n)) b.append(n).append('\n');
 		if (round % 10 == 1) b.append("status\n");
 		if (b.isEmpty()) return;
 		try {
@@ -99,6 +102,11 @@ final class NetconPoll {
 				if (m.matches() && WATCHED.contains(m.group(1))) {
 					lastReplyMs = System.currentTimeMillis();
 					onCvar.accept(m.group(1), m.group(2));
+					continue;
+				}
+				m = UNKNOWN.matcher(line);
+				if (m.find() && WATCHED.contains(m.group(1))) {
+					MISSING.add(m.group(1));
 					continue;
 				}
 				m = PLAYERS.matcher(line);

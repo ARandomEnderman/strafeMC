@@ -230,6 +230,7 @@ public final class GunServer {
 		float mc = (float) (dmg * StrafeConfig.hpScale);
 		target.invulnerableTime = 0; // 600 RPM: every bullet counts, like CS
 		hurtCs(p, target, mc, w.cls());
+		hitSounds(p, target, group.equals("head"), target.isDeadOrDying());
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
@@ -369,6 +370,27 @@ public final class GunServer {
 		Object v = d == null ? null : d.get(key);
 		if (v instanceof java.util.List<?> l && !l.isEmpty() && l.get(0) instanceof Number n) return n.doubleValue();
 		return v instanceof Number n ? n.doubleValue() : 1.0; // unknown: no slowdown
+	}
+
+	/**
+	 * CS2's hit sounds (game_sounds_player): the shooter hears the hit confirmation (AttackerFeedback), a hit player
+	 * hears it as the victim, players nearby as onlookers. Headshot vs body, damage vs kill; a headshot kill adds the
+	 * dink. (Helmet dinks on every headshot come with armor.)
+	 */
+	static void hitSounds(ServerPlayer p, LivingEntity target, boolean head, boolean died) {
+		String base = (died ? "Player.Death" : "Player.Damage") + (head ? "HeadShot" : "Body");
+		soundTo(p, base + ".AttackerFeedback", p);
+		if (died && head) soundTo(p, "Player.DeathHeadShot.AttackerFeedback.Dink", p);
+		if (target instanceof ServerPlayer victim) soundTo(victim, base + ".Victim", victim);
+		for (ServerPlayer o : p.level().players())
+			if (o != p && o != target && o.distanceToSqr(target) < SOUND_SEND_RANGE * SOUND_SEND_RANGE) soundTo(o, base + ".Onlooker", target);
+	}
+
+	/** One CS2 sound event for one player, at (and following) an entity. */
+	static void soundTo(ServerPlayer to, String event, Entity at) {
+		if (!net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(to, dev.strafemc.net.StrafePayloads.CsSound.TYPE)) return;
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(to,
+				new dev.strafemc.net.StrafePayloads.CsSound(event, at.getX(), at.getEyeY(), at.getZ(), false, at.getId()));
 	}
 
 	/** Damage to a non-living entity: dragon parts pass it to the dragon (no hit cooldown, like bullets on mobs), crystals explode. */
