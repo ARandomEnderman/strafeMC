@@ -248,7 +248,7 @@ public final class MovementController {
 
 	private String blockReason(LocalPlayer p) {
 		if (!StrafeConfig.movementEnabled) return "disabled in config";
-		if (!Cs2Bridge.INSTANCE.hasCvars()) return "no CS2 cvars yet (start CS2 via launch-cs2.bat -Metamod once)";
+		if (!dev.strafemc.client.ClientGameplay.hasCvars()) return "no CS2 cvars yet (start CS2 via launch-cs2.bat -Metamod once)";
 		if (!WeaponData.loaded()) return "weapon data not loaded yet";
 		if (p.isSpectator()) return "spectator";
 		if (p.getAbilities().flying && !sim.noclip) return "flying";
@@ -293,17 +293,17 @@ public final class MovementController {
 		params.enableBhop = cv("sv_enablebunnyhopping") != 0;
 		// TODO(milestone 3): active CS weapon item; until then the player carries the knife.
 		double gun = dev.strafemc.client.weapon.GunClient.heldMaxSpeed(Minecraft.getInstance().player);
-		params.weaponMaxSpeed = Double.isNaN(gun) ? WeaponData.maxSpeed("weapon_knife", false) : gun; // held weapon's m_flMaxSpeed
+		params.weaponMaxSpeed = Double.isNaN(gun) ? dev.strafemc.client.ClientGameplay.maxSpeed("weapon_knife", false) : gun; // held weapon's m_flMaxSpeed
 	}
 
 	private static double cv(String n) {
-		String v = Cs2Bridge.INSTANCE.cvar(n);
+		String v = dev.strafemc.client.ClientGameplay.cvar(n);
 		if (v == null) throw new IllegalStateException("cvar " + n + " never received from CS2");
 		return parse(v);
 	}
 
 	private static double cvOr(String n, double missing) {
-		String v = Cs2Bridge.INSTANCE.cvar(n);
+		String v = dev.strafemc.client.ClientGameplay.cvar(n);
 		return v == null ? missing : parse(v);
 	}
 

@@ -119,7 +119,7 @@ public final class Footsteps {
 	}
 
 	private static double cv(String n, double d) {
-		String v = Cs2Bridge.INSTANCE.cvar(n);
+		String v = dev.strafemc.client.ClientGameplay.cvar(n);
 		if (v == null) return d;
 		return switch (v) {
 			case "true" -> 1;

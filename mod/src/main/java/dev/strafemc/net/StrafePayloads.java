@@ -46,6 +46,18 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: the server's gameplay data as JSON (server/GameplaySync, client/ClientGameplay). */
+	public record GameplaySync(String json) implements CustomPacketPayload {
+		public static final Type<GameplaySync> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "gameplay_sync"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GameplaySync> CODEC =
+				StreamCodec.composite(ByteBufCodecs.stringUtf8(1 << 22), GameplaySync::json, GameplaySync::new);
+
+		@Override
+		public Type<GameplaySync> type() {
+			return TYPE;
+		}
+	}
+
 	/** Knife attack with the held CS knife: heavy = secondary (stab), else primary (slash); aimed along the player's view. */
 	public record Knife(boolean heavy) implements CustomPacketPayload {
 		public static final Type<Knife> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "knife"));

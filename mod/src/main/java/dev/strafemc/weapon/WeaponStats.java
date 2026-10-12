@@ -15,7 +15,11 @@ public record WeaponStats(String cls, int clip, int reserveMags, boolean reserve
 
 	public static WeaponStats of(String cls) {
 		Map<String, Object> w = WeaponData.get(cls);
-		if (w == null) return null;
+		return w == null ? null : of(cls, w);
+	}
+
+	/** From a vdata entry (local, or the server's synced copy). */
+	public static WeaponStats of(String cls, Map<String, Object> w) {
 		Object shoot = w.get("m_aShootSounds");
 		String sound = shoot instanceof Map<?, ?> m && m.get("WEAPON_SOUND_SINGLE") != null ? m.get("WEAPON_SOUND_SINGLE").toString() : null;
 		String nearlyEmpty = shoot instanceof Map<?, ?> m && m.get("WEAPON_SOUND_NEARLYEMPTY") != null ? m.get("WEAPON_SOUND_NEARLYEMPTY").toString() : null;

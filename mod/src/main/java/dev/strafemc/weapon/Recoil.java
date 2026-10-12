@@ -33,6 +33,11 @@ public final class Recoil {
 		return r;
 	}
 
+	/** From a vdata entry (the server's synced copy); not cached here. */
+	public static Recoil from(Map<String, Object> w) {
+		return new Recoil(w);
+	}
+
 	private Recoil(Map<String, Object> w) {
 		boolean fullAuto = Boolean.TRUE.equals(w.get("m_bIsFullAuto"));
 		int seed = (int) num(w, "m_nRecoilSeed", 0, 0);

@@ -20,7 +20,7 @@ public final class AmmoHud {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player == null || mc.options.hideGui || !(mc.player.getMainHandItem().getItem() instanceof GunItem gun)
 					|| gun instanceof dev.strafemc.weapon.KnifeItem) return;
-			WeaponStats w = gun.stats();
+			WeaponStats w = dev.strafemc.client.ClientGameplay.stats(gun.weaponClass);
 			if (w == null) return;
 			int clip = gun.clip(mc.player.getMainHandItem());
 			int mags = GunClient.magazineCount(mc.player, gun);

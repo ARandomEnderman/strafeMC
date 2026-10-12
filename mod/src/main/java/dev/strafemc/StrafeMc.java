@@ -18,6 +18,13 @@ public class StrafeMc implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		dev.strafemc.weapon.WeaponItems.register();
+		// gameplay data lives on the server side (dedicated or integrated): weapons.vdata and the CS2 bridge start here
+		dev.strafemc.data.WeaponData.loadAsync();
+		dev.strafemc.bridge.Cs2Bridge.INSTANCE.start();
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE, dev.strafemc.net.StrafePayloads.GameplaySync.CODEC);
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.server.GameplaySync.onJoin(handler.getPlayer()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Action.TYPE,
 				(msg, ctx) -> dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg()));

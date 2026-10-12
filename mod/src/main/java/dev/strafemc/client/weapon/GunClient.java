@@ -101,7 +101,10 @@ public final class GunClient {
 
 	/** Max speed of the held CS weapon (NaN if none), for movement. */
 	public static double heldMaxSpeed(LocalPlayer p) {
-		if (p != null && p.getMainHandItem().getItem() instanceof GunItem g && g.stats() != null) return g.stats().maxSpeed();
+		if (p != null && p.getMainHandItem().getItem() instanceof GunItem g) {
+			WeaponStats s = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+			if (s != null) return s.maxSpeed();
+		}
 		return Double.NaN;
 	}
 
@@ -126,7 +129,8 @@ public final class GunClient {
 			reloadSounds.clear();
 			if (!(held.getItem() instanceof GunItem)) dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.stop(); // put away: draw again next time
 			if (held.getItem() instanceof GunItem g) { // (knives have no WeaponStats: m_flDeployDuration 1.0 from their vdata)
-				deployUntil = now + sec(g.stats() != null ? g.stats().deployDuration() : 1.0); // no attacking while drawing
+				WeaponStats ds = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+				deployUntil = now + sec(ds != null ? ds.deployDuration() : 1.0); // no attacking while drawing
 				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("draw");
 				schedule(g, "draw", now);
 			}
@@ -139,7 +143,7 @@ public final class GunClient {
 			return;
 		}
 		if (!(held.getItem() instanceof GunItem g)) return;
-		WeaponStats w = g.stats();
+		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
 		if (w == null) return;
 		updatePenalty(w, dt);
 		double t = now / 1e9;
@@ -209,7 +213,7 @@ public final class GunClient {
 		target += frac * w.inaccuracyMove();
 		if (target >= penalty) penalty = target;
 		else {
-			dev.strafemc.weapon.Recoil rc = dev.strafemc.weapon.Recoil.of(w.cls());
+			dev.strafemc.weapon.Recoil rc = dev.strafemc.client.ClientGameplay.recoil(w.cls());
 			double rec = rc != null ? rc.recoveryTime(m.onGround(), m.ducked(), recoilIndex)
 					: m.ducked() ? w.recoveryTimeCrouch() : w.recoveryTimeStand();
 			penalty = target + (penalty - target) * Math.exp(-dt * Math.log(10) / Math.max(1e-3, rec));
@@ -251,7 +255,7 @@ public final class GunClient {
 		if (w.nearlyEmptySound() != null && w.clip() > 0 && roundsLeft <= w.clip() * NEARLY_EMPTY_FRACTION)
 			CsSounds.playOn(w.nearlyEmptySound(), p, 1.0, false);
 		penalty += w.inaccuracyFire();
-		dev.strafemc.weapon.Recoil rc = dev.strafemc.weapon.Recoil.of(w.cls());
+		dev.strafemc.weapon.Recoil rc = dev.strafemc.client.ClientGameplay.recoil(w.cls());
 		if (rc != null) {
 			int i = ((int) recoilIndex) & (dev.strafemc.weapon.Recoil.TABLE - 1);
 			double[] vp = aimPunch.kick(t, rc.angle[0][i], rc.magnitude[0][i]);
@@ -283,7 +287,7 @@ public final class GunClient {
 			for (AnimClip.Event e : c.events())
 				if (e.kind().equals("CNmParticleEvent") && e.extra().startsWith("muzzleflash"))
 					dev.strafemc.client.particle.Effects.view(e.name(), "muzzle_flash");
-		java.util.Map<String, Object> vd = dev.strafemc.data.WeaponData.get(w.cls());
+		java.util.Map<String, Object> vd = dev.strafemc.client.ClientGameplay.weapon(w.cls());
 		if (vd == null) return;
 		Object tracer = vd.get("m_szTracerParticle");
 		int freq = vd.get("m_nTracerFrequency") instanceof Number n ? n.intValue() : 0;
@@ -365,7 +369,7 @@ public final class GunClient {
 	}
 
 	private static double viewPunchDecay() {
-		String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar("view_punch_decay");
+		String v = dev.strafemc.client.ClientGameplay.cvar("view_punch_decay");
 		try {
 			return v == null ? VIEW_PUNCH_DECAY_DEFAULT : Double.parseDouble(v);
 		} catch (NumberFormatException e) {
@@ -395,13 +399,13 @@ public final class GunClient {
 		LocalPlayer p = mc.player;
 		if (p == null || !(p.getMainHandItem().getItem() instanceof GunItem g)) return;
 		// CS: R during an inspect cancels it when there's nothing to reload (full magazine, knife)
-		if (byKey && (g instanceof dev.strafemc.weapon.KnifeItem || g.stats() == null || g.clip(p.getMainHandItem()) >= g.stats().clip())) {
+		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+		if (byKey && (g instanceof dev.strafemc.weapon.KnifeItem || w == null || g.clip(p.getMainHandItem()) >= w.clip())) {
 			cancelInspect();
 			return;
 		}
-		if (g.stats() == null) return;
+		if (w == null) return;
 		long now = System.nanoTime();
-		WeaponStats w = g.stats();
 		if (reload != null || now < deployUntil || g.clip(p.getMainHandItem()) >= w.clip()) return;
 		if (infiniteAmmo() != 2 && !hasMagazine(p, g)) return;
 		reloadKeyHeld = byKey;
@@ -413,6 +417,8 @@ public final class GunClient {
 				if (e.name().equals("WPN_RELOAD_SILENT")) silentEnd = e.time() + e.duration();
 				else if (e.isSound() && !e.name().isEmpty()) reloadSounds.add(new Object[] {e.name(), e.time()});
 			}
+		// the silent window is gameplay (it decides who hears the reload): the server's timing wins over the local clip
+		silentEnd = dev.strafemc.client.ClientGameplay.timing(g.weaponClass, "reloadSilentEnd", silentEnd);
 		reload = new dev.strafemc.weapon.ReloadTimeline(silentEnd, byKey);
 		reloadLockout = w.reloadLockout();
 		if (ClientPlayNetworking.canSend(StrafePayloads.Reload.TYPE))
@@ -504,7 +510,7 @@ public final class GunClient {
 	}
 
 	public static int infiniteAmmo() {
-		String v = Cs2Bridge.INSTANCE.cvar("sv_infinite_ammo");
+		String v = dev.strafemc.client.ClientGameplay.cvar("sv_infinite_ammo");
 		try {
 			return v == null ? 0 : (int) Double.parseDouble(v);
 		} catch (NumberFormatException e) {

@@ -20,6 +20,9 @@ public class StrafeMcClient implements ClientModInitializer {
 		StrafeConfig.load();
 		dev.strafemc.client.assets.RuntimePack.build();
 		Cs2Bridge.INSTANCE.start();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE,
+				(msg, ctx) -> ClientGameplay.apply(msg.json()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ClientGameplay.clear());
 		WeaponData.loadAsync();
 		dev.strafemc.client.sound.CsAudio.prepareAsync();
 		ConsoleKeys.register();

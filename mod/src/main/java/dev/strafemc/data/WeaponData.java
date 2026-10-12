@@ -22,8 +22,12 @@ public final class WeaponData {
 		return loaded;
 	}
 
-	/** Loads in the background; safe to call repeatedly. */
-	public static void loadAsync() {
+	private static boolean started;
+
+	/** Loads in the background, once; safe to call repeatedly. */
+	public static synchronized void loadAsync() {
+		if (started) return;
+		started = true;
 		Thread t = new Thread(() -> {
 			try {
 				var file = AssetCache.decompiled("scripts/weapons.vdata_c");

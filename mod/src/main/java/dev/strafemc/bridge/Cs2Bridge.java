@@ -52,7 +52,12 @@ public final class Cs2Bridge {
 
 	private Cs2Bridge() {}
 
-	public void start() {
+	private boolean started;
+
+	/** Starts the bridge client once (common init on every side; the client init may call it again). */
+	public synchronized void start() {
+		if (started) return;
+		started = true;
 		loadCache();
 		try {
 			sock = new DatagramSocket(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
@@ -80,6 +85,11 @@ public final class Cs2Bridge {
 
 	public boolean hasCvars() {
 		return !cvars.isEmpty();
+	}
+
+	/** Snapshot of every cvar the CS2 server reported (or the cached ones). */
+	public Map<String, String> cvars() {
+		return new java.util.HashMap<>(cvars);
 	}
 
 	/** Raw cvar string, or null if the server never reported it. */
