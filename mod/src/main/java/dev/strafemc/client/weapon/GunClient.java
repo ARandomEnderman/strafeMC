@@ -414,6 +414,7 @@ public final class GunClient {
 		sounds.clear();
 		CsSounds.stopAnim();
 		inspectUntil = 0;
+		if (dev.strafemc.client.Placeholders.active()) dev.strafemc.client.Placeholders.reloadSound(p, false);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("reload");
 	}
 
@@ -457,6 +458,7 @@ public final class GunClient {
 			CsSounds.playOn((String) s[0], p, 1.0, reload.stealthy);
 		}
 		if (reload.animTime >= reloadLockout && reloadSounds.isEmpty()) {
+			if (dev.strafemc.client.Placeholders.active()) dev.strafemc.client.Placeholders.reloadSound(p, true);
 			reload = null;
 			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.setRate(1f);
 		}
@@ -476,6 +478,12 @@ public final class GunClient {
 
 	public boolean reloading() {
 		return reloadLocked();
+	}
+
+	/** How far the reload is (0..1), or -1 when not reloading. */
+	public double reloadProgress() {
+		var r = reload;
+		return r == null || reloadLockout <= 0 ? -1 : Math.min(1, r.animTime / reloadLockout);
 	}
 
 	private static boolean hasMagazine(LocalPlayer p, GunItem g) {

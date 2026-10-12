@@ -52,6 +52,14 @@ public final class Placeholders {
 		return true;
 	}
 
+	/** Reload start (a magazine coming out) and end (the new one going in), for players who hear no CS2 clip foley. */
+	public static void reloadSound(net.minecraft.world.entity.player.Player p, boolean end) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null) return;
+		mc.level.playLocalSound(p.getX(), p.getEyeY(), p.getZ(), end ? SoundEvents.CROSSBOW_LOADING_END.value() : SoundEvents.ARMOR_EQUIP_IRON.value(),
+				SoundSource.PLAYERS, 0.7f, end ? 1.3f : 0.9f, false);
+	}
+
 	/** Vanilla block-break particles and hit sound where a bullet landed. */
 	public static void impact(StrafePayloads.BulletImpact m) {
 		Minecraft mc = Minecraft.getInstance();

@@ -72,3 +72,6 @@ tasks.register('checkGameplayKeys') {
 	}
 }
 compileJava.dependsOn 'checkGameplayKeys'
+
+// license notices travel with the jar (the particle code is a port of ValveResourceFormat's, MIT)
+jar { from(file('../THIRD_PARTY_NOTICES.md')) }

@@ -48,6 +48,12 @@ public final class AmmoHud {
 			pose.popMatrix();
 			if (w.fullAuto()) g.blit(RenderPipelines.GUI_TEXTURED, FULLAUTO, bx - 16, y + 2, 0, 0, 12, 12, 12, 12);
 			if (GunClient.INSTANCE.reloading()) g.text(font, "RELOADING", sx - 60, y - 10, 0xFFFFC864, true);
+			double prog = GunClient.INSTANCE.reloadProgress();
+			if (prog >= 0 && dev.strafemc.client.Placeholders.active()) { // no reload animation without CS2 files: show the progress
+				int bw = 60, bx0 = sx - 60, by0 = y - 13;
+				g.fill(bx0, by0, bx0 + bw, by0 + 2, 0x80000000);
+				g.fill(bx0, by0, bx0 + (int) (bw * prog), by0 + 2, 0xFFFFC864);
+			}
 		});
 	}
 }
