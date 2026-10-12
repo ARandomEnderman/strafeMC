@@ -198,6 +198,14 @@ public final class ConsoleCommands {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
 		});
+		local("strafemc_setup", "Open the first-time setup (also to redo it, e.g. after a CS2 update).", a -> {
+			var mc = net.minecraft.client.Minecraft.getInstance();
+			mc.execute(() -> dev.strafemc.client.SetupScreen.open(mc.screen));
+		});
+		local("strafemc_setup_ask", "Offer the first-time setup on start while it isn't done (1) or never (0).", a -> {
+			StrafeConfig.setupNeverAsk = !bool(a, StrafeConfig.setupNeverAsk);
+			saved("strafemc_setup_ask", !StrafeConfig.setupNeverAsk);
+		});
 		local("strafemc_startserver", "Start the local CS2 server (optional host extra, if set up).", a -> {
 			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
 			else ServerLauncher.start();

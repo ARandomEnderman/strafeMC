@@ -59,6 +59,12 @@ public final class SetupScreen extends Screen {
 		mc.execute(() -> mc.setScreen(new SetupScreen(st, current)));
 	}
 
+	/** Opened by hand (settings menu or strafemc_setup): always shows, also when the setup is complete (to redo it). */
+	public static void open(Screen parent) {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		mc.setScreen(new SetupScreen(Setup.status(StrafeConfig.cacheDir()), parent));
+	}
+
 	@Override
 	public void onClose() {
 		minecraft.setScreen(parent);
@@ -156,7 +162,7 @@ public final class SetupScreen extends Screen {
 				new Setup(cs2, converter, StrafeConfig.cacheDir(), (f, s) -> {
 					fraction = 0.05 + f * 0.95;
 					step = s;
-				}).run(!status.done());
+				}).run(!status.done() || !status.needsSetup());
 				page = Page.DONE;
 			} catch (Exception e) {
 				StrafeMc.LOG.error("[strafemc] setup failed", e);
@@ -192,7 +198,9 @@ public final class SetupScreen extends Screen {
 		List<String> lines = new ArrayList<>();
 		switch (page) {
 			case INTRO -> {
-				if (status.done())
+				if (!status.needsSetup())
+					lines.add("§aThe setup is complete.§r Run it again to convert everything fresh, for example after a Counter-Strike 2 update.");
+				else if (status.done())
 					lines.add("This version of strafeMC needs more files from your Counter-Strike 2 install"
 							+ (status.missingFiles() > 0 ? " (" + status.missingFiles() + " files are missing)." : " (new weapons or effects)."));
 				else lines.add("strafeMC needs files from your own Counter-Strike 2 install before guns, sounds and effects work.");
