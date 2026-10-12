@@ -7,10 +7,6 @@
 guns and knives with their real models, animations, sounds and spray patterns, built from the files in **your own**
 CS2 install.
 
-![strafeMC in Minecraft](https://cdn.modrinth.com/data/xu9Tirxr/images/6519fe52df669b11c0eaddcff3aed21b0c32a84e.jpeg)
-
-*Shown with models from the player's own CS2 install; strafeMC doesn't include them.*
-
 > ⚠️ **Requires your own copy of Counter-Strike 2** (free on Steam), installed on the same PC. strafeMC contains no
 > CS2 files: it converts what it needs from your installation, locally on your PC.
 
@@ -21,12 +17,20 @@ CS2 install.
 ## Features
 
 ### Movement
+![Surfing along a surf ramp](https://cdn.modrinth.com/data/xu9Tirxr/images/dbab36874421bb809d5ec2c0076cbbed5eec2a02.jpeg)
+
 - Air strafing, bunnyhopping and surfing that follow CS2's rules, including its sub-tick input
 - Stairs climb as smooth ramps; ladders, water, ice, slime and soul sand all work with it
 - Surf ramp and surf slope blocks for building your own maps
 - CS2 fall damage
 
 ### Weapons
+![AK-47 spray with bullet holes on a stone wall](https://cdn.modrinth.com/data/xu9Tirxr/images/7819ba5ffcd86810277f5a1d1f227620136fef81.jpeg)
+
+![Inspecting the Falchion knife](https://cdn.modrinth.com/data/xu9Tirxr/images/6519fe52df669b11c0eaddcff3aed21b0c32a84e.jpeg)
+
+*Weapons are shown with models from the player's own CS2 install; strafeMC doesn't include them.*
+
 - The AK-47 and the Falchion knife, with the real first-person models, animations and sounds
 - Spray patterns, recoil, inaccuracy, reloads (including silent reload), inspects and rare inspects
 - Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs
