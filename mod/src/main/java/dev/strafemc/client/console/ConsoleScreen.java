@@ -93,6 +93,8 @@ public final class ConsoleScreen extends Screen {
 					() -> { if (Cs2Bridge.INSTANCE.connected()) ServerLauncher.stop(); else ServerLauncher.start(); });
 		cvarToggle("Auto bunnyhop", "sv_autobunnyhopping", false);
 		cvarToggle("Bhop speed cap", "sv_enablebunnyhopping", true);
+		// sv_stepsize 18 (CS2) vs 20: a slab is 20 units at 40 units per block, so 20 lets you walk up slabs
+		toggle(() -> "Step up slabs: " + onOff(slabStep()), () -> ConsoleCommands.quiet("sv_stepsize " + (slabStep() ? "18" : "20")));
 		number("Max velocity", "sv_maxvelocity");
 		number("Accelerate", "sv_accelerate");
 		number("Friction", "sv_friction");
@@ -209,6 +211,14 @@ public final class ConsoleScreen extends Screen {
 
 	private static String onOff(boolean b) {
 		return b ? "§aON" : "§cOFF";
+	}
+
+	private static boolean slabStep() {
+		try {
+			return Double.parseDouble(cvStr("sv_stepsize")) >= 20;
+		} catch (NumberFormatException e) {
+			return false;
+		}
 	}
 
 	private static String cvStr(String n) {
