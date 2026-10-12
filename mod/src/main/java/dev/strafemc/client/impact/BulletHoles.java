@@ -78,6 +78,7 @@ public final class BulletHoles {
 		double sizeRand = rng.nextDouble();
 		// knife scuffs lie roughly level, like a slash (+-15 degrees); bullet holes turn any way
 		double rot = m.knife() ? (rng.nextDouble() - 0.5) * Math.toRadians(30) : rng.nextDouble() * Math.PI * 2;
+		if (m.knife() && face.getAxis() == Direction.Axis.X) rot += Math.PI / 2; // on east/west walls the texture's u runs vertically
 		DECALS.addLast(new Decal(bp, mc.level.getBlockState(bp), face, new Vec3(m.x(), m.y(), m.z()), mat, sizeRand, rot, counter++,
 				new Vec3(m.nx(), m.ny(), m.nz())));
 		while (DECALS.size() > MAX_DECALS) DECALS.removeFirst();
