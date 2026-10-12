@@ -78,21 +78,20 @@ public final class ServerLauncher {
 
 	private static void startHosted() {
 		Path exe = executable();
-		List<String> cmd = List.of(exe.toString(), "-dedicated", "-insecure", "-port", String.valueOf(GAME_PORT),
+		// its own (minimized) console window: the dedicated server reads keyboard input from a real console, and without
+		// one it logs "CTextConsoleWin::GetLine" errors as fast as it can. cmd waits for it (so we know when it ends).
+		List<String> cmd = List.of("cmd.exe", "/c", "start", "strafeMC - CS2 server", "/min", "/wait", exe.toString(), "-dedicated", "-insecure", "-port", String.valueOf(GAME_PORT),
 				"-netconport", String.valueOf(StrafeConfig.netconPort), "-netconpassword", NetconSecret.get(), "-maxplayers", "16",
 				"+ip", "127.0.0.1", "+sv_lan", "1", "+sv_hibernate_when_empty", "0", "+bot_quota", "0", "+map", "de_dust2");
 		try {
-			Path log = StrafeConfig.RUNTIME_DIR.resolve("cs2-server.log");
 			Process p = new ProcessBuilder(cmd).directory(exe.getParent().toFile()).redirectErrorStream(true)
-					.redirectOutput(log.toFile()).start();
+					.redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
 			hosted = p;
-			StrafeMc.LOG.info("[strafemc] hosting CS2 server: {} (pid {}, output in {})", exe, p.pid(), log);
+			StrafeMc.LOG.info("[strafemc] hosting CS2 server: {} (in its own console window)", exe);
 			ConsoleLog.add("Starting your CS2 server (insecure, LAN only). It connects in ~20 s.", ConsoleLog.OK);
 			ConsoleLog.add("Note: other people on your network can reach this CS2 server's console. Read more in Options > strafeMC > About hosting.",
 					ConsoleLog.WARN);
-			Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-				if (p.isAlive()) p.destroyForcibly();
-			}, "strafemc-cs2-stop"));
+			Runtime.getRuntime().addShutdownHook(new Thread(() -> kill(p), "strafemc-cs2-stop"));
 			Thread w = new Thread(() -> watchdog(p), "strafemc-cs2-watchdog");
 			w.setDaemon(true);
 			w.start();
@@ -128,9 +127,15 @@ public final class ServerLauncher {
 		StrafeMc.LOG.info("[strafemc] hosted CS2 server exited ({})", p.exitValue());
 	}
 
+	/** Ends the server: cs2.exe (started by cmd's start) first, then the waiting cmd. */
+	private static void kill(Process p) {
+		if (p == null) return;
+		p.descendants().forEach(ProcessHandle::destroyForcibly);
+		p.destroyForcibly();
+	}
+
 	private static void stopHosted(String why) {
-		Process p = hosted;
-		if (p != null) p.destroyForcibly();
+		kill(hosted);
 		StrafeMc.LOG.error("[strafemc] stopped the hosted CS2 server: {}", why);
 		ConsoleLog.error("Stopped your CS2 server: " + why + ".");
 	}
