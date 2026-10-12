@@ -209,6 +209,40 @@ public final class ConsoleCommands {
 		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
 		local("explode", "Explode (CS explode).", a -> action("explode", "", false));
 		local("god", "Toggle godmode (needs sv_cheats 1 and operator).", a -> action("god", "", true));
+		local("healme", "healme [CS HP]: heal yourself (default: fully). Needs sv_cheats 1 and operator.", a -> action("healme", a.length > 0 ? a[0] : "", true));
+		local("getpos", "Print your position and view as a setpos/setang line (cl_showpos coordinates).", a -> {
+			var p = Minecraft.getInstance().player;
+			if (p == null) return;
+			double u = StrafeConfig.unitsPerBlock, yaw = Math.toRadians(p.getYRot());
+			double csYaw = Math.toDegrees(Math.atan2(-Math.cos(yaw), -Math.sin(yaw)));
+			ConsoleLog.add(String.format(java.util.Locale.ROOT, "setpos %.2f %.2f %.2f;setang %.2f %.2f 0", p.getX() * u, -p.getZ() * u, p.getY() * u,
+					p.getXRot(), csYaw), ConsoleLog.WHITE);
+		});
+		local("setpos", "setpos <x> <y> <z>: teleport (cl_showpos coordinates). Needs sv_cheats 1 and operator.", a -> {
+			if (a.length < 3) {
+				ConsoleLog.error("usage: setpos <x> <y> <z>");
+				return;
+			}
+			action("setpos", a[0] + " " + a[1] + " " + a[2], true);
+		});
+		local("setang", "setang <pitch> <yaw> [roll]: set your view (CS angles). Needs sv_cheats 1.", a -> {
+			var p = Minecraft.getInstance().player;
+			if (p == null || a.length < 2) {
+				ConsoleLog.error("usage: setang <pitch> <yaw>");
+				return;
+			}
+			if (!cheats()) {
+				ConsoleLog.error("setang needs sv_cheats 1.");
+				return;
+			}
+			try {
+				double c = Math.toRadians(Double.parseDouble(a[1]));
+				p.setXRot((float) Math.max(-90, Math.min(90, Double.parseDouble(a[0]))));
+				p.setYRot((float) Math.toDegrees(Math.atan2(-Math.cos(c), -Math.sin(c)))); // inverse of cl_showpos' yaw
+			} catch (NumberFormatException e) {
+				ConsoleLog.error("setang: numbers please");
+			}
+		});
 		local("hurtme", "hurtme <CS damage>: damage yourself (needs sv_cheats 1).", a -> action("hurtme", a.length > 0 ? a[0] : "10", true));
 		local("give", "give <weapon_ak47|mag_ak47> (needs sv_cheats 1).", a -> action("give", a.length > 0 ? a[0] : "", true));
 		local("impulse", "impulse 101: all weapons + ammo (needs sv_cheats 1).", a -> action("impulse", a.length > 0 ? a[0] : "", true));

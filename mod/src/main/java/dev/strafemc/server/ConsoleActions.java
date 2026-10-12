@@ -41,6 +41,20 @@ public final class ConsoleActions {
 				p.onUpdateAbilities();
 				p.sendSystemMessage(Component.literal("godmode " + (ab.invulnerable ? "ON" : "OFF")));
 			}
+			case "healme" -> {
+				if (!cheat) break;
+				float amount = arg.isBlank() ? p.getMaxHealth() : (float) (parse(arg, 100) * StrafeConfig.hpScale);
+				p.heal(amount);
+			}
+			case "setpos" -> {
+				if (!cheat) break;
+				String[] v = arg.trim().split("\\s+");
+				if (v.length < 3) break;
+				double u = StrafeConfig.unitsPerBlock; // cl_showpos coordinates: (x, -z, y) x units per block
+				double x = parse(v[0], Double.NaN) / u, z = -parse(v[1], Double.NaN) / u, y = parse(v[2], Double.NaN) / u;
+				if (Double.isNaN(x) || Double.isNaN(y) || Double.isNaN(z)) break;
+				p.teleportTo(x, y, z);
+			}
 			case "hurtme" -> {
 				if (!cheat) break;
 				double cs = parse(arg, 10);

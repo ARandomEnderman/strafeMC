@@ -247,10 +247,11 @@ public final class FlatGroundCheck {
 			System.out.printf("surf climb side %d airaccel %3.0f: x %.0f height gained %.0f u (%.1f blocks) in 1 s, speed now %.0f%n", side, aa, s.x, maxY - (20 * B + 1), (maxY - 20 * B) / B, s.horizontalSpeed());
 		}
 		// 5f. climbing with a perfect mouse-turn strafe (wishdir kept perpendicular to velocity, toward the ramp) by ramp angle
+		for (double aa5 : new double[] {12, 150})
 		for (double[] r : new double[][] {{1, 2}, {2, 3}, {1, 1.5}}) { // run, rise in blocks: 63.4, 56.3, 56.3 degrees
 			TestWorld g = new TestWorld().floor();
 			for (int j = 0; j < 40; j++) g.solids.add(HullTrace.Solid.ramp((2 + j * r[0]) * B, j * r[1] * B, -500 * B, 1000 * B, r[0] * B, r[1] * B, 1, 0));
-			p.airAccelerate = keepAa;
+			p.airAccelerate = aa5;
 			s = fresh();
 			s.onGround = false;
 			double y0 = 20 * B + 1;
@@ -265,7 +266,7 @@ public final class FlatGroundCheck {
 				s.step(in, p, g, DT);
 				maxY = Math.max(maxY, s.y);
 			}
-			System.out.printf("surf climb %.1f deg (run %.1f rise %.1f): +%.1f blocks in 2 s, speed %.0f%n",
+			System.out.printf("surf climb airaccel %3.0f, %.1f deg (run %.1f rise %.1f): +%.1f blocks in 2 s, speed %.0f%n", aa5,
 					Math.toDegrees(Math.atan2(r[1], r[0])), r[0], r[1], (maxY - y0) / B, Math.sqrt(s.vx * s.vx + s.vy * s.vy + s.vz * s.vz));
 		}
 		p.airAccelerate = keepAa;
