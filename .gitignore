@@ -35,7 +35,7 @@ spikes/out/
 cs2-plugin/out/
 __pycache__/
 
-# private dev notes (personal paths, RE details) - local only
+# private dev notes - local only
 NOTES.md
 
 # VRF converter error logs (written to the working directory)
