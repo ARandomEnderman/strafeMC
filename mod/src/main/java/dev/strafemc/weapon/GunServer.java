@@ -54,6 +54,11 @@ public final class GunServer {
 	/** The impact as the client draws it: on slope blocks (surf ramps, straight stairs) the hit and normal follow the slope. */
 	public static dev.strafemc.net.StrafePayloads.BulletImpact impactMessage(net.minecraft.world.level.Level level,
 																			 net.minecraft.world.phys.BlockHitResult bh, Vec3 eye, int seed) {
+		return impactMessage(level, bh, eye, seed, false);
+	}
+
+	public static dev.strafemc.net.StrafePayloads.BulletImpact impactMessage(net.minecraft.world.level.Level level,
+																			 net.minecraft.world.phys.BlockHitResult bh, Vec3 eye, int seed, boolean knife) {
 		var state = level.getBlockState(bh.getBlockPos());
 		Vec3 at = bh.getLocation(), n = Vec3.atLowerCornerOf(bh.getDirection().getUnitVec3i());
 		Vec3[] slope = dev.strafemc.world.SlopeHit.hit(level, bh.getBlockPos(), eye, at.subtract(eye).normalize());
@@ -62,12 +67,17 @@ public final class GunServer {
 			n = slope[1];
 		}
 		return new dev.strafemc.net.StrafePayloads.BulletImpact(at.x, at.y, at.z, bh.getDirection().get3DDataValue(), bh.getBlockPos().asLong(),
-				dev.strafemc.world.SurfaceMap.surface(state), seed, (float) n.x, (float) n.y, (float) n.z);
+				dev.strafemc.world.SurfaceMap.surface(state), seed, (float) n.x, (float) n.y, (float) n.z, knife);
 	}
 
 	/** Bullet hit a block: other nearby players get the decal + the surface's impact sound (the shooter predicts his own). */
 	private static void impact(ServerPlayer p, net.minecraft.world.phys.BlockHitResult bh) {
-		var msg = impactMessage(p.level(), bh, p.getEyePosition(), IMPACT_SEEDS.nextInt());
+		impact(p, bh, false);
+	}
+
+	/** A bullet or knife hit on a block: everyone else sees it (the shooter drew their own prediction). */
+	private static void impact(ServerPlayer p, net.minecraft.world.phys.BlockHitResult bh, boolean knife) {
+		var msg = impactMessage(p.level(), bh, p.getEyePosition(), IMPACT_SEEDS.nextInt(), knife);
 		for (ServerPlayer o : p.level().players())
 			if (o != p && o.distanceToSqr(bh.getLocation()) < SOUND_SEND_RANGE * SOUND_SEND_RANGE
 					&& net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
@@ -271,7 +281,10 @@ public final class GunServer {
 		st.knifeNextLight = now + sec(cd[0]);
 		st.knifeNextHeavy = now + sec(cd[1]);
 		broadcast(p, heavy ? "Weapon_Knife.Swish.Heavy" : "Weapon_Knife.Swish.Light");
-		if (k.block() != null) broadcast(p, "Weapon_Knife.HitWall");
+		if (k.block() != null) {
+			broadcast(p, "Weapon_Knife.HitWall");
+			impact(p, k.block(), true); // knife scuff + surface particles for the others
+		}
 		if (k.entity() == null) return;
 		double dmg = heavy ? (k.backstab() ? 180 : 65) : k.backstab() ? 90 : firstSwing ? 40 : 25;
 		if (!(k.entity() instanceof LivingEntity target)) { // dragon parts, crystals...

@@ -31,6 +31,8 @@ import java.util.Random;
 public final class BulletHoles {
 	/** Max decals kept (oldest dropped). Source's r_decals default (CS2 doesn't expose its limit; flagged). */
 	private static final int MAX_DECALS = 2048;
+	/** CS2's knife-hit decal group (knife_scuff materials). */
+	public static final String KNIFE_DECALS = "ManhackCut";
 	/** Lift off the face against z-fighting (blocks). */
 	private static final double LIFT = 0.002;
 
@@ -57,13 +59,14 @@ public final class BulletHoles {
 			return;
 		}
 		Surfaces.Surface s = Surfaces.get(m.surface());
-		if (s != null && s.bulletImpactSound() != null && !s.bulletImpactSound().isEmpty())
+		if (!m.knife() && s != null && s.bulletImpactSound() != null && !s.bulletImpactSound().isEmpty()) // knife: its own HitWall sound
 			CsSounds.play(s.bulletImpactSound(), m.x(), m.y(), m.z(), 1.0);
 		if (s != null && s.impactEffect() != null && !s.impactEffect().isEmpty()) // the surface's impact particles, out of the surface
 			dev.strafemc.client.particle.Effects.at(s.impactEffect(), new Vec3(m.x(), m.y(), m.z()), new Vec3(m.nx(), m.ny(), m.nz()), tint(mc, BlockPos.of(m.block())));
-		if (s == null || s.decalGroup() == null || s.decalGroup().isEmpty()) return;
+		String group = m.knife() ? KNIFE_DECALS : s == null ? null : s.decalGroup();
+		if (group == null || group.isEmpty()) return;
 		Random rng = new Random(m.seed());
-		String mat = DecalLibrary.pick(s.decalGroup(), rng);
+		String mat = DecalLibrary.pick(group, rng);
 		if (mat == null) return;
 		DecalLibrary.material(mat); // start loading early
 		addDecal(mc, m, mat, rng);
@@ -72,8 +75,11 @@ public final class BulletHoles {
 	private static void addDecal(Minecraft mc, StrafePayloads.BulletImpact m, String mat, Random rng) {
 		BlockPos bp = BlockPos.of(m.block());
 		Direction face = Direction.from3DDataValue(m.face());
-		DECALS.addLast(new Decal(bp, mc.level.getBlockState(bp), face, new Vec3(m.x(), m.y(), m.z()), mat, rng.nextDouble(),
-				rng.nextDouble() * Math.PI * 2, counter++, new Vec3(m.nx(), m.ny(), m.nz())));
+		double sizeRand = rng.nextDouble();
+		// knife scuffs lie roughly level, like a slash (+-15 degrees); bullet holes turn any way
+		double rot = m.knife() ? (rng.nextDouble() - 0.5) * Math.toRadians(30) : rng.nextDouble() * Math.PI * 2;
+		DECALS.addLast(new Decal(bp, mc.level.getBlockState(bp), face, new Vec3(m.x(), m.y(), m.z()), mat, sizeRand, rot, counter++,
+				new Vec3(m.nx(), m.ny(), m.nz())));
 		while (DECALS.size() > MAX_DECALS) DECALS.removeFirst();
 	}
 
@@ -124,7 +130,7 @@ public final class BulletHoles {
 			// size from the material: DecalWorldWidth/Height (Hammer units) +- DecalSizeVariance units (interpretation flagged:
 			// a fraction gave 0.4x..1.6x holes on concrete; units gives ~0.8x..1.2x), aspect kept
 			double base = Math.max(m.width(), 1e-3);
-			double scale = Math.max(0.5, (base + m.sizeVariance() * (2 * d.sizeRand - 1)) / base) * StrafeConfig.bulletHoleScale;
+			double scale = Math.max(0.5, (base + m.sizeVariance() * (2 * d.sizeRand - 1)) / base) * (d.material.contains("manhackcut") ? 1 : StrafeConfig.bulletHoleScale); // the 0.6x preference is for bullet holes only
 			double hw = m.width() * scale / u / 2, hh = m.height() * scale / u / 2;
 			if (!d.onFace()) { // slope: a rotated quad on the slope plane
 				List<double[]> q = slopeQuad(d, hw, hh);

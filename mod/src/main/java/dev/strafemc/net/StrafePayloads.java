@@ -152,14 +152,16 @@ public final class StrafePayloads {
 	}
 
 	/** A bullet hit a block: decal + impact sound/effect for the block's CS2 surface (seed picks the decal variant). */
-	public record BulletImpact(double x, double y, double z, int face, long block, String surface, int seed, float nx, float ny, float nz)
+	/** knife: a knife hit (CS2's knife scuff decal, no bullet ricochet sound) instead of a bullet. */
+	public record BulletImpact(double x, double y, double z, int face, long block, String surface, int seed, float nx, float ny, float nz,
+							   boolean knife)
 			implements CustomPacketPayload {
 		public static final Type<BulletImpact> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "bullet_impact"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, BulletImpact> CODEC = new StreamCodec<>() {
 			@Override
 			public BulletImpact decode(RegistryFriendlyByteBuf b) {
 				return new BulletImpact(b.readDouble(), b.readDouble(), b.readDouble(), b.readByte(), b.readLong(), b.readUtf(), b.readInt(),
-						b.readFloat(), b.readFloat(), b.readFloat());
+						b.readFloat(), b.readFloat(), b.readFloat(), b.readBoolean());
 			}
 
 			@Override
@@ -174,6 +176,7 @@ public final class StrafePayloads {
 				b.writeFloat(v.nx);
 				b.writeFloat(v.ny);
 				b.writeFloat(v.nz);
+				b.writeBoolean(v.knife);
 			}
 		};
 

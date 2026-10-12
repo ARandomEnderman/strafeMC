@@ -194,7 +194,10 @@ public final class GunClient {
 		inspectUntil = 0;
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		schedule(k, anim, now); // the clip carries the swish / hit / catch sounds
-		if (hit.block() != null) CsSounds.playOn("Weapon_Knife.HitWall", p, 1.0, false);
+		if (hit.block() != null) {
+			CsSounds.playOn("Weapon_Knife.HitWall", p, 1.0, false);
+			dev.strafemc.client.impact.BulletHoles.onImpact(GunServer.impactMessage(p.level(), hit.block(), p.getEyePosition(), IMPACT_RNG.nextInt(), true));
+		}
 		if (ClientPlayNetworking.canSend(StrafePayloads.Knife.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Knife(heavy));
 	}
 
@@ -339,6 +342,7 @@ public final class GunClient {
 			if (sf != null) {
 				dev.strafemc.client.particle.Effects.warm(sf.impactEffect());
 				dev.strafemc.client.impact.DecalLibrary.prefetchGroup(sf.decalGroup());
+				dev.strafemc.client.impact.DecalLibrary.prefetchGroup(dev.strafemc.client.impact.BulletHoles.KNIFE_DECALS);
 			}
 		}
 	}
