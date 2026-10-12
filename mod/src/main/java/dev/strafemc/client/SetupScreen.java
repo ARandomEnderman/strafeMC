@@ -201,6 +201,7 @@ public final class SetupScreen extends Screen {
 					lines.add("§eCounter-Strike 2 doesn't seem to be installed on this PC.");
 					lines.add("§7It's free on Steam (a large download, around 60 GB). Install it, then restart Minecraft and this screen comes back. If it's installed somewhere unusual, pick its folder instead.");
 					lines.add("§7Without it you can still play: CS2 movement works, and guns, knives and sounds use placeholders. On a server, its gameplay values still apply to you.");
+					lines.add("§c§lHeads up:§r§c strafeMC is built around CS2's files. Without them it's a much worse experience: no real guns, knives, sounds or effects.");
 					lines.add("");
 				}
 				lines.add("It converts them once, on this PC, into a strafemc folder in your Minecraft profile. Nothing is uploaded, and your CS2 install is never changed.");
