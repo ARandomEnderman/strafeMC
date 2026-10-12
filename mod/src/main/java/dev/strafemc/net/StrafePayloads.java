@@ -94,6 +94,18 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: you were hit; CS2 tagging slows you with the weapon's flinch velocity modifiers (large: first hit). */
+	public record Tagged(float large, float small) implements CustomPacketPayload {
+		public static final Type<Tagged> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "tagged"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Tagged> CODEC =
+				StreamCodec.composite(ByteBufCodecs.FLOAT, Tagged::large, ByteBufCodecs.FLOAT, Tagged::small, Tagged::new);
+
+		@Override
+		public Type<Tagged> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: the server's gameplay data as JSON (server/GameplaySync, client/ClientGameplay). */
 	public record GameplaySync(String json) implements CustomPacketPayload {
 		public static final Type<GameplaySync> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "gameplay_sync"));

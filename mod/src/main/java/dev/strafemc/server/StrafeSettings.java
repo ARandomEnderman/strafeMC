@@ -17,6 +17,8 @@ import java.nio.file.Path;
 public final class StrafeSettings {
 	private static final Gson GSON = new Gson();
 	private static volatile boolean sourceMovement = true;
+	/** Gun and knife hits push targets back like Minecraft hits (off = CS2: no knockback, the hit slows instead). */
+	private static volatile boolean mcKnockback = false;
 	private static Path file;
 
 	private StrafeSettings() {}
@@ -31,13 +33,24 @@ public final class StrafeSettings {
 		GameplaySync.resendAll();
 	}
 
+	public static boolean mcKnockback() {
+		return mcKnockback;
+	}
+
+	public static void setMcKnockback(boolean on) {
+		mcKnockback = on;
+		save();
+	}
+
 	public static void load(MinecraftServer server) {
 		file = server.getWorldPath(LevelResource.ROOT).resolve("strafemc_settings.json");
 		sourceMovement = true;
+		mcKnockback = false;
 		try {
 			if (Files.exists(file)) {
 				JsonObject o = GSON.fromJson(Files.readString(file), JsonObject.class);
 				if (o != null && o.has("sourceMovement")) sourceMovement = o.get("sourceMovement").getAsBoolean();
+				if (o != null && o.has("mcKnockback")) mcKnockback = o.get("mcKnockback").getAsBoolean();
 			}
 		} catch (Exception e) {
 			StrafeMc.LOG.error("[strafemc] could not read " + file, e);
@@ -48,6 +61,7 @@ public final class StrafeSettings {
 		if (file == null) return;
 		JsonObject o = new JsonObject();
 		o.addProperty("sourceMovement", sourceMovement);
+		o.addProperty("mcKnockback", mcKnockback);
 		try {
 			Files.writeString(file, GSON.toJson(o));
 		} catch (Exception e) {
@@ -58,5 +72,6 @@ public final class StrafeSettings {
 	public static void unload() {
 		file = null;
 		sourceMovement = true;
+		mcKnockback = false;
 	}
 }

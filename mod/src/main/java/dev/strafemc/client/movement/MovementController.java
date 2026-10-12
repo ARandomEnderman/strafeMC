@@ -299,6 +299,7 @@ public final class MovementController {
 		// TODO(milestone 3): active CS weapon item; until then the player carries the knife.
 		double gun = dev.strafemc.client.weapon.GunClient.heldMaxSpeed(Minecraft.getInstance().player);
 		params.weaponMaxSpeed = Double.isNaN(gun) ? dev.strafemc.client.ClientGameplay.maxSpeed("weapon_knife", false) : gun; // held weapon's m_flMaxSpeed
+		params.weaponMaxSpeed *= velocityModifier; // CS2 tagging: being hit caps your speed for a moment
 	}
 
 	private static double cv(String n) {
@@ -332,7 +333,21 @@ public final class MovementController {
 	}
 
 	/** One complete movement over part of a tick (CS2: one ProcessMovement per sub-tick step). */
+	/**
+	 * CS2 tagging (m_flVelocityModifier): a hit caps the victim's max speed at the weapon's flinch modifier (Large on the
+	 * first hit, Small on hits while still slowed) and it recovers toward 1. RECOVERY per second is FLAGGED: not in the
+	 * game's data files; 0.4/s is our best recollection of CS:GO's movement code.
+	 */
+	private static volatile double velocityModifier = 1;
+	private static final double RECOVERY = 0.4;
+
+	public static void tag(double large, double small) {
+		double m = velocityModifier < 1 ? Math.min(velocityModifier, small) : large;
+		if (m > 0) velocityModifier = Math.min(velocityModifier, m);
+	}
+
 	private void slice(double dt, McWorld world, double s) {
+		velocityModifier = Math.min(1, velocityModifier + RECOVERY * dt);
 		sim.step(input, params, world, dt);
 		footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s, dt);
 		dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side, dt);

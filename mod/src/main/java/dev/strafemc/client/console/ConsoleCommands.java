@@ -104,6 +104,13 @@ public final class ConsoleCommands {
 			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
 			action("strafemc_movement", on ? "1" : "0", false);
 		});
+		local("strafemc_knockback", "Gun/knife hits push targets back like Minecraft (1) or slow them like CS2 (0, default), for the whole server (operators).", a -> {
+			if (a.length == 0) {
+				ConsoleLog.error("strafemc_knockback 1 (Minecraft knockback) or 0 (CS2 tagging)");
+				return;
+			}
+			action("strafemc_knockback", bool(a, false) ? "1" : "0", false);
+		});
 		local("strafemc_reset_movement", "Restore every movement cvar to the CS2 server's default.", a -> {
 			Map<String, String> d = Cs2Bridge.INSTANCE.defaults();
 			if (d.isEmpty()) {

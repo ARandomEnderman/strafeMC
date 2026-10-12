@@ -77,6 +77,8 @@ public final class GunServer {
 
 	/** A bullet or knife hit on a block: everyone else sees it (the shooter drew their own prediction). */
 	private static void impact(ServerPlayer p, net.minecraft.world.phys.BlockHitResult bh, boolean knife) {
+		var hitState = p.level().getBlockState(bh.getBlockPos());
+		if (hitState.is(net.minecraft.world.level.block.Blocks.DRAGON_EGG)) hitState.useWithoutItem(p.level(), p, bh); // it teleports, as when clicked
 		var msg = impactMessage(p.level(), bh, p.getEyePosition(), IMPACT_SEEDS.nextInt(), knife);
 		for (ServerPlayer o : p.level().players())
 			if (o != p && o.distanceToSqr(bh.getLocation()) < SOUND_SEND_RANGE * SOUND_SEND_RANGE
@@ -220,7 +222,7 @@ public final class GunServer {
 		};
 		float mc = (float) (dmg * StrafeConfig.hpScale);
 		target.invulnerableTime = 0; // 600 RPM: every bullet counts, like CS
-		target.hurtServer(p.level(), p.damageSources().playerAttack(p), mc);
+		hurtCs(p, target, mc, w.cls());
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
@@ -294,9 +296,39 @@ public final class GunServer {
 		broadcast(p, heavy ? (k.backstab() ? "Weapon_Knife.Hit.Heavy.Backstab" : "Weapon_Knife.Hit.Heavy")
 				: k.backstab() ? "Weapon_Knife.Hit.Light.Backstab" : "Weapon_Knife.Hit.Slice");
 		target.invulnerableTime = 0;
-		target.hurtServer(p.level(), p.damageSources().playerAttack(p), (float) (dmg * StrafeConfig.hpScale));
+		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
+	}
+
+	/**
+	 * A CS hit on a living target. Endermen are hit as by a projectile (so they teleport away, as with arrows). Without
+	 * the server's "Minecraft knockback" setting the target isn't pushed back (its motion is kept and no motion packet is
+	 * sent); a hit player gets CS2 tagging instead: their client slows them by the weapon's flinch modifiers.
+	 */
+	static void hurtCs(ServerPlayer p, LivingEntity target, float amount, String cls) {
+		Vec3 motion = target.getDeltaMovement();
+		boolean marked = target.hurtMarked;
+		var src = target instanceof net.minecraft.world.entity.monster.EnderMan
+				? new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+						.getOrThrow(net.minecraft.world.damagesource.DamageTypes.ARROW), p, p)
+				: p.damageSources().playerAttack(p);
+		target.hurtServer(p.level(), src, amount);
+		if (dev.strafemc.server.StrafeSettings.mcKnockback()) return;
+		target.setDeltaMovement(motion);
+		target.hurtMarked = marked;
+		if (target instanceof ServerPlayer victim && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(victim, dev.strafemc.net.StrafePayloads.Tagged.TYPE)) {
+			java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(cls);
+			if (d == null) d = dev.strafemc.data.WeaponData.get("weapon_knife");
+			float large = (float) flinch(d, "m_flFlinchVelocityModifierLarge"), small = (float) flinch(d, "m_flFlinchVelocityModifierSmall");
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(victim, new dev.strafemc.net.StrafePayloads.Tagged(large, small));
+		}
+	}
+
+	private static double flinch(java.util.Map<String, Object> d, String key) {
+		Object v = d == null ? null : d.get(key);
+		if (v instanceof java.util.List<?> l && !l.isEmpty() && l.get(0) instanceof Number n) return n.doubleValue();
+		return v instanceof Number n ? n.doubleValue() : 1.0; // unknown: no slowdown
 	}
 
 	/** Damage to a non-living entity: dragon parts pass it to the dragon (no hit cooldown, like bullets on mobs), crystals explode. */

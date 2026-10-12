@@ -49,6 +49,7 @@ public class StrafeMc implements ModInitializer {
 				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "fire", 40)) dev.strafemc.weapon.GunServer.fire(ctx.player(), msg); });
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE, dev.strafemc.net.StrafePayloads.ShotSeed.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE, dev.strafemc.net.StrafePayloads.ShotCorrection.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Tagged.TYPE, dev.strafemc.net.StrafePayloads.Tagged.CODEC);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.ServerShots.sendSeed(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.ServerShots.forget(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.ServerShots::tick);

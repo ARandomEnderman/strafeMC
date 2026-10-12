@@ -26,6 +26,8 @@ public class StrafeMcClient implements ClientModInitializer {
 				(msg, ctx) -> ClientGameplay.apply(msg.json()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GunClient.INSTANCE.setShotSeed(msg.seed(), msg.next()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Tagged.TYPE,
+				(msg, ctx) -> dev.strafemc.client.movement.MovementController.tag(msg.large(), msg.small()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE,
 				(msg, ctx) -> dev.strafemc.client.impact.BulletHoles.dropPredicted(msg.shot()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ConsoleReply.TYPE,

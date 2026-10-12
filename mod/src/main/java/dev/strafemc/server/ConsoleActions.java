@@ -28,6 +28,15 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(
 						Component.literal("Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "strafemc_knockback" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change knockback for the server."));
+					break;
+				}
+				StrafeSettings.setMcKnockback(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Gun/knife hits: "
+						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "kill" -> p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			case "explode" -> {
 				// CS "explode": you blow up. A harmless-to-blocks explosion for the effect, then death.

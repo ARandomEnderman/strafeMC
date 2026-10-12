@@ -31,7 +31,7 @@ public final class WeaponItems {
 		CLIP = component("clip");
 		ROUNDS = component("rounds");
 		AK47 = item("weapon_ak47", p -> new GunItem(p, "weapon_ak47", "mag_ak47"));
-		MAG_AK47 = item("mag_ak47", p -> new MagazineItem(p, "weapon_ak47"));
+		MAG_AK47 = item("mag_ak47", p -> new MagazineItem(p.stacksTo(64), "weapon_ak47")); // full mags stack (partly used ones differ in rounds)
 		KNIFE_FALCHION = item("weapon_knife_falchion", p -> new KnifeItem(p, "weapon_knife_falchion"));
 		ResourceKey<net.minecraft.world.level.block.Block> rampKey = ResourceKey.create(Registries.BLOCK, id("surf_ramp"));
 		SURF_RAMP = Registry.register(BuiltInRegistries.BLOCK, rampKey, new dev.strafemc.world.SurfRampBlock(

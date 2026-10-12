@@ -504,7 +504,7 @@ public final class GunClient {
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
-			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass) && m.rounds(s) > 0) n++;
+			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass) && m.rounds(s) > 0) n += s.getCount();
 		}
 		return n;
 	}
