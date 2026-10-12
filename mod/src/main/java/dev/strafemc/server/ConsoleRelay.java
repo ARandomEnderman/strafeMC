@@ -38,6 +38,7 @@ public final class ConsoleRelay {
 	/** Who gets CS2's output right now, and until when. */
 	private static volatile UUID replyTo;
 	private static volatile long replyUntil;
+	private static final dev.strafemc.bridge.PollEchoFilter echo = new dev.strafemc.bridge.PollEchoFilter();
 
 	private ConsoleRelay() {}
 
@@ -63,6 +64,7 @@ public final class ConsoleRelay {
 			reply(p, "This server's CS2 server isn't running (netcon port " + StrafeConfig.netconPort + ").", 2);
 			return;
 		}
+		echo.typed(cmd);
 		replyTo = p.getUUID();
 		replyUntil = System.currentTimeMillis() + REPLY_WINDOW_MS;
 		try {
@@ -98,6 +100,7 @@ public final class ConsoleRelay {
 			s.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), StrafeConfig.netconPort), 1000);
 			socket = s;
 			out = s.getOutputStream();
+			out.write(dev.strafemc.bridge.NetconSecret.passLine().getBytes(StandardCharsets.UTF_8));
 			Thread t = new Thread(() -> readLoop(s), "strafemc-relay-netcon");
 			t.setDaemon(true);
 			t.start();
@@ -120,7 +123,7 @@ public final class ConsoleRelay {
 			String line;
 			while ((line = r.readLine()) != null) {
 				String clean = ANSI.matcher(line).replaceAll("");
-				if (NOISE.matcher(clean).find() || System.currentTimeMillis() > replyUntil) continue;
+				if (echo.drop(clean) || NOISE.matcher(clean).find() || System.currentTimeMillis() > replyUntil) continue;
 				UUID to = replyTo;
 				MinecraftServer srv = server;
 				if (to == null || srv == null) continue;

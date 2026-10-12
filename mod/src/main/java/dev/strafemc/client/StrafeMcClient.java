@@ -42,6 +42,11 @@ public class StrafeMcClient implements ClientModInitializer {
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
+			// advanced hosting: your own world gets your CS2 server (started once; it keeps running until Minecraft closes)
+			if (mc.getSingleplayerServer() != null && StrafeConfig.hostServer && !dev.strafemc.bridge.Cs2Bridge.INSTANCE.connected())
+				dev.strafemc.client.console.ServerLauncher.start();
+		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
 			if (mc.getSingleplayerServer() != null) return; // your own world: your CS2 server is its CS2 server
 			boolean local = handler.getConnection().getRemoteAddress() instanceof java.net.InetSocketAddress a && a.getAddress() != null
 					&& a.getAddress().isLoopbackAddress();

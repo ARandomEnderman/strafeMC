@@ -32,6 +32,8 @@ public final class StrafeConfig {
 
 	/** The player chose "don't ask again" on the setup screen. */
 	public static boolean setupNeverAsk = false;
+	/** Advanced: start CS2's dedicated server from the player's CS2 folder when they open their own world. */
+	public static boolean hostServer = false;
 
 	/** Master switch for Source movement. */
 	public static boolean movementEnabled = true;
@@ -121,6 +123,7 @@ public final class StrafeConfig {
 			vrfPath = p.getProperty("vrfPath", vrfPath);
 			launcherPath = p.getProperty("launcherPath", launcherPath);
 			setupNeverAsk = Boolean.parseBoolean(p.getProperty("setupNeverAsk", String.valueOf(setupNeverAsk)));
+			hostServer = Boolean.parseBoolean(p.getProperty("hostServer", String.valueOf(hostServer)));
 			save();
 			StrafeMc.LOG.info("[strafemc] config {} : unitsPerBlock={} hpScale={} scrollJump={} debug={}", FILE, unitsPerBlock, hpScale, scrollJump, debug);
 		} catch (IOException | RuntimeException e) {
@@ -152,6 +155,7 @@ public final class StrafeConfig {
 		p.setProperty("vrfPath", vrfPath);
 		p.setProperty("launcherPath", launcherPath);
 		p.setProperty("setupNeverAsk", String.valueOf(setupNeverAsk));
+		p.setProperty("hostServer", String.valueOf(hostServer));
 		try (Writer w = Files.newBufferedWriter(FILE)) {
 			p.store(w, "strafeMC settings (unitsPerBlock: Hammer units per block; hpScale: MC HP per CS HP)");
 		}

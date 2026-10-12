@@ -76,8 +76,20 @@ public final class Cs2Bridge {
 	}
 
 	public boolean connected() {
+		return pluginAlive() || netcon.alive();
+	}
+
+	private boolean pluginAlive() {
 		return System.currentTimeMillis() - lastRxMs < 3000;
 	}
+
+	/** A plain CS2 server (no bridge plugin, e.g. one a player hosts): settings and counts read over its net console. */
+	private final NetconPoll netcon = new NetconPoll((n, v) -> {
+		if (!v.equals(cvars.put(n, v))) bump(n + " = " + v);
+	}, (h, b) -> {
+		humans = h;
+		bots = b;
+	});
 
 	public int version() {
 		return version;
@@ -185,6 +197,8 @@ public final class Cs2Bridge {
 				if (!c || n % 10 == 0) send("cvars");
 				if (!c || n % 30 == 0) send("defaults");
 				send("ping " + n++);
+				if (pluginAlive()) netcon.close();
+				else netcon.poll();
 				if (dirty) {
 					dirty = false;
 					saveCache();

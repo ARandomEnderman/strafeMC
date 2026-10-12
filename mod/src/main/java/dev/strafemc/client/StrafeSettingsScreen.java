@@ -32,6 +32,10 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 		list.addSmall(bool("strafemc.options.setup_ask", !StrafeConfig.setupNeverAsk, v -> StrafeConfig.setupNeverAsk = !v).createButton(options),
 				Button.builder(Component.translatable("strafemc.options.setup_open"), b -> SetupScreen.open(this)).build());
 
+		list.addHeader(Component.translatable("strafemc.options.hosting"));
+		list.addSmall(bool("strafemc.options.hostserver", StrafeConfig.hostServer, v -> StrafeConfig.hostServer = v).createButton(options),
+				Button.builder(Component.translatable("strafemc.options.hosting_about"), b -> minecraft.setScreen(new HostingInfoScreen(this))).build());
+
 		list.addHeader(Component.translatable("strafemc.options.binds"));
 		var binds = Binds.all();
 		if (binds.isEmpty()) {

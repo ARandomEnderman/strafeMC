@@ -62,6 +62,7 @@ public final class NetconTransport implements ConsoleTransport {
 			s.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), StrafeConfig.netconPort), 1000);
 			socket = s;
 			out = s.getOutputStream();
+			out.write(dev.strafemc.bridge.NetconSecret.passLine().getBytes(StandardCharsets.UTF_8));
 			connected = true;
 			Thread t = new Thread(() -> readLoop(s), "strafemc-netcon");
 			t.setDaemon(true);
@@ -86,6 +87,7 @@ public final class NetconTransport implements ConsoleTransport {
 		ensureConnected();
 		if (!connected) return;
 		replyUntil = System.currentTimeMillis() + REPLY_WINDOW_MS;
+		pollEcho.typed(command);
 		raw(command);
 	}
 
@@ -116,6 +118,7 @@ public final class NetconTransport implements ConsoleTransport {
 						continue;
 					}
 				}
+				if (pollEcho.drop(line)) continue; // strafeMC reading settings / status in the background, not a reply to you
 				if (!dev.strafemc.config.StrafeConfig.showServerLog && (System.currentTimeMillis() > replyUntil || NOISE.matcher(line).find())) continue;
 				int color = line.contains("Unknown command") || line.toLowerCase().contains("error") ? ConsoleLog.ERROR : ConsoleLog.WHITE;
 				ConsoleLog.add(line, color);
@@ -125,6 +128,8 @@ public final class NetconTransport implements ConsoleTransport {
 		}
 		drop("connection closed");
 	}
+
+	private final dev.strafemc.bridge.PollEchoFilter pollEcho = new dev.strafemc.bridge.PollEchoFilter();
 
 	private synchronized void drop(String why) {
 		if (!connected) return;
