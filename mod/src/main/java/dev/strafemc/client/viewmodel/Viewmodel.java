@@ -157,12 +157,43 @@ public final class Viewmodel {
 		}
 	}
 
-	/** Starts an animation ("draw", "idle", "shoot1", "reload", "lookat01"). */
+	/** The clip being blended out (CS2 transition), its time when the blend started and how long the blend lasts. */
+	private VmClip fromClip;
+	private float fromTime, blendDuration;
+	private long blendStart;
+
+	/**
+	 * CS2's transition times from the viewmodel graphs (viewmodel_gun / viewmodel_knife): into a draw is a cut, so are
+	 * shots and knife attacks out of anything but another attack; inspects blend in over 0.3 s (0.2 s on knives and
+	 * after a draw) and out to idle over 0.3 s; a shot settles to idle over 0.1 s; everything else 0.2 s.
+	 */
+	private static float blendTime(String from, String to, boolean knife) {
+		boolean toAttack = to.startsWith("shoot") || to.startsWith("light_") || to.startsWith("heavy_");
+		boolean fromAttack = from.startsWith("shoot") || from.startsWith("light_") || from.startsWith("heavy_");
+		if (to.equals("draw")) return 0;
+		if (toAttack) return knife && fromAttack ? 0.2f : 0;
+		if (to.startsWith("lookat")) return knife || from.equals("draw") ? 0.2f : 0.3f;
+		if (to.equals("idle")) {
+			if (from.startsWith("lookat")) return 0.3f;
+			if (fromAttack) return knife ? 0.2f : 0.1f;
+		}
+		return 0.2f;
+	}
+
+	/** Starts an animation ("draw", "idle", "shoot1", "reload", "lookat01"), blending from the current one like CS2. */
 	public void play(String anim) {
 		Loaded l = loaded;
 		if (l == null) return;
 		VmClip c = l.clips.get(anim);
 		if (c == null) return;
+		if (clip != null && clip != c || clip == c && !anim.equals("idle")) {
+			float d = clip == null ? 0 : blendTime(clip.name, anim, l.cls.contains("knife"));
+			fromClip = d > 0 ? clip : null;
+			fromTime = d > 0 ? Math.min(clipTime(), clip.duration) : 0;
+			if (fromClip != null && fromClip.name.equals("idle") && fromClip.duration > 0) fromTime %= fromClip.duration;
+			blendDuration = d;
+			blendStart = System.nanoTime();
+		}
 		clip = c;
 		clipStart = System.nanoTime();
 		clipBase = 0;
@@ -172,6 +203,7 @@ public final class Viewmodel {
 	/** Weapon put away: the next render starts from its draw. */
 	public void stop() {
 		clip = null;
+		fromClip = null;
 	}
 
 	private float clipTime() {
@@ -197,7 +229,13 @@ public final class Viewmodel {
 			t = 0;
 		}
 		if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
-		Matrix4f[] pose = clip.pose(t);
+		Matrix4f[] pose;
+		float w = blendDuration <= 0 ? 1 : (System.nanoTime() - blendStart) / 1e9f / blendDuration;
+		if (fromClip != null && w < 1) pose = clip.pose(t, fromClip, fromTime, Math.max(0, w)); // the old clip held where it was
+		else {
+			fromClip = null;
+			pose = clip.pose(t);
+		}
 		Matrix4f wpn = mount(clip, pose);
 
 		Matrix4f[][] armSkin = skins(l.arms, clip, pose, null);

@@ -17,5 +17,6 @@
 	"item.strafemc.weapon_knife_falchion": "Falchion Knife",
 	"itemGroup.strafemc.weapons": "strafeMC Weapons",
 	"key.strafemc.reload": "Reload (CS weapons)",
-	"block.strafemc.surf_ramp": "Surf Ramp"
+	"block.strafemc.surf_ramp": "Surf Ramp",
+	"block.strafemc.surf_slope": "Surf Slope"
 }

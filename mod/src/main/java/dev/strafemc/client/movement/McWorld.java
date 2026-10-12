@@ -73,6 +73,11 @@ public final class McWorld implements SourceMovement.World {
 						}
 						continue;
 					}
+					if (st.getBlock() instanceof dev.strafemc.world.SurfSlopeBlock) {
+						Direction f = st.getValue(dev.strafemc.world.SurfSlopeBlock.FACING);
+						out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ()));
+						continue;
+					}
 					if (st.getBlock() instanceof StairBlock && st.getValue(StairBlock.HALF) == Half.BOTTOM
 							&& st.getValue(StairBlock.SHAPE) == StairsShape.STRAIGHT) {
 						Direction f = st.getValue(StairBlock.FACING); // the tall side: stairs rise toward FACING

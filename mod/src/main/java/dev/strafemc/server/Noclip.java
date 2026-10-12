@@ -32,7 +32,8 @@ public final class Noclip {
 			for (int y = (int) Math.floor(box.minY); y <= (int) Math.floor(box.maxY); y++)
 				for (int z = (int) Math.floor(box.minZ); z <= (int) Math.floor(box.maxZ); z++)
 					if (p.level().getBlockState(m.set(x, y, z)).getBlock() instanceof net.minecraft.world.level.block.StairBlock
-							|| p.level().getBlockState(m).getBlock() instanceof dev.strafemc.world.SurfRampBlock) return true;
+							|| p.level().getBlockState(m).getBlock() instanceof dev.strafemc.world.SurfRampBlock
+							|| p.level().getBlockState(m).getBlock() instanceof dev.strafemc.world.SurfSlopeBlock) return true;
 		return false;
 	}
 

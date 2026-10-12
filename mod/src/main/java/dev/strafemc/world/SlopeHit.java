@@ -27,6 +27,9 @@ public final class SlopeHit {
 			if (st.getValue(SurfRampBlock.HALF) == DoubleBlockHalf.UPPER) by -= 1;
 			rise = 2;
 			f = st.getValue(SurfRampBlock.FACING);
+		} else if (st.getBlock() instanceof SurfSlopeBlock) {
+			rise = 1;
+			f = st.getValue(SurfSlopeBlock.FACING);
 		} else if (st.getBlock() instanceof StairBlock && st.getValue(StairBlock.HALF) == Half.BOTTOM
 				&& st.getValue(StairBlock.SHAPE) == StairsShape.STRAIGHT) {
 			rise = 1;

@@ -22,8 +22,8 @@ public final class WeaponItems {
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
-	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM;
-	public static net.minecraft.world.level.block.Block SURF_RAMP;
+	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM;
+	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE;
 
 	private WeaponItems() {}
 
@@ -40,6 +40,13 @@ public final class WeaponItems {
 		ResourceKey<Item> rampItem = ResourceKey.create(Registries.ITEM, id("surf_ramp"));
 		SURF_RAMP_ITEM = Registry.register(BuiltInRegistries.ITEM, rampItem,
 				new net.minecraft.world.item.BlockItem(SURF_RAMP, new Item.Properties().setId(rampItem).useBlockDescriptionPrefix()));
+		ResourceKey<net.minecraft.world.level.block.Block> slopeKey = ResourceKey.create(Registries.BLOCK, id("surf_slope"));
+		SURF_SLOPE = Registry.register(BuiltInRegistries.BLOCK, slopeKey, new dev.strafemc.world.SurfSlopeBlock(
+				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(slopeKey).strength(1.5f)
+						.sound(net.minecraft.world.level.block.SoundType.STONE).noOcclusion()));
+		ResourceKey<Item> slopeItem = ResourceKey.create(Registries.ITEM, id("surf_slope"));
+		SURF_SLOPE_ITEM = Registry.register(BuiltInRegistries.ITEM, slopeItem,
+				new net.minecraft.world.item.BlockItem(SURF_SLOPE, new Item.Properties().setId(slopeItem).useBlockDescriptionPrefix()));
 		ResourceKey<CreativeModeTab> tab = ResourceKey.create(Registries.CREATIVE_MODE_TAB, id("weapons"));
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, tab, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
 				.title(Component.translatable("itemGroup.strafemc.weapons"))
@@ -49,6 +56,7 @@ public final class WeaponItems {
 			e.accept(MAG_AK47);
 			e.accept(KNIFE_FALCHION);
 			e.accept(SURF_RAMP_ITEM);
+			e.accept(SURF_SLOPE_ITEM);
 		});
 	}
 

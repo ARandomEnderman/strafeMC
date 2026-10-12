@@ -88,6 +88,41 @@ public final class VmClip {
 		return world;
 	}
 
+	/**
+	 * Crossfade (CS2 graph transitions): every node's local translation / rotation / scale blended from another clip
+	 * at its own time (bones matched by name) into this clip, w = this clip's weight (0..1). Rotations take the short way.
+	 */
+	public Matrix4f[] pose(float t, VmClip from, float fromT, float w) {
+		if (from == null || w >= 1) return pose(t);
+		int n = names.length;
+		Matrix4f[] world = new Matrix4f[n];
+		for (int i = 0; i < n; i++) resolveBlend(i, t, from, fromT, w, world);
+		return world;
+	}
+
+	private Matrix4f resolveBlend(int i, float t, VmClip from, float fromT, float w, Matrix4f[] world) {
+		if (world[i] != null) return world[i];
+		float[] T = sample(tT[i], t, restT[i]), R = sample(tR[i], t, restR[i]), S = sample(tS[i], t, restS[i]);
+		Integer j = from.index.get(names[i]);
+		if (j != null) {
+			float[] T0 = sample(from.tT[j], fromT, from.restT[j]), R0 = sample(from.tR[j], fromT, from.restR[j]), S0 = sample(from.tS[j], fromT, from.restS[j]);
+			float dot = R0[0] * R[0] + R0[1] * R[1] + R0[2] * R[2] + R0[3] * R[3];
+			float sign = dot < 0 ? -1 : 1;
+			for (int k = 0; k < 3; k++) {
+				T[k] = T0[k] + (T[k] - T0[k]) * w;
+				S[k] = S0[k] + (S[k] - S0[k]) * w;
+			}
+			float[] r = new float[4];
+			for (int k = 0; k < 4; k++) r[k] = R0[k] + (sign * R[k] - R0[k]) * w;
+			R = r;
+		}
+		Matrix4f local = new Matrix4f().translationRotateScale(new Vector3f(T[0], T[1], T[2]),
+				new Quaternionf(R[0], R[1], R[2], R[3]).normalize(), new Vector3f(S[0], S[1], S[2]));
+		Matrix4f m = parent[i] >= 0 ? new Matrix4f(resolveBlend(parent[i], t, from, fromT, w, world)).mul(local) : local;
+		world[i] = m;
+		return m;
+	}
+
 	private Matrix4f resolve(int i, float t, Matrix4f[] world) {
 		if (world[i] != null) return world[i];
 		float[] T = sample(tT[i], t, restT[i]), R = sample(tR[i], t, restR[i]), S = sample(tS[i], t, restS[i]);
