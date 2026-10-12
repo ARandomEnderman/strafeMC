@@ -37,3 +37,6 @@ __pycache__/
 
 # private dev notes (personal paths, RE details) - local only
 NOTES.md
+
+# VRF converter error logs (written to the working directory)
+exceptions.txt
