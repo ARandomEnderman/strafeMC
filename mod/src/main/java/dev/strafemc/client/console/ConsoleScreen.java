@@ -85,9 +85,6 @@ public final class ConsoleScreen extends Screen {
 		toggle(() -> "Jump stats: " + onOff(StrafeConfig.jumpStats), () -> ConsoleCommands.execute("cl_jumpstats"));
 		toggle(() -> "Speed graph: " + onOff(StrafeConfig.velGraph), () -> ConsoleCommands.execute("cl_velgraph"));
 		toggle(() -> "Speed meter: " + onOff(StrafeConfig.showSpeedMeter), () -> ConsoleCommands.execute("cl_showspeed"));
-		header("First-time setup");
-		toggle(() -> "Ask on start: " + onOff(!StrafeConfig.setupNeverAsk), () -> ConsoleCommands.execute("strafemc_setup_ask"));
-		toggle(() -> "Open setup...", () -> dev.strafemc.client.SetupScreen.open(this));
 		header("Presets");
 		toggle(() -> "Presets...", () -> minecraft.setScreen(new PresetScreen(this)));
 		header("CS2 server");

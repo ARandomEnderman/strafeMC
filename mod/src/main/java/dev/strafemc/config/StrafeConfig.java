@@ -70,7 +70,6 @@ public final class StrafeConfig {
 	/** Speed graph above the hotbar (cl_velgraph). */
 	public static boolean velGraph = false;
 	/** Which CS2 footstep set to use: "ct" or "t". */
-	public static String footstepTeam = "ct";
 	/** Show the raw CS2 server log in the console (otherwise only replies to your own commands). */
 	public static boolean showServerLog = false;
 	/** Verbose movement/bridge logging. */
@@ -115,7 +114,6 @@ public final class StrafeConfig {
 			vmAxes = p.getProperty("viewmodelAxes", vmAxes);
 			showSpeedMeter = Boolean.parseBoolean(p.getProperty("showSpeedMeter", String.valueOf(showSpeedMeter)));
 			velGraph = Boolean.parseBoolean(p.getProperty("velGraph", String.valueOf(velGraph)));
-			footstepTeam = p.getProperty("footstepTeam", footstepTeam);
 			showServerLog = Boolean.parseBoolean(p.getProperty("showServerLog", String.valueOf(showServerLog)));
 			bridgePort = Integer.parseInt(p.getProperty("bridgePort", String.valueOf(bridgePort)));
 			netconPort = Integer.parseInt(p.getProperty("netconPort", String.valueOf(netconPort)));
@@ -147,7 +145,6 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelAxes", vmAxes);
 		p.setProperty("showSpeedMeter", String.valueOf(showSpeedMeter));
 		p.setProperty("velGraph", String.valueOf(velGraph));
-		p.setProperty("footstepTeam", footstepTeam);
 		p.setProperty("showServerLog", String.valueOf(showServerLog));
 		p.setProperty("bridgePort", String.valueOf(bridgePort));
 		p.setProperty("netconPort", String.valueOf(netconPort));

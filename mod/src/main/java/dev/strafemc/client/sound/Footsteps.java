@@ -82,7 +82,7 @@ public final class Footsteps {
 	private void step(String forceSurface, double x, double y, double z, double units) {
 		BlockState under = below(x, y, z, units);
 		String surf = forceSurface != null ? forceSurface : SURFACES.getOrDefault(under.getSoundType(), "Default");
-		String team = StrafeConfig.footstepTeam.equalsIgnoreCase("t") ? "T_" : "CT_";
+		String team = "CT_"; // follows the agent's team once agents exist
 		if (!play(team + surf + ".StepLeft", x, y, z, units)) play(team + "Default.StepLeft", x, y, z, units);
 	}
 

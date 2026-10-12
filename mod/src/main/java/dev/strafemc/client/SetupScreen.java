@@ -59,7 +59,7 @@ public final class SetupScreen extends Screen {
 		mc.execute(() -> mc.setScreen(new SetupScreen(st, current)));
 	}
 
-	/** Opened by hand (settings menu or strafemc_setup): always shows, also when the setup is complete (to redo it). */
+	/** Opened by hand (Options > strafeMC...): always shows, also when the setup is complete (to redo it). */
 	public static void open(Screen parent) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
 		mc.setScreen(new SetupScreen(Setup.status(StrafeConfig.cacheDir()), parent));

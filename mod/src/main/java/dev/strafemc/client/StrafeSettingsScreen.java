@@ -26,8 +26,11 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 		list.addSmall(
 				bool("strafemc.options.scrolljump", StrafeConfig.scrollJump, v -> StrafeConfig.scrollJump = v),
 				bool("strafemc.options.showspeed", StrafeConfig.showSpeed, v -> StrafeConfig.showSpeed = v),
-				bool("strafemc.options.doubletapfly", StrafeConfig.doubleTapFly, v -> StrafeConfig.doubleTapFly = v),
-				bool("strafemc.options.footstepteam_t", StrafeConfig.footstepTeam.equals("t"), v -> StrafeConfig.footstepTeam = v ? "t" : "ct"));
+				bool("strafemc.options.doubletapfly", StrafeConfig.doubleTapFly, v -> StrafeConfig.doubleTapFly = v));
+
+		list.addHeader(Component.translatable("strafemc.options.setup"));
+		list.addSmall(bool("strafemc.options.setup_ask", !StrafeConfig.setupNeverAsk, v -> StrafeConfig.setupNeverAsk = !v).createButton(options),
+				Button.builder(Component.translatable("strafemc.options.setup_open"), b -> SetupScreen.open(this)).build());
 
 		list.addHeader(Component.translatable("strafemc.options.binds"));
 		var binds = Binds.all();

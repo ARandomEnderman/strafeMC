@@ -186,25 +186,9 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add("viewmodel_fov = " + StrafeConfig.viewmodelFov, ConsoleLog.OK);
 		});
-		local("cl_footstepteam", "CS2 footstep set: ct or t.", a -> {
-			if (a.length > 0 && (a[0].equalsIgnoreCase("t") || a[0].equalsIgnoreCase("ct"))) StrafeConfig.footstepTeam = a[0].toLowerCase();
-			try {
-				StrafeConfig.save();
-			} catch (Exception ignored) {
-			}
-			ConsoleLog.add("cl_footstepteam = " + StrafeConfig.footstepTeam, ConsoleLog.OK);
-		});
 		local("strafemc_serverlog", "Show the raw CS2 server log in the console (1) or only replies to your commands (0).", a -> {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
-		});
-		local("strafemc_setup", "Open the first-time setup (also to redo it, e.g. after a CS2 update).", a -> {
-			var mc = net.minecraft.client.Minecraft.getInstance();
-			mc.execute(() -> dev.strafemc.client.SetupScreen.open(mc.screen));
-		});
-		local("strafemc_setup_ask", "Offer the first-time setup on start while it isn't done (1) or never (0).", a -> {
-			StrafeConfig.setupNeverAsk = !bool(a, StrafeConfig.setupNeverAsk);
-			saved("strafemc_setup_ask", !StrafeConfig.setupNeverAsk);
 		});
 		local("strafemc_startserver", "Start the local CS2 server (optional host extra, if set up).", a -> {
 			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
