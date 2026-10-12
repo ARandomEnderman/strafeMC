@@ -25,15 +25,18 @@ public final class MovementController {
 	private final SourceMovement.Params params = new SourceMovement.Params();
 	private final SourceMovement.Input input = new SourceMovement.Input();
 	private final AtomicInteger wheelJumps = new AtomicInteger();
-	/** View yaws seen since the last sim step (one per frame), for CS2 sub-tick view angles. */
-	private final float[] yawSamples = new float[32];
-	private int yawCount;
-	private float lastStepYaw = Float.NaN;
 	/**
-	 * Minimum view-angle samples per tick for sub-tick air acceleration. CS2 takes sub-tick view angles into account
-	 * (sv_subtick_movement_view_angles) but doesn't expose how many; frame samples are used when there are more.
+	 * CS2 sub-tick movement: every user command carries sub-tick steps, each
+	 * with a "when" (fraction of the tick) and, with sv_subtick_movement_view_angles, its own view angles; for every step
+	 * whose "when" moved on, the server runs a complete ProcessMovement with frametime = (when - previous when) * 1/64,
+	 * then a last one up to the end of the tick. Here: every rendered frame is a step (its view and keys, at the time it
+	 * happened within the tick), so more fps = more, shorter slices = more air acceleration, like CS2.
 	 */
-	private static final int MIN_SUBTICK_SAMPLES = 4;
+	private record Step(double when, float yaw, float pitch, double forward, double side, boolean jumpHeld, boolean duck, boolean walk) {}
+
+	private final java.util.ArrayDeque<Step> steps = new java.util.ArrayDeque<>();
+	/** Most steps one tick is split into. CS2's client-side limit wasn't found (FLAGGED); 12 = 768 fps worth. */
+	private static final int MAX_SUBTICK_STEPS = 12;
 
 	private boolean active;
 	private long lastNs;
@@ -132,28 +135,35 @@ public final class MovementController {
 		}
 		readInput(mc, p);
 		McWorld world = new McWorld(p, s);
-		if (yawCount < yawSamples.length) yawSamples[yawCount++] = p.getYRot();
+		// this frame is a sub-tick step: its view and keys at its moment within the pending tick(s)
+		steps.addLast(new Step(acc / TICK, p.getYRot(), p.getXRot(), input.forward, input.side, input.jumpHeld, input.duck, input.walk));
+		sim.collisionLog = StrafeConfig.debug ? m -> StrafeMc.LOG.info("[strafemc] {}", m) : null;
 		while (acc >= TICK) {
 			px = sim.x;
 			py = sim.y;
 			pz = sim.z;
-			input.yawDeg = p.getYRot();
-			input.pitchDeg = p.getXRot();
-			input.subYaws = null; // plain Source air acceleration, once per tick
-			yawCount = 0;
-			sim.collisionLog = StrafeConfig.debug ? m -> StrafeMc.LOG.info("[strafemc] {}", m) : null;
-			sim.step(input, params, world, TICK);
-			footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s);
-			dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side);
-			// fall damage: measured by the server (server/ServerFall), never reported from here
-			input.jumpImpulse = false;
+			java.util.List<Step> tick = new java.util.ArrayList<>();
+			while (!steps.isEmpty() && steps.peekFirst().when() <= 1.0) tick.add(steps.pollFirst());
+			if (!params.subtickViewAngles && !tick.isEmpty()) tick = java.util.List.of(tick.get(tick.size() - 1)); // whole ticks only
+			if (tick.size() > MAX_SUBTICK_STEPS) tick = tick.subList(tick.size() - MAX_SUBTICK_STEPS, tick.size());
+			double prev = 0;
+			for (Step st : tick) {
+				apply(st);
+				if (st.when() - prev > 1e-6) {
+					slice((st.when() - prev) * TICK, world, s);
+					prev = st.when();
+				}
+			}
+			if (1 - prev > 1e-6) { // up to the end of the tick, with the newest input there is
+				if (!steps.isEmpty()) apply(steps.peekFirst());
+				slice((1 - prev) * TICK, world, s);
+			}
+			for (int i = steps.size(); i > 0; i--) { // later frames: one tick closer
+				Step st = steps.pollFirst();
+				steps.addLast(new Step(st.when() - 1, st.yaw(), st.pitch(), st.forward(), st.side(), st.jumpHeld(), st.duck(), st.walk()));
+			}
 			acc -= TICK;
 			stepsSinceLog++;
-			peakSpeed = Math.max(peakSpeed, sim.horizontalSpeed());
-			if (StrafeConfig.debug && sim.jumpedThisStep)
-				StrafeMc.LOG.info("[strafemc] jump  hspeed={} vy={} t={}", f(sim.horizontalSpeed()), f(sim.vy), f(sim.time));
-			if (StrafeConfig.debug && sim.landedThisStep)
-				StrafeMc.LOG.info("[strafemc] land  hspeed={} fallspeed={} t={}", f(sim.horizontalSpeed()), f(sim.landSpeed), f(sim.time));
 		}
 
 		double a = acc / TICK;
@@ -308,6 +318,31 @@ public final class MovementController {
 			case "false" -> 0;
 			default -> Double.parseDouble(v);
 		};
+	}
+
+	/** A sub-tick step's view and keys become the movement input. */
+	private void apply(Step st) {
+		input.yawDeg = st.yaw();
+		input.pitchDeg = st.pitch();
+		input.forward = st.forward();
+		input.side = st.side();
+		input.jumpHeld = st.jumpHeld();
+		input.duck = st.duck();
+		input.walk = st.walk();
+	}
+
+	/** One complete movement over part of a tick (CS2: one ProcessMovement per sub-tick step). */
+	private void slice(double dt, McWorld world, double s) {
+		sim.step(input, params, world, dt);
+		footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s);
+		dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side);
+		// fall damage: measured by the server (server/ServerFall), never reported from here
+		input.jumpImpulse = false; // a wheel jump happens once, in the first slice
+		peakSpeed = Math.max(peakSpeed, sim.horizontalSpeed());
+		if (StrafeConfig.debug && sim.jumpedThisStep)
+			StrafeMc.LOG.info("[strafemc] jump  hspeed={} vy={} t={}", f(sim.horizontalSpeed()), f(sim.vy), f(sim.time));
+		if (StrafeConfig.debug && sim.landedThisStep)
+			StrafeMc.LOG.info("[strafemc] land  hspeed={} fallspeed={} t={}", f(sim.horizontalSpeed()), f(sim.landSpeed), f(sim.time));
 	}
 
 	private void readInput(Minecraft mc, LocalPlayer p) {

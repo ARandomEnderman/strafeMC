@@ -116,7 +116,7 @@ public final class FlatGroundCheck {
 		}
 		System.out.printf("strafe: %.1f -> %.1f u/s over one jump%n", start, s.horizontalSpeed());
 
-		// 4b. sub-tick view angles: same strafe with 3 view samples per tick (~190 fps), airaccelerate 12 vs 100
+		// 4b. CS2 sub-tick steps: same strafe as 3 slices per tick (~190 fps), each with its own view; airaccelerate 12 vs 100
 		for (float turn : new float[] {4f, 8f, 12f})
 		for (double aa : new double[] {12, 100}) {
 			double keep = p.airAccelerate;
@@ -130,10 +130,11 @@ public final class FlatGroundCheck {
 			in.side = -1;
 			float yw = 0;
 			while (!s.onGround) {
-				in.subYaws = new float[] {yw - turn / 3, yw - 2 * turn / 3, yw - turn};
+				for (int k = 1; k <= 3; k++) {
+					in.yawDeg = yw - turn * k / 3;
+					s.step(in, p, flat, DT / 3);
+				}
 				yw -= turn;
-				in.yawDeg = yw;
-				s.step(in, p, flat, DT);
 			}
 			System.out.printf("subtick: turn %4.1f deg/tick  airaccelerate %4.0f -> %.1f u/s after one strafed jump%n", turn, aa, s.horizontalSpeed());
 			p.airAccelerate = keep;

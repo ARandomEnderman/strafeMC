@@ -56,7 +56,6 @@ public final class SourceMovement {
 		 * View yaws sampled during this tick (one per rendered frame). CS2 takes sub-tick view angles into account during
 		 * movement (sv_subtick_movement_view_angles), so air acceleration runs once per sample with a slice of the tick.
 		 */
-		public float[] subYaws;
 	}
 
 	/** Collision world in Hammer units. */
@@ -288,14 +287,28 @@ public final class SourceMovement {
 		vz += as * wz;
 	}
 
-	private void airAccelerate(double wx, double wz, double wishSpeed, double accel, double cap, double dt) {
+	/**
+	 * CS2 AirAccelerate: addspeed = min(wishspeed, sv_air_max_wishspeed) - current speed along wishdir; accelspeed =
+	 * sv_airaccelerate * wishspeed (uncapped: what makes air strafing work) * frametime. Applied as in CS2: if half of
+	 * accelspeed already covers addspeed, all of it now; else half now and the rest of min(accelspeed, addspeed) after
+	 * the move (returned as {vx, vz} to add then). Same total as classic Source; the position integrates with half.
+	 */
+	private double[] airAccelerate(double wx, double wz, double wishSpeed, double accel, double cap, double dt) {
 		double wishSpd = Math.min(wishSpeed, cap); // sv_air_max_wishspeed
 		double cur = vx * wx + vz * wz;
 		double add = wishSpd - cur;
-		if (add <= 0) return;
-		double as = Math.min(accel * wishSpeed * dt, add); // full wishspeed here: this is what makes air strafing work
-		vx += as * wx;
-		vz += as * wz;
+		if (add <= 0 || dt <= 0) return new double[2];
+		double as = accel * wishSpeed * dt, now, later;
+		if (as * 0.5 > add) {
+			now = add;
+			later = 0;
+		} else {
+			now = as * 0.5;
+			later = Math.min(as, add) - now;
+		}
+		vx += now * wx;
+		vz += now * wz;
+		return new double[] {later * wx, later * wz};
 	}
 
 	private void checkVelocity(Params p) {
@@ -327,21 +340,11 @@ public final class SourceMovement {
 	}
 
 	private void airMove(Input in, double wx, double wz, double wishSpeed, Params p, World w, double dt) {
-		float[] ys = in.subYaws;
-		if (p.subtickViewAngles && ys != null && ys.length > 1 && wishSpeed > 0) {
-			// sub-tick view angles: accelerate once per view sample, each with its share of the tick
-			double sdt = dt / ys.length;
-			for (float yd : ys) {
-				double yaw = Math.toRadians(yd);
-				double sx = -Math.sin(yaw) * in.forward - Math.cos(yaw) * in.side;
-				double sz = Math.cos(yaw) * in.forward - Math.sin(yaw) * in.side;
-				double l = Math.hypot(sx, sz);
-				if (l > 1e-6) airAccelerate(sx / l, sz / l, wishSpeed, p.airAccelerate, p.airMaxWishspeed, sdt);
-			}
-		} else {
-			airAccelerate(wx, wz, wishSpeed, p.airAccelerate, p.airMaxWishspeed, dt);
-		}
+		// CS2 air acceleration: half of the acceleration before the move, the rest after it
+		double[] later = airAccelerate(wx, wz, wishSpeed, p.airAccelerate, p.airMaxWishspeed, dt);
 		tryPlayerMove(w, dt);
+		vx += later[0];
+		vz += later[1];
 	}
 
 	/** Source TryPlayerMove: up to 4 bumps, clipping velocity against every plane hit (overbounce 1). */
