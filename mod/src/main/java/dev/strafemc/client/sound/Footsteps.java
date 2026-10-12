@@ -53,8 +53,8 @@ public final class Footsteps {
 	/** Landing sound held back one step: if a timed perfect bhop follows, CS plays neither landing nor jump sound. */
 	private double[] pendingLand;
 
-	/** Called after every sim step with the step's events. */
-	public void afterStep(SourceMovement sim, double maxSpeed, double units) {
+	/** Called after every sim step (dt = that step's frametime: sub-tick steps are shorter than a tick) with its events. */
+	public void afterStep(SourceMovement sim, double maxSpeed, double units, double dt) {
 		var mc = Minecraft.getInstance();
 		var p = mc.player;
 		if (p == null || cv("sv_footsteps", 1) == 0) return;
@@ -71,7 +71,7 @@ public final class Footsteps {
 		boolean moving = sim.onLadder ? Math.abs(sim.vy) > 1 : (sim.onGround && sim.horizontalSpeed() > 1);
 		if (!moving) return; // the stride counter keeps its progress: tapping A/D still adds up to steps
 		double speed = sim.onLadder ? Math.abs(sim.vy) : sim.horizontalSpeed();
-		distSinceStep += speed / 64.0;
+		distSinceStep += speed * dt;
 		if (distSinceStep < STRIDE_UNITS) return;
 		distSinceStep -= STRIDE_UNITS;
 		// CS2: steps are only audible above footstep_audible_threshold x max speed, so walking and crouching are silent

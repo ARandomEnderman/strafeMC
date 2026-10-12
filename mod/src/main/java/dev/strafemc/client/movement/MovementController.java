@@ -334,8 +334,8 @@ public final class MovementController {
 	/** One complete movement over part of a tick (CS2: one ProcessMovement per sub-tick step). */
 	private void slice(double dt, McWorld world, double s) {
 		sim.step(input, params, world, dt);
-		footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s);
-		dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side);
+		footsteps.afterStep(sim, Math.min(params.maxSpeed, params.weaponMaxSpeed), s, dt);
+		dev.strafemc.client.JumpStats.INSTANCE.afterStep(sim, input.side, dt);
 		// fall damage: measured by the server (server/ServerFall), never reported from here
 		input.jumpImpulse = false; // a wheel jump happens once, in the first slice
 		peakSpeed = Math.max(peakSpeed, sim.horizontalSpeed());

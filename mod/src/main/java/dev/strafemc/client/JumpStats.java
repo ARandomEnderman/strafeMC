@@ -16,6 +16,7 @@ public final class JumpStats {
 
 	private final float[] graph = new float[GRAPH];
 	private int graphPos;
+	private double graphTime;
 	private boolean inJump;
 	private double sx, sy, sz, pre, max, lastSpeed;
 	private int airTicks, gainTicks, strafes, lastSide;
@@ -24,11 +25,13 @@ public final class JumpStats {
 
 	private JumpStats() {}
 
-	/** Called after every sim step. */
-	public void afterStep(SourceMovement s, double side) {
+	/** Called after every sim step (dt = its frametime; the graph keeps one sample per 1/64 s whatever the frame rate). */
+	public void afterStep(SourceMovement s, double side, double dt) {
 		double sp = s.horizontalSpeed();
-		graph[graphPos] = (float) sp;
-		graphPos = (graphPos + 1) % GRAPH;
+		for (graphTime += dt; graphTime >= 1 / 64.0; graphTime -= 1 / 64.0) {
+			graph[graphPos] = (float) sp;
+			graphPos = (graphPos + 1) % GRAPH;
+		}
 		if (s.jumpedThisStep && !s.onLadder) {
 			inJump = true;
 			sx = s.x;
