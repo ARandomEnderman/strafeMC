@@ -19,6 +19,15 @@ public final class ConsoleActions {
 		boolean op = Access.isOperator(p);
 		boolean cheat = op && Access.cheats(); // cheat commands: operator AND sv_cheats 1, checked here, not just on the client
 		switch (cmd) {
+			case "strafemc_movement" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change Source movement for the server."));
+					break;
+				}
+				StrafeSettings.setSourceMovement(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(
+						Component.literal("Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "kill" -> p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			case "explode" -> {
 				// CS "explode": you blow up. A harmless-to-blocks explosion for the effect, then death.

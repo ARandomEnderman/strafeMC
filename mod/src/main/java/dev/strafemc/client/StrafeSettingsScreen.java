@@ -24,7 +24,6 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 	@Override
 	protected void addOptions() {
 		list.addSmall(
-				bool("strafemc.options.movement", StrafeConfig.movementEnabled, v -> StrafeConfig.movementEnabled = v),
 				bool("strafemc.options.scrolljump", StrafeConfig.scrollJump, v -> StrafeConfig.scrollJump = v),
 				bool("strafemc.options.showspeed", StrafeConfig.showSpeed, v -> StrafeConfig.showSpeed = v),
 				bool("strafemc.options.doubletapfly", StrafeConfig.doubleTapFly, v -> StrafeConfig.doubleTapFly = v),

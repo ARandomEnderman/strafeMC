@@ -21,7 +21,7 @@ public final class CsFallDamage {
 
 	/** Server side. Multiplayer TODO: validate the reported speed against the server's own view of the fall. */
 	public static void apply(ServerPlayer p, double impactSpeed, double scale) {
-		if (!Noclip.SOURCE.contains(p.getUUID())) return;
+		if (!StrafeSettings.sourceMovement()) return;
 		double v = Math.min(impactSpeed, 3500), s = Math.max(0, Math.min(scale, 10));
 		double cs = csDamage(v, s);
 		if (cs <= 0) return;

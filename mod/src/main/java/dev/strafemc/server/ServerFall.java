@@ -35,7 +35,7 @@ public final class ServerFall {
 			double y = p.getY(), dy = Double.isNaN(s.prevY) ? 0 : y - s.prevY;
 			s.prevY = y;
 			double speed = -dy * 20 * units; // u/s, + = falling
-			if (!Noclip.SOURCE.contains(p.getUUID()) || Noclip.active(p) || p.isSpectator() || p.getAbilities().flying || p.isPassenger()
+			if (!StrafeSettings.sourceMovement() || Noclip.active(p) || p.isSpectator() || p.getAbilities().flying || p.isPassenger()
 					|| p.isFallFlying() || p.isInWater() || p.onClimbable() || Math.abs(speed) > maxVel * 1.5) {
 				s.air = false; // not a Source fall (or a teleport): nothing to land from
 				continue;

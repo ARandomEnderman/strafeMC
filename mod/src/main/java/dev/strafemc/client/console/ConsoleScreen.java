@@ -80,7 +80,7 @@ public final class ConsoleScreen extends Screen {
 		toggle(() -> "Scroll wheel: " + (StrafeConfig.scrollJump ? "Jump" : "Hotbar"), () -> ConsoleCommands.execute("cl_scrolljump"));
 		toggle(() -> "cl_showpos: " + onOff(StrafeConfig.showSpeed), () -> ConsoleCommands.execute("cl_showpos"));
 		toggle(() -> "Double-tap fly: " + onOff(StrafeConfig.doubleTapFly), () -> ConsoleCommands.execute("cl_doubletapfly"));
-		toggle(() -> "Source movement: " + onOff(StrafeConfig.movementEnabled), () -> ConsoleCommands.execute("strafemc_movement"));
+		toggle(() -> "Source movement: " + onOff(dev.strafemc.client.ClientGameplay.sourceMovement()), () -> ConsoleCommands.execute("strafemc_movement"));
 		toggle(() -> "Server log: " + onOff(StrafeConfig.showServerLog), () -> ConsoleCommands.execute("strafemc_serverlog"));
 		toggle(() -> "Jump stats: " + onOff(StrafeConfig.jumpStats), () -> ConsoleCommands.execute("cl_jumpstats"));
 		toggle(() -> "Speed graph: " + onOff(StrafeConfig.velGraph), () -> ConsoleCommands.execute("cl_velgraph"));
@@ -406,8 +406,9 @@ public final class ConsoleScreen extends Screen {
 		g.fill(wx, wy, wx + ww, wy + wh, BG);
 		g.fill(wx, wy, wx + ww, wy + 16, TITLE);
 		g.text(font, "Console", wx + 6, wy + 4, 0xFFFFFFFF, false);
-		boolean live = NetconTransport.INSTANCE.connected();
-		int bots = Cs2Bridge.INSTANCE.bots();
+		boolean remote = RelayTransport.remote();
+		boolean live = remote ? dev.strafemc.client.ClientGameplay.cs2Online() : NetconTransport.INSTANCE.connected();
+		int bots = remote ? -1 : Cs2Bridge.INSTANCE.bots();
 		String status = live ? "§aCS2 server connected" + (bots >= 0 ? "§7 | " + bots + (bots == 1 ? " bot" : " bots") : "")
 				: "§cCS2 server offline";
 		g.text(font, status, wx + ww - 26 - font.width(status), wy + 4, 0xFFFFFFFF, false);

@@ -32,6 +32,12 @@ public final class GameplaySync {
 	private static final Set<UUID> PENDING = new HashSet<>();
 	private static String lastCvars = "";
 	private static int tick;
+	private static volatile int forceSeq;
+
+	/** A server-wide setting changed: everyone gets a fresh sync within half a second. */
+	public static void resendAll() {
+		forceSeq++;
+	}
 
 	private GameplaySync() {}
 
@@ -46,7 +52,9 @@ public final class GameplaySync {
 	/** Server tick: first syncs once the data is loaded, then a resend to everyone when the CS2 cvars change. */
 	public static void tick(MinecraftServer server) {
 		if (++tick % 10 != 0 || !WeaponData.loaded()) return;
-		String cvars = GSON.toJson(new java.util.TreeMap<>(Cs2Bridge.INSTANCE.cvars()));
+		// anything players need to see change: the cvars, whether the server's CS2 is up, the server-wide settings
+		String cvars = GSON.toJson(new java.util.TreeMap<>(Cs2Bridge.INSTANCE.cvars())) + Cs2Bridge.INSTANCE.connected()
+				+ StrafeSettings.sourceMovement() + forceSeq;
 		boolean changed = !cvars.equals(lastCvars);
 		if (!changed && PENDING.isEmpty()) return;
 		if (building) return;
@@ -92,6 +100,8 @@ public final class GameplaySync {
 		root.put("weapons", weapons);
 		root.put("timings", timings);
 		root.put("cvars", new LinkedHashMap<>(Cs2Bridge.INSTANCE.cvars()));
+		root.put("cs2Online", Cs2Bridge.INSTANCE.connected());
+		root.put("sourceMovement", StrafeSettings.sourceMovement());
 		String json = GSON.toJson(root);
 		if (dev.strafemc.config.StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] gameplay sync: {} weapons, {} chars", weapons.size(), json.length());
 		return json;

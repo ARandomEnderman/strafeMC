@@ -23,6 +23,7 @@ public final class ClientGameplay {
 	private static volatile Map<String, Map<String, Object>> weapons;
 	private static volatile Map<String, Map<String, Double>> timings;
 	private static volatile Map<String, String> cvars;
+	private static volatile Boolean cs2Online, sourceMovement;
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
 	/** Local vdata entry with the server's gameplay fields on top. */
@@ -39,6 +40,8 @@ public final class ClientGameplay {
 			Map<String, String> cv = new ConcurrentHashMap<>();
 			((Map<String, Object>) root.getOrDefault("cvars", Map.of())).forEach((k, v) -> cv.put(k, String.valueOf(v)));
 			cvars = cv;
+			cs2Online = root.get("cs2Online") instanceof Boolean b ? b : null;
+			sourceMovement = root.get("sourceMovement") instanceof Boolean b ? b : null;
 			STATS.clear();
 			RECOIL.clear();
 			MERGED.clear();
@@ -53,6 +56,8 @@ public final class ClientGameplay {
 		weapons = null;
 		timings = null;
 		cvars = null;
+		cs2Online = null;
+		sourceMovement = null;
 		STATS.clear();
 		RECOIL.clear();
 		MERGED.clear();
@@ -118,6 +123,24 @@ public final class ClientGameplay {
 	public static String cvar(String name) {
 		Map<String, String> c = cvars;
 		return c != null ? c.get(name) : localAllowed() ? Cs2Bridge.INSTANCE.cvar(name) : null;
+	}
+
+	/** Whether the CS2 server this game uses is up: the server's (as synced) on someone else's server, else your own. */
+	public static boolean cs2Online() {
+		Boolean b = cs2Online;
+		if (b != null) return b;
+		return localAllowed() && Cs2Bridge.INSTANCE.connected();
+	}
+
+	/** Server-wide Source movement setting (on until a server says otherwise). */
+	public static boolean sourceMovement() {
+		Boolean b = sourceMovement;
+		return b == null || b;
+	}
+
+	/** Weapon data is usable: synced from the server, or local in your own world. */
+	public static boolean weaponsReady() {
+		return weapons != null || localAllowed() && WeaponData.loaded();
 	}
 
 	public static boolean hasCvars() {

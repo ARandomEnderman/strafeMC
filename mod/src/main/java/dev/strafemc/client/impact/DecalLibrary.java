@@ -72,10 +72,31 @@ public final class DecalLibrary {
 		for (Option o : l) if (!MATERIALS.containsKey(o.material()) && LOADING.putIfAbsent(o.material(), true) == null) prepare(o.material());
 	}
 
+	/** Material name of the drawn stand-in hole for players without CS2 files. */
+	public static final String PLACEHOLDER = "#placeholder";
+
 	/** The material if ready (render thread); starts loading it in the background otherwise. */
 	public static Material material(String vmat) {
 		Material m = MATERIALS.get(vmat);
 		if (m != null) return m;
+		if (PLACEHOLDER.equals(vmat)) { // a dark round hole with a soft rim, drawn here (nothing from CS2)
+			java.awt.image.BufferedImage b = new java.awt.image.BufferedImage(32, 32, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+			for (int y = 0; y < 32; y++)
+				for (int x = 0; x < 32; x++) {
+					double r = Math.hypot(x - 15.5, y - 15.5) / 15.5;
+					int a = r < 0.45 ? 235 : r < 1 ? (int) (235 * (1 - r) / 0.55 * 0.6) : 0;
+					int c = r < 0.45 ? 0x141414 : 0x3C3A36;
+					b.setRGB(x, y, a << 24 | c);
+				}
+			try {
+				java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+				javax.imageio.ImageIO.write(b, "png", bytes);
+				SIZES.put(PLACEHOLDER, new double[] {4, 4, 0.6});
+				return register(PLACEHOLDER, NativeImage.read(new java.io.ByteArrayInputStream(bytes.toByteArray())));
+			} catch (java.io.IOException e) {
+				return null;
+			}
+		}
 		NativeImage img = PENDING.remove(vmat);
 		if (img != null) return register(vmat, img);
 		if (LOADING.putIfAbsent(vmat, true) == null) {

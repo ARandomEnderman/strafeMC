@@ -100,9 +100,9 @@ public final class ConsoleCommands {
 			StrafeConfig.doubleTapFly = bool(a, !StrafeConfig.doubleTapFly);
 			saved("cl_doubletapfly", StrafeConfig.doubleTapFly);
 		});
-		local("strafemc_movement", "Source movement on (1) / vanilla movement (0).", a -> {
-			StrafeConfig.movementEnabled = bool(a, !StrafeConfig.movementEnabled);
-			saved("strafemc_movement", StrafeConfig.movementEnabled);
+		local("strafemc_movement", "Source movement on (1) / vanilla movement (0) for the whole server (operators).", a -> {
+			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
+			action("strafemc_movement", on ? "1" : "0", false);
 		});
 		local("strafemc_reset_movement", "Restore every movement cvar to the CS2 server's default.", a -> {
 			Map<String, String> d = Cs2Bridge.INSTANCE.defaults();

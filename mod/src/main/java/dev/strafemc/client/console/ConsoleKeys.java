@@ -36,7 +36,6 @@ public final class ConsoleKeys {
 	 * that changes the game lives on the Minecraft server (see dev.strafemc.server.Access); this only hides the UI.
 	 */
 	public static boolean allowed(Minecraft mc) {
-		if (mc.hasSingleplayerServer()) return true;
-		return mc.player != null && mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		return true; // everyone may open it; the Minecraft server decides what each player may run (server.Access)
 	}
 }

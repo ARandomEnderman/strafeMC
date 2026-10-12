@@ -51,8 +51,9 @@ public final class BulletHoles {
 	public static void onImpact(StrafePayloads.BulletImpact m) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null) return;
-		if (dev.strafemc.client.Placeholders.active()) {
+		if (dev.strafemc.client.Placeholders.active()) { // no CS2 files: vanilla particles + a drawn stand-in hole
 			dev.strafemc.client.Placeholders.impact(m);
+			addDecal(mc, m, DecalLibrary.PLACEHOLDER, new Random(m.seed()));
 			return;
 		}
 		Surfaces.Surface s = Surfaces.get(m.surface());
@@ -65,6 +66,10 @@ public final class BulletHoles {
 		String mat = DecalLibrary.pick(s.decalGroup(), rng);
 		if (mat == null) return;
 		DecalLibrary.material(mat); // start loading early
+		addDecal(mc, m, mat, rng);
+	}
+
+	private static void addDecal(Minecraft mc, StrafePayloads.BulletImpact m, String mat, Random rng) {
 		BlockPos bp = BlockPos.of(m.block());
 		Direction face = Direction.from3DDataValue(m.face());
 		DECALS.addLast(new Decal(bp, mc.level.getBlockState(bp), face, new Vec3(m.x(), m.y(), m.z()), mat, rng.nextDouble(),

@@ -15,6 +15,6 @@ public abstract class GameRendererHandFovMixin {
 	@ModifyExpressionValue(method = "renderLevel", at = @At(value = "FIELD",
 			target = "Lnet/minecraft/client/renderer/state/level/CameraRenderState;hudFov:F"))
 	private float strafemc$viewmodelFov(float original) {
-		return StrafeConfig.movementEnabled ? (float) StrafeConfig.viewmodelFov : original;
+		return dev.strafemc.client.ClientGameplay.sourceMovement() ? (float) StrafeConfig.viewmodelFov : original;
 	}
 }
