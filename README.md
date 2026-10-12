@@ -14,8 +14,8 @@ and impact effects.
 
 ## Status
 
-Early development, not released yet. Development builds work, but setting them up is manual (see
-[Manual setup](#manual-setup)). A guided first-time setup is the next big step before a public release.
+Early development, not released yet. The first-time setup is built in: when you join a world, strafeMC offers to
+convert what it needs from your CS2 install.
 
 ## Features
 
@@ -55,19 +55,27 @@ Early development, not released yet. Development builds work, but setting them u
 
 ## First-time setup
 
-strafeMC converts models, sounds and data from your CS2 install into a cache on your PC. This happens once, locally;
-nothing is uploaded.
+strafeMC converts models, sounds and data from your CS2 install into a `strafemc` folder in your Minecraft profile.
+This happens once, locally; nothing is uploaded and your CS2 install is never changed.
 
-**Planned (not available yet):** when you join a world without a finished setup, strafeMC will offer two ways:
-- **Automatic:** the mod finds CS2, downloads the open-source converter (ValveResourceFormat) from its official release
-  page and converts everything, after telling you exactly what it will do.
-- **Manual:** run the standalone `strafemc-setup.jar` from this repository's releases, which does the same thing.
+> [!NOTE]
+> **Disk space:** the setup converts every gun and knife at once (so updates rarely need more), about **900 MB**, and
+> takes **about 3 minutes**. Weapon textures are stored at reduced size to keep it small.
 
-Until then, development builds use the manual setup below.
+When you join a world without a finished setup, strafeMC offers:
+- **Set up automatically:** strafeMC finds CS2 (or you paste its folder), downloads the open-source converter
+  (ValveResourceFormat 20.0) from its official GitHub release, checks it against its published checksum, and converts
+  everything. It shows exactly what it will do before it starts, and runs in the background while you play.
+- **Do it myself:** follow [docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md). (A standalone setup tool is planned.)
+- **Later** / **Don't ask again:** play with placeholders.
+
+strafeMC checks on every start whether anything is missing. If a mod update needs more files from CS2, it offers to
+convert only those.
 
 ## Manual setup
 
-The full step-by-step guide is in [docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md). In short:
+If you'd rather not let the mod download the converter, the full step-by-step guide is in
+[docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md). In short:
 
 1. Download the ValveResourceFormat command-line converter (`Source2Viewer-CLI`) from its
    [official releases](https://github.com/ValveResourceFormat/ValveResourceFormat/releases).

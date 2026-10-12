@@ -10,9 +10,10 @@ CS2 install.
 > ⚠️ **Requires your own copy of Counter-Strike 2** (free on Steam), installed on the same PC. strafeMC contains no
 > CS2 files: it converts what it needs from your installation, locally on your PC.
 
-> 🛠️ **Development build.** First-time setup is currently manual; follow the
-> [setup guide](https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md). A guided setup inside the
-> game is coming.
+> 💾 **First-time setup: about 900 MB and about 3 minutes.** When you join a world, strafeMC offers to convert what it
+> needs from your CS2 install: automatically (it tells you exactly what it does first), or by hand with the
+> [setup guide](https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md). Every gun and knife is
+> converted at once, so updates rarely need more.
 
 ## Features
 
@@ -51,9 +52,11 @@ CS2 install.
 
 So you know exactly what to expect:
 - **Reads your CS2 files** (read-only) from the folder you set, and never changes your CS2 install.
-- **Runs the open-source ValveResourceFormat converter** (`Source2Viewer-CLI`), which you download yourself from its
-  [official releases](https://github.com/ValveResourceFormat/ValveResourceFormat/releases), to convert CS2's models,
-  textures, sounds and animations into a cache in your Minecraft profile's `strafemc` folder.
+- **Uses the open-source ValveResourceFormat converter** (`Source2Viewer-CLI`) to convert CS2's models, textures,
+  sounds and animations into your Minecraft profile's `strafemc` folder (about 900 MB). With automatic setup, strafeMC
+  downloads it from its [official GitHub release](https://github.com/ValveResourceFormat/ValveResourceFormat/releases)
+  only after you click "Set up automatically", and checks it against its published checksum before running it. You can
+  also download it yourself and follow the setup guide.
 - **Uploads nothing.** Converted files stay on your PC. On a server, only gameplay numbers (like weapon damage and
   movement settings) are sent from the server to its players.
 - **Never connects to Valve's servers**, matchmaking or anti-cheat. Hosts can optionally run a local CS2 dedicated

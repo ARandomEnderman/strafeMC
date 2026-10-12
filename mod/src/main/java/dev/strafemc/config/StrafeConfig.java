@@ -30,6 +30,9 @@ public final class StrafeConfig {
 
 	private static final Path FILE = RUNTIME_DIR.resolve("strafemc.properties");
 
+	/** The player chose "don't ask again" on the setup screen. */
+	public static boolean setupNeverAsk = false;
+
 	/** Master switch for Source movement. */
 	public static boolean movementEnabled = true;
 	/**
@@ -119,6 +122,7 @@ public final class StrafeConfig {
 			cs2Path = p.getProperty("cs2Path", cs2Path);
 			vrfPath = p.getProperty("vrfPath", vrfPath);
 			launcherPath = p.getProperty("launcherPath", launcherPath);
+			setupNeverAsk = Boolean.parseBoolean(p.getProperty("setupNeverAsk", String.valueOf(setupNeverAsk)));
 			save();
 			StrafeMc.LOG.info("[strafemc] config {} : unitsPerBlock={} hpScale={} scrollJump={} debug={}", FILE, unitsPerBlock, hpScale, scrollJump, debug);
 		} catch (IOException | RuntimeException e) {
@@ -150,6 +154,7 @@ public final class StrafeConfig {
 		p.setProperty("cs2Path", cs2Path);
 		p.setProperty("vrfPath", vrfPath);
 		p.setProperty("launcherPath", launcherPath);
+		p.setProperty("setupNeverAsk", String.valueOf(setupNeverAsk));
 		try (Writer w = Files.newBufferedWriter(FILE)) {
 			p.store(w, "strafeMC settings (unitsPerBlock: Hammer units per block; hpScale: MC HP per CS HP)");
 		}
