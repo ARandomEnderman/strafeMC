@@ -27,6 +27,9 @@ public final class CsFallDamage {
 		if (cs <= 0) return;
 		float mc = (float) (cs * StrafeConfig.hpScale);
 		p.hurtServer(p.level(), p.damageSources().fall(), mc);
+		// taking damage marks the player for a motion resync, which the client would apply as knockback on top of its
+		// own movement (it launched bunny-hoppers upward); fall damage never pushes anyone
+		p.hurtMarked = false;
 		StrafeMc.LOG.info("[strafemc] CS2 fall damage {}: impact {} u/s -> {} CS HP -> {} MC HP", p.getScoreboardName(),
 				String.format("%.0f", v), String.format("%.1f", cs), String.format("%.2f", mc));
 	}
