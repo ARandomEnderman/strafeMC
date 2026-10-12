@@ -38,6 +38,11 @@ public class StrafeMcClient implements ClientModInitializer {
 		// first-time setup / top-up after an update: offered on the title screen (or on joining, if that was skipped) while CS2 files are missing
 		SetupScreen.registerHud();
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
+			if (!(screen instanceof SetupScreen)) // the running setup's progress on every menu (title, pause, options...)
+				net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterExtract(screen).register((s, g, mx, my, d) -> {
+					String p = SetupScreen.progressLine();
+					if (p != null) g.centeredText(mc.font, p, s.width / 2, 2, 0xFFFFFFFF);
+				});
 			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));

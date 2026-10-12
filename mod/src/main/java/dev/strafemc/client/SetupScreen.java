@@ -41,8 +41,11 @@ public final class SetupScreen extends Screen {
 	private EditBox folder;
 	private String typed = "";
 	private Path cs2;
-	private volatile double fraction;
-	private volatile String step = "";
+	/** The running setup's progress (shared: the screen can be closed and reopened, and menus / the HUD show it too). */
+	private static volatile boolean running;
+	private static volatile double fraction;
+	private static volatile String step = "";
+	private static volatile String runError;
 	private volatile String error;
 
 	public SetupScreen(Setup.Status status, Screen parent) {
@@ -64,7 +67,7 @@ public final class SetupScreen extends Screen {
 			mc0.execute(() -> mc0.setScreen(done));
 			return;
 		}
-		if (offered || StrafeConfig.setupNeverAsk) return;
+		if (running || offered || StrafeConfig.setupNeverAsk) return;
 		offered = true;
 		Setup.Status st = Setup.status(StrafeConfig.cacheDir());
 		if (!st.needsSetup()) return;
@@ -75,7 +78,15 @@ public final class SetupScreen extends Screen {
 	/** Opened by hand (Options > strafeMC...): always shows, also when the setup is complete (to redo it). */
 	public static void open(Screen parent) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		mc.setScreen(new SetupScreen(Setup.status(StrafeConfig.cacheDir()), parent));
+		SetupScreen s = new SetupScreen(Setup.status(StrafeConfig.cacheDir()), parent);
+		if (running) s.page = Page.RUNNING; // reopened while it runs: back to the progress bar
+		mc.setScreen(s);
+	}
+
+	/** The setup's progress while it runs, the restart reminder after it, else null (shown on menus and in game). */
+	public static String progressLine() {
+		if (running) return String.format("§e[strafeMC] Setting up: %.0f%%§7 (%s)", fraction * 100, step);
+		return restartNeeded ? "§e[strafeMC] Setup done: restart Minecraft to load the CS2 files" : null;
 	}
 
 	/** A line at the top of the screen in game until Minecraft is restarted after the setup. */
@@ -83,8 +94,9 @@ public final class SetupScreen extends Screen {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
 				net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "setup_restart"), (g, delta) -> {
 					var mc = net.minecraft.client.Minecraft.getInstance();
-					if (!restartNeeded || mc.options.hideGui) return;
-					g.centeredText(mc.font, "§e[strafeMC] Setup done: restart Minecraft to load the CS2 files", g.guiWidth() / 2, 4, 0xFFFFFFFF);
+					if (mc.options.hideGui) return;
+					String p = progressLine();
+					if (p != null) g.centeredText(mc.font, p, g.guiWidth() / 2, 4, 0xFFFFFFFF);
 				});
 	}
 
@@ -176,6 +188,9 @@ public final class SetupScreen extends Screen {
 		error = null;
 		page = Page.RUNNING;
 		rebuildWidgets();
+		running = true;
+		fraction = 0;
+		step = "";
 		Thread t = new Thread(() -> {
 			try {
 				Path converter = converterReady() ? Path.of(StrafeConfig.vrfPath)
@@ -196,11 +211,13 @@ public final class SetupScreen extends Screen {
 			} catch (Exception e) {
 				StrafeMc.LOG.error("[strafemc] setup failed", e);
 				error = e.getMessage();
+				runError = error;
 				page = Page.FAILED;
 			}
+			running = false;
 			minecraft.execute(() -> {
 				rebuildWidgets();
-				if (minecraft.screen != this) // closed while it ran: tell the player in chat
+				if (!(minecraft.screen instanceof SetupScreen)) // closed while it ran: tell the player in chat
 					minecraft.gui.getChat().addClientSystemMessage(Component.literal(page == Page.DONE
 							? "§a[strafeMC] Setup done. Restart Minecraft to load the converted CS2 files."
 							: "§c[strafeMC] Setup stopped: " + error));
@@ -221,6 +238,11 @@ public final class SetupScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float partial) {
 		super.extractRenderState(g, mx, my, partial);
+		if (page == Page.RUNNING && !running) { // a reopened progress page: the setup finished meanwhile
+			page = restartNeeded ? Page.DONE : Page.FAILED;
+			if (error == null) error = runError;
+			rebuildWidgets();
+		}
 		int cx = width / 2, x = cx - 155, y = 16;
 		g.centeredText(font, "§lstrafeMC setup", cx, y, 0xFFFFFFFF);
 		y += 20;
@@ -267,7 +289,7 @@ public final class SetupScreen extends Screen {
 				if (error != null) lines.add("§c" + error);
 			}
 			case RUNNING -> {
-				lines.add("Setting up… you can keep playing: it runs in the background, and the chat says when it's done.");
+				lines.add("Setting up… you can keep playing: it runs in the background, its progress shows at the top of the screen, and Options > strafeMC > Open setup... brings this page back.");
 				lines.add("");
 				lines.add("§7" + step);
 				int bw = 310, by = y + 50;
