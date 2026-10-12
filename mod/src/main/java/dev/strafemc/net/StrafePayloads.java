@@ -70,6 +70,30 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: the seed for this player's shot spread and the next shot number (for exact prediction). */
+	public record ShotSeed(long seed, int next) implements CustomPacketPayload {
+		public static final Type<ShotSeed> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "shot_seed"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ShotSeed> CODEC =
+				StreamCodec.composite(ByteBufCodecs.VAR_LONG, ShotSeed::seed, ByteBufCodecs.VAR_INT, ShotSeed::next, ShotSeed::new);
+
+		@Override
+		public Type<ShotSeed> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> shooter: shot n didn't go where the client predicted; drop its predicted impact (the real one follows). */
+	public record ShotCorrection(int shot) implements CustomPacketPayload {
+		public static final Type<ShotCorrection> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "shot_correction"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ShotCorrection> CODEC =
+				StreamCodec.composite(ByteBufCodecs.VAR_INT, ShotCorrection::shot, ShotCorrection::new);
+
+		@Override
+		public Type<ShotCorrection> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: the server's gameplay data as JSON (server/GameplaySync, client/ClientGameplay). */
 	public record GameplaySync(String json) implements CustomPacketPayload {
 		public static final Type<GameplaySync> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "gameplay_sync"));
@@ -93,11 +117,20 @@ public final class StrafePayloads {
 		}
 	}
 
-	/** Fire one shot of the held CS gun in this direction (client applied CS inaccuracy/spread). */
-	public record Fire(float yaw, float pitch) implements CustomPacketPayload {
+	/**
+	 * Fire one shot of the held CS gun: the view angles, the shot number, and the client's inaccuracy and aim punch as it
+	 * predicted them. The server decides the actual direction (weapon.ServerShots, weapon.ShotMath).
+	 */
+	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw) implements CustomPacketPayload {
 		public static final Type<Fire> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "fire"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, Fire> CODEC =
-				StreamCodec.composite(ByteBufCodecs.FLOAT, Fire::yaw, ByteBufCodecs.FLOAT, Fire::pitch, Fire::new);
+		public static final StreamCodec<RegistryFriendlyByteBuf, Fire> CODEC = StreamCodec.of((b, v) -> {
+			b.writeFloat(v.yaw);
+			b.writeFloat(v.pitch);
+			b.writeVarInt(v.shot);
+			b.writeFloat(v.inaccuracy);
+			b.writeFloat(v.punchPitch);
+			b.writeFloat(v.punchYaw);
+		}, b -> new Fire(b.readFloat(), b.readFloat(), b.readVarInt(), b.readFloat(), b.readFloat(), b.readFloat()));
 
 		@Override
 		public Type<Fire> type() {

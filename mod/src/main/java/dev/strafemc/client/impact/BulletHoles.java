@@ -78,7 +78,30 @@ public final class BulletHoles {
 		return new org.joml.Vector3f((c >> 16 & 255) / 255f, (c >> 8 & 255) / 255f, (c & 255) / 255f);
 	}
 
+	/** Shot number -> the decal its prediction placed (dropped if the server says the shot went elsewhere). */
+	private static final java.util.Map<Integer, Decal> PREDICTED = new java.util.LinkedHashMap<>() {
+		@Override
+		protected boolean removeEldestEntry(java.util.Map.Entry<Integer, Decal> e) {
+			return size() > 64;
+		}
+	};
+
+	/** The shooter's own predicted impact, remembered by shot number. */
+	public static void onPredicted(StrafePayloads.BulletImpact m, int shot) {
+		Decal before = DECALS.peekLast();
+		onImpact(m);
+		Decal added = DECALS.peekLast();
+		if (added != null && added != before) PREDICTED.put(shot, added);
+	}
+
+	/** The server corrected shot n: its predicted hole goes (the real impact arrives separately). */
+	public static void dropPredicted(int shot) {
+		Decal d = PREDICTED.remove(shot);
+		if (d != null) DECALS.remove(d);
+	}
+
 	public static void clear() {
+		PREDICTED.clear();
 		DECALS.clear();
 	}
 

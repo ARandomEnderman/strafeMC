@@ -158,29 +158,41 @@ public final class GunServer {
 		}
 	}
 
-	public static void fire(ServerPlayer p, float yaw, float pitch) {
+	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
 		ItemStack held = p.getMainHandItem();
-		if (!(held.getItem() instanceof GunItem g)) return;
-		WeaponStats w = g.stats();
-		if (w == null) return;
+		WeaponStats w = held.getItem() instanceof GunItem gi && !(gi instanceof KnifeItem) ? gi.stats() : null;
+		if (w == null) {
+			ServerShots.skip(p, f.shot());
+			return;
+		}
+		GunItem g = (GunItem) held.getItem();
 		State st = state(p);
 		long now = System.nanoTime(), tolerance = 5_000_000L; // 5 ms for network jitter
-		if (now < st.deployUntil - tolerance || st.reloadLocked() || now < st.nextFire - tolerance) return;
 		int clip = g.clip(held), inf = infiniteAmmo();
-		if (clip <= 0 && inf != 1) return;
+		if (now < st.deployUntil - tolerance || st.reloadLocked() || now < st.nextFire - tolerance || (clip <= 0 && inf != 1)) {
+			ServerShots.skip(p, f.shot()); // a rejected shot still uses up its number, so client and server stay in step
+			return;
+		}
 		st.nextFire = Math.max(now, st.nextFire) + sec(w.cycleTime());
 		broadcast(p, w.shootSound());
 		if (inf != 1) held.set(WeaponItems.CLIP, clip - 1);
 
 		double units = StrafeConfig.unitsPerBlock;
 		Vec3 eye = p.getEyePosition();
-		Vec3 dir = Vec3.directionFromRotation(pitch, yaw);
+		ServerShots.Result shot = ServerShots.resolve(p, w, f); // the server decides spread + recoil (the client only predicted)
+		Vec3 dir = shot.dir();
 		Vec3 end = eye.add(dir.scale(w.range() / units));
 		HitResult block = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
 		EntityHitResult hit = ProjectileUtil.getEntityHitResult(p, eye, end, new AABB(eye, end).inflate(1.0),
 				e -> e != p && e.isPickable() && !e.isSpectator(), eye.distanceToSqr(end));
-		if (hit == null && block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) impact(p, bh);
+		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
+		if (hit == null && block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) {
+			impact(p, bh);
+			if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, impactMessage(p.level(), bh, eye, IMPACT_SEEDS.nextInt())); // the real hole
+		}
 		if (hit == null || !(hit.getEntity() instanceof LivingEntity target)) return;
 
 		Vec3 at = hit.getLocation();

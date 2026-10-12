@@ -33,8 +33,6 @@ import java.util.Random;
  */
 public final class GunClient {
 	public static final GunClient INSTANCE = new GunClient();
-	/** CS: movement inaccuracy ramps from 34% to 95% of max speed (Source/CS:GO values; not exposed by CS2 data). */
-	private static final double MOVE_INACC_MIN = 0.34, MOVE_INACC_MAX = 0.95;
 
 	public static KeyMapping RELOAD;
 
@@ -203,21 +201,10 @@ public final class GunClient {
 	/** Base inaccuracy from stance/movement, recovering toward it with the weapon's recovery time (CS model). */
 	private void updatePenalty(WeaponStats w, double dt) {
 		MovementController m = MovementController.INSTANCE;
-		double target;
-		if (m.onLadder()) target = w.inaccuracyLadder();
-		else if (!m.onGround()) target = w.inaccuracyStand() + w.inaccuracyJump();
-		else if (m.ducked()) target = w.inaccuracyCrouch();
-		else target = w.inaccuracyStand();
-		double max = w.maxSpeed(), speed = m.horizontalSpeed();
-		double frac = Math.max(0, Math.min(1, (speed - max * MOVE_INACC_MIN) / (max * (MOVE_INACC_MAX - MOVE_INACC_MIN))));
-		target += frac * w.inaccuracyMove();
-		if (target >= penalty) penalty = target;
-		else {
-			dev.strafemc.weapon.Recoil rc = dev.strafemc.client.ClientGameplay.recoil(w.cls());
-			double rec = rc != null ? rc.recoveryTime(m.onGround(), m.ducked(), recoilIndex)
-					: m.ducked() ? w.recoveryTimeCrouch() : w.recoveryTimeStand();
-			penalty = target + (penalty - target) * Math.exp(-dt * Math.log(10) / Math.max(1e-3, rec));
-		}
+		double target = dev.strafemc.weapon.InaccuracyModel.target(w, m.onLadder(), m.onGround(), m.ducked(), m.horizontalSpeed());
+		dev.strafemc.weapon.Recoil rc = dev.strafemc.client.ClientGameplay.recoil(w.cls());
+		double rec = rc != null ? rc.recoveryTime(m.onGround(), m.ducked(), recoilIndex) : m.ducked() ? w.recoveryTimeCrouch() : w.recoveryTimeStand();
+		penalty = dev.strafemc.weapon.InaccuracyModel.recover(penalty, target, rec, dt);
 	}
 
 	/**
@@ -226,23 +213,24 @@ public final class GunClient {
 	 */
 	private static final double NEARLY_EMPTY_FRACTION = 0.2;
 	private int predictedClip = -1;
+	/** This player's spread seed and next shot number from the server (ShotSeed); a local seed until it arrives. */
+	private long shotSeed = new java.util.Random().nextLong();
+	private int shotNumber;
+
+	public void setShotSeed(long seed, int next) {
+		shotSeed = seed;
+		shotNumber = next;
+	}
 	private long lastShot;
 
 	private void shoot(LocalPlayer p, WeaponStats w, int roundsLeft) {
-		// CS: a random offset inside the inaccuracy circle plus one inside the spread circle
-		double t0 = rng.nextDouble() * Math.PI * 2, r0 = rng.nextDouble() * penalty;
-		double t1 = rng.nextDouble() * Math.PI * 2, r1 = rng.nextDouble() * w.spread();
-		double ox = Math.cos(t0) * r0 + Math.cos(t1) * r1, oy = Math.sin(t0) * r0 + Math.sin(t1) * r1;
-		// CS2: the bullet leaves along eye angles + aim punch (Source pitch + = down, yaw + = left; MC yaw + = right)
+		// predicted exactly like the server will decide it: same formula, the server's seed, the next shot number
 		double t = System.nanoTime() / 1e9;
 		aimPunch.advance(t);
-		float aimPitch = (float) (p.getXRot() + aimPunch.angle[0]), aimYaw = (float) (p.getYRot() - aimPunch.angle[1]);
-		Vec3 fwd = Vec3.directionFromRotation(aimPitch, aimYaw);
-		Vec3 right = fwd.cross(new Vec3(0, 1, 0)).normalize();
-		Vec3 up = right.cross(fwd).normalize();
-		Vec3 d = fwd.add(right.scale(ox)).add(up.scale(oy)).normalize();
-		float yaw = (float) Math.toDegrees(Math.atan2(-d.x, d.z)), pitch = (float) Math.toDegrees(Math.asin(-d.y));
-		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Fire(yaw, pitch));
+		int shot = shotNumber++;
+		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
+		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
+			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1]));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
 			sounds.clear();
@@ -250,7 +238,7 @@ public final class GunClient {
 		}
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("shoot1");
 		effects(p, w, d);
-		predictImpact(p, w, d);
+		predictImpact(p, w, d, shot);
 		if (w.shootSound() != null) CsSounds.playOn(w.shootSound(), p, 1.0, false);
 		if (w.nearlyEmptySound() != null && w.clip() > 0 && roundsLeft <= w.clip() * NEARLY_EMPTY_FRACTION)
 			CsSounds.playOn(w.nearlyEmptySound(), p, 1.0, false);
@@ -305,7 +293,7 @@ public final class GunClient {
 	private static final java.util.Random IMPACT_RNG = new java.util.Random();
 
 	/** The shooter's own bullet impact, shown immediately (as CS predicts it) instead of after the server round trip. */
-	private static void predictImpact(LocalPlayer p, WeaponStats w, Vec3 dir) {
+	private static void predictImpact(LocalPlayer p, WeaponStats w, Vec3 dir, int shot) {
 		Vec3 eye = p.getEyePosition(), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var hit = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
@@ -314,7 +302,7 @@ public final class GunClient {
 				new net.minecraft.world.phys.AABB(eye, hit.getLocation()).inflate(1), e -> e != p && e.isPickable() && !e.isSpectator(),
 				eye.distanceToSqr(hit.getLocation()));
 		if (ent != null) return; // the bullet stops in an entity first
-		dev.strafemc.client.impact.BulletHoles.onImpact(GunServer.impactMessage(p.level(), hit, eye, IMPACT_RNG.nextInt()));
+		dev.strafemc.client.impact.BulletHoles.onPredicted(GunServer.impactMessage(p.level(), hit, eye, IMPACT_RNG.nextInt()), shot);
 	}
 
 	/** Background-loads a weapon's shot effects (muzzle flash events of its shoot clip, tracer) and the surface impact effects. */

@@ -22,6 +22,10 @@ public class StrafeMcClient implements ClientModInitializer {
 		Cs2Bridge.INSTANCE.start();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE,
 				(msg, ctx) -> ClientGameplay.apply(msg.json()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE,
+				(msg, ctx) -> dev.strafemc.client.weapon.GunClient.INSTANCE.setShotSeed(msg.seed(), msg.next()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE,
+				(msg, ctx) -> dev.strafemc.client.impact.BulletHoles.dropPredicted(msg.shot()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ConsoleReply.TYPE,
 				(msg, ctx) -> dev.strafemc.client.console.ConsoleLog.add(msg.text(), switch (msg.kind()) {
 					case 1 -> dev.strafemc.client.console.ConsoleLog.OK;
