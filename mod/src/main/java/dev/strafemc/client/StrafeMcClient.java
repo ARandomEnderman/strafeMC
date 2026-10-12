@@ -35,8 +35,11 @@ public class StrafeMcClient implements ClientModInitializer {
 					default -> dev.strafemc.client.console.ConsoleLog.WHITE;
 				}));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ClientGameplay.clear());
-		// first-time setup / top-up after an update: offered when joining a world while CS2 files are missing
-		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.checkOnJoin());
+		// first-time setup / top-up after an update: offered on the title screen (or on joining, if that was skipped) while CS2 files are missing
+		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
+			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
+		});
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
 			if (mc.getSingleplayerServer() != null) return; // your own world: your CS2 server is its CS2 server
 			boolean local = handler.getConnection().getRemoteAddress() instanceof java.net.InetSocketAddress a && a.getAddress() != null

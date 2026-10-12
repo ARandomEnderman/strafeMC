@@ -30,7 +30,10 @@ public final class SetupScreen extends Screen {
 
 	private enum Page { INTRO, CONFIRM, RUNNING, DONE, FAILED }
 
+	/** Offered once per game start: on the title screen, or on joining a world if the title screen was skipped. */
+	private static boolean offered;
 	private final Setup.Status status;
+	private final Screen parent;
 	private Page page = Page.INTRO;
 	private EditBox folder;
 	private String typed = "";
@@ -39,18 +42,26 @@ public final class SetupScreen extends Screen {
 	private volatile String step = "";
 	private volatile String error;
 
-	public SetupScreen(Setup.Status status) {
+	public SetupScreen(Setup.Status status, Screen parent) {
 		super(Component.literal("strafeMC setup"));
 		this.status = status;
+		this.parent = parent;
+		this.cs2 = Cs2Finder.find(StrafeConfig.cs2Path);
 	}
 
-	/** Called on world join: opens the screen when CS2 files are missing or the setup is outdated. */
-	public static void checkOnJoin() {
-		if (StrafeConfig.setupNeverAsk) return;
+	/** Opens the screen over {@code current} (null in a world) when CS2 files are missing or the setup is outdated, once per game start. */
+	public static void offer(Screen current) {
+		if (offered || StrafeConfig.setupNeverAsk) return;
+		offered = true;
 		Setup.Status st = Setup.status(StrafeConfig.cacheDir());
 		if (!st.needsSetup()) return;
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		mc.execute(() -> mc.setScreen(new SetupScreen(st)));
+		mc.execute(() -> mc.setScreen(new SetupScreen(st, current)));
+	}
+
+	@Override
+	public void onClose() {
+		minecraft.setScreen(parent);
 	}
 
 	@Override
@@ -58,10 +69,14 @@ public final class SetupScreen extends Screen {
 		int cx = width / 2, bottom = height - 32;
 		switch (page) {
 			case INTRO -> {
-				addRenderableWidget(Button.builder(Component.literal("Set up automatically"), b -> toConfirm()).bounds(cx - 155, bottom - 26, 150, 20).build());
+				if (cs2 == null)
+					addRenderableWidget(Button.builder(Component.literal("Get CS2 on Steam (free)"), b -> Util.getPlatform().openUri(STORE))
+							.bounds(cx - 155, bottom - 52, 310, 20).build());
+				addRenderableWidget(Button.builder(Component.literal(cs2 == null ? "I have CS2: pick its folder" : "Set up automatically"), b -> toConfirm())
+						.bounds(cx - 155, bottom - 26, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Do it myself (guide)"), b -> Util.getPlatform().openUri(GUIDE))
 						.bounds(cx + 5, bottom - 26, 150, 20).build());
-				addRenderableWidget(Button.builder(Component.literal("Later"), b -> onClose()).bounds(cx - 155, bottom, 150, 20).build());
+				addRenderableWidget(Button.builder(Component.literal(cs2 == null ? "Play without it" : "Later"), b -> onClose()).bounds(cx - 155, bottom, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Don't ask again"), b -> {
 					StrafeConfig.setupNeverAsk = true;
 					save();
@@ -95,7 +110,6 @@ public final class SetupScreen extends Screen {
 	}
 
 	private void toConfirm() {
-		cs2 = Cs2Finder.find(StrafeConfig.cs2Path);
 		page = Page.CONFIRM;
 		rebuildWidgets();
 	}
@@ -183,6 +197,12 @@ public final class SetupScreen extends Screen {
 							+ (status.missingFiles() > 0 ? " (" + status.missingFiles() + " files are missing)." : " (new weapons or effects)."));
 				else lines.add("strafeMC needs files from your own Counter-Strike 2 install before guns, sounds and effects work.");
 				lines.add("");
+				if (cs2 == null) {
+					lines.add("§eCounter-Strike 2 doesn't seem to be installed on this PC.");
+					lines.add("§7It's free on Steam (a large download, around 60 GB). Install it, then restart Minecraft and this screen comes back. If it's installed somewhere unusual, pick its folder instead.");
+					lines.add("§7Without it you can still play: CS2 movement works, and guns, knives and sounds use placeholders. On a server, its gameplay values still apply to you.");
+					lines.add("");
+				}
 				lines.add("It converts them once, on this PC, into a strafemc folder in your Minecraft profile. Nothing is uploaded, and your CS2 install is never changed.");
 				lines.add("");
 				lines.add("§7Needs " + SIZE + " of disk space and a few minutes. Until then you can play with placeholders.");
@@ -198,10 +218,7 @@ public final class SetupScreen extends Screen {
 					lines.add("§7In Steam: right-click Counter-Strike 2 → Manage → Browse local files. Use Browse… to pick that folder (or paste it).");
 					lines.add("§7Don't have CS2? It's free on Steam; install it, then come back here.");
 				}
-				if (converterReady()) {
-					lines.add("• Uses the converter that's already on this PC (no download):");
-					lines.add("§7  " + StrafeConfig.vrfPath);
-				}
+				if (converterReady()) lines.add("• Uses the ValveResourceFormat converter strafeMC already has (no download).");
 				else {
 					var b = ConverterDownload.forThisComputer();
 					lines.add("• Downloads the open-source ValveResourceFormat converter " + ConverterDownload.VERSION + " (" + b.size() / 1_000_000
