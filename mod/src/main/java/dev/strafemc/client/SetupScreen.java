@@ -23,6 +23,7 @@ import java.util.List;
  * setup is missing or incomplete, unless the player chose "don't ask again".
  */
 public final class SetupScreen extends Screen {
+	public static final String STORE = "https://store.steampowered.com/app/730/";
 	public static final String GUIDE = "https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md";
 	/** Rough size of a full setup (all guns and knives, shrunk textures, effects, sounds); see setup.json for the real files. */
 	private static final String SIZE = "about 900 MB";
@@ -32,6 +33,7 @@ public final class SetupScreen extends Screen {
 	private final Setup.Status status;
 	private Page page = Page.INTRO;
 	private EditBox folder;
+	private String typed = "";
 	private Path cs2;
 	private volatile double fraction;
 	private volatile String step = "";
@@ -67,11 +69,19 @@ public final class SetupScreen extends Screen {
 				}).bounds(cx + 5, bottom, 150, 20).build());
 			}
 			case CONFIRM -> {
-				folder = new EditBox(font, cx - 155, 96, 310, 20, Component.literal("CS2 folder"));
+				folder = new EditBox(font, cx - 155, 74, 236, 20, Component.literal("CS2 folder"));
 				folder.setMaxLength(400);
-				folder.setValue(cs2 != null ? cs2.toString() : "");
+				folder.setValue(cs2 != null ? cs2.toString() : typed);
 				folder.setHint(Component.literal("…\\steamapps\\common\\" + Cs2Finder.FOLDER));
+				folder.setResponder(v -> {
+					typed = v;
+					error = null;
+				});
 				addRenderableWidget(folder);
+				addRenderableWidget(Button.builder(Component.literal("Browse…"), b -> browse()).bounds(cx + 85, 74, 70, 20).build());
+				if (cs2 == null)
+					addRenderableWidget(Button.builder(Component.literal("Get CS2 on Steam (free)"), b -> Util.getPlatform().openUri(STORE))
+							.bounds(cx - 155, bottom - 26, 310, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("§aStart"), b -> start()).bounds(cx - 155, bottom, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Back"), b -> {
 					page = Page.INTRO;
@@ -94,10 +104,25 @@ public final class SetupScreen extends Screen {
 		return !StrafeConfig.vrfPath.isBlank() && Files.isRegularFile(Path.of(StrafeConfig.vrfPath));
 	}
 
+	/** A native folder picker (it blocks, so it runs off the render thread); the pick goes through the same normalizing. */
+	private void browse() {
+		Thread t = new Thread(() -> {
+			String picked = org.lwjgl.util.tinyfd.TinyFileDialogs.tinyfd_selectFolderDialog("Choose your Counter-Strike 2 folder",
+					folder.getValue().isBlank() ? System.getProperty("user.home") : folder.getValue());
+			if (picked == null) return;
+			minecraft.execute(() -> {
+				Path n = Cs2Finder.normalize(picked);
+				folder.setValue(n != null ? n.toString() : picked);
+			});
+		}, "strafemc-browse");
+		t.setDaemon(true);
+		t.start();
+	}
+
 	private void start() {
-		Path chosen = Path.of(folder.getValue().trim());
-		if (!Cs2Finder.valid(chosen)) {
-			error = "That folder doesn't contain CS2's game files (game\\csgo\\pak01_dir.vpk). In Steam: Counter-Strike 2 → Manage → Browse local files.";
+		Path chosen = Cs2Finder.normalize(folder.getValue());
+		if (chosen == null) {
+			error = "No CS2 game files there. In Steam: right-click Counter-Strike 2 → Manage → Browse local files, and pick that folder.";
 			return;
 		}
 		cs2 = chosen;
@@ -163,12 +188,20 @@ public final class SetupScreen extends Screen {
 				lines.add("§7Needs " + SIZE + " of disk space and a few minutes. Until then you can play with placeholders.");
 			}
 			case CONFIRM -> {
-				lines.add("Counter-Strike 2 folder" + (cs2 == null ? " (not found automatically, paste it here):" : ":"));
-				y += 0;
+				lines.add(cs2 == null ? "§eCounter-Strike 2 wasn't found automatically. Pick its folder:" : "Counter-Strike 2 folder:");
 				drawWrapped(g, lines, x, y);
 				lines.clear();
-				y = 124;
-				if (converterReady()) lines.add("• Uses the converter you already set up: " + StrafeConfig.vrfPath);
+				Path n = Cs2Finder.normalize(folder == null ? "" : folder.getValue());
+				g.text(font, n != null ? "§a✔ CS2 found" + (n.toString().equals(folder.getValue().trim()) ? "" : ": " + n) : "§c✘ no CS2 game files here", x, 98, 0xFFFFFFFF, false);
+				y = 114;
+				if (cs2 == null) {
+					lines.add("§7In Steam: right-click Counter-Strike 2 → Manage → Browse local files. Use Browse… to pick that folder (or paste it).");
+					lines.add("§7Don't have CS2? It's free on Steam; install it, then come back here.");
+				}
+				if (converterReady()) {
+					lines.add("• Uses the converter that's already on this PC (no download):");
+					lines.add("§7  " + StrafeConfig.vrfPath);
+				}
 				else {
 					var b = ConverterDownload.forThisComputer();
 					lines.add("• Downloads the open-source ValveResourceFormat converter " + ConverterDownload.VERSION + " (" + b.size() / 1_000_000

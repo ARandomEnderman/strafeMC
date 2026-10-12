@@ -26,6 +26,28 @@ public final class Cs2Finder {
 		return cs2 != null && Files.isRegularFile(cs2.resolve("game").resolve("csgo").resolve("pak01_dir.vpk"));
 	}
 
+	/**
+	 * The CS2 folder for whatever the player picked: the folder itself, its game or csgo subfolder, the pak file, or the
+	 * steamapps\\common folder above it. Null if none of those lead to CS2.
+	 */
+	public static Path normalize(String input) {
+		if (input == null || input.isBlank()) return null;
+		Path p;
+		try {
+			p = Path.of(input.trim().replace("\"", ""));
+		} catch (RuntimeException e) {
+			return null;
+		}
+		if (Files.isRegularFile(p)) p = p.getParent(); // picked pak01_dir.vpk (or another file in there)
+		for (Path c = p; c != null; c = c.getParent()) { // the folder itself, or one of its parents (game\\csgo, game)
+			if (valid(c)) return c;
+		}
+		if (p != null && valid(p.resolve(FOLDER))) return p.resolve(FOLDER); // picked steamapps\\common
+		if (p != null && valid(p.resolve("common").resolve(FOLDER))) return p.resolve("common").resolve(FOLDER); // picked steamapps
+		if (p != null && valid(p.resolve("steamapps").resolve("common").resolve(FOLDER))) return p.resolve("steamapps").resolve("common").resolve(FOLDER);
+		return null;
+	}
+
 	public static Path find(String configured) {
 		if (configured != null && !configured.isBlank() && valid(Path.of(configured))) return Path.of(configured);
 		for (Path lib : libraries()) {
