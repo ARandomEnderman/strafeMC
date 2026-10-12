@@ -40,3 +40,4 @@ NOTES.md
 
 # VRF converter error logs (written to the working directory)
 exceptions.txt
+!mod/tools/
