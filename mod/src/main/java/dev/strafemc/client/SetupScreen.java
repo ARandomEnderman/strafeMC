@@ -32,6 +32,9 @@ public final class SetupScreen extends Screen {
 
 	/** Offered once per game start: on the title screen, or on joining a world if the title screen was skipped. */
 	private static boolean offered;
+	/** The setup finished in this game session: its files only load on the next start, so keep reminding until then. */
+	private static volatile boolean restartNeeded;
+	private static boolean reminded;
 	private final Setup.Status status;
 	private final Screen parent;
 	private Page page = Page.INTRO;
@@ -51,6 +54,16 @@ public final class SetupScreen extends Screen {
 
 	/** Opens the screen over {@code current} (null in a world) when CS2 files are missing or the setup is outdated, once per game start. */
 	public static void offer(Screen current) {
+		var mc0 = net.minecraft.client.Minecraft.getInstance();
+		if (current == null) reminded = false; // joining a world: remind once more
+		if (restartNeeded) { // once per world join and once back on the title screen, until the restart
+			if (reminded) return;
+			reminded = true;
+			SetupScreen done = new SetupScreen(Setup.status(StrafeConfig.cacheDir()), current);
+			done.page = Page.DONE;
+			mc0.execute(() -> mc0.setScreen(done));
+			return;
+		}
 		if (offered || StrafeConfig.setupNeverAsk) return;
 		offered = true;
 		Setup.Status st = Setup.status(StrafeConfig.cacheDir());
@@ -63,6 +76,16 @@ public final class SetupScreen extends Screen {
 	public static void open(Screen parent) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
 		mc.setScreen(new SetupScreen(Setup.status(StrafeConfig.cacheDir()), parent));
+	}
+
+	/** A line at the top of the screen in game until Minecraft is restarted after the setup. */
+	public static void registerHud() {
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
+				net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "setup_restart"), (g, delta) -> {
+					var mc = net.minecraft.client.Minecraft.getInstance();
+					if (!restartNeeded || mc.options.hideGui) return;
+					g.centeredText(mc.font, "§e[strafeMC] Setup done: restart Minecraft to load the CS2 files", g.guiWidth() / 2, 4, 0xFFFFFFFF);
+				});
 	}
 
 	@Override
@@ -111,7 +134,11 @@ public final class SetupScreen extends Screen {
 			}
 			case RUNNING -> addRenderableWidget(Button.builder(Component.literal("Keep playing"), b -> onClose())
 					.bounds(cx - 75, bottom, 150, 20).build());
-			case DONE, FAILED -> addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(cx - 75, bottom, 150, 20).build());
+			case DONE -> {
+				addRenderableWidget(Button.builder(Component.literal("§aQuit Minecraft now"), b -> minecraft.stop()).bounds(cx - 155, bottom, 150, 20).build());
+				addRenderableWidget(Button.builder(Component.literal("Later"), b -> onClose()).bounds(cx + 5, bottom, 150, 20).build());
+			}
+			case FAILED -> addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(cx - 75, bottom, 150, 20).build());
 		}
 	}
 
@@ -164,6 +191,8 @@ public final class SetupScreen extends Screen {
 					step = s;
 				}).run(!status.done() || !status.needsSetup());
 				page = Page.DONE;
+				restartNeeded = true;
+				reminded = true; // this page is the reminder right now
 			} catch (Exception e) {
 				StrafeMc.LOG.error("[strafemc] setup failed", e);
 				error = e.getMessage();
@@ -247,9 +276,10 @@ public final class SetupScreen extends Screen {
 				g.centeredText(font, String.format("%.0f%%", fraction * 100), cx, by + 12, 0xFFFFFFFF);
 			}
 			case DONE -> {
-				lines.add("§aDone.");
+				lines.add("§aThe setup is done.");
 				lines.add("");
-				lines.add("Restart Minecraft so strafeMC loads the converted files (guns, sounds, effects and icons).");
+				lines.add("§e§lRestart Minecraft to finish.");
+				lines.add("§eThe converted guns, knives, sounds and effects only load when Minecraft starts. Until you restart, everything still uses placeholders.");
 			}
 			case FAILED -> {
 				lines.add("§cThe setup stopped: " + error);
