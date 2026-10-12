@@ -20,6 +20,7 @@ param(
   [int]$NetconPort = 29015,
   [int]$ConfirmTimeoutSec = 120,
   [switch]$Metamod,
+  [string]$NetconPassword = '',   # set: netcon needs "PASS <password>" first (it listens on every interface)
   [string[]]$ExtraArgs = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -82,10 +83,12 @@ $cmd = @('-dedicated', '-insecure', '-condebug', '-consolelog',
          '+sv_hibernate_when_empty', '0',
          '+bot_quota', '0',          # no automatic bots; add them from the console (bot_add / bot_add_t / bot_add_ct)
          '+map', $Map) + $ExtraArgs
+if ($NetconPassword) { $cmd += @('-netconpassword', $NetconPassword) }
 foreach ($req in '-dedicated', '-insecure') { if ($cmd -notcontains $req) { Fail "missing $req" } }
 $i = [Array]::IndexOf($cmd, '+sv_lan'); if ($i -lt 0 -or $cmd[$i + 1] -ne '1') { Fail "+sv_lan 1 missing" }
 $i = [Array]::IndexOf($cmd, '+ip');     if ($i -lt 0 -or $cmd[$i + 1] -ne '127.0.0.1') { Fail "+ip 127.0.0.1 missing" }
-Log ("args: " + ($cmd -join ' '))
+$shown = $cmd -join ' '; if ($NetconPassword) { $shown = $shown.Replace($NetconPassword, '***') }
+Log ("args: " + $shown)
 
 # ---------- 5. launch + monitor ----------
 function IsLocalAddr([string]$a) {
@@ -126,7 +129,8 @@ function NetconStatus {
   try {
     $c = New-Object Net.Sockets.TcpClient; $c.ReceiveTimeout = 1500
     $c.Connect('127.0.0.1', $NetconPort); $s = $c.GetStream()
-    $b = [Text.Encoding]::ASCII.GetBytes("status`n"); $s.Write($b, 0, $b.Length)
+    $pre = if ($NetconPassword) { "PASS $NetconPassword`n" } else { '' }
+    $b = [Text.Encoding]::ASCII.GetBytes("${pre}status`n"); $s.Write($b, 0, $b.Length)
     $sb = New-Object Text.StringBuilder; $buf = New-Object byte[] 65536; $t = [DateTime]::Now
     while (([DateTime]::Now - $t).TotalMilliseconds -lt 1500 -and $sb.ToString() -notmatch '#end') {
       if ($s.DataAvailable) { $n = $s.Read($buf, 0, $buf.Length); [void]$sb.Append([Text.Encoding]::UTF8.GetString($buf, 0, $n)) } else { Start-Sleep -Milliseconds 20 }
@@ -139,9 +143,6 @@ $lastStatus = [DateTime]::MinValue
 $confirmed = $false; $logFile = $null; $logPos = 0; $seenBinds = @{}
 try {
   while (-not $proc.HasExited) {
-    # Steam must stay closed for the whole session, not just at launch
-    $steamNow = Get-Process -Name steam, steamwebhelper, steamservice -ErrorAction SilentlyContinue
-    if ($steamNow) { KillIt "Steam was started while CS2 was running ($(($steamNow.Name | Sort-Object -Unique) -join ', '))" }
     if (([DateTime]::Now - $lastStatus).TotalSeconds -ge 5) {
       $lastStatus = [DateTime]::Now
       $st = NetconStatus
