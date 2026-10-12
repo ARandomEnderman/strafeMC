@@ -214,6 +214,19 @@ public final class ConsoleCommands {
 		local("impulse", "impulse 101: all weapons + ammo (needs sv_cheats 1).", a -> action("impulse", a.length > 0 ? a[0] : "", true));
 		local("thirdperson", "Third-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
 		local("firstperson", "First-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
+		local("strafemc_fx_list", "List the layers of the last bullet impact effect (for strafemc_fx_hide).", a -> {
+			var layers = dev.strafemc.client.particle.Effects.lastImpactLayers();
+			if (layers.isEmpty()) ConsoleLog.add("No impact effect yet: shoot a block first.", ConsoleLog.WARN);
+			for (String l : layers) ConsoleLog.add(l, ConsoleLog.WHITE);
+		});
+		local("strafemc_fx_hide", "strafemc_fx_hide <layer name or part of it> | clear: hide particle layers to find a broken one.", a -> {
+			if (a.length == 0) {
+				ConsoleLog.add("hidden: " + dev.strafemc.client.particle.Effects.hiddenNames(), ConsoleLog.WHITE);
+				return;
+			}
+			dev.strafemc.client.particle.Effects.hide(a[0]);
+			ConsoleLog.add("hidden: " + dev.strafemc.client.particle.Effects.hiddenNames(), ConsoleLog.OK);
+		});
 		local("strafemc_relearn", "Reload the CS2 command list used for autocomplete.", a -> NetconTransport.INSTANCE.learnCommands());
 	}
 

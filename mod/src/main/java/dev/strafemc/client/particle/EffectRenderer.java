@@ -99,7 +99,7 @@ public final class EffectRenderer {
 		collect(root, all);
 		float unit = toRender.getScale(new Vector3f()).x;
 		for (PSystem s : all) {
-			if (s.count() == 0) continue;
+			if (s.count() == 0 || Effects.hidden(s.name)) continue;
 			for (Map<String, Object> def : s.renderers) {
 				Info in = info(s, def);
 				if (!in.sprites && !in.trails || in.bloomOnly) continue;

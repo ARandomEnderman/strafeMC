@@ -78,9 +78,44 @@ public final class Effects {
 	}
 
 	/** tint: the hit material's colour (0..1), passed in control point 4 as CS2's impact effects read it (chips take its colour). */
+	/** Debugging (strafemc_fx_hide / strafemc_fx_list): layers hidden by name, and the last impact effect's layers. */
+	private static final java.util.Set<String> HIDDEN = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	private static volatile PSystem lastImpact;
+
+	public static boolean hidden(String systemName) {
+		if (HIDDEN.isEmpty() || systemName == null) return false;
+		String n = systemName.toLowerCase();
+		for (String h : HIDDEN) if (n.contains(h)) return true;
+		return false;
+	}
+
+	public static void hide(String part) {
+		if (part.equalsIgnoreCase("clear")) HIDDEN.clear();
+		else HIDDEN.add(part.toLowerCase());
+	}
+
+	public static java.util.Set<String> hiddenNames() {
+		return HIDDEN;
+	}
+
+	/** Names of the last impact effect's layers (the system and all its children). */
+	public static java.util.List<String> lastImpactLayers() {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		PSystem s = lastImpact;
+		if (s != null) listLayers(s, "", out);
+		return out;
+	}
+
+	private static void listLayers(PSystem s, String indent, java.util.List<String> out) {
+		String n = s.name.substring(s.name.lastIndexOf('/') + 1).replace(".vpcf", "");
+		out.add(indent + n + (hidden(s.name) ? "  (hidden)" : ""));
+		for (PSystem c : s.children) listLayers(c, indent + "  ", out);
+	}
+
 	public static void at(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
+		lastImpact = s;
 		Vector3f z = new Vector3f((float) normal.x, (float) -normal.z, (float) normal.y).normalize();
 		Vector3f ref = Math.abs(z.z) > 0.9f ? new Vector3f(1, 0, 0) : new Vector3f(0, 0, 1);
 		Vector3f x = new Vector3f(ref).sub(new Vector3f(z).mul(ref.dot(z))).normalize(), y = new Vector3f(z).cross(x);
