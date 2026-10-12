@@ -41,6 +41,7 @@ public class StrafeMcClient implements ClientModInitializer {
 				}));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ClientGameplay.clear());
 		// first-time setup / top-up after an update: offered on the title screen (or on joining, if that was skipped) while CS2 files are missing
+		dev.strafemc.client.particle.ParticleBlend.init();
 		SetupScreen.registerHud();
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
 			if (!(screen instanceof SetupScreen)) // the running setup's progress on every menu (title, pause, options...)

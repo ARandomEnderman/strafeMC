@@ -17,7 +17,7 @@ import java.util.Map;
 /**
  * Draws Source 2 particle systems with Minecraft's submit API: C_OP_RenderSprites (camera-facing quads with sprite-sheet
  * frames) and C_OP_RenderTrails (ribbons along the motion, length = trail length x speed). Geometry follows VRF's
- * renderers (MIT). Additive blend modes use Minecraft's additive "eyes" type (colour premultiplied by alpha), alpha blend
+ * renderers (MIT). Additive blend modes use our own SRC_ALPHA, ONE type (ParticleBlend), alpha blend
  * uses translucent emissive; particles are full-bright like CS2's unlit spritecards.
  */
 public final class EffectRenderer {
@@ -105,7 +105,7 @@ public final class EffectRenderer {
 				if (!in.sprites && !in.trails || in.bloomOnly) continue;
 				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
 				if (tex == null) continue;
-				RenderType type = in.additive ? RenderTypes.eyes(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
+				RenderType type = in.additive ? ParticleBlend.additive(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
 				List<float[]> quads = new ArrayList<>(); // 4 corners x (x,y,z,u,v,r,g,b,a)
 				for (int i = 0; i < s.count(); i++) {
 					Particle p = s.particle(i);
@@ -140,11 +140,6 @@ public final class EffectRenderer {
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] q, int o, boolean additive) {
 		float a = Math.max(0, Math.min(1, q[o + 8]));
 		float r = Math.max(0, Math.min(1, q[o + 5])), g = Math.max(0, Math.min(1, q[o + 6])), b = Math.max(0, Math.min(1, q[o + 7]));
-		if (additive) { // ONE, ONE blending: premultiply
-			r *= a;
-			g *= a;
-			b *= a;
-		}
 		int argb = (int) (a * 255) << 24 | (int) (r * 255) << 16 | (int) (g * 255) << 8 | (int) (b * 255);
 		vc.addVertex(pose, q[o], q[o + 1], q[o + 2]).setColor(argb).setUv(q[o + 3], q[o + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
 				.setLight(FULL_BRIGHT).setNormal(pose, 0, 1, 0);
