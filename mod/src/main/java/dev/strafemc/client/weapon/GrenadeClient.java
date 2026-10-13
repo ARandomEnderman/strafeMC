@@ -234,6 +234,15 @@ public final class GrenadeClient {
 	/** Draws the trajectory preview (dots, a bigger one where it ends) and the smoke clouds. */
 	public static void render(LevelRenderContext ctx) {
 		renderPreview(ctx);
+	}
+
+	/**
+	 * Smoke, drawn last in the main pass (END_MAIN) so the order is fixed: every puff back to front with normal blending
+	 * (overlapping puffs build up to opaque), then the thick inside into the depth buffer, so clouds (their own later
+	 * pass) don't draw through it. Drawn among the other submits, the depth pass could land before puffs behind it and
+	 * hide them, leaving only the nearest puff of a smoke visible.
+	 */
+	public static void renderSmoke(LevelRenderContext ctx) {
 		List<Smoke> smokes;
 		synchronized (SMOKES) {
 			if (SMOKES.isEmpty()) return;
@@ -276,25 +285,26 @@ public final class GrenadeClient {
 			}
 		}
 		quads.sort(Comparator.comparingDouble((float[] q) -> -(q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));
-		PoseStack ps = ctx.poseStack();
-		// the dense core into the depth buffer too, so things drawn later (bullet holes, effects, clouds) stay behind it
-		for (net.minecraft.client.renderer.rendertype.RenderType type : new net.minecraft.client.renderer.rendertype.RenderType[] {
-				RenderTypes.entityTranslucent(puff()), dev.strafemc.client.particle.ParticleBlend.depthOnly(puff())})
-			ctx.submitNodeCollector().submitCustomGeometry(ps, type, (pose, vc) -> {
-				boolean depth = type == dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
-				for (float[] q : quads) {
-					float a = depth ? q[9] : q[5];
-					if (a <= 0) continue;
-					int light = Float.floatToRawIntBits(q[6]);
-					int col = (int) (a * 255) << 24 | (int) (q[4] * 255) << 16 | (int) (q[7] * 255) << 8 | (int) (q[8] * 255);
-					float sz = q[3];
-					float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
-					for (float[] k : corners)
-						vc.addVertex(pose, q[0] + (right.x * k[0] + up.x * k[1]) * sz, q[1] + (right.y * k[0] + up.y * k[1]) * sz,
-										q[2] + (right.z * k[0] + up.z * k[1]) * sz)
-								.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
-				}
-			});
+		var buffers = ctx.bufferSource();
+		PoseStack.Pose pose = ctx.poseStack().last();
+		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
+		for (int pass = 0; pass < 2; pass++) {
+			net.minecraft.client.renderer.rendertype.RenderType type = pass == 0 ? RenderTypes.entityTranslucent(puff())
+					: dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
+			com.mojang.blaze3d.vertex.VertexConsumer vc = buffers.getBuffer(type);
+			for (float[] q : quads) {
+				float a = pass == 1 ? q[9] : q[5];
+				if (a <= 0) continue;
+				int light = Float.floatToRawIntBits(q[6]);
+				int col = (int) (a * 255) << 24 | (int) (q[4] * 255) << 16 | (int) (q[7] * 255) << 8 | (int) (q[8] * 255);
+				float sz = q[3];
+				for (float[] k : corners)
+					vc.addVertex(pose, q[0] + (right.x * k[0] + up.x * k[1]) * sz, q[1] + (right.y * k[0] + up.y * k[1]) * sz,
+									q[2] + (right.z * k[0] + up.z * k[1]) * sz)
+							.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
+			}
+			buffers.endBatch(type);
+		}
 	}
 
 	private static void renderPreview(LevelRenderContext ctx) {

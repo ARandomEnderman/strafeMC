@@ -44,6 +44,7 @@ public class StrafeMcClient implements ClientModInitializer {
 				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.weapon.GrenadeClient::render);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(dev.strafemc.client.weapon.GrenadeClient::renderSmoke);
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GrenadeFx.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onEffect(msg));
