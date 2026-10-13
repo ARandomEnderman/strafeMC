@@ -34,7 +34,32 @@ public final class GrenadeClient {
 
 	private record Smoke(Vec3 at, long start, float[] puffs) {}
 
-	private record Fire(Vec3 at, long until, boolean incendiary) {}
+	private static final class Fire {
+		final Vec3 at;
+		final long until;
+		final boolean incendiary;
+		final String key = "flame" + FLAME_IDS.incrementAndGet();
+
+		Fire(Vec3 at, long until, boolean incendiary) {
+			this.at = at;
+			this.until = until;
+			this.incendiary = incendiary;
+		}
+	}
+
+	/** A burning fire's centre, for its looping sound (Inferno.Loop is a few seconds long: replayed while it burns). */
+	private static final class FireSound {
+		final Vec3 at;
+		long nextLoop;
+
+		FireSound(Vec3 at) {
+			this.at = at;
+		}
+	}
+
+	private static final java.util.concurrent.atomic.AtomicLong FLAME_IDS = new java.util.concurrent.atomic.AtomicLong();
+	private static final List<FireSound> FIRE_SOUNDS = new ArrayList<>();
+	private static final double LOOP_EVERY = 2.0;
 
 	private static final List<Smoke> SMOKES = new ArrayList<>();
 	private static final List<Fire> FIRES = new ArrayList<>();
@@ -76,21 +101,33 @@ public final class GrenadeClient {
 			}
 			case GrenadeEffects.EV_FLAME, GrenadeEffects.EV_FLAME_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FLAME_INC;
+				Fire f = new Fire(at, System.nanoTime() + (long) ((inc ? FLAME_SECONDS_INC : FLAME_SECONDS) * 1e9), inc);
 				synchronized (FIRES) {
-					FIRES.add(new Fire(at, System.nanoTime() + (long) ((inc ? FLAME_SECONDS_INC : FLAME_SECONDS) * 1e9), inc));
+					FIRES.add(f);
 				}
+				dev.strafemc.client.particle.Effects.atHeld(f.key, inc ? GrenadeEffects.INCENDIARY_FLAME_EFFECT : GrenadeEffects.MOLOTOV_FLAME_EFFECT, at, up);
 			}
 			case GrenadeEffects.EV_FIRE, GrenadeEffects.EV_FIRE_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FIRE_INC;
-				dev.strafemc.client.particle.Effects.at(GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up);
+				dev.strafemc.client.particle.Effects.at(inc ? GrenadeEffects.INCENDIARY_GROUND_EFFECT : GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up);
 				CsSounds.play(inc ? "IncGrenade.Start" : "Inferno.Fire.Ignite", at.x, at.y, at.z, 1.0);
-				CsSounds.play("Inferno.Loop", at.x, at.y, at.z, 1.0);
+				synchronized (FIRE_SOUNDS) {
+					FIRE_SOUNDS.add(new FireSound(at));
+				}
 			}
 			case GrenadeEffects.EV_FIRE_OUT, GrenadeEffects.EV_FIRE_END -> {
 				double range = 160 / StrafeConfig.unitsPerBlock;
 				synchronized (FIRES) {
-					FIRES.removeIf(f -> f.at.distanceToSqr(at) < range * range);
+					FIRES.removeIf(f -> {
+						if (f.at.distanceToSqr(at) >= range * range) return false;
+						dev.strafemc.client.particle.Effects.stopHeld(f.key);
+						return true;
+					});
 				}
+				synchronized (FIRE_SOUNDS) {
+					FIRE_SOUNDS.removeIf(f -> f.at.distanceToSqr(at) < 0.01);
+				}
+				if (m.kind() == GrenadeEffects.EV_FIRE_OUT) dev.strafemc.client.particle.Effects.at(GrenadeEffects.EXTINGUISH_EFFECT, at, up);
 				CsSounds.play(m.kind() == GrenadeEffects.EV_FIRE_OUT ? "Molotov.Extinguish" : "Inferno.FadeOut", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_FIZZLE, GrenadeEffects.EV_FIZZLE_INC -> {
@@ -132,14 +169,26 @@ public final class GrenadeClient {
 		long now = System.nanoTime();
 		double r = FLAME_REACH / StrafeConfig.unitsPerBlock;
 		Random rnd = new Random();
-		synchronized (FIRES) {
-			FIRES.removeIf(f -> now > f.until);
-			for (Fire f : FIRES)
-				for (int i = 0; i < 2; i++) {
-					double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * r;
-					double x = f.at.x + Math.cos(a) * d, z = f.at.z + Math.sin(a) * d;
-					mc.level.addParticle(i % 4 == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, x, f.at.y + 0.05, z, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
+		synchronized (FIRE_SOUNDS) {
+			for (FireSound fs : FIRE_SOUNDS)
+				if (now >= fs.nextLoop) {
+					CsSounds.play("Inferno.Loop", fs.at.x, fs.at.y, fs.at.z, 1.0);
+					fs.nextLoop = now + (long) (LOOP_EVERY * 1e9);
 				}
+		}
+		synchronized (FIRES) {
+			FIRES.removeIf(f -> {
+				if (now <= f.until) return false;
+				dev.strafemc.client.particle.Effects.stopHeld(f.key);
+				return true;
+			});
+			if (dev.strafemc.client.Placeholders.active()) // no CS2 effects: Minecraft flames instead
+				for (Fire f : FIRES)
+					for (int i = 0; i < 2; i++) {
+						double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * r;
+						double x = f.at.x + Math.cos(a) * d, z = f.at.z + Math.sin(a) * d;
+						mc.level.addParticle(i % 4 == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, x, f.at.y + 0.05, z, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
+					}
 		}
 		synchronized (SMOKES) {
 			SMOKES.removeIf(s -> (now - s.start) / 1e9 > SMOKE_GONE);
@@ -250,6 +299,9 @@ public final class GrenadeClient {
 
 	public static void clear() {
 		preview = null;
+		synchronized (FIRE_SOUNDS) {
+			FIRE_SOUNDS.clear();
+		}
 		synchronized (SMOKES) {
 			SMOKES.clear();
 		}

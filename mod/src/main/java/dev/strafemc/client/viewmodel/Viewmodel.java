@@ -300,23 +300,29 @@ public final class Viewmodel {
 
 	static Matrix4f[] skin(VmModel.Skin m, VmClip c, Matrix4f[] pose, Matrix4f mount) {
 		Matrix4f[] s = new Matrix4f[m.joints.length];
-		for (int j = 0; j < m.joints.length; j++) {
-			String name = m.joints[j];
-			Integer n = c.node(name);
-			Matrix4f ibm = m.inverseBind[j];
-			if (n == null && name.contains("_TWIST")) {
-				// twist helpers aren't animated: they ride rigidly on their bone, so they take that bone's bind matrix too
-				String base = name.substring(0, name.indexOf("_TWIST"));
-				n = c.node(base);
-				int bj = java.util.Arrays.asList(m.joints).indexOf(base);
-				if (bj >= 0) ibm = m.inverseBind[bj];
-			}
-			if (n == null && mount != null) n = c.node("weapon");
-			Matrix4f jm = n != null ? new Matrix4f(pose[n]) : new Matrix4f();
-			if (mount != null) jm = new Matrix4f(mount).mul(jm);
-			s[j] = jm.mul(ibm);
-		}
+		for (int j = 0; j < m.joints.length; j++) skinJoint(m, c, pose, mount, s, j, 0);
 		return s;
+	}
+
+	private static Matrix4f skinJoint(VmModel.Skin m, VmClip c, Matrix4f[] pose, Matrix4f mount, Matrix4f[] s, int j, int depth) {
+		if (s[j] != null) return s[j];
+		String name = m.joints[j];
+		if (c.node(name) == null && !name.contains("_TWIST") && m.parent != null && m.parent[j] >= 0 && depth < 64)
+			// not animated by the clip (cloth like the molotov rag): it keeps its rest pose relative to its parent
+			return s[j] = skinJoint(m, c, pose, mount, s, m.parent[j], depth + 1);
+		Integer n = c.node(name);
+		Matrix4f ibm = m.inverseBind[j];
+		if (n == null && name.contains("_TWIST")) {
+			// twist helpers aren't animated: they ride rigidly on their bone, so they take that bone's bind matrix too
+			String base = name.substring(0, name.indexOf("_TWIST"));
+			n = c.node(base);
+			int bj = java.util.Arrays.asList(m.joints).indexOf(base);
+			if (bj >= 0) ibm = m.inverseBind[bj];
+		}
+		if (n == null && mount != null) n = c.node("weapon");
+		Matrix4f jm = n != null ? new Matrix4f(pose[n]) : new Matrix4f();
+		if (mount != null) jm = new Matrix4f(mount).mul(jm);
+		return s[j] = jm.mul(ibm);
 	}
 
 	static Matrix4f toView() {

@@ -11,9 +11,10 @@ public final class ImpactCheck {
 		sys.controlPoint(0).set(new Vector3f(), new Quaternionf(), sys.state);
 		sys.controlPoint(1).set(new Vector3f(), new Quaternionf(), sys.state);
 		sys.controlPoint(4).set(new Vector3f(0.56f, 0.45f, 0.29f), null, sys.state);
-		for (int f = 0; f < 20; f++) {
+		int frames = a.length > 1 ? Integer.parseInt(a[1]) : 20;
+		for (int f = 0; f < frames; f++) {
 			sys.update(1 / 60f);
-			if (f < 6 || f % 4 == 0) {
+			if (f < 6 || f % (frames > 20 ? 20 : 4) == 0) {
 				System.out.println("-- frame " + f);
 				dump(sys, "");
 			}

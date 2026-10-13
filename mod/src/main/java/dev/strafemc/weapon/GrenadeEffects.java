@@ -19,11 +19,19 @@ public final class GrenadeEffects {
 	/** Explosion effects and sounds per grenade (effect files from CS2, converted by the setup). */
 	public static final String HE_EFFECT = "particles/explosions_fx/explosion_hegrenade.vpcf",
 			FLASH_EFFECT = "particles/explosions_fx/explosion_flashbang.vpcf",
-			MOLOTOV_GROUND_EFFECT = "particles/inferno_fx/explosion_molotov_ground.vpcf",
+			MOLOTOV_GROUND_EFFECT = "particles/inferno_fx/molotov_explosion.vpcf",
+			INCENDIARY_GROUND_EFFECT = "particles/inferno_fx/incendiary_explosion.vpcf",
+			EXTINGUISH_EFFECT = "particles/inferno_fx/extinguish_fire.vpcf",
 			MOLOTOV_AIR_EFFECT = "particles/inferno_fx/explosion_molotov_air.vpcf",
-			INCENDIARY_AIR_EFFECT = "particles/inferno_fx/explosion_incend_air.vpcf";
+			INCENDIARY_AIR_EFFECT = "particles/inferno_fx/explosion_incend_air.vpcf",
+			// one flame of CS2's ground fire (molotov_groundfire's per-flame part; the rest of it is drawn from a snapshot of
+			// all the flames, which we don't simulate)
+			MOLOTOV_FLAME_EFFECT = "particles/inferno_fx/molotov_fire01.vpcf",
+			INCENDIARY_FLAME_EFFECT = "particles/inferno_fx/incendiary_fire01.vpcf",
+			MOLOTOV_HELD_EFFECT = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf";
 	/** Every CS2 effect the grenades use (the setup converts these). */
-	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT};
+	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT,
+			MOLOTOV_FLAME_EFFECT, INCENDIARY_FLAME_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT};
 
 	/** What happened, for the clients (GrenadeFx.kind). */
 	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,

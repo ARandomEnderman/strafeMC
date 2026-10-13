@@ -12,6 +12,7 @@ final class Operators {
 	static PFunction create(String kind, String cls, Pd p) {
 		return switch (cls) {
 			case "C_OP_InstantaneousEmitter" -> new InstantaneousEmitter(p);
+			case "C_OP_ContinuousEmitter" -> new ContinuousEmitter(p);
 			case "C_OP_BasicMovement" -> new BasicMovement(p);
 			case "C_OP_Decay" -> new Decay(p);
 			case "C_OP_FadeOut" -> new FadeOutRandom(p);
@@ -91,6 +92,52 @@ final class Operators {
 			int n = (int) (claimed * strength);
 			for (int i = 0; i < n; i++) sys.emit(elapsed - start);
 			if (remaining <= 0) finished = true;
+		}
+	}
+
+	/** Emits m_flEmitRate particles per second from m_flStartTime for m_flEmissionDuration seconds (0 = until stopped). */
+	static final class ContinuousEmitter extends PFunction.Emitter {
+		final Num duration, startTime, rate;
+		PSystem sys;
+		boolean finished;
+		float owed;
+
+		ContinuousEmitter(Pd p) {
+			super(p);
+			duration = p.num("m_flEmissionDuration", new Num.Literal(0));
+			startTime = p.num("m_flStartTime", new Num.Literal(0));
+			rate = p.num("m_flEmitRate", new Num.Literal(100));
+		}
+
+		@Override
+		void onStart(PSystem s) {
+			sys = s;
+			finished = false;
+			owed = 0;
+		}
+
+		@Override
+		void stop() {
+			finished = true;
+			sys = null;
+		}
+
+		@Override
+		boolean finished() {
+			return finished;
+		}
+
+		@Override
+		void emit(float dt, PState s, float strength) {
+			if (finished || sys == null) return;
+			float elapsed = s.age - startAge, start = startTime.next(s), dur = duration.next(s);
+			if (elapsed < start) return;
+			float from = Math.max(start, elapsed - dt), to = dur > 0 ? Math.min(elapsed, start + dur) : elapsed;
+			if (to > from) owed += rate.next(s) * (to - from) * strength;
+			int n = (int) owed;
+			owed -= n;
+			for (int i = 0; i < n; i++) sys.emit(dt * (n - i) / (n + 1f)); // spread over this frame
+			if (dur > 0 && elapsed >= start + dur) finished = true;
 		}
 	}
 

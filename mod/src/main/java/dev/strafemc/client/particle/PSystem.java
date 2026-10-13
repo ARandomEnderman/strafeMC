@@ -65,6 +65,7 @@ public final class PSystem {
 				return def;
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] particle system {} failed to load: {}", k, e.toString());
+				if (Boolean.getBoolean("strafemc.trace")) e.printStackTrace();
 				return null;
 			}
 		});

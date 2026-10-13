@@ -45,7 +45,7 @@ public final class Setup {
 		m.put("graphs", 1);
 		m.put("models", 1);
 		m.put("icons", 2); // 2: armor icons
-		m.put("effects", 3); // 2: HE explosion, 3: all grenade effects
+		m.put("effects", 4); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov
 		m.put("decals", 1);
 		return m;
 	}

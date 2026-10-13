@@ -24,6 +24,8 @@ public final class VmModel {
 	public static final class Skin {
 		public String[] joints;
 		public Matrix4f[] inverseBind;
+		/** Each joint's parent joint in this skin (-1: none), for joints the clips don't animate (cloth, the molotov rag). */
+		public int[] parent;
 	}
 
 	public final List<Part> parts = new ArrayList<>();
@@ -43,6 +45,19 @@ public final class VmModel {
 			s.inverseBind = new Matrix4f[js.size()];
 			float[] ibm = skin.has("inverseBindMatrices") ? g.floats(skin.get("inverseBindMatrices").getAsInt()) : null;
 			for (int i = 0; i < js.size(); i++) s.inverseBind[i] = ibm == null ? new Matrix4f() : new Matrix4f().set(ibm, i * 16);
+			java.util.Map<Integer, Integer> jointOf = new java.util.HashMap<>();
+			for (int i = 0; i < js.size(); i++) jointOf.put(js.get(i).getAsInt(), i);
+			s.parent = new int[js.size()];
+			java.util.Arrays.fill(s.parent, -1);
+			for (int ni = 0; ni < nodes.size(); ni++) {
+				JsonObject pn = nodes.get(ni).getAsJsonObject();
+				Integer pj = jointOf.get(ni);
+				if (pj == null || !pn.has("children")) continue;
+				for (JsonElement ch : pn.getAsJsonArray("children")) {
+					Integer cj = jointOf.get(ch.getAsInt());
+					if (cj != null) s.parent[cj] = pj;
+				}
+			}
 			m.skins.add(s);
 		}
 		for (JsonElement ne : nodes) {

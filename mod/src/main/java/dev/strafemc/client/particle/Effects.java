@@ -28,6 +28,8 @@ public final class Effects {
 		final PSystem sys;
 		final String attachment; // VIEW effects follow this viewmodel attachment
 		double age;
+		/** Held effects run until stopHeld (a lit molotov's rag); others end after MAX_AGE. */
+		String heldKey;
 
 		Instance(PSystem sys, String attachment) {
 			this.sys = sys;
@@ -48,6 +50,30 @@ public final class Effects {
 	// ------------------------------------------------------------------ spawning
 
 	/** A viewmodel effect (e.g. the muzzle flash) at a weapon attachment. */
+	/** A view effect that runs until it ends by itself or stopHeld(key) stops it (and every other one under that key). */
+	public static void viewHeld(String key, String vpcf, String attachment) {
+		PSystem s = load(vpcf);
+		if (s == null) return;
+		Instance in = new Instance(s, attachment);
+		in.heldKey = key;
+		synchronized (VIEW) {
+			VIEW.add(in);
+		}
+	}
+
+	/** Stops a held view effect: no new particles, the old ones finish. */
+	public static void stopHeld(String key) {
+		for (List<Instance> list : List.of(VIEW, WORLD))
+			synchronized (list) {
+				for (Instance in : list)
+					if (key.equals(in.heldKey)) {
+						in.sys.stop();
+						in.heldKey = null;
+						in.age = 0;
+					}
+			}
+	}
+
 	public static void view(String vpcf, String attachment) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
@@ -113,6 +139,15 @@ public final class Effects {
 	}
 
 	public static void at(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint) {
+		spawnAt(vpcf, pos, normal, tint, null);
+	}
+
+	/** A world effect that keeps running (past MAX_AGE) until it ends by itself or stopHeld(key) stops it. */
+	public static void atHeld(String key, String vpcf, Vec3 pos, Vec3 normal) {
+		spawnAt(vpcf, pos, normal, null, key);
+	}
+
+	private static void spawnAt(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint, String heldKey) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
 		lastImpact = s;
@@ -124,8 +159,10 @@ public final class Effects {
 		s.controlPoint(0).set(at, rot, s.state);
 		s.controlPoint(1).set(at, rot, s.state); // second point of impact effects: the hit point too (flagged)
 		if (tint != null) s.controlPoint(4).set(tint, null, s.state);
+		Instance in = new Instance(s, null);
+		in.heldKey = heldKey;
 		synchronized (WORLD) {
-			WORLD.add(new Instance(s, null));
+			WORLD.add(in);
 		}
 	}
 
@@ -209,7 +246,7 @@ public final class Effects {
 				}
 				in.sys.update(dt);
 				in.age += dt;
-				if (in.age > MAX_AGE || (in.age > 0.05 && in.sys.finished())) it.remove();
+				if ((in.heldKey == null && in.age > MAX_AGE) || (in.age > 0.05 && in.sys.finished())) it.remove();
 			}
 			for (Instance in : VIEW)
 				EffectRenderer.submit(in.sys, toCam, new Vector3f(), new Vector3f(1, 0, 0), new Vector3f(0, 1, 0), ps, out,
@@ -237,7 +274,7 @@ public final class Effects {
 				in.sys.controlPoint(5).set(toSim(c), null, in.sys.state); // detail-by-distance input of impact effects: the viewer (flagged)
 				in.sys.update(dt);
 				in.age += dt;
-				if (in.age > MAX_AGE || (in.age > 0.05 && in.sys.finished())) it.remove();
+				if ((in.heldKey == null && in.age > MAX_AGE) || (in.age > 0.05 && in.sys.finished())) it.remove();
 			}
 			for (Instance in : WORLD) EffectRenderer.submit(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), ctx.submitNodeCollector(), null);
 		}

@@ -113,7 +113,9 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (st.normal() != null) {
 			spinScale *= ELASTICITY;
 			if (st.normal().y > 0.7) hitFloor = true;
-			if (level() instanceof ServerLevel sl && st.impactSpeed() > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
+			// CS2 has no Decoy.Bounce: the decoy uses the HE's bounce (FLAGGED)
+			String bounce = grenade() == Grenade.DECOY ? "HEGrenade.Bounce" : grenade().sounds + ".Bounce";
+			if (level() instanceof ServerLevel sl && st.impactSpeed() > 80) GunServer.soundAt(sl, bounce, position(), this);
 		}
 		if (st.resting()) resting = true;
 	}

@@ -80,17 +80,24 @@ public final class GrenadeFlight {
 		return new Step(to, vel.add(0, -g * STEP * 0.5, 0), null, 0, false);
 	}
 
-	/** The path a throw would take, one point per step, until it rests or after `seconds`. */
-	public static List<Vec3> simulate(Level level, Entity self, Launch l, double gravity, double seconds) {
+	/**
+	 * The path a throw would take, one point per step, until it goes off (as GrenadeEntity does it: HE and flash at the
+	 * fuse, a molotov on its first floor hit or when it fizzles in the air), rests, or after `seconds`.
+	 */
+	public static List<Vec3> simulate(Level level, Entity self, Launch l, double gravity, double seconds, Grenade type) {
+		double end = seconds;
+		if (type == Grenade.HE || type == Grenade.FLASHBANG) end = GrenadeEntity.FUSE;
+		else if (type == Grenade.MOLOTOV || type == Grenade.INCENDIARY) end = GrenadeEntity.MOLOTOV_AIR_TIME;
+		boolean molotov = type == Grenade.MOLOTOV || type == Grenade.INCENDIARY;
 		List<Vec3> path = new ArrayList<>();
 		Vec3 pos = l.start(), vel = l.vel();
 		path.add(pos);
-		for (int i = 0; i < seconds / STEP; i++) {
+		for (int i = 0; i < end / STEP; i++) {
 			Step s = step(level, self, self, pos, vel, gravity);
 			pos = s.pos();
 			vel = s.vel();
 			path.add(pos);
-			if (s.resting()) break;
+			if (s.resting() || (molotov && s.normal() != null && s.normal().y > 0.7)) break;
 		}
 		return path;
 	}

@@ -20,6 +20,7 @@ final class Initializers {
 			case "C_INIT_RandomSequence" -> new RandomSequence(p);
 			case "C_INIT_RandomColor" -> new RandomColor(p);
 			case "C_INIT_VelocityRandom" -> new VelocityRandom(p);
+			case "C_INIT_InitialVelocityNoise" -> new InitialVelocityNoise(p);
 			case "C_INIT_PositionOffset" -> new PositionOffset(p);
 			case "C_INIT_GlobalScale" -> new GlobalScale(p);
 			case "C_INIT_RemapScalarToVector" -> new RemapScalarToVector(p);
@@ -373,6 +374,38 @@ final class Initializers {
 			if (a.lengthSquared() > 0 || b.lengthSquared() > 0) v = transformDirection(s, cp, sampler.between(q, s, a, b));
 			float mn = sMin.next(q, s), mx = sMax.next(q, s);
 			if (mn != 0 || mx != 0) v.add(s.random.nextBetweenPerComponent(new Vector3f(mn), new Vector3f(mx)));
+			if (ignoreDt && s.system != null && s.system.frameTime() > 0) v.div(s.system.frameTime());
+			q.velocity.add(v);
+		}
+	}
+
+	/**
+	 * Starting velocity between m_vecOutputMin and m_vecOutputMax (local to the control point if m_bLocalSpace). CS2
+	 * samples Perlin noise there; this picks uniformly at random in the same range (FLAGGED: no noise field).
+	 */
+	static final class InitialVelocityNoise extends PFunction.Initializer {
+		final Vec min, max;
+		final int cp;
+		final boolean local, ignoreDt;
+
+		InitialVelocityNoise(Pd p) {
+			super(p);
+			min = p.vecInput("m_vecOutputMin", Vec.literal(new Vector3f()));
+			max = p.vecInput("m_vecOutputMax", Vec.literal(new Vector3f(1)));
+			cp = p.i("m_nControlPointNumber", 0);
+			local = p.b("m_bLocalSpace", false);
+			ignoreDt = p.b("m_bIgnoreDt", false);
+		}
+
+		@Override
+		long writes() {
+			return mask(Particle.POSITION_PREVIOUS);
+		}
+
+		@Override
+		void init(Particle q, PCollection c, PState s) {
+			Vector3f v = s.random.nextBetweenPerComponent(min.next(q, s), max.next(q, s));
+			if (local) v = transformDirection(s, cp, v);
 			if (ignoreDt && s.system != null && s.system.frameTime() > 0) v.div(s.system.frameTime());
 			q.velocity.add(v);
 		}

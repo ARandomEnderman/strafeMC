@@ -75,6 +75,7 @@ public final class GunClient {
 			for (String a : new String[] {"draw", "reload", "lookat01", "shoot1"}) AnimClip.load(GunServer.clipPath("weapon_ak47", a));
 			preloadEffects("weapon_ak47");
 			for (String fx : dev.strafemc.weapon.GrenadeEffects.EFFECTS) dev.strafemc.client.particle.Effects.warm(fx);
+			dev.strafemc.client.particle.Effects.warm(MOLOTOV_HELD);
 			dev.strafemc.data.InspectGraph.options("knife_falchion");
 			for (String a : new String[] {"draw", "lookat01", "lookat02", "light_miss1", "light_hit1", "heavy_miss1", "heavy_hit1"})
 				AnimClip.load(GunServer.clipPath("weapon_knife_falchion", a));
@@ -120,6 +121,7 @@ public final class GunClient {
 			lastHeld = held;
 			grenadeState = GRENADE_IDLE;
 			GrenadeClient.preview(null);
+			dev.strafemc.client.particle.Effects.stopHeld("molotov");
 			sounds.clear();
 			CsSounds.stopAnim();
 			inspectUntil = 0;
@@ -186,6 +188,7 @@ public final class GunClient {
 	private static final int GRENADE_IDLE = 0, GRENADE_PULLING = 1, GRENADE_CHARGED = 2, GRENADE_THROWN = 3;
 	private int grenadeState;
 	private long pinDoneAt, throwDoneAt;
+	private long pinAnimDoneAt, ragLitAt;
 	private float throwStrength = 1;
 	private String chargeAnim;
 	private boolean throwQueued;
@@ -216,7 +219,8 @@ public final class GunClient {
 				if (!held) return;
 				vm.play("pullpin");
 				schedule(g, "pullpin", now);
-				pinDoneAt = now + sec(clipSeconds(g, "pullpin", 0.8));
+				pinDoneAt = now + sec(pinSeconds(g, left));
+				pinAnimDoneAt = now + sec(clipSeconds(g, "pullpin", 0.8));
 				grenadeState = GRENADE_PULLING;
 				throwQueued = false;
 				chargeAnim = null;
@@ -224,19 +228,29 @@ public final class GunClient {
 			case GRENADE_PULLING -> {
 				if (!held) throwQueued = true;
 				if (now < pinDoneAt) return;
+				if (throwQueued) { // a quick tap: thrown as soon as the pin can go, the pin animation cut short
+					throwGrenade(p, g, now);
+					return;
+				}
+				if (now < pinAnimDoneAt) return; // still held: the charge pose once the pin is out
 				grenadeState = GRENADE_CHARGED;
 				chargedSince = now;
-				if (throwQueued) throwGrenade(p, g, now);
+				ragLitAt = 0;
 			}
 			case GRENADE_CHARGED -> {
 				if (!held) {
 					throwGrenade(p, g, now);
 					return;
 				}
+				// the burning rag: CS2 starts it from the 1 s charge clip each time it loops (it emits for 1.25 s, so they overlap)
+				if ((g.type == dev.strafemc.weapon.Grenade.MOLOTOV || g.type == dev.strafemc.weapon.Grenade.INCENDIARY) && now >= ragLitAt) {
+					dev.strafemc.client.particle.Effects.viewHeld("molotov", MOLOTOV_HELD, "molotov_particle");
+					ragLitAt = now + sec(clipSeconds(g, "throwcharge_low", 1.0));
+				}
 				if (now - chargedSince >= sec(PREVIEW_AFTER)) { // the path this throw would take, as the server will fly it
 					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, p.getEyePosition(), p.getYRot(), p.getXRot(), throwStrength,
 							dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p), 750);
-					GrenadeClient.preview(dev.strafemc.weapon.GrenadeFlight.simulate(p.level(), p, l, dev.strafemc.weapon.GrenadeFlight.gravity(), 4));
+					GrenadeClient.preview(dev.strafemc.weapon.GrenadeFlight.simulate(p.level(), p, l, dev.strafemc.weapon.GrenadeFlight.gravity(), 4, g.type));
 				} else GrenadeClient.preview(null);
 				String anim = throwStrength >= 1 ? "throwcharge_high" : throwStrength <= 0 ? "throwcharge_low" : "throwcharge_mid";
 				if (!anim.equals(chargeAnim)) {
@@ -248,8 +262,12 @@ public final class GunClient {
 		}
 	}
 
+	/** CS2's burning rag on a lit molotov (the throwcharge clip's particle event at attachment molotov_particle). */
+	static final String MOLOTOV_HELD = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf";
+
 	private void throwGrenade(LocalPlayer p, dev.strafemc.weapon.GrenadeItem g, long now) {
 		GrenadeClient.preview(null);
+		dev.strafemc.client.particle.Effects.stopHeld("molotov");
 		String anim = throwStrength >= 0.5f ? "throw_overhand" : "throw_underhand";
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		schedule(g, anim, now);
@@ -258,6 +276,17 @@ public final class GunClient {
 			ClientPlayNetworking.send(new StrafePayloads.Throw(throwStrength, p.getYRot(), p.getXRot(), (float) v.x, (float) v.y, (float) v.z));
 		grenadeState = GRENADE_THROWN;
 		throwDoneAt = now + sec(clipSeconds(g, anim, 0.5));
+	}
+
+	/**
+	 * How soon a pulled pin can be thrown: the grenade's m_flCycleTime (CS2 weapons.vdata: 0.15 s with left, 0.3 s with
+	 * right), not the whole pin animation, so a quick tap throws quickly (FLAGGED: our reading of what the cycle time gates).
+	 */
+	private static double pinSeconds(GunItem g, boolean primary) {
+		var d = dev.strafemc.data.WeaponData.get(g.weaponClass);
+		Object ct = d == null ? null : d.get("m_flCycleTime");
+		if (ct instanceof java.util.List<?> l && !l.isEmpty()) ct = l.get(primary || l.size() < 2 ? 0 : 1);
+		return ct instanceof Number n && n.doubleValue() > 0 ? n.doubleValue() : clipSeconds(g, "pullpin", 0.8);
 	}
 
 	private static double clipSeconds(GunItem g, String anim, double fallback) {
