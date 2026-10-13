@@ -32,8 +32,15 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	private double stepTime;
 	private boolean resting;
 	private int age;
-	/** Client: spin (degrees, end over end) while flying and the flight heading (degrees) for drawing the model. */
-	public float spin, prevSpin, heading;
+	/**
+	 * Tumble, as CS2 sets it at the throw: 600 deg/s pitch (end over end) and a random whole -1200..1200 deg/s yaw
+	 * (server-chosen, synced), no roll. Each bounce slows it by the bounce factor (FLAGGED: CS:GO's behaviour); it stops at rest.
+	 */
+	private static final net.minecraft.network.syncher.EntityDataAccessor<Float> YAW_RATE =
+			net.minecraft.network.syncher.SynchedEntityData.defineId(GrenadeEntity.class, net.minecraft.network.syncher.EntityDataSerializers.FLOAT);
+	private double spinScale = 1;
+	/** Client: tumble angles (degrees) and the flight heading for drawing the model. */
+	public float spin, prevSpin, spinYaw, prevSpinYaw, heading;
 
 	public boolean resting() {
 		return resting;
@@ -48,6 +55,13 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		setPos(pos);
 		vel = velocity;
 		setDeltaMovement(velocity.scale(0.05));
+		getEntityData().set(YAW_RATE, (float) (level.getRandom().nextInt(2401) - 1200));
+	}
+
+	@Override
+	protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder b) {
+		super.defineSynchedData(b);
+		b.define(YAW_RATE, 0f);
 	}
 
 	public Grenade grenade() {
@@ -75,10 +89,11 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		}
 		setDeltaMovement(resting ? Vec3.ZERO : vel.scale(0.05));
 		prevSpin = spin;
+		prevSpinYaw = spinYaw;
 		if (!resting) {
-			double horizontal = Math.hypot(vel.x, vel.z);
-			if (horizontal > 0.05) heading = (float) Math.toDegrees(Math.atan2(-vel.x, vel.z));
-			spin += (float) Math.min(36, vel.length() * 3); // degrees per tick, faster the faster it flies
+			if (age == 0 && Math.hypot(vel.x, vel.z) > 0.05) heading = (float) Math.toDegrees(Math.atan2(-vel.x, vel.z));
+			spin += (float) (600 * spinScale * 0.05);
+			spinYaw += (float) (getEntityData().get(YAW_RATE) * spinScale * 0.05);
 		}
 		age++;
 		if (level() instanceof ServerLevel sl) serverTick(sl);
@@ -103,6 +118,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 			double into = vel.dot(n);
 			double speed = vel.length() * upb;
 			vel = vel.subtract(n.scale(into * 2)).scale(ELASTICITY); // reflect, keep 45%
+			spinScale *= ELASTICITY;
 			setPos(hit.getLocation().add(n.scale(0.02)));
 			if (level() instanceof ServerLevel sl && speed > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
 			if (n.y > 0.7 && vel.length() * upb < STOP_SPEED) {

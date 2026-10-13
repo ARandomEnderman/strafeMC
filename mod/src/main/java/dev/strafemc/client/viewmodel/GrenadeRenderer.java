@@ -28,13 +28,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 	public static final class State extends ThrownItemRenderState {
 		Grenade type = Grenade.HE;
-		float spin, yaw;
+		float spin, spinYaw, yaw;
 		boolean resting;
 	}
 
 	/** A loaded model and its centre (model units, meters) so it turns about its middle. */
 	private record Model(VmModel model, float cx, float cy, float cz, float halfThickness) {}
 
+	/** True CS2 scale (~5 units = 0.125 blocks for the HE) read as half size in game (user): drawn 2x. */
+	private static final float WORLD_SCALE = 2f;
 	private static final Map<Grenade, Model> MODELS = new ConcurrentHashMap<>();
 	private static final Set<Grenade> LOADING = ConcurrentHashMap.newKeySet();
 
@@ -53,6 +55,7 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 		State st = (State) s;
 		st.type = e.grenade();
 		st.spin = Mth.lerp(partial, e.prevSpin, e.spin);
+		st.spinYaw = Mth.lerp(partial, e.prevSpinYaw, e.spinYaw);
 		st.yaw = e.heading;
 		st.resting = e.resting();
 	}
@@ -65,13 +68,13 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 			super.submit(s, ps, out, cam);
 			return;
 		}
-		float k = (float) (39.3701 / StrafeConfig.unitsPerBlock); // meters -> units -> blocks
+		float k = (float) (39.3701 / StrafeConfig.unitsPerBlock) * WORLD_SCALE; // meters -> units -> blocks
 		ps.pushPose();
-		ps.mulPose(Axis.YP.rotationDegrees(-st.yaw));
+		ps.mulPose(Axis.YP.rotationDegrees(-st.yaw - st.spinYaw)); // throw direction + CS2's random yaw tumble
 		if (st.resting) { // on its side, resting on the ground
 			ps.translate(0, m.halfThickness() * k, 0);
 			ps.mulPose(Axis.ZP.rotationDegrees(90));
-		} else ps.mulPose(Axis.XP.rotationDegrees(st.spin)); // end over end along the flight
+		} else ps.mulPose(Axis.XP.rotationDegrees(st.spin)); // CS2's 600 deg/s end over end
 		ps.scale(k, k, k);
 		ps.translate(-m.cx(), -m.cy(), -m.cz());
 		int light = s.lightCoords;
