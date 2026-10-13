@@ -270,7 +270,8 @@ public final class SetupScreen extends Screen {
 				}
 				lines.add("It converts them once, on this PC, into a strafemc folder in your Minecraft profile. Nothing is uploaded, and your CS2 install is never changed.");
 				lines.add("");
-				lines.add("§7Needs " + SIZE + " of disk space and a few minutes. Until then you can play with placeholders.");
+				if (status.done()) lines.add("§7Only the new or missing files are converted: usually a few MB and under a minute.");
+				else lines.add("§7Needs " + SIZE + " of disk space and a few minutes. Until then you can play with placeholders.");
 			}
 			case CONFIRM -> {
 				lines.add(cs2 == null ? "§eCounter-Strike 2 wasn't found automatically. Pick its folder:" : "Counter-Strike 2 folder:");
@@ -290,7 +291,8 @@ public final class SetupScreen extends Screen {
 							+ " MB) from its official GitHub release, and checks it against its published checksum.");
 				}
 				lines.add("• Reads your CS2 files (read-only) and converts every gun, knife, sound and effect strafeMC uses.");
-				lines.add("• Saves " + SIZE + " into " + StrafeConfig.RUNTIME_DIR + ".");
+				lines.add(status.done() ? "• Adds the new files to " + StrafeConfig.RUNTIME_DIR + "."
+						: "• Saves " + SIZE + " into " + StrafeConfig.RUNTIME_DIR + ".");
 				if (error != null) lines.add("§c" + error);
 			}
 			case RUNNING -> {
