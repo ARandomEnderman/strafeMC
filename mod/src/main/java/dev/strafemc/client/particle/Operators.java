@@ -640,25 +640,28 @@ final class Operators {
 		void operate(PCollection c, float dt, PState s, float strength) {
 			for (int i = 0; i < c.count; i++) {
 				Particle q = c.current[i];
-				float a = in1.next(q, s), b = in2.next(q, s);
-				float out = switch (expr) {
-					case "SCALAR_EXPRESSION_SUBTRACT" -> a - b;
-					case "SCALAR_EXPRESSION_MUL" -> a * b;
-					case "SCALAR_EXPRESSION_DIVIDE" -> b == 0 ? 0 : a / b;
-					case "SCALAR_EXPRESSION_INPUT_1" -> a;
-					case "SCALAR_EXPRESSION_MIN" -> Math.min(a, b);
-					case "SCALAR_EXPRESSION_MAX" -> Math.max(a, b);
-					case "SCALAR_EXPRESSION_MOD" -> a % b;
-					case "SCALAR_EXPRESSION_EQUAL" -> a == b ? 1 : 0;
-					case "SCALAR_EXPRESSION_GT" -> a > b ? 1 : 0;
-					case "SCALAR_EXPRESSION_LT" -> a < b ? 1 : 0;
-					case "SCALAR_EXPRESSION_UNINITIALIZED" -> 0;
-					default -> a + b;
-				};
+				float out = eval(expr, in1.next(q, s), in2.next(q, s));
 				if (!expr.equals("SCALAR_EXPRESSION_EQUAL") && !expr.equals("SCALAR_EXPRESSION_GT") && !expr.equals("SCALAR_EXPRESSION_LT")) out *= strength;
 				if (remap != null) out = remap.apply(out);
 				q.scalar(field, q.modifyScalar(c, field, out, method));
 			}
+		}
+
+		static float eval(String expr, float a, float b) {
+			return switch (expr) {
+				case "SCALAR_EXPRESSION_SUBTRACT" -> a - b;
+				case "SCALAR_EXPRESSION_MUL" -> a * b;
+				case "SCALAR_EXPRESSION_DIVIDE" -> b == 0 ? 0 : a / b;
+				case "SCALAR_EXPRESSION_INPUT_1" -> a;
+				case "SCALAR_EXPRESSION_MIN" -> Math.min(a, b);
+				case "SCALAR_EXPRESSION_MAX" -> Math.max(a, b);
+				case "SCALAR_EXPRESSION_MOD" -> a % b;
+				case "SCALAR_EXPRESSION_EQUAL" -> a == b ? 1 : 0;
+				case "SCALAR_EXPRESSION_GT" -> a > b ? 1 : 0;
+				case "SCALAR_EXPRESSION_LT" -> a < b ? 1 : 0;
+				case "SCALAR_EXPRESSION_UNINITIALIZED" -> 0;
+				default -> a + b;
+			};
 		}
 	}
 

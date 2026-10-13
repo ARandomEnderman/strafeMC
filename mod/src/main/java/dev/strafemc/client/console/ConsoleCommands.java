@@ -212,6 +212,22 @@ public final class ConsoleCommands {
 				v -> StrafeConfig.viewmodelOffsetY = v);
 		viewmodelSetting("viewmodel_offset_z", "Weapon position up (-2 to 2, default -1).", -2, 2, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
+		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair
+			final int k = i;
+			String kind = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
+			local("cl_grenadecrosshair_" + kind, "Is the grenade crosshair enabled (" + kind + ", default 1).", a -> {
+				StrafeConfig.grenadeCrosshair[k] = bool(a, !StrafeConfig.grenadeCrosshair[k]);
+				saved("cl_grenadecrosshair_" + kind, StrafeConfig.grenadeCrosshair[k]);
+			});
+			viewmodelSetting("cl_grenadecrosshairdelay_" + kind, "How long should the pin be pulled for before showing the grenade crosshair (0-5, default 2).",
+					0, 5, () -> StrafeConfig.grenadeCrosshairDelay[k], v -> StrafeConfig.grenadeCrosshairDelay[k] = v);
+		}
+		viewmodelSetting("cl_grenadecrosshair_tickscaling", "Scale applied to grenade throw crosshair ticks (0.5-2, default 1.1).", 0.5, 2,
+				() -> StrafeConfig.grenadeCrosshairTickScaling, v -> StrafeConfig.grenadeCrosshairTickScaling = v);
+		local("cl_grenadecrosshair_ticklabels", "Draw labels on grenade throw crosshair ticks (default 1).", a -> {
+			StrafeConfig.grenadeCrosshairTickLabels = bool(a, !StrafeConfig.grenadeCrosshairTickLabels);
+			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
+		});
 		local("strafemc_serverlog", "Show the raw CS2 server log in the console (1) or only replies to your commands (0).", a -> {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);

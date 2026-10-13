@@ -79,6 +79,7 @@ public final class GunClient {
 			dev.strafemc.data.InspectGraph.options("knife_falchion");
 			for (String a : new String[] {"draw", "lookat01", "lookat02", "light_miss1", "light_hit1", "heavy_miss1", "heavy_hit1"})
 				AnimClip.load(GunServer.clipPath("weapon_knife_falchion", a));
+			dev.strafemc.client.viewmodel.Viewmodel.warmClips(); // every other weapon's clips too: no converter run on a weapon switch
 			try {
 				for (String d : new String[] {"sounds/weapons/knife/", "sounds/weapons/knife_falchion/"}) {
 					java.nio.file.Path marker = StrafeConfig.cacheDir().resolve(d + ".extracted");
@@ -114,6 +115,7 @@ public final class GunClient {
 		double dt = lastNs == 0 ? 0 : Math.min(0.25, (now - lastNs) / 1e9);
 		lastNs = now;
 		if (p == null) return;
+		releaseGrenade(p, now);
 		ItemStack held = p.getMainHandItem();
 		int slot = p.getInventory().getSelectedSlot();
 		if (slot != lastSlot || !ItemStack.isSameItem(held, lastHeld)) {
@@ -192,7 +194,17 @@ public final class GunClient {
 	private float throwStrength = 1;
 	private String chargeAnim;
 	private boolean throwQueued;
-	private long chargedSince;
+	private long chargedSince, pinPulledAt;
+	private dev.strafemc.weapon.Grenade pinType;
+
+	/** Seconds the pin has been out of the grenade in hand (pulling or charged), or -1. */
+	public double pinSeconds() {
+		return grenadeState == GRENADE_PULLING || grenadeState == GRENADE_CHARGED ? (System.nanoTime() - pinPulledAt) / 1e9 : -1;
+	}
+
+	public dev.strafemc.weapon.Grenade pinGrenade() {
+		return grenadeState == GRENADE_PULLING || grenadeState == GRENADE_CHARGED ? pinType : null;
+	}
 	/** Show the trajectory preview after holding a charged grenade this long (seconds). */
 	private static final double PREVIEW_AFTER = 2.0;
 
@@ -222,6 +234,8 @@ public final class GunClient {
 				pinDoneAt = now + sec(pinSeconds(g, left));
 				pinAnimDoneAt = now + sec(clipSeconds(g, "pullpin", 0.8));
 				grenadeState = GRENADE_PULLING;
+				pinPulledAt = now;
+				pinType = g.type;
 				throwQueued = false;
 				chargeAnim = null;
 			}
@@ -265,15 +279,26 @@ public final class GunClient {
 	/** CS2's burning rag on a lit molotov (the throwcharge clip's particle event at attachment molotov_particle). */
 	static final String MOLOTOV_HELD = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf";
 
+	/** CS: the grenade leaves the hand this long after the throw starts, with the aim and speed of that moment (FLAGGED: CS:GO's 0.1 s). */
+	private static final double RELEASE_DELAY = 0.1;
+	private long releaseAt;
+
+	/** Sends a started throw once its release time comes (every frame, whatever is held by then). */
+	private void releaseGrenade(LocalPlayer p, long now) {
+		if (releaseAt == 0 || now < releaseAt) return;
+		releaseAt = 0;
+		var v = dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p);
+		if (ClientPlayNetworking.canSend(StrafePayloads.Throw.TYPE))
+			ClientPlayNetworking.send(new StrafePayloads.Throw(throwStrength, p.getYRot(), p.getXRot(), (float) v.x, (float) v.y, (float) v.z));
+	}
+
 	private void throwGrenade(LocalPlayer p, dev.strafemc.weapon.GrenadeItem g, long now) {
 		GrenadeClient.preview(null);
 		dev.strafemc.client.particle.Effects.stopHeld("molotov");
 		String anim = throwStrength >= 0.5f ? "throw_overhand" : "throw_underhand";
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		schedule(g, anim, now);
-		var v = dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p);
-		if (ClientPlayNetworking.canSend(StrafePayloads.Throw.TYPE))
-			ClientPlayNetworking.send(new StrafePayloads.Throw(throwStrength, p.getYRot(), p.getXRot(), (float) v.x, (float) v.y, (float) v.z));
+		releaseAt = now + sec(RELEASE_DELAY);
 		grenadeState = GRENADE_THROWN;
 		throwDoneAt = now + sec(clipSeconds(g, anim, 0.5));
 	}
@@ -291,7 +316,7 @@ public final class GunClient {
 
 	private static double clipSeconds(GunItem g, String anim, double fallback) {
 		String path = GunServer.clipPath(g.weaponClass, anim);
-		AnimClip c = path == null ? null : AnimClip.load(path);
+		AnimClip c = path == null ? null : AnimClip.peek(path);
 		return c != null && c.duration() > 0 ? c.duration() : fallback;
 	}
 	private int knifeSwing;
@@ -396,7 +421,7 @@ public final class GunClient {
 	 * Which shots of a burst carry the tracer (index % frequency == 0) is assumed (flagged).
 	 */
 	private void effects(LocalPlayer p, WeaponStats w, Vec3 dir) {
-		AnimClip c = AnimClip.load(GunServer.clipPath(w.cls(), "shoot1"));
+		AnimClip c = AnimClip.peek(GunServer.clipPath(w.cls(), "shoot1"));
 		if (c != null)
 			for (AnimClip.Event e : c.events())
 				if (e.kind().equals("CNmParticleEvent") && e.extra().startsWith("muzzleflash"))
@@ -444,7 +469,7 @@ public final class GunClient {
 
 	/** Background-loads a weapon's shot effects (muzzle flash events of its shoot clip, tracer) and the surface impact effects. */
 	static void preloadEffects(String cls) {
-		AnimClip c = AnimClip.load(GunServer.clipPath(cls, "shoot1"));
+		AnimClip c = AnimClip.peek(GunServer.clipPath(cls, "shoot1"));
 		if (c != null) for (AnimClip.Event e : c.events()) if (e.kind().equals("CNmParticleEvent")) dev.strafemc.client.particle.Effects.warm(e.name());
 		for (int i = 0; i < 600 && !dev.strafemc.data.WeaponData.loaded(); i++)
 			try {
@@ -537,7 +562,7 @@ public final class GunClient {
 		reloadKeyHeld = byKey;
 		double silentEnd = 0;
 		reloadSounds.clear();
-		AnimClip rc = AnimClip.load(GunServer.clipPath(g.weaponClass, "reload"));
+		AnimClip rc = AnimClip.peek(GunServer.clipPath(g.weaponClass, "reload"));
 		if (rc != null)
 			for (AnimClip.Event e : rc.events()) {
 				if (e.name().equals("WPN_RELOAD_SILENT")) silentEnd = e.time() + e.duration();
@@ -565,7 +590,7 @@ public final class GunClient {
 		if (g instanceof dev.strafemc.weapon.GrenadeItem && grenadeState != GRENADE_IDLE) return;
 		String anim = g instanceof dev.strafemc.weapon.KnifeItem ? dev.strafemc.data.InspectGraph.pick(g.weaponClass.substring("weapon_".length()), rng, "lookat01")
 				: g instanceof dev.strafemc.weapon.GrenadeItem gi ? dev.strafemc.data.InspectGraph.pick(gi.type.inspectGraph, rng, "lookat01") : "lookat01";
-		AnimClip c = AnimClip.load(GunServer.clipPath(g.weaponClass, anim));
+		AnimClip c = AnimClip.peek(GunServer.clipPath(g.weaponClass, anim));
 		if (c == null) return;
 		inspectUntil = now + sec(c.duration());
 		schedule(g, anim, now);
@@ -593,7 +618,7 @@ public final class GunClient {
 		vm.seek((float) inspectLoop[0]);
 		inspectUntil += sec(back);
 		String path = GunServer.clipPath(inspectItem.weaponClass, inspectAnim);
-		AnimClip c = path == null ? null : AnimClip.load(path);
+		AnimClip c = path == null ? null : AnimClip.peek(path);
 		if (c != null) for (AnimClip.Event e : c.events())
 			if (e.isSound() && !e.name().isEmpty() && e.time() >= inspectLoop[0] && e.time() < inspectLoop[1])
 				sounds.add(new Scheduled(now + sec(e.time() - inspectLoop[0]), e.name()));
@@ -603,7 +628,7 @@ public final class GunClient {
 	private void schedule(GunItem g, String anim, long start) {
 		String path = GunServer.clipPath(g.weaponClass, anim);
 		if (path == null) return;
-		AnimClip c = AnimClip.load(path);
+		AnimClip c = AnimClip.peek(path);
 		if (c == null) return;
 		for (AnimClip.Event e : c.events()) if (e.isSound() && !e.name().isEmpty()) sounds.add(new Scheduled(start + sec(e.time()), e.name()));
 	}

@@ -21,6 +21,7 @@ final class Initializers {
 			case "C_INIT_RandomColor" -> new RandomColor(p);
 			case "C_INIT_VelocityRandom" -> new VelocityRandom(p);
 			case "C_INIT_InitialVelocityNoise" -> new InitialVelocityNoise(p);
+			case "C_INIT_SetAttributeToScalarExpression" -> new ScalarExpression(p);
 			case "C_INIT_PositionOffset" -> new PositionOffset(p);
 			case "C_INIT_GlobalScale" -> new GlobalScale(p);
 			case "C_INIT_RemapScalarToVector" -> new RemapScalarToVector(p);
@@ -109,6 +110,36 @@ final class Initializers {
 			if (Particle.isAngle(field) && method != Particle.SET_SCALE_INITIAL && method != Particle.SET_SCALE_CURRENT) v = (float) Math.toRadians(v);
 			float target = q.modifyScalarAtSpawn(c, field, v, method), cur = q.scalar(field);
 			q.scalar(field, PMath.lerp(cur, target, strength.next(q, s)));
+		}
+	}
+
+	/** C_OP_SetAttributeToScalarExpression's maths, once at spawn (e.g. CS2 fire flames grow with the fire's age). */
+	static final class ScalarExpression extends PFunction.Initializer {
+		final int field, method;
+		final Num in1, in2;
+		final String expr;
+		final Num.Mapping remap;
+
+		ScalarExpression(Pd p) {
+			super(p);
+			field = p.field("m_nOutputField", Particle.RADIUS);
+			in1 = p.num("m_flInput1", new Num.Literal(1));
+			in2 = p.num("m_flInput2", new Num.Literal(0));
+			expr = p.str("m_nExpression", "SCALAR_EXPRESSION_ADD");
+			method = Particle.setMethod(p.str("m_nSetMethod", null));
+			remap = p.raw("m_flOutputRemap") instanceof java.util.Map<?, ?> m ? new Num.Mapping(p.nested(m)) : null;
+		}
+
+		@Override
+		long writes() {
+			return mask(field);
+		}
+
+		@Override
+		void init(Particle q, PCollection c, PState s) {
+			float out = Operators.ScalarExpression.eval(expr, in1.next(q, s), in2.next(q, s));
+			if (remap != null) out = remap.apply(out);
+			q.scalar(field, q.modifyScalarAtSpawn(c, field, out, method));
 		}
 	}
 

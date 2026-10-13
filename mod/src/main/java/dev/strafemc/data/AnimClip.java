@@ -60,6 +60,21 @@ public record AnimClip(String path, double duration, List<Event> events) {
 		});
 	}
 
+	private static final java.util.concurrent.ExecutorService LOADER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "strafemc-clips");
+		t.setDaemon(true);
+		return t;
+	});
+	private static final java.util.Set<String> QUEUED = ConcurrentHashMap.newKeySet();
+
+	/** Non-blocking (for the game/render thread): the clip if already read, else null and it is read in the background. */
+	public static AnimClip peek(String vnmclipPath) {
+		if (vnmclipPath == null) return null;
+		AnimClip c = CACHE.get(vnmclipPath);
+		if (c == null && QUEUED.add(vnmclipPath)) LOADER.execute(() -> load(vnmclipPath));
+		return c;
+	}
+
 	/** Time (s) of the first event with this name, or fallback. */
 	public double timeOf(String name, double fallback) {
 		for (Event e : events) if (e.name().equals(name)) return e.time();

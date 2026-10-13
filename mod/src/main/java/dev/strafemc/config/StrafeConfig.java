@@ -68,6 +68,14 @@ public final class StrafeConfig {
 	public static double viewmodelFov = 60;
 	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up), clamped like CS2: x -2..2.5, y and z -2..2; defaults 1, 1, -1. */
 	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
+	/**
+	 * CS2's grenade throw crosshair (client cvars, CS2 defaults): cl_grenadecrosshair_<explosive|flash|smoke|fire|decoy>
+	 * on, cl_grenadecrosshairdelay_* 2 s (0..5), cl_grenadecrosshair_tickscaling 1.1 (0.5..2), cl_grenadecrosshair_ticklabels on.
+	 */
+	public static boolean[] grenadeCrosshair = {true, true, true, true, true};
+	public static double[] grenadeCrosshairDelay = {2, 2, 2, 2, 2};
+	public static double grenadeCrosshairTickScaling = 1.1;
+	public static boolean grenadeCrosshairTickLabels = true;
 	/** KZ-style jump stats after each jump (cl_jumpstats). */
 	public static boolean jumpStats = true;
 	/** VRF glTF axes -> camera space for the viewmodel (clip/model space is y-up, z forward, x left -> camera x=-x, y=y, z=-z). */
@@ -121,6 +129,13 @@ public final class StrafeConfig {
 			viewmodelOffsetY = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)))));
 			viewmodelOffsetZ = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)))));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
+			for (int i = 0; i < 5; i++) {
+				String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
+				grenadeCrosshair[i] = Boolean.parseBoolean(p.getProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i])));
+				grenadeCrosshairDelay[i] = Math.max(0, Math.min(5, Double.parseDouble(p.getProperty("grenadeCrosshairDelay." + k, String.valueOf(grenadeCrosshairDelay[i])))));
+			}
+			grenadeCrosshairTickScaling = Math.max(0.5, Math.min(2, Double.parseDouble(p.getProperty("grenadeCrosshairTickScaling", String.valueOf(grenadeCrosshairTickScaling)))));
+			grenadeCrosshairTickLabels = Boolean.parseBoolean(p.getProperty("grenadeCrosshairTickLabels", String.valueOf(grenadeCrosshairTickLabels)));
 			vmAxes = p.getProperty("viewmodelAxes", vmAxes);
 			showSpeedMeter = Boolean.parseBoolean(p.getProperty("showSpeedMeter", String.valueOf(showSpeedMeter)));
 			velGraph = Boolean.parseBoolean(p.getProperty("velGraph", String.valueOf(velGraph)));
@@ -157,6 +172,13 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
+		for (int i = 0; i < 5; i++) {
+			String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
+			p.setProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i]));
+			p.setProperty("grenadeCrosshairDelay." + k, String.valueOf(grenadeCrosshairDelay[i]));
+		}
+		p.setProperty("grenadeCrosshairTickScaling", String.valueOf(grenadeCrosshairTickScaling));
+		p.setProperty("grenadeCrosshairTickLabels", String.valueOf(grenadeCrosshairTickLabels));
 		p.setProperty("viewmodelAxes", vmAxes);
 		p.setProperty("showSpeedMeter", String.valueOf(showSpeedMeter));
 		p.setProperty("velGraph", String.valueOf(velGraph));

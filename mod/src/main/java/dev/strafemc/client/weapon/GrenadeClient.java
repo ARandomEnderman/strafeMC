@@ -150,6 +150,8 @@ public final class GrenadeClient {
 
 	/** The white-out: full white for the first 40% of the flash, then fading (FLAGGED: CS-like shape). */
 	public static void registerHud() {
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "grenade_crosshair"),
+				(g, delta) -> GrenadeCrosshair.render(g));
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "flashbang"), (g, delta) -> {
 			float secs = flashSeconds;
 			if (secs <= 0) return;

@@ -60,7 +60,7 @@ public final class Viewmodel {
 	/** Set after any rendering error: the vanilla hand is used from then on (logged once). */
 	private volatile boolean broken;
 	private volatile String loading;
-	private final Map<Path, Identifier> textures = new HashMap<>();
+	private final Map<Path, Identifier> textures = new java.util.concurrent.ConcurrentHashMap<>();
 	/** The camera rotation GameRenderer.renderItemInHand starts the hand pose from (inverted); captured by a mixin. */
 	public static final Matrix4f HAND_VIEW = new Matrix4f();
 	private VmClip clip;
@@ -125,6 +125,15 @@ public final class Viewmodel {
 		return false;
 	}
 
+	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
+	public static void warmClips() {
+		for (Weapon w : WEAPONS.values())
+			for (String a : w.clips) dev.strafemc.data.AnimClip.load(dev.strafemc.weapon.GunServer.clipPath(w.cls, a));
+	}
+
+	/** Textures decoded by the loader thread, waiting for their (render thread) upload. */
+	private final Map<Path, NativeImage> decoded = new java.util.concurrent.ConcurrentHashMap<>();
+
 	private void loadAsync(String cls) {
 		Weapon w = WEAPONS.get(cls);
 		if (w == null) return;
@@ -140,7 +149,14 @@ public final class Viewmodel {
 					String p = dev.strafemc.weapon.GunServer.clipPath(cls, a);
 					l.clips.put(a, new VmClip(a, Glb.read(AssetCache.exportGlb(p, false))));
 				}
-				for (VmModel m : new VmModel[] {l.arms, l.gun}) for (VmModel.Part part : m.parts) if (part.texture != null) downscaled(part.texture);
+				for (String a : w.clips) dev.strafemc.data.AnimClip.load(dev.strafemc.weapon.GunServer.clipPath(cls, a));
+				for (VmModel m : new VmModel[] {l.arms, l.gun})
+					for (VmModel.Part part : m.parts)
+						if (part.texture != null) {
+							downscaled(part.texture);
+							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+								decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+						}
 				cache.put(cls, l);
 				StrafeMc.LOG.info("[strafemc] viewmodel ready for {} ({} clips)", cls, l.clips.size());
 			} catch (Exception e) {
@@ -420,12 +436,9 @@ public final class Viewmodel {
 	Identifier texture(Path png, boolean opaque) {
 		if (png == null) return null;
 		return textures.computeIfAbsent(png, p -> {
-			try (InputStream in = Files.newInputStream(downscaledPath(p))) {
-				NativeImage img = NativeImage.read(in);
-				// CS2 color textures carry the paint/skin mask in alpha: for opaque materials it isn't transparency
-				if (opaque)
-					for (int y = 0; y < img.getHeight(); y++)
-						for (int x = 0; x < img.getWidth(); x++) img.setPixel(x, y, img.getPixel(x, y) | 0xFF000000);
+			try {
+				NativeImage ready = decoded.remove(p);
+				NativeImage img = ready != null ? ready : decode(p, opaque);
 				Identifier id = Identifier.fromNamespaceAndPath("strafemc", "vm/" + Integer.toHexString(p.toString().hashCode()));
 				Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "strafemc viewmodel " + p.getFileName(), img));
 				return id;
@@ -434,6 +447,18 @@ public final class Viewmodel {
 				return null;
 			}
 		});
+	}
+
+	/** Reads a viewmodel texture (any thread). */
+	private static NativeImage decode(Path p, boolean opaque) throws java.io.IOException {
+		try (InputStream in = Files.newInputStream(downscaledPath(p))) {
+			NativeImage img = NativeImage.read(in);
+			// CS2 color textures carry the paint/skin mask in alpha: for opaque materials it isn't transparency
+			if (opaque)
+				for (int y = 0; y < img.getHeight(); y++)
+					for (int x = 0; x < img.getWidth(); x++) img.setPixel(x, y, img.getPixel(x, y) | 0xFF000000);
+			return img;
+		}
 	}
 
 	private static Path downscaledPath(Path p) {
