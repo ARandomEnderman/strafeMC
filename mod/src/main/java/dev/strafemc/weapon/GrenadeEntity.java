@@ -24,8 +24,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	public static EntityType<GrenadeEntity> TYPE;
 
 	static final double GRAVITY_SCALE = 0.4, ELASTICITY = 0.45, STOP_SPEED = 20, STEP = 1 / 64.0;
-	/** Seconds from the throw until an HE grenade or flashbang goes off (CS: 1.5 s). */
-	static final double FUSE = 1.5;
+	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2: 1.6 s, measured by the user). */
+	static final double FUSE = 1.6;
 
 	/** Velocity in blocks per second (Minecraft's delta movement is per tick and only mirrors it for interpolation). */
 	private Vec3 vel = Vec3.ZERO;

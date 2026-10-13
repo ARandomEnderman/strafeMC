@@ -244,7 +244,8 @@ public final class Viewmodel {
 		Loaded l = loaded;
 		if (clip == null) play("draw");
 		float t = clipTime();
-		if (t > clip.duration && !clip.name.equals("idle")) {
+		// clips that end in a held pose (a grenade's charged throw: single-frame poses) stay until the next animation
+		if (t > clip.duration && !clip.name.equals("idle") && !clip.name.startsWith("throwcharge")) {
 			play("idle");
 			t = 0;
 		}
