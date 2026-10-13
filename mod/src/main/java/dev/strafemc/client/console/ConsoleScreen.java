@@ -77,6 +77,7 @@ public final class ConsoleScreen extends Screen {
 
 		items.clear();
 		header("Personal");
+		toggle(() -> "Team: " + ("t".equals(StrafeConfig.team) ? "T" : "CT"), () -> ConsoleCommands.execute("strafemc_team"));
 		toggle(() -> "Scroll wheel: " + (StrafeConfig.scrollJump ? "Jump" : "Hotbar"), () -> ConsoleCommands.execute("cl_scrolljump"));
 		toggle(() -> "cl_showpos: " + onOff(StrafeConfig.showSpeed), () -> ConsoleCommands.execute("cl_showpos"));
 		toggle(() -> "Double-tap fly: " + onOff(StrafeConfig.doubleTapFly), () -> ConsoleCommands.execute("cl_doubletapfly"));

@@ -229,6 +229,16 @@ public final class ConsoleCommands {
 			StrafeConfig.grenadeCrosshairTickLabels = bool(a, !StrafeConfig.grenadeCrosshairTickLabels);
 			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
 		});
+		local("strafemc_team", "Your CS side: ct or t (no value: switch). Footsteps and smoke colour; later your agent.", a -> {
+			StrafeConfig.team = a.length > 0 ? (a[0].equalsIgnoreCase("t") ? "t" : "ct") : ("t".equals(StrafeConfig.team) ? "ct" : "t");
+			try {
+				StrafeConfig.save();
+			} catch (Exception e) {
+				ConsoleLog.error("could not save config: " + e.getMessage());
+			}
+			sendTeam();
+			ConsoleLog.add("Team: " + StrafeConfig.team.toUpperCase(java.util.Locale.ROOT), ConsoleLog.OK);
+		});
 		local("strafemc_serverlog", "Show the raw CS2 server log in the console (1) or only replies to your commands (0).", a -> {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
@@ -371,6 +381,12 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add(name + " = " + get.getAsDouble(), ConsoleLog.OK);
 		});
+	}
+
+	/** Tells the server your side (for your smokes' colour). */
+	public static void sendTeam() {
+		if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE))
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.TeamChoice("t".equals(StrafeConfig.team)));
 	}
 
 	static boolean bool(String[] a, boolean toggled) {

@@ -19,8 +19,8 @@ import java.util.List;
 /**
  * Smokes and fires ("infernos") burning right now (server), with CS2's values:
  * <ul>
- * <li>Smoke (server code): fades in over 0.1..1.5 s, full until 17 s, gone at 22 s (smoothstep). Its radius (144
- * units) is still ours (FLAGGED: CS2's smoke is a voxel volume).</li>
+ * <li>Smoke (server code): fades in over 0.1..1.5 s, full until 17 s, gone at 22 s (smoothstep); its space is CS2's
+ * voxel volume (SmokeVolume).</li>
  * <li>Fire (CS2's inferno_* settings): starts with one flame where it lands; flames spawn new ones inferno_flame_spacing
  * (42) units away, within inferno_spawn_angle (45) degrees of their own direction, for inferno_per_flame_spawn_duration
  * (3) s each, at most inferno_max_flames (16), never farther than inferno_max_range (150; incendiary 110) from the
@@ -32,7 +32,6 @@ import java.util.List;
  * Fires go out when a smoke covers them.
  */
 public final class GrenadeZones {
-	static final double SMOKE_RADIUS = 144;
 	static final double SMOKE_SECONDS = 22;
 	static final int SMOKE_TICKS = (int) (SMOKE_SECONDS * 20);
 
@@ -40,7 +39,7 @@ public final class GrenadeZones {
 			MAX_INTERVAL = 0.5, FLAME_REACH = 21;
 	static final int MAX_FLAMES = 16;
 
-	record Smoke(ServerLevel level, Vec3 at, long until) {}
+	record Smoke(ServerLevel level, Vec3 at, long until, SmokeVolume volume) {}
 
 	private static final class Flame {
 		final Vec3 at;
@@ -83,12 +82,13 @@ public final class GrenadeZones {
 
 	private GrenadeZones() {}
 
-	static void smoke(ServerLevel level, Vec3 at) {
-		SMOKES.add(new Smoke(level, at, level.getGameTime() + SMOKE_TICKS));
-		GrenadeEffects.event(level, GrenadeEffects.EV_SMOKE, at);
+	static void smoke(ServerLevel level, Vec3 at, net.minecraft.world.entity.Entity thrower) {
+		Smoke smoke = new Smoke(level, at, level.getGameTime() + SMOKE_TICKS, SmokeVolume.fill(level, at));
+		SMOKES.add(smoke);
+		GrenadeEffects.event(level, CsTeam.isT(thrower) ? GrenadeEffects.EV_SMOKE_T : GrenadeEffects.EV_SMOKE, at);
 		for (Iterator<Fire> it = FIRES.iterator(); it.hasNext(); ) { // a smoke on a fire puts it out
 			Fire f = it.next();
-			if (f.level == level && covered(at, f.origin)) {
+			if (f.level == level && covered(smoke, f)) {
 				GrenadeEffects.event(level, GrenadeEffects.EV_FIRE_OUT, f.origin);
 				it.remove();
 			}
@@ -97,7 +97,7 @@ public final class GrenadeZones {
 
 	/** Starts a fire on the ground at `at`; false if a smoke already covers that spot (it fizzles, like CS). */
 	static boolean fire(ServerLevel level, Vec3 at, ServerPlayer owner, GrenadeEntity source, boolean incendiary) {
-		for (Smoke s : SMOKES) if (s.level == level && covered(s.at, at)) return false;
+		for (Smoke s : SMOKES) if (s.level == level && covered(s, at)) return false;
 		java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(incendiary ? Grenade.INCENDIARY.cls : Grenade.MOLOTOV.cls);
 		Fire f = new Fire(level, at, incendiary, d != null && d.get("m_nDamage") instanceof Number n ? n.doubleValue() : 40);
 		long t = level.getGameTime();
@@ -119,10 +119,18 @@ public final class GrenadeZones {
 		GrenadeEffects.event(f.level, f.incendiary ? GrenadeEffects.EV_FLAME_INC : GrenadeEffects.EV_FLAME, at);
 	}
 
-	private static boolean covered(Vec3 smoke, Vec3 spot) {
-		double upb = StrafeConfig.unitsPerBlock, dx = (smoke.x - spot.x) * upb, dz = (smoke.z - spot.z) * upb, dy = (spot.y - smoke.y) * upb;
-		return dx * dx + dz * dz < SMOKE_RADIUS * SMOKE_RADIUS && dy > -64 && dy < 160;
+	/** Is this spot on the ground inside the smoke (a voxel just above it is filled)? */
+	private static boolean covered(Smoke smoke, Vec3 spot) {
+		return smoke.volume.contains(spot.add(0, 0.25, 0));
 	}
+
+	/** Does the smoke cover the fire's start or any of its flames? */
+	private static boolean covered(Smoke smoke, Fire f) {
+		if (covered(smoke, f.origin)) return true;
+		for (Flame fl : f.flames) if (covered(smoke, fl.at)) return true;
+		return false;
+	}
+
 
 	/** Every server tick: flames spread and hurt (four times a second); burnt-out smokes and fires are dropped. */
 	public static void tick(MinecraftServer server) {

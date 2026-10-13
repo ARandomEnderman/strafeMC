@@ -75,6 +75,8 @@ public class StrafeMcClient implements ClientModInitializer {
 			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register(
+				(handler, sender, mc) -> dev.strafemc.client.console.ConsoleCommands.sendTeam()); // your side, for your smokes' colour
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
 			// your own world gets your CS2 server (started once; it keeps running until Minecraft closes); asked once
 			if (mc.getSingleplayerServer() == null) return;

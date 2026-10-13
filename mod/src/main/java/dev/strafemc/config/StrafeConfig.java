@@ -84,7 +84,8 @@ public final class StrafeConfig {
 	public static boolean showSpeedMeter = true;
 	/** Speed graph above the hotbar (cl_velgraph). */
 	public static boolean velGraph = false;
-	/** Which CS2 footstep set to use: "ct" or "t". */
+	/** Your CS side, "ct" or "t" (console quick menu, strafemc_team): footstep set and smoke colour, later your agent. */
+	public static String team = "ct";
 	/** Show the raw CS2 server log in the console (otherwise only replies to your own commands). */
 	public static boolean showServerLog = false;
 	/** Verbose movement/bridge logging. */
@@ -129,6 +130,7 @@ public final class StrafeConfig {
 			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
 			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
+			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
 			for (int i = 0; i < 5; i++) {
 				String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
 				grenadeCrosshair[i] = Boolean.parseBoolean(p.getProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i])));
@@ -172,6 +174,7 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
+		p.setProperty("team", team);
 		for (int i = 0; i < 5; i++) {
 			String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
 			p.setProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i]));

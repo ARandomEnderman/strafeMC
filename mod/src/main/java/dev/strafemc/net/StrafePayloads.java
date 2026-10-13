@@ -95,6 +95,17 @@ public final class StrafePayloads {
 	}
 
 	/** Client -> server: throw the held grenade (strength 1 overhand, 0 underhand, 0.5 both buttons; velocity in units/s). */
+	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
+	public record TeamChoice(boolean t) implements CustomPacketPayload {
+		public static final Type<TeamChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "team"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, TeamChoice> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, TeamChoice::t, TeamChoice::new);
+
+		@Override
+		public Type<TeamChoice> type() {
+			return TYPE;
+		}
+	}
+
 	public record Throw(float strength, float yaw, float pitch, float vx, float vy, float vz) implements CustomPacketPayload {
 		public static final Type<Throw> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "throw"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Throw> CODEC = StreamCodec.of((b, v) -> {

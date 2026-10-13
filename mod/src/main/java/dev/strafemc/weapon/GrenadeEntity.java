@@ -147,7 +147,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 				}
 			}
 			case SMOKE -> { // goes off once it has settled
-				if (restTicks == 10 || age >= 60 * 20) GrenadeZones.smoke(level, position());
+				if (restTicks == 10 || age >= 60 * 20) GrenadeZones.smoke(level, position(), getOwner());
 				if (restTicks >= 10 + GrenadeZones.SMOKE_TICKS || age >= 60 * 20) discard();
 			}
 			case MOLOTOV, INCENDIARY -> { // bursts into fire on the ground, or fizzles if still flying

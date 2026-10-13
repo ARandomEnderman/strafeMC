@@ -26,13 +26,20 @@ import java.util.Random;
 
 /**
  * Client side of grenades going off: CS2's effects and sounds, the flashbang white-out, smoke clouds and fire patches.
- * Smoke and fire are drawn by strafeMC (CS2's are a voxel smoke and a spreading fire system): a cloud of soft puffs
- * about CS2's smoke size, and flames over the burning area. Sizes and durations match weapon.GrenadeZones.
+ * Smoke is CS2's voxel volume (weapon.SmokeVolume, the same fill the server runs) drawn as one soft puff per voxel
+ * (CS2 raymarches it); fire is CS2's per-flame effect. Durations match weapon.GrenadeZones.
  */
 public final class GrenadeClient {
 	private GrenadeClient() {}
 
-	private record Smoke(Vec3 at, long start, float[] puffs) {}
+	private record Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t) {}
+
+	/**
+	 * CS2's team smoke colours (smoke_grenade_ct_color 75 127 155, smoke_grenade_t_color 180 129 50) and how much of
+	 * them tints the grey (FLAGGED: ours, CS2's smoke shader mixes it its own way).
+	 */
+	private static final float[] CT_TINT = {75 / 255f, 127 / 255f, 155 / 255f}, T_TINT = {180 / 255f, 129 / 255f, 50 / 255f};
+	private static final float TINT = 0.3f;
 
 	private static final class Fire {
 		final Vec3 at;
@@ -67,7 +74,6 @@ public final class GrenadeClient {
 	private static final double SMOKE_IN0 = 0.1, SMOKE_IN1 = 1.5, SMOKE_OUT0 = 17, SMOKE_GONE = 22;
 	/** CS2's inferno_flame_lifetime (7 s, incendiary 5.5 s); the server sends each flame as it spreads. */
 	private static final double FLAME_SECONDS = 7, FLAME_SECONDS_INC = 5.5, FLAME_REACH = 21;
-	private static final int PUFFS = 70;
 	private static Identifier puffTexture;
 
 	/** The trajectory preview: the path of the grenade being held charged (null = none). */
@@ -95,9 +101,10 @@ public final class GrenadeClient {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.FLASH_EFFECT, at, up);
 				CsSounds.play("Flashbang.Explode", at.x, at.y, at.z, 1.0);
 			}
-			case GrenadeEffects.EV_SMOKE -> {
-				synchronized (SMOKES) {
-					SMOKES.add(new Smoke(at, System.nanoTime(), puffs(at)));
+			case GrenadeEffects.EV_SMOKE, GrenadeEffects.EV_SMOKE_T -> {
+				var level = Minecraft.getInstance().level;
+				if (level != null) synchronized (SMOKES) {
+					SMOKES.add(new Smoke(dev.strafemc.weapon.SmokeVolume.fill(level, at), System.nanoTime(), m.kind() == GrenadeEffects.EV_SMOKE_T));
 				}
 				CsSounds.play("BaseSmokeEffect.Sound", at.x, at.y, at.z, 1.0);
 			}
@@ -202,21 +209,6 @@ public final class GrenadeClient {
 		}
 	}
 
-	/** Puff centres (x, y, z offsets in blocks, size) filling CS2's smoke size: 144 units around, about 100 high. */
-	private static float[] puffs(Vec3 at) {
-		Random rnd = new Random(Double.doubleToLongBits(at.x * 31 + at.z));
-		double u = StrafeConfig.unitsPerBlock, rad = 144 / u, height = 100 / u;
-		float[] p = new float[PUFFS * 4];
-		for (int i = 0; i < PUFFS; i++) {
-			double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * rad * 0.85;
-			p[i * 4] = (float) (Math.cos(a) * d);
-			p[i * 4 + 1] = (float) (rnd.nextDouble() * height);
-			p[i * 4 + 2] = (float) (Math.sin(a) * d);
-			p[i * 4 + 3] = (float) ((50 + rnd.nextDouble() * 30) / u);
-		}
-		return p;
-	}
-
 	/** CS2's smoothstep: 0 at e0, 1 at e1 (either order), smooth in between. */
 	private static double smoothstep(double e0, double e1, double x) {
 		double t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
@@ -255,15 +247,32 @@ public final class GrenadeClient {
 		long now = System.nanoTime();
 		List<float[]> quads = new ArrayList<>();
 		for (Smoke s : smokes) {
-			double t = (now - s.start) / 1e9;
-			double grow = smoothstep(SMOKE_IN0, SMOKE_IN1, t), fade = smoothstep(SMOKE_GONE, SMOKE_OUT0, t);
-			float alpha = (float) (0.85 * grow * fade);
-			for (int i = 0; i < PUFFS; i++) {
-				float x = (float) (s.at.x + s.puffs[i * 4] * grow - c.x), y = (float) (s.at.y + s.puffs[i * 4 + 1] * grow - c.y),
-						z = (float) (s.at.z + s.puffs[i * 4 + 2] * grow - c.z), size = (float) (s.puffs[i * 4 + 3] * (0.6 + 0.4 * grow));
-				int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(x + c.x, y + c.y, z + c.z));
-				float shade = 0.62f + (i % 5) * 0.025f;
-				quads.add(new float[] {x, y, z, size, shade, alpha, Float.intBitsToFloat(light)});
+			double t = (now - s.start) / 1e9, fade = smoothstep(SMOKE_GONE, SMOKE_OUT0, t);
+			var v = s.volume;
+			float[] tint = s.t ? T_TINT : CT_TINT;
+			double vs = dev.strafemc.weapon.SmokeVolume.VOXEL / StrafeConfig.unitsPerBlock;
+			for (int n = 0; n < v.cells.length; n++) {
+				// grows out from the grenade in flood order over CS2's 0.1..1.5 s fade-in (FLAGGED: the order is ours)
+				double at0 = SMOKE_IN0 + (SMOKE_IN1 - SMOKE_IN0) * v.steps[n] / Math.max(1, v.maxStep);
+				double appear = smoothstep(at0, at0 + 0.35, t);
+				if (appear <= 0) continue;
+				int cell = v.cells[n];
+				Vec3 p = v.center(cell);
+				double dens = v.density(p);
+				if (dens <= 0) continue;
+				int h = cell * 0x9E3779B1; // a fixed per-voxel wobble so the puffs don't sit on a grid
+				float jx = ((h >>> 8 & 255) / 255f - 0.5f) * 0.3f, jy = ((h >>> 16 & 255) / 255f - 0.5f) * 0.3f, jz = ((h >>> 24) / 255f - 0.5f) * 0.3f;
+				float x = (float) (p.x + jx * vs - c.x), y = (float) (p.y + jy * vs - c.y), z = (float) (p.z + jz * vs - c.z);
+				float alpha = (float) (0.55 * dens * appear * fade);
+				int cx = cell % dev.strafemc.weapon.SmokeVolume.N, cy = cell / dev.strafemc.weapon.SmokeVolume.N % dev.strafemc.weapon.SmokeVolume.N,
+						cz = cell / (dev.strafemc.weapon.SmokeVolume.N * dev.strafemc.weapon.SmokeVolume.N);
+				boolean inner = v.filled(cx + 1, cy, cz) && v.filled(cx - 1, cy, cz) && v.filled(cx, cy + 1, cz) && v.filled(cx, cy - 1, cz)
+						&& v.filled(cx, cy, cz + 1) && v.filled(cx, cy, cz - 1);
+				float depthAlpha = inner && dens > 0.9 ? (float) (appear * fade) : 0; // only the thick inside hides what's behind
+				int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(p));
+				float shade = 0.64f + ((h >>> 4 & 7) - 3.5f) * 0.012f;
+				float r = shade * (1 - TINT) + tint[0] * TINT, g = shade * (1 - TINT) + tint[1] * TINT, b = shade * (1 - TINT) + tint[2] * TINT;
+				quads.add(new float[] {x, y, z, (float) (vs * 1.25), r, alpha, Float.intBitsToFloat(light), g, b, depthAlpha});
 			}
 		}
 		quads.sort(Comparator.comparingDouble((float[] q) -> -(q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));
@@ -272,10 +281,12 @@ public final class GrenadeClient {
 		for (net.minecraft.client.renderer.rendertype.RenderType type : new net.minecraft.client.renderer.rendertype.RenderType[] {
 				RenderTypes.entityTranslucent(puff()), dev.strafemc.client.particle.ParticleBlend.depthOnly(puff())})
 			ctx.submitNodeCollector().submitCustomGeometry(ps, type, (pose, vc) -> {
+				boolean depth = type == dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
 				for (float[] q : quads) {
+					float a = depth ? q[9] : q[5];
+					if (a <= 0) continue;
 					int light = Float.floatToRawIntBits(q[6]);
-					int shade = (int) (q[4] * 255);
-					int col = (int) (q[5] * 255) << 24 | shade << 16 | shade << 8 | shade;
+					int col = (int) (a * 255) << 24 | (int) (q[4] * 255) << 16 | (int) (q[7] * 255) << 8 | (int) (q[8] * 255);
 					float sz = q[3];
 					float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
 					for (float[] k : corners)
