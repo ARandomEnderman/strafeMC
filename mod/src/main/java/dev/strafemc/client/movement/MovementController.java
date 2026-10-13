@@ -296,6 +296,7 @@ public final class MovementController {
 		params.maxVelocity = cv("sv_maxvelocity");
 		params.timeBetweenDucks = cv("sv_timebetweenducks");
 		params.bhopTimeWindow = cvOr("sv_bhop_time_window", 0);
+		params.legacyJump = cvOr("sv_legacy_jump", 0) != 0;
 		params.stepMoveVelMin = cvOr("sv_step_move_vel_min", 0);
 		params.jumpSpamPenalty = cvOr("sv_jump_spam_penalty_time", 0);
 		params.standableNormal = cv("sv_standable_normal");

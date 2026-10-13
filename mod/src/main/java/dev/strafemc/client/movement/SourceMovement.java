@@ -44,6 +44,8 @@ public final class SourceMovement {
 				standableNormal, ladderScaleSpeed, ladderAngle, ladderDampen,
 				noclipSpeed, noclipAccelerate, noclipFriction, noclipSpeedScaleOnShift, waterAccelerate, waterFriction;
 		public boolean autoBhop, enableBhop, subtickViewAngles = true;
+		/** sv_legacy_jump: CS2's pre-2026 jump (full sv_jump_impulse every time, no landing penalty, no bhop window). */
+		public boolean legacyJump;
 		/** Active weapon m_flMaxSpeed (knife when nothing is held). */
 		public double weaponMaxSpeed;
 	}
@@ -99,6 +101,16 @@ public final class SourceMovement {
 	/** Events from the last step, for logging/sounds. */
 	public boolean jumpedThisStep, landedThisStep;
 	public double landSpeed;
+	/**
+	 * CS2's 2026 jump ("jump impulse mul" in cl_showpos): landing sets it to 1 - fall speed x LAND_PENALTY, it recovers
+	 * MUL_RECOVERY per second (in the air too), and a jump's take-off speed is it x (sv_jump_impulse - gravity / 256).
+	 * Measured from CS2 (cl_showpos, host_timescale 0.25): standing jump apex 55.83 u; landings from 298.9 / 262.3 /
+	 * 257.8 u/s gave 0.851 / 0.869 / 0.871; recovery 0.61 per s; held-space hops 0.655 s apart. FLAGGED: fitted
+	 * constants (the same numbers as sv_staminalandcost / 100 and sv_staminarecoveryrate / 100), and a landing while
+	 * still penalised keeps the lower value.
+	 */
+	public double jumpMul = 1;
+	static final double LAND_PENALTY = 0.0005, MUL_RECOVERY = 0.6;
 	/** True when the last jump came from sv_autobunnyhopping (held), not a timed press. */
 	public boolean jumpedAuto;
 	/** Source m_flFallVelocity: downward speed recorded before moving (the move itself may clip vy to 0 on impact). */
@@ -175,6 +187,7 @@ public final class SourceMovement {
 			return;
 		}
 
+		if (!p.legacyJump) jumpMul = Math.min(1, jumpMul + MUL_RECOVERY * dt);
 		vy -= p.gravity * 0.5 * dt; // StartGravity
 		if (!onGround) fallVelocity = -vy;
 
@@ -183,6 +196,7 @@ public final class SourceMovement {
 			landedThisStep = true;
 			landSpeed = fallVelocity;
 			landTime = time;
+			if (!p.legacyJump) jumpMul = Math.max(0, Math.min(jumpMul, 1 - Math.max(0, landSpeed) * LAND_PENALTY));
 		}
 
 		if (onGround) {
@@ -200,6 +214,7 @@ public final class SourceMovement {
 			landedThisStep = true;
 			landSpeed = fallVelocity;
 			landTime = time;
+			if (!p.legacyJump) jumpMul = Math.max(0, Math.min(jumpMul, 1 - Math.max(0, landSpeed) * LAND_PENALTY));
 			double[] under = w.surface(x, y, z, HULL_HALF_WIDTH);
 			if (under[3] > 0 && !ducked && landSpeed > Unexposed.NON_JUMP_VELOCITY) {
 				vy = landSpeed; // slime: bounce back up like vanilla (crouching lands normally)
@@ -244,7 +259,7 @@ public final class SourceMovement {
 		boolean timed = edge;
 		boolean want = edge || (in.jumpHeld && p.autoBhop);
 		// sv_bhop_time_window: a press shortly before landing still counts as a jump on landing
-		if (!want && time - landTime <= dt + 1e-9 && lastJumpPress <= landTime && landTime - lastJumpPress <= p.bhopTimeWindow + dt) {
+		if (!want && !p.legacyJump && time - landTime <= dt + 1e-9 && lastJumpPress <= landTime && landTime - lastJumpPress <= p.bhopTimeWindow + dt) {
 			want = true;
 			timed = true;
 		}
@@ -258,7 +273,8 @@ public final class SourceMovement {
 				vz *= cap / hs;
 			}
 		}
-		vy = p.jumpImpulse * surf[2]; // honey: MC jump factor
+		double impulse = p.legacyJump ? p.jumpImpulse : jumpMul * (p.jumpImpulse - p.gravity / 256);
+		vy = impulse * surf[2]; // honey: MC jump factor
 		vy -= p.gravity * 0.5 * dt; // FinishGravity inside CheckJumpButton
 		onGround = false;
 		lastJumpPress = -1e9;

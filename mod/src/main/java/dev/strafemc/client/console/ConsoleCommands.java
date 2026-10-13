@@ -28,7 +28,7 @@ public final class ConsoleCommands {
 	/** Movement cvars restored by strafemc_reset_movement. */
 	public static final String[] MOVEMENT_CVARS = {"sv_accelerate", "sv_airaccelerate", "sv_air_max_wishspeed", "sv_friction",
 			"sv_stopspeed", "sv_maxspeed", "sv_gravity", "sv_jump_impulse", "sv_stepsize", "sv_maxvelocity", "sv_autobunnyhopping",
-			"sv_enablebunnyhopping", "sv_timebetweenducks", "sv_ladder_scale_speed", "sv_ladder_angle", "sv_ladder_dampen", "host_timescale"};
+			"sv_enablebunnyhopping", "sv_legacy_jump", "sv_timebetweenducks", "sv_ladder_scale_speed", "sv_ladder_angle", "sv_ladder_dampen", "host_timescale"};
 
 	static {
 		local("clear", "Clear the console.", a -> ConsoleLog.clear());
