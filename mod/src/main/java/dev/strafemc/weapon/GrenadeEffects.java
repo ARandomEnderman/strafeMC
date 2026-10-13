@@ -88,7 +88,7 @@ public final class GrenadeEffects {
 	 * x0.6 to the side, x0.25 behind; full within 800 units, fading out to 2400.
 	 */
 	/**
-	 * CS2's flashbang (its server code): strength 3 x (1 - distance / 3000 units) x how much of the flash you can see
+	 * CS2's flashbang: strength 3 x (1 - distance / 3000 units) x how much of the flash you can see
 	 * (1 with a clear line to your eyes, else 0.167 for each of three points next to it that you can see: 50 units
 	 * up, 75 units to either side and 10 up). By where you look (dot of your view with the direction to it): >= 0.6
 	 * holds x 1.25 and fades x 2.5, >= 0.3 x 0.8 / x 1.75, >= -0.2 x 0.5 / x 1, behind you x 0.25 / x 0.5. In seconds:

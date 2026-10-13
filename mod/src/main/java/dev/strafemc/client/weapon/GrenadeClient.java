@@ -97,7 +97,7 @@ public final class GrenadeClient {
 
 	private static final List<Smoke> SMOKES = new ArrayList<>();
 	private static final List<Fire> FIRES = new ArrayList<>();
-	/** CS2's smoke timing (server code): smoothstep in over 0.1..1.5 s, full until 17 s, gone at 22 s. */
+	/** CS2's smoke timing: smoothstep in over 0.1..1.5 s, full until 17 s, gone at 22 s. */
 	private static final double SMOKE_IN0 = 0.1, SMOKE_IN1 = 1.5, SMOKE_OUT0 = 17, SMOKE_GONE = 22;
 	/** CS2's inferno_flame_lifetime (7 s, incendiary 5.5 s); the server sends each flame as it spreads. */
 	private static final double FLAME_SECONDS = 7, FLAME_SECONDS_INC = 5.5, FLAME_REACH = 21;

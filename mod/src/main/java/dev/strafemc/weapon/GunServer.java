@@ -414,7 +414,7 @@ public final class GunServer {
 	}
 
 	/**
-	 * Wallbangs, with CS2's penetration maths (its server code): the solid is measured along the bullet (0.5 unit steps
+	 * Wallbangs, with CS2's penetration maths: the solid is measured along the bullet (0.5 unit steps
 	 * through block collision shapes) and the surface modifier is the lowest bulletPenetrationDistanceModifier of the
 	 * blocks crossed (CS2 surface data, by SurfaceMap). Same material in and out: wood / cardboard count as 3, plastic
 	 * as 2; glass or grate thinner than 6 units as 3 with a 0.05 damage fraction. Damage lost = damage x 0.16 +

@@ -10,8 +10,8 @@ import java.util.function.Consumer;
 
 /**
  * CS2's Medi-Shot (weapon_healthshot): left click plays the inject animation; at its WPN_HEALTHSHOT_INJECT event
- * (0.667 s into the 1.9 s clip) the server heals healthshot_health (CS2 default 50); it is used up when the clip ends. CS2's defaults
- * from its code: healthshot_allow_use_at_full on, healthshot_healthboost_time 1 s with speed and damage multipliers
+ * (0.667 s into the 1.9 s clip) the server heals healthshot_health (CS2 default 50); it is used up when the clip ends. CS2's defaults:
+ * healthshot_allow_use_at_full on, healthshot_healthboost_time 1 s with speed and damage multipliers
  * 1.0 (so the boost changes nothing and isn't modelled).
  */
 public class HealthshotItem extends GunItem {

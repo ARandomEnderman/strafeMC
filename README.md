@@ -14,15 +14,16 @@ and impact effects.
 
 ## Status
 
-Early development, not released yet. The first-time setup is built in: on the title screen, strafeMC offers to
-convert what it needs from your CS2 install.
+Early development (0.42). Builds are on the [Releases](https://github.com/ARandomEnderman/strafeMC/releases) page.
+The first-time setup is built in: when you join a world, strafeMC offers to convert what it needs from your CS2 install.
 
 ## Features
 
 **Movement**
 - Air strafing, bunnyhopping and surfing that follow CS2's rules, including its sub-tick input.
+- CS2's 2026 jump (a weaker jump right after landing); the pre-2026 jump is a quick setting (`sv_legacy_jump`).
 - Stairs climb as smooth ramps; ladders, water, ice, slime and soul sand all work with it.
-- Surf ramp and surf slope blocks (with corners) for building your own maps.
+- Surf ramp, lying surf ramp and surf slope blocks (with corners) for building your own maps.
 - CS2 fall damage, and an optional half-block step height for slabs.
 
 **Weapons**
@@ -30,13 +31,24 @@ convert what it needs from your CS2 install.
   first-person models, animations and sounds.
 - Spray patterns, recoil, inaccuracy, deploy times, reloads (including silent reload) and inspects (rare inspects
   included; hold the key to keep them going).
-- Damage by hitgroup, headshots and range falloff; knife slashes, stabs and backstabs; wallbangs through thin blocks.
+- Damage by hitgroup, headshots and range falloff; knife slashes, stabs and backstabs; wallbangs with CS2's
+  penetration rules per material.
 - CS2 tagging: getting hit slows you down instead of knocking you back (Minecraft knockback is a server option).
 - Kevlar and helmets with CS armor rules, hit sounds and the helmet dink.
-- Grenades: CS throws (left, right, both), grenade physics and spin, a trajectory preview, flashes, smokes that put
-  out fires, fire that cooks the mobs it kills, and decoys that fake your last gun.
+- Grenades: CS throws (left, right, both), grenade physics and spin, a trajectory preview and CS2's lineup crosshair,
+  flashes with CS2's blind strength and fade, volumetric smokes in T and CT colours that HE grenades blow holes in,
+  smokes that put out fires, fire that cooks the mobs it kills, decoys that fake your last gun, and
+  `sv_rethrow_last_grenade` for practising lineups.
+- The Medi-Shot.
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects that change with the block you hit.
-- Viewmodel bob and sway, and CS2's viewmodel_fov and viewmodel_offset_x/y/z settings.
+- Viewmodel bob and sway, CS2's viewmodel_fov and viewmodel_offset_x/y/z settings, and `switchhands` (H).
+
+**Gloves, buy menu, killfeed**
+- Every CS2 glove type in every finish, Factory New, on your first-person arms (right-click to wear). Finishes are
+  rebuilt on your PC from your own CS2 files; they're cosmetic and unrelated to your Steam inventory.
+- CS2's buy menu (<kbd>B</kbd>) in CS2's layout, with CS2's grenade limits; operators choose who may buy
+  (`strafemc_buymenu`) and for how long after respawning (`strafemc_buytime`).
+- CS2's killfeed, and a T / CT choice in the console's quick menu (smoke colours, footsteps).
 
 **Console and multiplayer**
 - An in-game developer console (default key: <kbd>`</kbd>) with autocomplete, binds, movement presets and speed / jump stats.

@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
 import java.util.BitSet;
 
 /**
- * A smoke grenade's volume, voxelised like CS2's (its server code): a 32 x 32 x 32 grid of 20 unit voxels (640
+ * A smoke grenade's volume, voxelised like CS2's: a 32 x 32 x 32 grid of 20 unit voxels (640
  * units across) around the detonation, flood-filled from it through open space, so the smoke goes round corners
  * and through doorways but never through walls. The shape is CS2's (replicated cvars, read from a CS2 server):
  * a torus cl_smoke_torus_ring_radius 61 around a centre cl_smoke_origin_height 68 above the grenade, with tube

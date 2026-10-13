@@ -9,7 +9,7 @@ import org.joml.Matrix4f;
  * Viewmodel bob and sway, as a camera-space transform in front of the viewmodel.
  * Bob: a walk cycle whose size follows the horizontal speed (vertical, lateral, a slight roll / pitch / yaw, and the
  * weapon lowered a little while moving). Sway: when turning, the weapon lags behind the view and catches up, and it
- * shifts with the view pitch. FLAGGED: CS2 does this in game code, not data; these are CS:GO's viewmodel bob and
+ * shifts with the view pitch. FLAGGED: CS2 has no data for this; these are CS:GO's viewmodel bob and
  * weapon lag formulas and defaults (cl_bobcycle 0.98, cl_bobup 0.5, cl_bob_lower_amt 21, max lag 1.5, lag speed 5),
  * with the bob amount picked to look right. To be matched against CS2 later.
  */

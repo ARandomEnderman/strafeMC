@@ -1,6 +1,6 @@
 """Measure CS2 fall damage in the real engine: lift a bot by dz units (zero velocity), let it fall, read health loss.
 Impact speed for a drop from rest: v = sqrt(2 * sv_gravity * dz)."""
-import json, socket, time, math, sys
+import json, os, socket, time, math, sys
 u = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); u.bind(('127.0.0.1', 0)); u.settimeout(2)
 n = socket.create_connection(('127.0.0.1', 29015), timeout=2)
 
@@ -41,4 +41,4 @@ for dz in [150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000]:
     if not b or hp <= 0:
         con('mp_restartgame 1'); time.sleep(4)
 con('bot_kick'); con('bot_quota 0'); con('bot_stop 0'); con('mp_ignore_round_win_conditions 0')
-json.dump(rows, open(r'C:\Users\are\cs2mc\spikes\out\fall_damage.json', 'w'))
+json.dump(rows, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'out', 'fall_damage.json'), 'w'))

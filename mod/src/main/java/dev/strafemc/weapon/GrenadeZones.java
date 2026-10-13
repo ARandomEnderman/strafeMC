@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * Smokes and fires ("infernos") burning right now (server), with CS2's values:
  * <ul>
- * <li>Smoke (server code): fades in over 0.1..1.5 s, full until 17 s, gone at 22 s (smoothstep); its space is CS2's
+ * <li>Smoke: fades in over 0.1..1.5 s, full until 17 s, gone at 22 s (smoothstep); its space is CS2's
  * voxel volume (SmokeVolume).</li>
  * <li>Fire (CS2's inferno_* settings): starts with one flame where it lands; flames spawn new ones inferno_flame_spacing
  * (42) units away, within inferno_spawn_angle (45) degrees of their own direction, for inferno_per_flame_spawn_duration
