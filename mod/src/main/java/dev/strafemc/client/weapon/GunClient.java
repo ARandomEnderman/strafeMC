@@ -34,7 +34,7 @@ import java.util.Random;
 public final class GunClient {
 	public static final GunClient INSTANCE = new GunClient();
 
-	public static KeyMapping RELOAD;
+	public static KeyMapping RELOAD, BUY;
 
 	private record Scheduled(long at, String event) {}
 
@@ -61,6 +61,7 @@ public final class GunClient {
 
 	public static void register() {
 		RELOAD = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, ConsoleKeys.CATEGORY));
+		BUY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.buymenu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, ConsoleKeys.CATEGORY));
 		// CS: F inspects. While a CS gun is held, Minecraft's swap-hands key (F by default) inspects instead.
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
 			if (mc.player == null || !(mc.player.getMainHandItem().getItem() instanceof GunItem)) return;
@@ -68,6 +69,7 @@ public final class GunClient {
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (RELOAD.consumeClick()) INSTANCE.reload(true);
+			while (BUY.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new dev.strafemc.client.BuyMenuScreen());
 			INSTANCE.watchReloadKey();
 		});
 		// warm the AK's clip data off-thread so the first reload/inspect doesn't hitch

@@ -260,6 +260,10 @@ public final class ConsoleCommands {
 			else ServerLauncher.stop();
 		});
 		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
+		local("buy", "buy <item>: kevlar, assaultsuit, ak47, knife, hegrenade, flashbang, smokegrenade, molotov, incgrenade, decoy (creative, or with strafemc_buymenu 1).",
+				a -> { if (a.length > 0) buy(a[0]); else ConsoleLog.error("buy <item>"); });
+		local("strafemc_buymenu", "Allow buying outside creative (1) or not (0, default), for the whole server (operators).",
+				a -> action("strafemc_buymenu", a.length > 0 && a[0].equals("0") ? "0" : "1", false));
 		local("sv_rethrow_last_grenade", "Throw your last grenade again from the same spot (needs sv_cheats 1). Spammable.",
 				a -> action("sv_rethrow_last_grenade", "", true));
 		local("explode", "Explode (CS explode).", a -> action("explode", "", false));
@@ -391,6 +395,11 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add(name + " = " + get.getAsDouble(), ConsoleLog.OK);
 		});
+	}
+
+	/** Buys an item (the buy menu's buttons, the buy command). */
+	public static void buy(String item) {
+		action("buy", item, false);
 	}
 
 	/** Tells the server your side (for your smokes' colour). */

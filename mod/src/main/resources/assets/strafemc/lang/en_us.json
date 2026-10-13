@@ -31,6 +31,7 @@
 	"entity.strafemc.grenade": "Grenade",
 	"itemGroup.strafemc.weapons": "strafeMC Weapons",
 	"key.strafemc.reload": "Reload (CS weapons)",
+	"key.strafemc.buymenu": "Buy menu",
 	"block.strafemc.surf_ramp": "Surf Ramp",
 	"block.strafemc.surf_slope": "Surf Slope",
 	"block.strafemc.surf_ramp_lying": "Lying Surf Ramp",

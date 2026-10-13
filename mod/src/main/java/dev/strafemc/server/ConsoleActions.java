@@ -52,6 +52,16 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Gun/knife hits: "
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
+			case "strafemc_buymenu" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can turn buying on for the server."));
+					break;
+				}
+				StrafeSettings.setBuyAnywhere(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy menu outside creative: "
+						+ (StrafeSettings.buyAnywhere() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "strafemc_slabstep" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change stepping up slabs for the server."));
