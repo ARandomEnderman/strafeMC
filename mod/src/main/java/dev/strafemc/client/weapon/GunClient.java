@@ -70,6 +70,7 @@ public final class GunClient {
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (RELOAD.consumeClick()) INSTANCE.reload(true);
 			dev.strafemc.client.BuyMenuScreen.watchSpawn(mc);
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.preloadTick(mc); // inventory first, then everything else
 			while (BUY.consumeClick()) if (mc.screen == null && mc.player != null) dev.strafemc.client.BuyMenuScreen.open(mc);
 			INSTANCE.watchReloadKey();
 		});

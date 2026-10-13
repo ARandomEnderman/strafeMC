@@ -61,7 +61,8 @@ public final class Viewmodel {
 	private final ViewmodelMotion motion = new ViewmodelMotion();
 	/** Set after any rendering error: the vanilla hand is used from then on (logged once). */
 	private volatile boolean broken;
-	private volatile String loading;
+	/** Weapons being loaded right now (or that failed: not retried), by class. */
+	private final java.util.Set<String> loading = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	private final Map<Path, Identifier> textures = new java.util.concurrent.ConcurrentHashMap<>();
 	/** The camera rotation GameRenderer.renderItemInHand starts the hand pose from (inverted); captured by a mixin. */
 	public static final Matrix4f HAND_VIEW = new Matrix4f();
@@ -123,9 +124,44 @@ public final class Viewmodel {
 			clip = null;
 			return true;
 		}
-		if (!cls.equals(loading)) loadAsync(cls);
+		if (loading.add(cls)) loadAsync(cls);
 		return false;
 	}
+
+	/**
+	 * Loads weapons before they're held, one at a time, most likely first: the held item, the hotbar, the rest of the
+	 * inventory, the worn gloves, then every other weapon. Also uploads one finished texture per tick, so switching to
+	 * a preloaded weapon draws at once. Client thread, every tick.
+	 */
+	public void preloadTick(Minecraft mc) {
+		if (mc.player == null) return;
+		for (Path p : decoded.keySet()) { // one GPU upload per tick
+			texture(p, true);
+			break;
+		}
+		if (!AssetCache.available() || loading.stream().anyMatch(c -> !cache.containsKey(c) && !failed.contains(c)) || !glovesLoading.isEmpty() && glovesBusy())
+			return;
+		var inv = mc.player.getInventory();
+		java.util.List<net.minecraft.world.item.ItemStack> order = new java.util.ArrayList<>();
+		order.add(mc.player.getMainHandItem());
+		for (int i = 0; i < 9; i++) order.add(inv.getItem(i));
+		for (int i = 9; i < inv.getContainerSize(); i++) order.add(inv.getItem(i));
+		for (var st : order)
+			if (st.getItem() instanceof dev.strafemc.weapon.GunItem g && WEAPONS.containsKey(g.weaponClass) && !cache.containsKey(g.weaponClass)
+					&& loading.add(g.weaponClass)) {
+				loadAsync(g.weaponClass);
+				return;
+			}
+		if (!cache.isEmpty() && preloadGloves()) return;
+		for (String cls : WEAPONS.keySet())
+			if (!cache.containsKey(cls) && loading.add(cls)) {
+				loadAsync(cls);
+				return;
+			}
+	}
+
+	/** Weapons whose load failed (kept in loading so they aren't retried every tick). */
+	private final java.util.Set<String> failed = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 	/** Glove arm models by model path, loaded in the background on first use. */
 	private final Map<String, VmModel> gloves = new java.util.concurrent.ConcurrentHashMap<>();
@@ -138,32 +174,52 @@ public final class Viewmodel {
 		String key = path + "#" + kit;
 		VmModel g = gloves.get(key);
 		if (g != null) return g;
-		if (glovesLoading.add(key)) {
-			Thread t = new Thread(() -> {
-				try {
-					VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(path, true)), ".viewmodel");
-					// CS2's paintable gloves carry a 1x1 grey placeholder colour: wear the baked finish instead
-					java.nio.file.Path skin = kit.isEmpty() ? null : GloveSkinCache.ensure(kit);
-					for (VmModel.Part part : m.parts)
-						if (skin != null && part.texture != null && part.texture.getFileName().toString().contains("_vmat_g_tcolor")) {
-							part.texture = skin;
-							part.metal = null;
-							if (!textures.containsKey(skin) && !decoded.containsKey(skin)) decoded.put(skin, decode(skin, true));
-						} else if (part.texture != null) {
-							downscaled(part.texture);
-							part.metal = metalPerVertex(part);
-							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
-								decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
-						}
-					gloves.put(key, m);
-				} catch (Exception e) {
-					StrafeMc.LOG.warn("[strafemc] gloves {} failed: {}", path, e.toString());
-				}
-			}, "strafemc-gloves");
-			t.setDaemon(true);
-			t.start();
-		}
+		loadGloves(path, kit, key);
 		return l.arms;
+	}
+
+	/** Starts loading the worn gloves if they aren't loaded; true if that started a load. */
+	private boolean preloadGloves() {
+		String path = dev.strafemc.client.GloveChoice.model(), kit = dev.strafemc.client.GloveChoice.skin();
+		if (path.equals(ARMS)) return false;
+		String key = path + "#" + kit;
+		return !gloves.containsKey(key) && loadGloves(path, kit, key);
+	}
+
+	private boolean glovesBusy() {
+		for (String k : glovesLoading) if (!gloves.containsKey(k) && !glovesFailed.contains(k)) return true;
+		return false;
+	}
+
+	private final java.util.Set<String> glovesFailed = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	private boolean loadGloves(String path, String kit, String key) {
+		if (!glovesLoading.add(key)) return false;
+		Thread t = new Thread(() -> {
+			try {
+				VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(path, true)), ".viewmodel");
+				// CS2's paintable gloves carry a 1x1 grey placeholder colour: wear the baked finish instead
+				java.nio.file.Path skin = kit.isEmpty() ? null : GloveSkinCache.ensure(kit);
+				for (VmModel.Part part : m.parts)
+					if (skin != null && part.texture != null && part.texture.getFileName().toString().contains("_vmat_g_tcolor")) {
+						part.texture = skin;
+						part.metal = null;
+						if (!textures.containsKey(skin) && !decoded.containsKey(skin)) decoded.put(skin, decode(skin, true));
+					} else if (part.texture != null) {
+						downscaled(part.texture);
+						part.metal = metalPerVertex(part);
+						if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+							decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+					}
+				gloves.put(key, m);
+			} catch (Exception e) {
+				glovesFailed.add(key);
+				StrafeMc.LOG.warn("[strafemc] gloves {} failed: {}", key, e.toString());
+			}
+		}, "strafemc-gloves");
+		t.setDaemon(true);
+		t.start();
+		return true;
 	}
 
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
@@ -177,8 +233,10 @@ public final class Viewmodel {
 
 	private void loadAsync(String cls) {
 		Weapon w = WEAPONS.get(cls);
-		if (w == null) return;
-		loading = cls;
+		if (w == null) {
+			failed.add(cls);
+			return;
+		}
 		Thread t = new Thread(() -> {
 			try {
 				Loaded l = new Loaded();
@@ -203,6 +261,7 @@ public final class Viewmodel {
 				StrafeMc.LOG.info("[strafemc] viewmodel ready for {} ({} clips)", cls, l.clips.size());
 			} catch (Exception e) {
 				StrafeMc.LOG.error("[strafemc] viewmodel for " + cls + " failed", e);
+				failed.add(cls);
 			}
 		}, "strafemc-viewmodel");
 		t.setDaemon(true);
