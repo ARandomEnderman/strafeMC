@@ -14,7 +14,7 @@ and impact effects.
 
 ## Status
 
-Early development, not released yet. The first-time setup is built in: when you join a world, strafeMC offers to
+Early development, not released yet. The first-time setup is built in: on the title screen, strafeMC offers to
 convert what it needs from your CS2 install.
 
 ## Features
@@ -22,19 +22,28 @@ convert what it needs from your CS2 install.
 **Movement**
 - Air strafing, bunnyhopping and surfing that follow CS2's rules, including its sub-tick input.
 - Stairs climb as smooth ramps; ladders, water, ice, slime and soul sand all work with it.
-- Surf ramp and surf slope blocks for building your own maps.
-- CS2 fall damage.
+- Surf ramp and surf slope blocks (with corners) for building your own maps.
+- CS2 fall damage, and an optional half-block step height for slabs.
 
 **Weapons**
-- The AK-47 and the Falchion knife, with the real first-person models, animations and sounds.
-- Spray patterns, recoil, inaccuracy, deploy times, reloads (including silent reload) and inspects.
-- Damage by hitgroup, headshots and range falloff; knife slashes, stabs and backstabs.
+- The AK-47, the Falchion knife and every grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real
+  first-person models, animations and sounds.
+- Spray patterns, recoil, inaccuracy, deploy times, reloads (including silent reload) and inspects (rare inspects
+  included; hold the key to keep them going).
+- Damage by hitgroup, headshots and range falloff; knife slashes, stabs and backstabs; wallbangs through thin blocks.
+- CS2 tagging: getting hit slows you down instead of knocking you back (Minecraft knockback is a server option).
+- Kevlar and helmets with CS armor rules, hit sounds and the helmet dink.
+- Grenades: CS throws (left, right, both), grenade physics and spin, a trajectory preview, flashes, smokes that put
+  out fires, fire that cooks the mobs it kills, and decoys that fake your last gun.
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects that change with the block you hit.
+- Viewmodel bob and sway, and CS2's viewmodel_fov and viewmodel_offset_x/y/z settings.
 
 **Console and multiplayer**
 - An in-game developer console (default key: <kbd>`</kbd>) with autocomplete, binds, movement presets and speed / jump stats.
 - Per-world CS2 settings, controlled by server operators (Minecraft operators, plus anyone added with `/strafeop`).
 - The server decides spread, recoil and fall damage, so everyone plays by the same rules.
+- Lag compensation: shots and knife attacks are checked against what the shooter saw, like in CS.
+- Source movement for everyone, or let each player choose (`strafemc_movement_choice`).
 - Players without CS2 can still join a server and play, with placeholder icons, marks and Minecraft sounds.
 
 ## Requirements
@@ -62,7 +71,7 @@ This happens once, locally; nothing is uploaded and your CS2 install is never ch
 > **Disk space:** the setup converts every gun and knife at once (so updates rarely need more), about **900 MB**, and
 > takes **about 3 minutes**. Weapon textures are stored at reduced size to keep it small.
 
-When you join a world without a finished setup, strafeMC offers:
+When you start Minecraft without a finished setup, strafeMC offers on the title screen:
 - **Set up automatically:** strafeMC finds CS2 (or you paste its folder), downloads the open-source converter
   (ValveResourceFormat 20.0) from its official GitHub release, checks it against its published checksum, and converts
   everything. It shows exactly what it will do before it starts, and runs in the background while you play.
@@ -70,7 +79,8 @@ When you join a world without a finished setup, strafeMC offers:
 - **Later** / **Don't ask again:** play with placeholders.
 
 strafeMC checks on every start whether anything is missing. If a mod update needs more files from CS2, it offers to
-convert only those.
+convert only those (a few MB). Its progress shows on every menu and in game, and Options > strafeMC > Open setup...
+brings it back. Restart Minecraft when it's done.
 
 ## Manual setup
 
@@ -83,6 +93,14 @@ If you'd rather not let the mod download the converter, the full step-by-step gu
 3. In that file, set `cs2Path` to your CS2 folder and `vrfPath` to the converter.
 4. Start Minecraft again. strafeMC converts files the first time it needs them, so the first shots and sounds can lag
    for a moment.
+
+## CS2 server (optional)
+
+strafeMC works without a CS2 server: it uses CS2's default settings. With one, the console gets CS2's real settings
+and commands (cvars, bots). On your first singleplayer world strafeMC asks once whether to run CS2's own dedicated
+server from your CS2 folder alongside your worlds (Options > strafeMC changes it). It runs in insecure mode, LAN only,
+changes nothing in your CS2 folder and stops when Minecraft closes. Note: while it runs, people on your local network
+could reach its console (Options > strafeMC > About hosting).
 
 ## Multiplayer
 

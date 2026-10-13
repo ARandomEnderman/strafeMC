@@ -22,8 +22,8 @@ CS2 install.
 
 - Air strafing, bunnyhopping and surfing that follow CS2's rules, including its sub-tick input
 - Stairs climb as smooth ramps; ladders, water, ice, slime and soul sand all work with it
-- Surf ramp and surf slope blocks for building your own maps
-- CS2 fall damage
+- Surf ramp and surf slope blocks (with corners) for building your own maps
+- CS2 fall damage, plus an optional half-block step for slabs
 
 ### Weapons
 ![AK-47 spray with bullet holes on a stone wall](https://cdn.modrinth.com/data/xu9Tirxr/images/7819ba5ffcd86810277f5a1d1f227620136fef81.jpeg)
@@ -32,15 +32,20 @@ CS2 install.
 
 *Weapons are shown with models from the player's own CS2 install; strafeMC doesn't include them.*
 
-- The AK-47 and the Falchion knife, with the real first-person models, animations and sounds
-- Spray patterns, recoil, inaccuracy, reloads (including silent reload), inspects and rare inspects
-- Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs
+- The AK-47, the Falchion knife and every grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real first-person models, animations and sounds
+- Spray patterns, recoil, inaccuracy, reloads (including silent reload), inspects and rare inspects (hold to keep them going)
+- Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs; wallbangs through thin blocks
+- CS2 tagging (hits slow you instead of knocking you back), kevlar and helmets with CS armor rules, hit sounds and the dink
+- Grenades with CS throws, physics, spin and a trajectory preview; smokes put out fires, and molotov-killed chickens drop cooked chicken
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects per block material
+- Viewmodel bob and sway, viewmodel_fov and viewmodel_offset_x/y/z
 
 ### Console and multiplayer
 - In-game developer console (default key: the one under Esc, left of 1) with autocomplete, binds, movement presets, speed and jump stats
 - Per-world CS2 settings controlled by server operators (`/strafeop` to give players console rights)
 - The server decides spread, recoil and fall damage
+- Lag compensation: you hit what you saw, like in CS
+- Optional: run CS2's own server alongside your worlds for its real settings, commands and bots (asked once)
 - Friends without CS2 can still join and play, with placeholder icons and Minecraft sounds
 
 ## Requirements
