@@ -232,28 +232,42 @@ public final class GunServer {
 		Vec3 eye = p.getEyePosition();
 		ServerShots.Result shot = ServerShots.resolve(p, w, f); // the server decides spread + recoil (the client only predicted)
 		Vec3 dir = shot.dir();
-		Vec3 end = eye.add(dir.scale(w.range() / units));
-		HitResult block = p.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
-		// living targets: rewound to what the shooter saw (lag compensation); everything else (crystals, dragon parts) as it is now
+		// the bullet's path: through up to 4 thin surfaces (wallbangs), losing damage in each (see penetrate)
 		boolean lag = dev.strafemc.server.StrafeSettings.lagComp();
-		EntityHitResult hit = ProjectileUtil.getEntityHitResult(p, eye, end, new AABB(eye, end).inflate(1.0),
-				e -> e != p && e.isPickable() && !e.isSpectator() && !(lag && e instanceof LivingEntity), eye.distanceToSqr(end));
-		dev.strafemc.server.LagHistory.Hit rewound = lag ? rewound(p, eye, end, f.viewTick(), f.claim(), 0.05) : null;
-		if (rewound != null && (hit == null || rewound.at().distanceToSqr(eye) < hit.getLocation().distanceToSqr(eye)))
-			hit = new EntityHitResult(rewound.entity(), rewound.at());
-		else rewound = null;
+		Vec3 from = eye;
+		double dmgScale = 1, left = w.range() / units;
+		EntityHitResult hit = null;
+		dev.strafemc.server.LagHistory.Hit rewound = null;
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
-		if (hit == null && block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) {
-			impact(p, bh);
-			if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
+		for (int pen = 0; pen <= 4 && left > 0; pen++) {
+			Vec3 end = from.add(dir.scale(left));
+			HitResult block = p.level().clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+			if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
+			// living targets: rewound to what the shooter saw (lag compensation); everything else (crystals, dragon parts) as it is now
+			Vec3 segFrom = from, segEnd = end;
+			hit = ProjectileUtil.getEntityHitResult(p, segFrom, segEnd, new AABB(segFrom, segEnd).inflate(1.0),
+					e -> e != p && e.isPickable() && !e.isSpectator() && !(lag && e instanceof LivingEntity), segFrom.distanceToSqr(segEnd));
+			rewound = lag ? rewound(p, segFrom, segEnd, f.viewTick(), f.claim(), 0.05) : null;
+			if (rewound != null && (hit == null || rewound.at().distanceToSqr(segFrom) < hit.getLocation().distanceToSqr(segFrom)))
+				hit = new EntityHitResult(rewound.entity(), rewound.at());
+			else rewound = null;
+			if (hit != null || !(block instanceof net.minecraft.world.phys.BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) break;
+			if (pen == 0) impact(p, bh);
+			else impactAll(p, bh); // past a wallbang: the shooter's own client didn't predict this one
+			if (pen == 0 && shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, impactMessage(p.level(), bh, eye, IMPACT_SEEDS.nextInt())); // the real hole
+			double[] through = penetrate(p, bh, dir, w.penetration());
+			if (through == null) break;
+			Vec3 exit = new Vec3(through[0], through[1], through[2]);
+			dmgScale *= through[3];
+			left -= exit.distanceTo(from);
+			from = exit.add(dir.scale(0.01));
 		}
 		if (hit == null) return;
 		Vec3 at = hit.getLocation();
 		double distUnits = at.distanceTo(eye) * units;
-		double dmg = w.damage() * Math.pow(w.rangeModifier(), distUnits / FALLOFF_UNITS);
+		double dmg = w.damage() * Math.pow(w.rangeModifier(), distUnits / FALLOFF_UNITS) * dmgScale;
 		if (!(hit.getEntity() instanceof LivingEntity target)) { // dragon body parts, end crystals, boats...: Minecraft's own damage path
 			hurtOther(p, hit.getEntity(), (float) (dmg * StrafeConfig.hpScale));
 			return;
@@ -364,6 +378,52 @@ public final class GunServer {
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
+	}
+
+	/**
+	 * Wallbangs: can the bullet go through the block it hit? Measures the solid thickness along the bullet (0.5 unit
+	 * steps through block collision shapes) and compares it with what the weapon gets through that material: CS2's
+	 * m_flPenetration x the surface's bulletPenetrationDistanceModifier x 32 units. Damage kept: between the surface's
+	 * bulletPenetrationDamageModifier (at the limit) and all of it (paper thin). FLAGGED: the 32 units and the damage
+	 * curve are ours (CS2's formula isn't in its data files); with them an AK gets through slabs, doors, trapdoors, panes
+	 * and fences but not a full block. Leaves an exit hole. Returns {x, y, z, damage kept} or null.
+	 */
+	static double[] penetrate(ServerPlayer p, net.minecraft.world.phys.BlockHitResult bh, Vec3 dir, double power) {
+		var level = p.level();
+		double upb = StrafeConfig.unitsPerBlock;
+		var surf = dev.strafemc.data.Surfaces.get(dev.strafemc.world.SurfaceMap.surface(level.getBlockState(bh.getBlockPos())));
+		double distMod = surf != null && !Double.isNaN(surf.penetrationDistance()) ? surf.penetrationDistance() : 0.5;
+		double dmgMod = surf != null && !Double.isNaN(surf.penetrationDamage()) ? surf.penetrationDamage() : 0.5;
+		double allowed = power * distMod * 32;
+		if (allowed <= 0) return null;
+		Vec3 pt = bh.getLocation().add(dir.scale(0.001));
+		double t = 0, stepU = 0.5;
+		while (solid(level, pt)) {
+			if (t > allowed) return null;
+			pt = pt.add(dir.scale(stepU / upb));
+			t += stepU;
+		}
+		// the exit hole: the face the bullet leaves through
+		HitResult back = level.clip(new ClipContext(pt.add(dir.scale(0.02)), pt.subtract(dir.scale(stepU * 2 / upb)), ClipContext.Block.COLLIDER,
+				ClipContext.Fluid.NONE, p));
+		if (back instanceof net.minecraft.world.phys.BlockHitResult out && out.getType() == HitResult.Type.BLOCK) impactAll(p, out);
+		return new double[] {pt.x, pt.y, pt.z, dmgMod + (1 - dmgMod) * (1 - t / allowed)};
+	}
+
+	/** A bullet hole everyone sees, the shooter included. */
+	private static void impactAll(ServerPlayer p, net.minecraft.world.phys.BlockHitResult bh) {
+		impact(p, bh);
+		if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, impactMessage(p.level(), bh, p.getEyePosition(), IMPACT_SEEDS.nextInt()));
+	}
+
+	private static boolean solid(net.minecraft.world.level.Level level, Vec3 pt) {
+		net.minecraft.core.BlockPos bp = net.minecraft.core.BlockPos.containing(pt);
+		var shape = level.getBlockState(bp).getCollisionShape(level, bp);
+		if (shape.isEmpty()) return false;
+		Vec3 local = pt.subtract(bp.getX(), bp.getY(), bp.getZ());
+		for (AABB b : shape.toAabbs()) if (b.contains(local)) return true;
+		return false;
 	}
 
 	/**
