@@ -93,6 +93,8 @@ public final class ConsoleScreen extends Screen {
 					() -> { if (Cs2Bridge.INSTANCE.connected()) ServerLauncher.stop(); else ServerLauncher.start(); });
 		cvarToggle("Auto bunnyhop", "sv_autobunnyhopping", false);
 		cvarToggle("Bhop speed cap", "sv_enablebunnyhopping", true);
+		// sv_legacy_jump 1: CS2's pre-2026 jump (full height every time, no weaker jump right after landing)
+		cvarToggle("Pre-2026 jump", "sv_legacy_jump", false);
 		// sv_stepsize 18 (CS2) vs 20: a slab is 20 units at 40 units per block, so 20 lets you walk up slabs
 		toggle(() -> "Step up slabs: " + onOff(dev.strafemc.client.ClientGameplay.slabStep()), () -> ConsoleCommands.execute("strafemc_slabstep"));
 		number("Max velocity", "sv_maxvelocity");
