@@ -41,6 +41,12 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + g.cls + ".png"), 128), tex.resolve("item/" + g.cls + ".png"),
 						Placeholders.Icon.GRENADE, 32);
 			}
+			for (dev.strafemc.weapon.GloveItem.Kind k : dev.strafemc.weapon.GloveItem.Kind.values()) {
+				// CS2 has inventory pictures only for the default gloves: T's on the studded designs, CT's on the rest
+				String icon = "panorama/images/econ/weapons/base_weapons/" + (k.studded ? "t" : "ct") + "_gloves_png";
+				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + k.id + ".png"), 128), tex.resolve("item/" + k.id + ".png"),
+						Placeholders.Icon.ARMOR, 32);
+			}
 			for (String a : new String[] {"kevlar", "assaultsuit"}) {
 				String item = a.equals("kevlar") ? "item_kevlar" : "item_assaultsuit";
 				safe(() -> svg("panorama/images/icons/equipment/" + a + ".vsvg_c", "panorama/images/icons/equipment/" + a + ".svg",

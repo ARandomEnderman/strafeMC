@@ -33,5 +33,13 @@
 	"key.strafemc.reload": "Reload (CS weapons)",
 	"block.strafemc.surf_ramp": "Surf Ramp",
 	"block.strafemc.surf_slope": "Surf Slope",
-	"block.strafemc.surf_ramp_lying": "Lying Surf Ramp"
+	"block.strafemc.surf_ramp_lying": "Lying Surf Ramp",
+	"item.strafemc.studded_bloodhound_gloves": "Bloodhound Gloves",
+	"item.strafemc.sporty_gloves": "Sport Gloves",
+	"item.strafemc.slick_gloves": "Driver Gloves",
+	"item.strafemc.leather_handwraps": "Hand Wraps",
+	"item.strafemc.motorcycle_gloves": "Moto Gloves",
+	"item.strafemc.specialist_gloves": "Specialist Gloves",
+	"item.strafemc.studded_hydra_gloves": "Hydra Gloves",
+	"item.strafemc.studded_brokenfang_gloves": "Broken Fang Gloves"
 }

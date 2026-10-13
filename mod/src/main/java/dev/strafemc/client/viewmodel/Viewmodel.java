@@ -125,6 +125,38 @@ public final class Viewmodel {
 		return false;
 	}
 
+	/** Glove arm models by model path, loaded in the background on first use. */
+	private final Map<String, VmModel> gloves = new java.util.concurrent.ConcurrentHashMap<>();
+	private final java.util.Set<String> glovesLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** The arms to draw: the chosen gloves (GloveChoice) once loaded, the weapon's default arms until then. */
+	private VmModel arms(Loaded l) {
+		String path = dev.strafemc.client.GloveChoice.model();
+		if (path.equals(ARMS)) return l.arms;
+		VmModel g = gloves.get(path);
+		if (g != null) return g;
+		if (glovesLoading.add(path)) {
+			Thread t = new Thread(() -> {
+				try {
+					VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(path, true)), ".viewmodel");
+					for (VmModel.Part part : m.parts)
+						if (part.texture != null) {
+							downscaled(part.texture);
+							part.metal = metalPerVertex(part);
+							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+								decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+						}
+					gloves.put(path, m);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] gloves {} failed: {}", path, e.toString());
+				}
+			}, "strafemc-gloves");
+			t.setDaemon(true);
+			t.start();
+		}
+		return l.arms;
+	}
+
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
 	public static void warmClips() {
 		for (Weapon w : WEAPONS.values())
@@ -280,7 +312,8 @@ public final class Viewmodel {
 		}
 		Matrix4f wpn = mount(clip, pose);
 
-		Matrix4f[][] armSkin = skins(l.arms, clip, pose, null);
+		VmModel arms = arms(l);
+		Matrix4f[][] armSkin = skins(arms, clip, pose, null);
 		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
 		var player = net.minecraft.client.Minecraft.getInstance().player;
 		// CS2's viewmodel_offset_x/y/z (units right / forward / up), then bob + sway, then the model
@@ -292,7 +325,7 @@ public final class Viewmodel {
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());
-		emit(l.arms, armSkin, toView, cam, ps, out, light);
+		emit(arms, armSkin, toView, cam, ps, out, light);
 		emit(l.gun, gunSkin, toView, cam, ps, out, light);
 		updateAttachments(l, gunSkin, toView);
 		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
