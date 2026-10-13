@@ -20,6 +20,9 @@ final class ViewmodelMotion {
 	private static final double LAG_MAX = 1.5, LAG_SPEED = 5, LAG_SCALE = 5;
 
 	private double bobTime;
+	/** Bob size per unit/s and the lowering, eased toward their target (jumping / landing no longer cut the bob off). */
+	private double mult = BOB_GROUND, lowered;
+	private static final double EASE = 8; // per second
 	private long lastNs;
 	private Vec3 lastFacing;
 
@@ -35,10 +38,12 @@ final class ViewmodelMotion {
 		double speed = Math.min(MAX_SPEED, Math.hypot(v.x, v.z));
 		double frac = speed / MAX_SPEED;
 		bobTime += dt * frac;
-		double mult = p.onGround() ? BOB_GROUND : BOB_AIR;
+		double ease = 1 - Math.exp(-EASE * dt);
+		mult += ((p.onGround() ? BOB_GROUND : BOB_AIR) - mult) * ease;
 		double vert = clamp(speed * mult * (0.3 + 0.7 * Math.sin(phase(bobTime, BOB_CYCLE))), -7, 4);
 		double lat = clamp(speed * mult * LATERAL * (0.3 + 0.7 * Math.sin(phase(bobTime, BOB_CYCLE * 2))), -7, 4);
-		double lower = frac * LOWER_AMT * 0.05;
+		lowered += (frac * LOWER_AMT * 0.05 - lowered) * ease;
+		double lower = lowered;
 
 		// ---- sway: the facing the weapon follows lags behind the view ----
 		Vec3 f = Vec3.directionFromRotation(p.getXRot(), p.getYRot());
