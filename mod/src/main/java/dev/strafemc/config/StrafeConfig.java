@@ -62,7 +62,10 @@ public final class StrafeConfig {
 	 */
 	public static double landVolume = 0.3;
 	/** viewmodel_fov (CS2 client cvar; default 68, allowed 54-68 - Source/CS2 values, not readable from the server). */
-	public static double viewmodelFov = 68;
+	/** CS2's viewmodel_fov: 60..68, default 60. */
+	public static double viewmodelFov = 60;
+	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up), clamped like CS2: x -2..2.5, y and z -2..2; defaults 1, 1, -1. */
+	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
 	/** KZ-style jump stats after each jump (cl_jumpstats). */
 	public static boolean jumpStats = true;
 	/** VRF glTF axes -> camera space for the viewmodel (clip/model space is y-up, z forward, x left -> camera x=-x, y=y, z=-z). */
@@ -111,7 +114,10 @@ public final class StrafeConfig {
 			doubleTapFly = Boolean.parseBoolean(p.getProperty("doubleTapFly", String.valueOf(doubleTapFly)));
 			movementVolume = Double.parseDouble(p.getProperty("movementVolume", String.valueOf(movementVolume)));
 			landVolume = Double.parseDouble(p.getProperty("landVolume", String.valueOf(landVolume)));
-			viewmodelFov = Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)));
+			viewmodelFov = Math.max(60, Math.min(68, Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)))));
+			viewmodelOffsetX = Math.max(-2, Math.min(2.5, Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)))));
+			viewmodelOffsetY = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)))));
+			viewmodelOffsetZ = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)))));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
 			vmAxes = p.getProperty("viewmodelAxes", vmAxes);
 			showSpeedMeter = Boolean.parseBoolean(p.getProperty("showSpeedMeter", String.valueOf(showSpeedMeter)));
@@ -144,6 +150,9 @@ public final class StrafeConfig {
 		p.setProperty("movementVolume", String.valueOf(movementVolume));
 		p.setProperty("landVolume", String.valueOf(landVolume));
 		p.setProperty("viewmodelFov", String.valueOf(viewmodelFov));
+		p.setProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX));
+		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
+		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
 		p.setProperty("viewmodelAxes", vmAxes);
 		p.setProperty("showSpeedMeter", String.valueOf(showSpeedMeter));

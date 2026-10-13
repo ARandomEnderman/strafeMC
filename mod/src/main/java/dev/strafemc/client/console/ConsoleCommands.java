@@ -204,18 +204,14 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add("cl_landvolume = " + StrafeConfig.landVolume, ConsoleLog.OK);
 		});
-		local("viewmodel_fov", "Field of view of the first-person hand / viewmodel (54-68, default 68).", a -> {
-			if (a.length > 0) {
-				try {
-					StrafeConfig.viewmodelFov = Math.max(54, Math.min(68, Double.parseDouble(a[0])));
-					StrafeConfig.save();
-				} catch (Exception e) {
-					ConsoleLog.error("viewmodel_fov: expected a number");
-					return;
-				}
-			}
-			ConsoleLog.add("viewmodel_fov = " + StrafeConfig.viewmodelFov, ConsoleLog.OK);
-		});
+		viewmodelSetting("viewmodel_fov", "Field of view of the first-person weapon (60-68, default 60).", 60, 68, () -> StrafeConfig.viewmodelFov,
+				v -> StrafeConfig.viewmodelFov = v);
+		viewmodelSetting("viewmodel_offset_x", "Weapon position to the right (-2 to 2.5, default 1).", -2, 2.5, () -> StrafeConfig.viewmodelOffsetX,
+				v -> StrafeConfig.viewmodelOffsetX = v);
+		viewmodelSetting("viewmodel_offset_y", "Weapon position forward (-2 to 2, default 1).", -2, 2, () -> StrafeConfig.viewmodelOffsetY,
+				v -> StrafeConfig.viewmodelOffsetY = v);
+		viewmodelSetting("viewmodel_offset_z", "Weapon position up (-2 to 2, default -1).", -2, 2, () -> StrafeConfig.viewmodelOffsetZ,
+				v -> StrafeConfig.viewmodelOffsetZ = v);
 		local("strafemc_serverlog", "Show the raw CS2 server log in the console (1) or only replies to your commands (0).", a -> {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
@@ -341,6 +337,23 @@ public final class ConsoleCommands {
 	public static boolean cheats() {
 		String v = dev.strafemc.client.ClientGameplay.cvar("sv_cheats"); // the server's, on someone else's server
 		return "1".equals(v) || "true".equals(v);
+	}
+
+	/** A personal viewmodel setting: shown without a value, set and saved (clamped to CS2's range) with one. */
+	private static void viewmodelSetting(String name, String help, double min, double max, java.util.function.DoubleSupplier get,
+										 java.util.function.DoubleConsumer set) {
+		local(name, help, a -> {
+			if (a.length > 0) {
+				try {
+					set.accept(Math.max(min, Math.min(max, Double.parseDouble(a[0]))));
+					StrafeConfig.save();
+				} catch (Exception e) {
+					ConsoleLog.error(name + ": expected a number");
+					return;
+				}
+			}
+			ConsoleLog.add(name + " = " + get.getAsDouble(), ConsoleLog.OK);
+		});
 	}
 
 	static boolean bool(String[] a, boolean toggled) {

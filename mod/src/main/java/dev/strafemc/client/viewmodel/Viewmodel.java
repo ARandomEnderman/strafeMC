@@ -263,7 +263,11 @@ public final class Viewmodel {
 		Matrix4f[][] armSkin = skins(l.arms, clip, pose, null);
 		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
 		var player = net.minecraft.client.Minecraft.getInstance().player;
-		Matrix4f toView = player != null ? motion.offset(player).mul(toView()) : toView(); // bob + sway, then the model
+		// CS2's viewmodel_offset_x/y/z (units right / forward / up), then bob + sway, then the model
+		float upb = (float) StrafeConfig.unitsPerBlock;
+		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
+				(float) -StrafeConfig.viewmodelOffsetY / upb);
+		Matrix4f toView = player != null ? offsets.mul(motion.offset(player)).mul(toView()) : offsets.mul(toView());
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());
