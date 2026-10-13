@@ -136,10 +136,12 @@ public final class StrafePayloads {
 	}
 
 	/** Server -> client: a grenade went off here (kind = Grenade ordinal): show its effect, play its sound. */
-	public record GrenadeFx(int kind, double x, double y, double z) implements CustomPacketPayload {
+	/** heading: the grenade's horizontal flight direction (radians, atan2(z, x) in Minecraft axes), NaN if none. */
+	public record GrenadeFx(int kind, double x, double y, double z, float heading) implements CustomPacketPayload {
 		public static final Type<GrenadeFx> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "grenade_fx"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, GrenadeFx> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, GrenadeFx::kind,
-				ByteBufCodecs.DOUBLE, GrenadeFx::x, ByteBufCodecs.DOUBLE, GrenadeFx::y, ByteBufCodecs.DOUBLE, GrenadeFx::z, GrenadeFx::new);
+				ByteBufCodecs.DOUBLE, GrenadeFx::x, ByteBufCodecs.DOUBLE, GrenadeFx::y, ByteBufCodecs.DOUBLE, GrenadeFx::z, ByteBufCodecs.FLOAT,
+				GrenadeFx::heading, GrenadeFx::new);
 
 		@Override
 		public Type<GrenadeFx> type() {

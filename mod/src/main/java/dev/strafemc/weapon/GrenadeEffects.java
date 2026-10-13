@@ -106,7 +106,12 @@ public final class GrenadeEffects {
 
 	/** Tells nearby players what a grenade did here (EV_*), for its effect and sound (client: client.weapon.GrenadeClient). */
 	static void event(ServerLevel level, int kind, Vec3 at) {
-		var msg = new StrafePayloads.GrenadeFx(kind, at.x, at.y, at.z);
+		event(level, kind, at, Float.NaN);
+	}
+
+	/** heading: the grenade's flight direction, for effects that splash forward (a molotov's burst). */
+	static void event(ServerLevel level, int kind, Vec3 at, float heading) {
+		var msg = new StrafePayloads.GrenadeFx(kind, at.x, at.y, at.z, heading);
 		for (ServerPlayer p : level.players())
 			if (p.distanceToSqr(at) < FX_RANGE * FX_RANGE && ServerPlayNetworking.canSend(p, StrafePayloads.GrenadeFx.TYPE)) ServerPlayNetworking.send(p, msg);
 	}

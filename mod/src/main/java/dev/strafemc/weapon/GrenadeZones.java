@@ -104,7 +104,8 @@ public final class GrenadeZones {
 		f.flames.add(new Flame(at, Vec3.ZERO, 0, t, t + lifetimeTicks(f, level.getRandom()), t));
 		f.spawned = 1;
 		FIRES.add(f);
-		GrenadeEffects.event(level, incendiary ? GrenadeEffects.EV_FIRE_INC : GrenadeEffects.EV_FIRE, at);
+		GrenadeEffects.event(level, incendiary ? GrenadeEffects.EV_FIRE_INC : GrenadeEffects.EV_FIRE, at,
+				source != null ? source.flightHeading() : Float.NaN);
 		flameEvent(f, at);
 		return true;
 	}

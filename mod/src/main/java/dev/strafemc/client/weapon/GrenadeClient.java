@@ -84,6 +84,8 @@ public final class GrenadeClient {
 	public static void onEffect(StrafePayloads.GrenadeFx m) {
 		Vec3 at = new Vec3(m.x(), m.y(), m.z());
 		Vec3 up = new Vec3(0, 1, 0);
+		// the flight direction: molotov bursts splash forward (their effects' +X), not towards world east
+		Vec3 fwd = Float.isNaN(m.heading()) ? null : new Vec3(Math.cos(m.heading()), 0, Math.sin(m.heading()));
 		switch (m.kind()) {
 			case GrenadeEffects.EV_HE -> {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.HE_EFFECT, at, up);
@@ -109,7 +111,7 @@ public final class GrenadeClient {
 			}
 			case GrenadeEffects.EV_FIRE, GrenadeEffects.EV_FIRE_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FIRE_INC;
-				dev.strafemc.client.particle.Effects.at(inc ? GrenadeEffects.INCENDIARY_GROUND_EFFECT : GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up);
+				dev.strafemc.client.particle.Effects.at(inc ? GrenadeEffects.INCENDIARY_GROUND_EFFECT : GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up, fwd);
 				CsSounds.play(inc ? "IncGrenade.Start" : "Molotov.Start", at.x, at.y, at.z, 1.0); // the burst (CS2's server plays these)
 				CsSounds.play("Inferno.Fire.Ignite", at.x, at.y, at.z, 1.0);
 				synchronized (FIRE_SOUNDS) {
@@ -133,7 +135,7 @@ public final class GrenadeClient {
 			}
 			case GrenadeEffects.EV_FIZZLE, GrenadeEffects.EV_FIZZLE_INC -> {
 				dev.strafemc.client.particle.Effects.at(m.kind() == GrenadeEffects.EV_FIZZLE_INC ? GrenadeEffects.INCENDIARY_AIR_EFFECT
-						: GrenadeEffects.MOLOTOV_AIR_EFFECT, at, up);
+						: GrenadeEffects.MOLOTOV_AIR_EFFECT, at, up, fwd);
 				// FLAGGED: CS2's "failed to start" sounds for both an air burst and landing in a smoke
 				CsSounds.play(m.kind() == GrenadeEffects.EV_FIZZLE_INC ? "IncGrenade.StartFailed" : "Molotov.StartFailed", at.x, at.y, at.z, 1.0);
 			}
@@ -265,19 +267,22 @@ public final class GrenadeClient {
 		}
 		quads.sort(Comparator.comparingDouble((float[] q) -> -(q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));
 		PoseStack ps = ctx.poseStack();
-		ctx.submitNodeCollector().submitCustomGeometry(ps, RenderTypes.entityTranslucent(puff()), (pose, vc) -> {
-			for (float[] q : quads) {
-				int light = Float.floatToRawIntBits(q[6]);
-				int shade = (int) (q[4] * 255);
-				int col = (int) (q[5] * 255) << 24 | shade << 16 | shade << 8 | shade;
-				float sz = q[3];
-				float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
-				for (float[] k : corners)
-					vc.addVertex(pose, q[0] + (right.x * k[0] + up.x * k[1]) * sz, q[1] + (right.y * k[0] + up.y * k[1]) * sz,
-									q[2] + (right.z * k[0] + up.z * k[1]) * sz)
-							.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
-			}
-		});
+		// the dense core into the depth buffer too, so things drawn later (bullet holes, effects, clouds) stay behind it
+		for (net.minecraft.client.renderer.rendertype.RenderType type : new net.minecraft.client.renderer.rendertype.RenderType[] {
+				RenderTypes.entityTranslucent(puff()), dev.strafemc.client.particle.ParticleBlend.depthOnly(puff())})
+			ctx.submitNodeCollector().submitCustomGeometry(ps, type, (pose, vc) -> {
+				for (float[] q : quads) {
+					int light = Float.floatToRawIntBits(q[6]);
+					int shade = (int) (q[4] * 255);
+					int col = (int) (q[5] * 255) << 24 | shade << 16 | shade << 8 | shade;
+					float sz = q[3];
+					float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
+					for (float[] k : corners)
+						vc.addVertex(pose, q[0] + (right.x * k[0] + up.x * k[1]) * sz, q[1] + (right.y * k[0] + up.y * k[1]) * sz,
+										q[2] + (right.z * k[0] + up.z * k[1]) * sz)
+								.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
+				}
+			});
 	}
 
 	private static void renderPreview(LevelRenderContext ctx) {

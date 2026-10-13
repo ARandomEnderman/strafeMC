@@ -105,6 +105,11 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (level() instanceof ServerLevel sl) serverTick(sl);
 	}
 
+	/** Horizontal flight direction (radians, atan2(z, x)), NaN when (almost) not moving sideways. */
+	public float flightHeading() {
+		return Math.hypot(vel.x, vel.z) < 0.05 ? Float.NaN : (float) Math.atan2(vel.z, vel.x);
+	}
+
 	/** One 1/64 s step (GrenadeFlight, shared with the client's trajectory preview); bounce sounds on the server. */
 	private void step(double gravity) {
 		GrenadeFlight.Step st = GrenadeFlight.step(level(), this, age < 5 ? getOwner() : null, position(), vel, gravity);
@@ -150,10 +155,10 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 				if (hitFloor) {
 					Vec3 ground = position().add(0, -RADIUS / StrafeConfig.unitsPerBlock, 0);
 					if (!GrenadeZones.fire(level, ground, owner, this, inc))
-						GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position());
+						GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position(), flightHeading());
 					discard();
 				} else if (age >= MOLOTOV_AIR_TIME * 20) {
-					GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position());
+					GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position(), flightHeading());
 					discard();
 				}
 			}

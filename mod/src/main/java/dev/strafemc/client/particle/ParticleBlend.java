@@ -34,12 +34,36 @@ public final class ParticleBlend {
 			.withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
 			.withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
 			.build());
-	private static final Map<Identifier, RenderType> TYPES = new ConcurrentHashMap<>();
+	/**
+	 * Depth only, where the texture x vertex alpha is at least 0.5: the dense part of a smoke cloud. Translucent smoke
+	 * writes no depth, so whatever is drawn after it (bullet holes, effects, clouds in their own later pass) used to
+	 * paint over it; with its core in the depth buffer those are hidden behind it. Its soft edges still blend.
+	 */
+	private static final RenderPipeline DEPTH = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+			.withLocation("pipeline/strafemc_smoke_depth")
+			.withVertexShader("core/entity")
+			.withFragmentShader("core/entity")
+			.withShaderDefine("ALPHA_CUTOUT", 0.5f)
+			.withShaderDefine("EMISSIVE")
+			.withShaderDefine("NO_OVERLAY")
+			.withShaderDefine("NO_CARDINAL_LIGHTING")
+			.withSampler("Sampler0")
+			.withColorTargetState(new ColorTargetState(java.util.Optional.empty(), ColorTargetState.WRITE_NONE))
+			.withCull(false)
+			.withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+			.withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
+			.build());
+	private static final Map<Identifier, RenderType> TYPES = new ConcurrentHashMap<>(), DEPTH_TYPES = new ConcurrentHashMap<>();
 
 	private ParticleBlend() {}
 
 	/** Called at client start so the pipeline is registered with Minecraft's own (they're compiled up front). */
 	public static void init() {}
+
+	public static RenderType depthOnly(Identifier texture) {
+		return DEPTH_TYPES.computeIfAbsent(texture, t -> RenderType.create("strafemc_smoke_depth",
+				RenderSetup.builder(DEPTH).withTexture("Sampler0", t).createRenderSetup()));
+	}
 
 	static RenderType additive(Identifier texture) {
 		return TYPES.computeIfAbsent(texture, t -> RenderType.create("strafemc_particle_add",

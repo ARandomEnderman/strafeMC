@@ -100,7 +100,7 @@ public final class Effects {
 	 * (m_LocalCoordinateSystemSpeed [0, 0, 40..140]), so the control point's Z axis is the surface normal.
 	 */
 	public static void at(String vpcf, Vec3 pos, Vec3 normal) {
-		at(vpcf, pos, normal, null);
+		spawnAt(vpcf, pos, normal, null, null, null);
 	}
 
 	/** tint: the hit material's colour (0..1), passed in control point 4 as CS2's impact effects read it (chips take its colour). */
@@ -139,20 +139,32 @@ public final class Effects {
 	}
 
 	public static void at(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint) {
-		spawnAt(vpcf, pos, normal, tint, null);
+		spawnAt(vpcf, pos, normal, tint, null, null);
+	}
+
+	/**
+	 * A world effect whose control point faces `forward` (Minecraft axes) around the normal: directional effects such
+	 * as a molotov's burst splash along their +X (the flight direction); without one, +X is world east.
+	 */
+	public static void at(String vpcf, Vec3 pos, Vec3 normal, Vec3 forward) {
+		spawnAt(vpcf, pos, normal, null, null, forward);
 	}
 
 	/** A world effect that keeps running (past MAX_AGE) until it ends by itself or stopHeld(key) stops it. */
 	public static void atHeld(String key, String vpcf, Vec3 pos, Vec3 normal) {
-		spawnAt(vpcf, pos, normal, null, key);
+		spawnAt(vpcf, pos, normal, null, key, null);
 	}
 
-	private static void spawnAt(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint, String heldKey) {
+	private static void spawnAt(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint, String heldKey, Vec3 forward) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
 		lastImpact = s;
 		Vector3f z = new Vector3f((float) normal.x, (float) -normal.z, (float) normal.y).normalize();
 		Vector3f ref = Math.abs(z.z) > 0.9f ? new Vector3f(1, 0, 0) : new Vector3f(0, 0, 1);
+		if (forward != null) { // Minecraft (x, y, z) -> simulation (x, -z, y), like the normal
+			Vector3f f = new Vector3f((float) forward.x, (float) -forward.z, (float) forward.y);
+			if (f.lengthSquared() > 1e-6f && Math.abs(f.normalize().dot(z)) < 0.95f) ref = f;
+		}
 		Vector3f x = new Vector3f(ref).sub(new Vector3f(z).mul(ref.dot(z))).normalize(), y = new Vector3f(z).cross(x);
 		Quaternionf rot = new Quaternionf().setFromNormalized(new Matrix3f(x, y, z));
 		Vector3f at = toSim(pos);
