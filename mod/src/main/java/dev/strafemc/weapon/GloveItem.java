@@ -1,5 +1,6 @@
 package dev.strafemc.weapon;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -7,14 +8,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * CS2 gloves (items_game wearables, no skins yet): right-click to wear them on your viewmodel, again to go back to
- * your side's default gloves. Kept, not used up; only your own first-person view shows them (saved on your client).
+ * CS2 gloves (items_game wearables) in every CS2 finish (GloveSkins), always Factory New: right-click to wear them on
+ * your viewmodel (holding the button keeps them on), sneak + right-click for your side's default gloves. Kept, not
+ * used up; only your own first-person view shows them (saved on your client). The finish is the stack's custom model
+ * data string, which also picks its inventory picture.
  */
 public class GloveItem extends Item {
 	/** CS2's wearables: item name, glove model (agents/models/shared/arms/...), and whether it's a T "studded" design. */
@@ -45,14 +50,45 @@ public class GloveItem extends Item {
 		this.kind = kind;
 	}
 
+	/** These gloves in a finish. */
+	public static ItemStack stack(Item item, String kit) {
+		ItemStack s = new ItemStack(item);
+		s.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(List.of(), List.of(), List.of(kit), List.of()));
+		return s;
+	}
+
+	/** The stack's finish; gloves without one (older stacks) wear their first CS2 finish. */
+	public String kit(ItemStack stack) {
+		CustomModelData d = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+		String k = d == null ? null : d.getString(0);
+		if (GloveSkins.get(k) != null && GloveSkins.get(k).kind() == kind) return k;
+		List<GloveSkins.Skin> all = GloveSkins.of(kind);
+		return all.isEmpty() ? "" : all.get(0).kit();
+	}
+
+	@Override
+	public Component getName(ItemStack stack) {
+		String kit = kit(stack);
+		Component base = super.getName(stack);
+		if (kit.isEmpty()) return base;
+		return Component.empty().append(base).append(" | ")
+				.append(Component.translatableWithFallback("strafemc.paintkit." + kit, GloveSkins.fallbackName(kit)));
+	}
+
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (level.isClientSide()) dev.strafemc.client.GloveChoice.toggle(kind);
+		if (level.isClientSide()) {
+			ItemStack stack = player.getItemInHand(hand);
+			if (player.isShiftKeyDown()) dev.strafemc.client.GloveChoice.wearDefault();
+			else dev.strafemc.client.GloveChoice.wear(kind, kit(stack));
+		}
 		return InteractionResult.SUCCESS;
 	}
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("§7Right click to wear on your viewmodel (again: your side's default gloves)"));
+		out.accept(Component.literal("§7Factory New"));
+		out.accept(Component.literal("§7Right click: wear on your viewmodel"));
+		out.accept(Component.literal("§7Sneak + right click: your side's default gloves"));
 	}
 }

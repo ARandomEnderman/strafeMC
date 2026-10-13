@@ -104,6 +104,8 @@ public final class GameplaySync {
 		root.put("sourceMovement", StrafeSettings.sourceMovement());
 		root.put("movementChoice", StrafeSettings.playerChoice());
 		root.put("slabStep", StrafeSettings.slabStep());
+		root.put("buyMode", StrafeSettings.buyMode());
+		root.put("buyTime", StrafeSettings.buyTime());
 		root.put("movementPersonal", StrafeSettings.personal());
 		String json = GSON.toJson(root);
 		if (dev.strafemc.config.StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] gameplay sync: {} weapons, {} chars", weapons.size(), json.length());

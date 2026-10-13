@@ -88,7 +88,8 @@ public final class AssetCache {
 		Path dir = StrafeConfig.cacheDir().resolve("gltf");
 		String base = vpkPath.substring(0, vpkPath.lastIndexOf('.'));
 		Path glb = dir.resolve(base + ".glb");
-		if (Files.exists(glb)) return glb;
+		// a model first exported without materials (e.g. for its skeleton) has no textures next to it: export again
+		if (Files.exists(glb) && (!materials || texturesPresent(glb))) return glb;
 		Files.createDirectories(dir); // VRF treats a missing -o folder as an output file name
 		List<String> args = new java.util.ArrayList<>(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", dir.toString(), "-d",
 				"--gltf_export_format", "glb", "--gltf_export_animations"));
@@ -96,6 +97,31 @@ public final class AssetCache {
 		runVrf(args);
 		if (!Files.exists(glb)) throw new IOException("VRF produced no " + glb);
 		return glb;
+	}
+
+	/** Every image a .glb names (glTF "images" uris) exists next to it. */
+	static boolean texturesPresent(Path glb) {
+		try (var in = Files.newInputStream(glb)) {
+			byte[] head = in.readNBytes(20);
+			if (head.length < 20) return false;
+			int len = java.nio.ByteBuffer.wrap(head, 12, 4).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt();
+			String json = new String(in.readNBytes(len), java.nio.charset.StandardCharsets.UTF_8);
+			var root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+			if (!root.has("images")) return true;
+			for (var img : root.getAsJsonArray("images")) {
+				var o = img.getAsJsonObject();
+				if (o.has("uri") && !Files.exists(glb.resolveSibling(o.get("uri").getAsString()))) return false;
+			}
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	/** Decompiles several resources in one converter run (paths joined for VRF's file filter). */
+	public static synchronized void decompileAll(List<String> vpkPaths) throws IOException {
+		if (vpkPaths.isEmpty()) return;
+		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", String.join(",", vpkPaths), "-o", StrafeConfig.cacheDir().toString(), "-d"));
 	}
 
 	/** Decompiles every file under a VPK folder prefix (e.g. "sounds/player/") into the cache. */

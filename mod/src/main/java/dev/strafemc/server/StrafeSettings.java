@@ -26,8 +26,11 @@ public final class StrafeSettings {
 	private static volatile boolean lagComp = true;
 	/** Step height of half a block (a slab) instead of CS2's sv_stepsize 18; works on any CS2 server (sv_stepsize is developer-only without the plugin). */
 	private static volatile boolean slabStep = false;
-	/** strafemc_buymenu: buying (weapon.BuyMenu) outside creative too. */
-	private static volatile boolean buyAnywhere = false;
+	/** strafemc_buymenu: who may buy (weapon.BuyMenu): BUY_OFF nobody, BUY_CREATIVE creative players, BUY_EVERYONE everyone. */
+	public static final int BUY_OFF = 0, BUY_CREATIVE = 1, BUY_EVERYONE = 2;
+	private static volatile int buyMode = BUY_CREATIVE;
+	/** strafemc_buytime: seconds after (re)spawning that buying stays open, like CS2's mp_buytime; 0: no limit. */
+	private static volatile int buyTime = 0;
 	private static volatile int maxUnlagMs = 300;
 	private static Path file;
 
@@ -82,13 +85,24 @@ public final class StrafeSettings {
 		save();
 	}
 
-	public static boolean buyAnywhere() {
-		return buyAnywhere;
+	public static int buyMode() {
+		return buyMode;
 	}
 
-	public static void setBuyAnywhere(boolean on) {
-		buyAnywhere = on;
+	public static void setBuyMode(int mode) {
+		buyMode = Math.max(BUY_OFF, Math.min(BUY_EVERYONE, mode));
 		save();
+		GameplaySync.resendAll();
+	}
+
+	public static int buyTime() {
+		return buyTime;
+	}
+
+	public static void setBuyTime(int seconds) {
+		buyTime = Math.max(0, Math.min(3600, seconds));
+		save();
+		GameplaySync.resendAll();
 	}
 
 	public static boolean slabStep() {
@@ -126,7 +140,8 @@ public final class StrafeSettings {
 		lagComp = true;
 		maxUnlagMs = 300;
 		slabStep = false;
-		buyAnywhere = false;
+		buyMode = BUY_CREATIVE;
+		buyTime = 0;
 		playerChoice = false;
 		PERSONAL.clear();
 		try {
@@ -136,7 +151,9 @@ public final class StrafeSettings {
 				if (o != null && o.has("mcKnockback")) mcKnockback = o.get("mcKnockback").getAsBoolean();
 				if (o != null && o.has("lagComp")) lagComp = o.get("lagComp").getAsBoolean();
 				if (o != null && o.has("slabStep")) slabStep = o.get("slabStep").getAsBoolean();
-				if (o != null && o.has("buyAnywhere")) buyAnywhere = o.get("buyAnywhere").getAsBoolean();
+				if (o != null && o.has("buyAnywhere")) buyMode = o.get("buyAnywhere").getAsBoolean() ? BUY_EVERYONE : BUY_CREATIVE; // older worlds
+				if (o != null && o.has("buyMode")) buyMode = o.get("buyMode").getAsInt();
+				if (o != null && o.has("buyTime")) buyTime = o.get("buyTime").getAsInt();
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
@@ -154,7 +171,8 @@ public final class StrafeSettings {
 		o.addProperty("mcKnockback", mcKnockback);
 		o.addProperty("lagComp", lagComp);
 		o.addProperty("slabStep", slabStep);
-		o.addProperty("buyAnywhere", buyAnywhere);
+		o.addProperty("buyMode", buyMode);
+		o.addProperty("buyTime", buyTime);
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
 		JsonObject pers = new JsonObject();

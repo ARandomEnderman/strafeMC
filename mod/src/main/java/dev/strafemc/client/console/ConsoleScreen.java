@@ -98,6 +98,14 @@ public final class ConsoleScreen extends Screen {
 		cvarToggle("Pre-2026 jump", "sv_legacy_jump", false);
 		// sv_stepsize 18 (CS2) vs 20: a slab is 20 units at 40 units per block, so 20 lets you walk up slabs
 		toggle(() -> "Step up slabs: " + onOff(dev.strafemc.client.ClientGameplay.slabStep()), () -> ConsoleCommands.execute("strafemc_slabstep"));
+		toggle(() -> "Buy menu: " + dev.strafemc.weapon.BuyMenu.modeName(dev.strafemc.client.ClientGameplay.buyMode()), () -> ConsoleCommands.execute("strafemc_buymenu"));
+		// buy time presets (strafemc_buytime takes any number of seconds)
+		toggle(() -> "Buy time: " + (dev.strafemc.client.ClientGameplay.buyTime() == 0 ? "no limit" : dev.strafemc.client.ClientGameplay.buyTime() + " s"), () -> {
+			int[] presets = {0, 10, 20, 45, 90};
+			int cur = dev.strafemc.client.ClientGameplay.buyTime(), next = presets[0];
+			for (int i = 0; i < presets.length; i++) if (presets[i] == cur) next = presets[(i + 1) % presets.length];
+			ConsoleCommands.execute("strafemc_buytime " + next);
+		});
 		number("Max velocity", "sv_maxvelocity");
 		number("Accelerate", "sv_accelerate");
 		number("Friction", "sv_friction");

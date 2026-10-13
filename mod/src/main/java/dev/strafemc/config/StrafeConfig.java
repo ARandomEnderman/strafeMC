@@ -90,6 +90,8 @@ public final class StrafeConfig {
 	public static boolean rightHand = true;
 	/** Gloves worn on the viewmodel (a GloveItem.Kind id), empty: your side's default gloves. */
 	public static String glove = "";
+	/** The worn gloves' CS2 finish (a GloveSkins paint kit), Factory New. */
+	public static String gloveSkin = "";
 	/** H was bound to switchhands once (like CS2's default), so a removed or changed H bind stays as the player left it. */
 	public static boolean switchHandsBound = false;
 	/** Show the raw CS2 server log in the console (otherwise only replies to your own commands). */
@@ -139,6 +141,7 @@ public final class StrafeConfig {
 			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
 			rightHand = Boolean.parseBoolean(p.getProperty("rightHand", String.valueOf(rightHand)));
 			glove = p.getProperty("glove", glove);
+			gloveSkin = p.getProperty("gloveSkin", gloveSkin);
 			switchHandsBound = Boolean.parseBoolean(p.getProperty("switchHandsBound", String.valueOf(switchHandsBound)));
 			for (int i = 0; i < 5; i++) {
 				String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
@@ -186,6 +189,7 @@ public final class StrafeConfig {
 		p.setProperty("team", team);
 		p.setProperty("rightHand", String.valueOf(rightHand));
 		p.setProperty("glove", glove);
+		p.setProperty("gloveSkin", gloveSkin);
 		p.setProperty("switchHandsBound", String.valueOf(switchHandsBound));
 		for (int i = 0; i < 5; i++) {
 			String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];

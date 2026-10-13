@@ -131,24 +131,31 @@ public final class Viewmodel {
 	private final Map<String, VmModel> gloves = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> glovesLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-	/** The arms to draw: the chosen gloves (GloveChoice) once loaded, the weapon's default arms until then. */
+	/** The arms to draw: the chosen gloves (GloveChoice) in their finish once loaded, the weapon's default arms until then. */
 	private VmModel arms(Loaded l) {
-		String path = dev.strafemc.client.GloveChoice.model();
+		String path = dev.strafemc.client.GloveChoice.model(), kit = dev.strafemc.client.GloveChoice.skin();
 		if (path.equals(ARMS)) return l.arms;
-		VmModel g = gloves.get(path);
+		String key = path + "#" + kit;
+		VmModel g = gloves.get(key);
 		if (g != null) return g;
-		if (glovesLoading.add(path)) {
+		if (glovesLoading.add(key)) {
 			Thread t = new Thread(() -> {
 				try {
 					VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(path, true)), ".viewmodel");
+					// CS2's paintable gloves carry a 1x1 grey placeholder colour: wear the baked finish instead
+					java.nio.file.Path skin = kit.isEmpty() ? null : GloveSkinCache.ensure(kit);
 					for (VmModel.Part part : m.parts)
-						if (part.texture != null) {
+						if (skin != null && part.texture != null && part.texture.getFileName().toString().contains("_vmat_g_tcolor")) {
+							part.texture = skin;
+							part.metal = null;
+							if (!textures.containsKey(skin) && !decoded.containsKey(skin)) decoded.put(skin, decode(skin, true));
+						} else if (part.texture != null) {
 							downscaled(part.texture);
 							part.metal = metalPerVertex(part);
 							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
 								decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
 						}
-					gloves.put(path, m);
+					gloves.put(key, m);
 				} catch (Exception e) {
 					StrafeMc.LOG.warn("[strafemc] gloves {} failed: {}", path, e.toString());
 				}

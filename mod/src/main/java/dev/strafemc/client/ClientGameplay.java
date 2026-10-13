@@ -25,6 +25,8 @@ public final class ClientGameplay {
 	private static volatile Map<String, String> cvars;
 	private static volatile Boolean cs2Online, sourceMovement;
 	private static volatile boolean movementChoice, slabStep;
+	/** The server's buy menu rules (strafemc_buymenu, strafemc_buytime); creative only and no limit until it says. */
+	private static volatile int buyMode = 1, buyTime = 0;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
@@ -46,6 +48,8 @@ public final class ClientGameplay {
 			sourceMovement = root.get("sourceMovement") instanceof Boolean b ? b : null;
 			movementChoice = Boolean.TRUE.equals(root.get("movementChoice"));
 			slabStep = Boolean.TRUE.equals(root.get("slabStep"));
+			buyMode = root.get("buyMode") instanceof Number n ? n.intValue() : 1;
+			buyTime = root.get("buyTime") instanceof Number n ? n.intValue() : 0;
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
@@ -68,6 +72,8 @@ public final class ClientGameplay {
 		sourceMovement = null;
 		movementChoice = false;
 		slabStep = false;
+		buyMode = 1;
+		buyTime = 0;
 		movementPersonal = java.util.Map.of();
 		STATS.clear();
 		RECOIL.clear();
@@ -145,6 +151,14 @@ public final class ClientGameplay {
 
 	/** Server-wide Source movement setting (on until a server says otherwise). */
 	/** The server's "step up slabs" setting (strafemc_slabstep). */
+	public static int buyMode() {
+		return buyMode;
+	}
+
+	public static int buyTime() {
+		return buyTime;
+	}
+
 	public static boolean slabStep() {
 		return slabStep;
 	}

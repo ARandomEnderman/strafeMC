@@ -47,6 +47,11 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + k.id + ".png"), 128), tex.resolve("item/" + k.id + ".png"),
 						Placeholders.Icon.ARMOR, 32);
 			}
+			gloveSkins(tex);
+			// buy menu icons: CS2's white equipment icons, 64 px high
+			for (String w : dev.strafemc.client.BuyMenuScreen.ICONS)
+				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",
+						tex.resolve("gui/buymenu/" + w + ".png"), 64), tex.resolve("gui/buymenu/" + w + ".png"), Placeholders.Icon.BULLET, 32);
 			// killfeed icons (CS2's death notices): weapons and the kill modifiers, 48 px high, as wide as they are
 			for (String w : dev.strafemc.client.DeathNotices.WEAPON_ICONS)
 				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",
@@ -133,6 +138,60 @@ public final class RuntimePack {
 		Path src = StrafeConfig.cacheDir().resolve(exported);
 		AssetCache.ensureDecompiled(vpk, src);
 		write(SvgIcon.rasterize(src, size), out);
+	}
+
+	/**
+	 * Glove finishes: CS2's Factory New inventory pictures (converted in one run), an item model per finish that the
+	 * glove items pick by their custom model data string, and the finishes' English names from CS2's localization.
+	 */
+	private static void gloveSkins(Path tex) throws Exception {
+		String prefix = "panorama/images/econ/default_generated/";
+		java.util.List<String> missing = new java.util.ArrayList<>();
+		for (var s : dev.strafemc.weapon.GloveSkins.ALL) {
+			String name = s.kind().id + "_" + s.kit() + "_light_png";
+			if (!Files.exists(tex.resolve("item/glove/" + s.kit() + ".png")) && !Files.exists(StrafeConfig.cacheDir().resolve(prefix + name + ".png")))
+				missing.add(prefix + name + ".vtex_c");
+		}
+		if (!missing.isEmpty() && AssetCache.available())
+			try {
+				AssetCache.decompileAll(missing);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] glove pictures: {}", e.toString());
+			}
+		Path models = DIR.resolve("assets/strafemc/models/item/glove"), items = DIR.resolve("assets/strafemc/items");
+		Files.createDirectories(models);
+		Files.createDirectories(items);
+		java.util.Map<dev.strafemc.weapon.GloveItem.Kind, StringBuilder> cases = new java.util.EnumMap<>(dev.strafemc.weapon.GloveItem.Kind.class);
+		for (var s : dev.strafemc.weapon.GloveSkins.ALL) {
+			String name = s.kind().id + "_" + s.kit() + "_light_png";
+			Path out = tex.resolve("item/glove/" + s.kit() + ".png");
+			safe(() -> icon(prefix + name + ".vtex_c", prefix + name + ".png", out, 128), out, Placeholders.Icon.ARMOR, 32);
+			Files.writeString(models.resolve(s.kit() + ".json"),
+					"{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/glove/" + s.kit() + "\"}}");
+			StringBuilder c = cases.computeIfAbsent(s.kind(), k -> new StringBuilder());
+			if (c.length() > 0) c.append(',');
+			c.append("{\"when\":\"").append(s.kit()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/glove/").append(s.kit())
+					.append("\"}}");
+		}
+		for (var e : cases.entrySet())
+			Files.writeString(items.resolve(e.getKey().id + ".json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+					+ "\"index\":0,\"cases\":[" + e.getValue() + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/" + e.getKey().id + "\"}}}");
+		// names: CS2's "PaintKit_<kit>_Tag" strings (the localization file is converted once)
+		Path lang = DIR.resolve("assets/strafemc/lang/en_us.json");
+		if (Files.exists(lang) || !AssetCache.available()) return;
+		java.util.Map<String, String> tags = new java.util.HashMap<>();
+		var line = java.util.regex.Pattern.compile("^[ \\t]*\"PaintKit_([^\"]+?)_tag\"[ \\t]+\"([^\"]*)\"", java.util.regex.Pattern.CASE_INSENSITIVE);
+		for (String l : Files.readAllLines(AssetCache.raw("resource/csgo_english.txt"), java.nio.charset.StandardCharsets.UTF_8)) {
+			var m = line.matcher(l);
+			if (m.find()) tags.put(m.group(1).toLowerCase(java.util.Locale.ROOT), m.group(2));
+		}
+		com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+		for (var s : dev.strafemc.weapon.GloveSkins.ALL) {
+			String t = tags.get(s.kit().toLowerCase(java.util.Locale.ROOT));
+			if (t != null && !t.isEmpty()) o.addProperty("strafemc.paintkit." + s.kit(), t);
+		}
+		Files.createDirectories(lang.getParent());
+		Files.writeString(lang, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(o));
 	}
 
 	private static void write(BufferedImage img, Path out) throws Exception {

@@ -69,7 +69,8 @@ public final class GunClient {
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (RELOAD.consumeClick()) INSTANCE.reload(true);
-			while (BUY.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new dev.strafemc.client.BuyMenuScreen());
+			dev.strafemc.client.BuyMenuScreen.watchSpawn(mc);
+			while (BUY.consumeClick()) if (mc.screen == null && mc.player != null) dev.strafemc.client.BuyMenuScreen.open(mc);
 			INSTANCE.watchReloadKey();
 		});
 		// warm the AK's clip data off-thread so the first reload/inspect doesn't hitch

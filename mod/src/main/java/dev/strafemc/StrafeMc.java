@@ -35,6 +35,10 @@ public class StrafeMc implements ModInitializer {
 				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "console", 5)) dev.strafemc.server.ConsoleRelay.handle(ctx.player(), msg.line()); });
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE, dev.strafemc.net.StrafePayloads.GameplaySync.CODEC);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.server.GameplaySync.onJoin(handler.getPlayer()));
+		// buy time counts from joining or respawning (strafemc_buytime)
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.BuyMenu.spawned(handler.getPlayer()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> dev.strafemc.weapon.BuyMenu.spawned(newP));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
@@ -60,6 +64,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ArmorSync.TYPE, dev.strafemc.net.StrafePayloads.ArmorSync.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.CsArmor::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.GrenadeZones::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.HealthshotItem::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.weapon.GrenadeZones.clear());
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Throw.TYPE, dev.strafemc.net.StrafePayloads.Throw.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE, dev.strafemc.net.StrafePayloads.TeamChoice.CODEC);

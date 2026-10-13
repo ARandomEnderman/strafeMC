@@ -80,7 +80,7 @@ public final class WeaponItems {
 			e.accept(KEVLAR);
 			e.accept(ASSAULTSUIT);
 			e.accept(HEALTHSHOT);
-			for (Item g : GLOVES.values()) e.accept(g);
+			for (GloveSkins.Skin s : GloveSkins.ALL) e.accept(GloveItem.stack(GLOVES.get(s.kind()), s.kit()));
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
 			e.accept(SURF_RAMP_LYING_ITEM);

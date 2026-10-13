@@ -56,12 +56,32 @@ public final class ConsoleActions {
 			case "healthshot" -> dev.strafemc.weapon.HealthshotItem.inject(p);
 			case "strafemc_buymenu" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can turn buying on for the server."));
+					p.sendSystemMessage(Component.literal("Only operators can change buying for the server."));
 					break;
 				}
-				StrafeSettings.setBuyAnywhere(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy menu outside creative: "
-						+ (StrafeSettings.buyAnywhere() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
+				int mode;
+				try {
+					mode = Integer.parseInt(arg.trim());
+				} catch (NumberFormatException e) {
+					mode = (StrafeSettings.buyMode() + 1) % 3;
+				}
+				StrafeSettings.setBuyMode(mode);
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy menu: "
+						+ dev.strafemc.weapon.BuyMenu.modeName(StrafeSettings.buyMode()) + " (set by " + p.getScoreboardName() + ")"), false);
+			}
+			case "strafemc_buytime" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change the buy time for the server."));
+					break;
+				}
+				try {
+					StrafeSettings.setBuyTime((int) Math.round(Double.parseDouble(arg.trim())));
+				} catch (NumberFormatException e) {
+					p.sendSystemMessage(Component.literal("strafemc_buytime <seconds after respawning; 0 = no limit>"));
+					break;
+				}
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy time: "
+						+ (StrafeSettings.buyTime() == 0 ? "no limit" : StrafeSettings.buyTime() + " s after respawning") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "strafemc_slabstep" -> {
 				if (!op) {
