@@ -66,7 +66,7 @@ public final class StrafeConfig {
 	/** viewmodel_fov (CS2 client cvar; default 68, allowed 54-68 - Source/CS2 values, not readable from the server). */
 	/** CS2's viewmodel_fov: 60..68, default 60. */
 	public static double viewmodelFov = 60;
-	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up), clamped like CS2: x -2..2.5, y and z -2..2; defaults 1, 1, -1. */
+	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up); defaults 1, 1, -1. Unlimited (CS2 clamps x -2..2.5, y and z -2..2). */
 	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
 	/**
 	 * CS2's grenade throw crosshair (client cvars, CS2 defaults): cl_grenadecrosshair_<explosive|flash|smoke|fire|decoy>
@@ -125,9 +125,9 @@ public final class StrafeConfig {
 			movementVolume = Double.parseDouble(p.getProperty("movementVolume", String.valueOf(movementVolume)));
 			landVolume = Double.parseDouble(p.getProperty("landVolume", String.valueOf(landVolume)));
 			viewmodelFov = Math.max(60, Math.min(68, Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)))));
-			viewmodelOffsetX = Math.max(-2, Math.min(2.5, Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)))));
-			viewmodelOffsetY = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)))));
-			viewmodelOffsetZ = Math.max(-2, Math.min(2, Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)))));
+			viewmodelOffsetX = Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)));
+			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
+			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
 			for (int i = 0; i < 5; i++) {
 				String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];

@@ -79,23 +79,64 @@ public final class GrenadeEffects {
 	 * close make it longer. FLAGGED (CS:GO-like, not in CS2's data): up to 4.9 s, x1 within 60 degrees of the view,
 	 * x0.6 to the side, x0.25 behind; full within 800 units, fading out to 2400.
 	 */
+	/**
+	 * CS2's flashbang (its server code): strength 3 x (1 - distance / 3000 units) x how much of the flash you can see
+	 * (1 with a clear line to your eyes, else 0.167 for each of three points next to it that you can see: 50 units
+	 * up, 75 units to either side and 10 up). By where you look (dot of your view with the direction to it): >= 0.6
+	 * holds x 1.25 and fades x 2.5, >= 0.3 x 0.8 / x 1.75, >= -0.2 x 0.5 / x 1, behind you x 0.25 / x 0.5. In seconds:
+	 * point blank, looking at it, 3.75 s hold and 7.5 s fade.
+	 */
 	static void flash(ServerLevel level, GrenadeEntity g) {
 		Vec3 at = g.position();
 		double upb = StrafeConfig.unitsPerBlock;
 		for (ServerPlayer p : level.players()) {
 			Vec3 eye = p.getEyePosition();
-			double d = eye.distanceTo(at) * upb;
-			if (d > 2400) continue;
-			if (level.clip(new ClipContext(at, eye, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, g)).getType() != HitResult.Type.MISS) continue;
+			double strength = 3 * (1 - eye.distanceTo(at) * upb / 3000);
+			if (strength <= 0) continue;
+			double seen = seen(level, g, at, eye);
+			if (seen <= 0) continue;
 			double dot = p.getLookAngle().dot(at.subtract(eye).normalize());
-			double angle = dot > 0.5 ? 1 : dot > -0.3 ? 0.6 : 0.25;
-			double dist = d < 800 ? 1 : Math.max(0, 1 - (d - 800) / 1600);
-			double seconds = 4.9 * angle * dist;
-			if (seconds < 0.25) continue;
-			if (ServerPlayNetworking.canSend(p, StrafePayloads.Flashed.TYPE)) ServerPlayNetworking.send(p, new StrafePayloads.Flashed((float) seconds));
+			double hold, fade;
+			if (dot >= 0.6) {
+				hold = strength * 1.25;
+				fade = strength * 2.5;
+			} else if (dot >= 0.3) {
+				hold = strength * 0.8;
+				fade = strength * 1.75;
+			} else if (dot >= -0.2) {
+				hold = strength * 0.5;
+				fade = strength;
+			} else {
+				hold = strength * 0.25;
+				fade = strength * 0.5;
+			}
+			if (ServerPlayNetworking.canSend(p, StrafePayloads.Flashed.TYPE))
+				ServerPlayNetworking.send(p, new StrafePayloads.Flashed((float) (hold * seen), (float) (fade * seen)));
 		}
 		event(level, EV_FLASH, at);
 	}
+
+	/** How much of a flash at `at` reaches `eye` (CS2: 1 if in clear sight, else 0.167 per visible side point). */
+	private static double seen(ServerLevel level, GrenadeEntity g, Vec3 at, Vec3 eye) {
+		if (clear(level, g, at, eye)) return 1;
+		double upb = StrafeConfig.unitsPerBlock;
+		Vec3 back = eye.subtract(at).normalize(); // from the flash towards the eye: its right and up
+		Vec3 right = back.cross(new Vec3(0, 1, 0));
+		right = right.lengthSqr() < 1e-6 ? new Vec3(1, 0, 0) : right.normalize();
+		Vec3 up = right.cross(back).normalize();
+		double seen = 0;
+		for (Vec3 off : new Vec3[] {up.scale(50 / upb), right.scale(75 / upb).add(up.scale(10 / upb)), right.scale(-75 / upb).add(up.scale(10 / upb))}) {
+			// out to the side point (stopping at a wall), then from there to the eye
+			HitResult out = level.clip(new ClipContext(at, at.add(off), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, g));
+			if (clear(level, g, out.getLocation(), eye)) seen += 0.167;
+		}
+		return seen;
+	}
+
+	private static boolean clear(ServerLevel level, GrenadeEntity g, Vec3 from, Vec3 to) {
+		return level.clip(new ClipContext(from, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, g)).getType() == HitResult.Type.MISS;
+	}
+
 
 	/** The decoy's fake gunfire: the thrower's last held gun's shot sound from the grenade, heard like a real shot. */
 	static void decoyShot(ServerLevel level, GrenadeEntity g) {

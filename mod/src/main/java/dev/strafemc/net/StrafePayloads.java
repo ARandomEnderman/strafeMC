@@ -124,10 +124,11 @@ public final class StrafePayloads {
 		}
 	}
 
-	/** Server -> client: you were flashed for this many seconds (client: white-out, then fade). */
-	public record Flashed(float seconds) implements CustomPacketPayload {
+	/** Server -> client: you were flashed: full white for `hold` seconds, gone after `fade` (CS2's Blind hold / fade times). */
+	public record Flashed(float hold, float fade) implements CustomPacketPayload {
 		public static final Type<Flashed> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "flashed"));
-		public static final StreamCodec<RegistryFriendlyByteBuf, Flashed> CODEC = StreamCodec.composite(ByteBufCodecs.FLOAT, Flashed::seconds, Flashed::new);
+		public static final StreamCodec<RegistryFriendlyByteBuf, Flashed> CODEC = StreamCodec.composite(ByteBufCodecs.FLOAT, Flashed::hold,
+				ByteBufCodecs.FLOAT, Flashed::fade, Flashed::new);
 
 		@Override
 		public Type<Flashed> type() {

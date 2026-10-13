@@ -206,11 +206,12 @@ public final class ConsoleCommands {
 		});
 		viewmodelSetting("viewmodel_fov", "Field of view of the first-person weapon (60-68, default 60).", 60, 68, () -> StrafeConfig.viewmodelFov,
 				v -> StrafeConfig.viewmodelFov = v);
-		viewmodelSetting("viewmodel_offset_x", "Weapon position to the right (-2 to 2.5, default 1).", -2, 2.5, () -> StrafeConfig.viewmodelOffsetX,
+		// offsets unlimited on request (CS2 clamps them to -2..2.5 / -2..2)
+		viewmodelSetting("viewmodel_offset_x", "Weapon position to the right (default 1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetX,
 				v -> StrafeConfig.viewmodelOffsetX = v);
-		viewmodelSetting("viewmodel_offset_y", "Weapon position forward (-2 to 2, default 1).", -2, 2, () -> StrafeConfig.viewmodelOffsetY,
+		viewmodelSetting("viewmodel_offset_y", "Weapon position forward (default 1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetY,
 				v -> StrafeConfig.viewmodelOffsetY = v);
-		viewmodelSetting("viewmodel_offset_z", "Weapon position up (-2 to 2, default -1).", -2, 2, () -> StrafeConfig.viewmodelOffsetZ,
+		viewmodelSetting("viewmodel_offset_z", "Weapon position up (default -1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
 		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair
 			final int k = i;

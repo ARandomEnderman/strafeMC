@@ -79,7 +79,7 @@ public final class GrenadeClient {
 
 	/** Flashbang: when the white-out started and how long it lasts (seconds). */
 	private static volatile long flashStart;
-	private static volatile float flashSeconds;
+	private static volatile float flashSeconds, flashHold;
 
 	public static void onEffect(StrafePayloads.GrenadeFx m) {
 		Vec3 at = new Vec3(m.x(), m.y(), m.z());
@@ -146,20 +146,21 @@ public final class GrenadeClient {
 
 	public static void onFlashed(StrafePayloads.Flashed m) {
 		flashStart = System.nanoTime();
-		flashSeconds = m.seconds();
+		flashHold = m.hold();
+		flashSeconds = m.fade();
 		var p = Minecraft.getInstance().player;
-		if (p != null) CsSounds.play(m.seconds() > 3 ? "Flashbang.Ring.Long" : m.seconds() > 1.5 ? "Flashbang.Ring.Medium" : "Flashbang.Ring.Short",
+		if (p != null) CsSounds.play(m.hold() > 3 ? "Flashbang.Ring.Long" : m.hold() > 1.5 ? "Flashbang.Ring.Medium" : "Flashbang.Ring.Short",
 				p.getX(), p.getEyeY(), p.getZ(), 1.0);
 	}
 
-	/** The white-out: full white for the first 40% of the flash, then fading (FLAGGED: CS-like shape). */
+	/** The white-out: full white for CS2's hold time, then fading out until its fade time (FLAGGED: the curve's shape). */
 	public static void registerHud() {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "grenade_crosshair"),
 				(g, delta) -> GrenadeCrosshair.render(g));
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "flashbang"), (g, delta) -> {
 			float secs = flashSeconds;
 			if (secs <= 0) return;
-			float t = (System.nanoTime() - flashStart) / 1e9f, hold = secs * 0.4f;
+			float t = (System.nanoTime() - flashStart) / 1e9f, hold = Math.min(flashHold, secs * 0.99f);
 			float a = t < hold ? 1 : 1 - (t - hold) / (secs - hold);
 			if (a <= 0) {
 				flashSeconds = 0;
