@@ -44,7 +44,9 @@ public final class Viewmodel {
 					new String[] {"draw", "idle", "shoot1", "reload", "lookat01"}),
 			"weapon_knife_falchion", new Weapon("weapon_knife_falchion", "weapons/models/knife/knife_falchion/weapon_knife_falchion.vmdl_c",
 					".body_legacy", new String[] {"draw", "idle", "lookat01", "lookat02", "light_miss1", "light_miss2", "light_hit1", "light_hit2",
-					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"})));
+					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"}),
+			dev.strafemc.weapon.HealthshotItem.CLS, new Weapon(dev.strafemc.weapon.HealthshotItem.CLS, "weapons/models/healthshot/weapon_healthshot.vmdl_c",
+					".healthshot_content_src", new String[] {"draw", "idle", "inject"})));
 
 	/** Every CS2 grenade: its model's ".body" mesh and the grenade animations. */
 	private static Map<String, Weapon> withGrenades(Map<String, Weapon> base) {
@@ -325,8 +327,11 @@ public final class Viewmodel {
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());
-		emit(arms, armSkin, toView, cam, ps, out, light);
-		emit(l.gun, gunSkin, toView, cam, ps, out, light);
+		// a weapon mesh without a skeleton (the Medi-Shot) rides on the animated weapon bone as a whole
+		Integer weaponNode = clip.node("weapon");
+		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
+		emit(arms, armSkin, toView, cam, ps, out, light, null);
+		emit(l.gun, gunSkin, toView, cam, ps, out, light, rigid);
 		updateAttachments(l, gunSkin, toView);
 		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
 		return true;
@@ -434,12 +439,12 @@ public final class Viewmodel {
 		return new float[][] {sp, sn};
 	}
 
-	private void emit(VmModel m, Matrix4f[][] skins, Matrix4f toView, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
+	private void emit(VmModel m, Matrix4f[][] skins, Matrix4f toView, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light, Matrix4f rigid) {
 		for (VmModel.Part p : m.parts) {
 			if (p.alphaMode.equals("BLEND")) continue; // sticker/decal overlays (sticker_gaps) need CS2's composite shader
 			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;
-			Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : new Matrix4f[0];
+			Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
 			float[][] sk = skinVertices(p, skin, toView);
 			float[] sp = sk[0], sn = sk[1];
 			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (ignored, vc) -> {

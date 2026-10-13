@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
  */
 public final class BuyMenuScreen extends Screen {
 	private static final String[][] GROUPS = {
-			{"Equipment", "kevlar:Kevlar Vest", "assaultsuit:Kevlar + Helmet"},
+			{"Equipment", "kevlar:Kevlar Vest", "assaultsuit:Kevlar + Helmet", "healthshot:Medi-Shot"},
 			{"Grenades", "hegrenade:HE Grenade", "flashbang:Flashbang", "smokegrenade:Smoke Grenade", "molotov:Molotov", "incgrenade:Incendiary Grenade",
 					"decoy:Decoy Grenade"},
 			{"Rifles", "ak47:AK-47"},

@@ -154,6 +154,10 @@ public final class GunClient {
 			grenadeFrame(mc, p, gi, now);
 			return;
 		}
+		if (held.getItem() instanceof dev.strafemc.weapon.HealthshotItem hs) {
+			healthshotFrame(mc, hs, now);
+			return;
+		}
 		if (!(held.getItem() instanceof GunItem g)) return;
 		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
 		if (w == null) return;
@@ -300,6 +304,22 @@ public final class GunClient {
 			dev.strafemc.client.particle.Effects.viewHeld("molotov", MOLOTOV_HELD, "molotov_particle");
 			ragLitAt = now + sec(clipSeconds(g, "throwcharge_low", 1.0));
 		}
+	}
+
+	/** Medi-Shot: when the current injection's WPN_HEALTHSHOT_INJECT event is due (0: none running) and when it ends. */
+	private long injectAt, injectDoneAt;
+
+	/** Left click injects (the clip's own sounds); at its inject event the server heals and uses one up. */
+	private void healthshotFrame(Minecraft mc, dev.strafemc.weapon.HealthshotItem hs, long now) {
+		if (injectAt != 0 && now >= injectAt) {
+			injectAt = 0;
+			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("healthshot", ""));
+		}
+		if (now < injectDoneAt || now < deployUntil || mc.screen != null || !mc.options.keyAttack.isDown()) return;
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("inject");
+		schedule(hs, "inject", now);
+		injectAt = now + sec(dev.strafemc.weapon.HealthshotItem.INJECT_AT);
+		injectDoneAt = now + sec(clipSeconds(hs, "inject", 1.9));
 	}
 
 	/** CS2's burning rag on a lit molotov (the throwcharge clip's particle event at attachment molotov_particle). */

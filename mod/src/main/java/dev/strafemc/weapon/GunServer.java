@@ -123,6 +123,7 @@ public final class GunServer {
 	public static String clipPath(String cls, String anim) {
 		return switch (cls) {
 			case "weapon_ak47" -> "animation/anims/viewmodel/rifle/rifle_ak/" + anim + "_ak.vnmclip_c";
+			case HealthshotItem.CLS -> "animation/anims/viewmodel/equipment/healthshot/" + anim + "_healthshot.vnmclip_c";
 			case "weapon_knife_falchion" -> "animation/anims/viewmodel/knife/knife_falchion/" + (anim.equals("idle") ? "idle1" : anim) + "_falchion.vnmclip_c";
 			default -> {
 				Grenade g = Grenade.of(cls);

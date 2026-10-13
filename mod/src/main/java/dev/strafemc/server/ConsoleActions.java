@@ -53,6 +53,7 @@ public final class ConsoleActions {
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
+			case "healthshot" -> dev.strafemc.weapon.HealthshotItem.inject(p);
 			case "strafemc_buymenu" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can turn buying on for the server."));

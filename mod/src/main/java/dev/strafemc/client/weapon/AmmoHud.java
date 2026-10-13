@@ -19,7 +19,8 @@ public final class AmmoHud {
 		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "ammo"), (g, delta) -> {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player == null || mc.options.hideGui || !(mc.player.getMainHandItem().getItem() instanceof GunItem gun)
-					|| gun instanceof dev.strafemc.weapon.KnifeItem || gun instanceof dev.strafemc.weapon.GrenadeItem) return;
+					|| gun instanceof dev.strafemc.weapon.KnifeItem || gun instanceof dev.strafemc.weapon.GrenadeItem
+					|| gun instanceof dev.strafemc.weapon.HealthshotItem) return;
 			WeaponStats w = dev.strafemc.client.ClientGameplay.stats(gun.weaponClass);
 			if (w == null) return;
 			int clip = gun.clip(mc.player.getMainHandItem());

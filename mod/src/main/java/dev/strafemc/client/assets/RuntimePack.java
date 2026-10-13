@@ -54,6 +54,8 @@ public final class RuntimePack {
 			for (String m : dev.strafemc.client.DeathNotices.MODIFIER_ICONS)
 				safe(() -> svgH("panorama/images/hud/deathnotice/" + m + ".vsvg_c", "panorama/images/hud/deathnotice/" + m + ".svg",
 						tex.resolve("gui/deathnotice/" + m + ".png"), 48), tex.resolve("gui/deathnotice/" + m + ".png"), Placeholders.Icon.BULLET, 32);
+			safe(() -> svg("panorama/images/icons/equipment/healthshot.vsvg_c", "panorama/images/icons/equipment/healthshot.svg",
+					tex.resolve("item/weapon_healthshot.png"), 32), tex.resolve("item/weapon_healthshot.png"), Placeholders.Icon.ARMOR, 32);
 			for (String a : new String[] {"kevlar", "assaultsuit"}) {
 				String item = a.equals("kevlar") ? "item_kevlar" : "item_assaultsuit";
 				safe(() -> svg("panorama/images/icons/equipment/" + a + ".vsvg_c", "panorama/images/icons/equipment/" + a + ".svg",

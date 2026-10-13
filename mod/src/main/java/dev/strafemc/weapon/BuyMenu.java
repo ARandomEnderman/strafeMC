@@ -39,6 +39,7 @@ public final class BuyMenu {
 				give(p, new ItemStack(WeaponItems.MAG_AK47, 3)); // CS2's 90 reserve rounds: three 30-round magazines
 			}
 			case "knife" -> give(p, new ItemStack(WeaponItems.KNIFE_FALCHION));
+			case "healthshot" -> give(p, new ItemStack(WeaponItems.HEALTHSHOT));
 			default -> {
 				Grenade g = null;
 				for (Grenade x : Grenade.values()) if (x.cls.equals("weapon_" + what) || x.cls.equals(what)) g = x;
