@@ -16,7 +16,7 @@ import java.util.Map;
  */
 public final class Surfaces {
 	public record Surface(String name, String base, String bulletImpactSound, String impactEffect, String decalGroup,
-						  String grazingDecalGroup, double penetrationDistance, double penetrationDamage) {}
+						  String grazingDecalGroup, double penetrationDistance, double penetrationDamage, String gameMaterial) {}
 
 	private static volatile Map<String, Surface> surfaces = Map.of();
 
@@ -58,7 +58,7 @@ public final class Surfaces {
 			String base = bh == null || bh == 0 ? null : byHash.get(bh);
 			out.put(n, new Surface(n, base, str(raw, n, "audiosounds", "bulletimpact"), str(raw, n, null, "effect"),
 					str(raw, n, null, "impactDecalName"), str(raw, n, null, "impactGrazingDecalName"),
-					num(raw, n, "bulletPenetrationDistanceModifier"), num(raw, n, "bulletPenetrationDamageModifier")));
+					num(raw, n, "bulletPenetrationDistanceModifier"), num(raw, n, "bulletPenetrationDamageModifier"), str(raw, n, null, "gamematerial")));
 		}
 		// resolve inheritance: missing values come from the base chain, finally "default"
 		Map<String, Surface> resolved = new HashMap<>();
@@ -73,6 +73,7 @@ public final class Surfaces {
 		Surface s = all.get(n);
 		String sound = s.bulletImpactSound(), effect = s.impactEffect(), decal = s.decalGroup(), grazing = s.grazingDecalGroup();
 		double pd = s.penetrationDistance(), pdm = s.penetrationDamage();
+		String mat = s.gameMaterial();
 		String cur = s.base();
 		for (int depth = 0; depth < 16; depth++) {
 			Surface b = cur != null ? all.get(cur) : (n.equals("default") ? null : all.get("default"));
@@ -83,10 +84,11 @@ public final class Surfaces {
 			if (grazing == null) grazing = b.grazingDecalGroup();
 			if (Double.isNaN(pd)) pd = b.penetrationDistance();
 			if (Double.isNaN(pdm)) pdm = b.penetrationDamage();
+			if (mat == null) mat = b.gameMaterial();
 			if (cur == null) break; // reached default
 			cur = b.base();
 		}
-		return new Surface(n, s.base(), sound, effect, decal, grazing, pd, pdm);
+		return new Surface(n, s.base(), sound, effect, decal, grazing, pd, pdm, mat);
 	}
 
 	@SuppressWarnings("unchecked")
