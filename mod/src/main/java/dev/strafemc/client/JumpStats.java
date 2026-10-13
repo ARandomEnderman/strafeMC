@@ -19,7 +19,9 @@ public final class JumpStats {
 	private double graphTime;
 	private boolean inJump;
 	private double sx, sy, sz, pre, max, lastSpeed, apex, simAir;
-	private long takeoffNs;
+	private long takeoffNs, landNs;
+	/** Held-jump chains: time on the ground before this takeoff and from the previous takeoff (real clock, ms). */
+	private double groundMs = -1, periodMs = -1;
 	private int airTicks, gainTicks, strafes, lastSide;
 	private String last;
 	private long lastUntil;
@@ -45,7 +47,10 @@ public final class JumpStats {
 			lastSpeed = sp;
 			apex = s.y;
 			simAir = 0;
-			takeoffNs = System.nanoTime();
+			long now = System.nanoTime();
+			periodMs = takeoffNs != 0 && now - takeoffNs < 2_000_000_000L ? (now - takeoffNs) / 1e6 : -1;
+			groundMs = landNs != 0 && now - landNs < 2_000_000_000L ? (now - landNs) / 1e6 : -1;
+			takeoffNs = now;
 			return;
 		}
 		if (!inJump) return;
@@ -70,9 +75,11 @@ public final class JumpStats {
 			double dh = s.y - sy;
 			int sync = airTicks == 0 ? 0 : Math.round(100f * gainTicks / airTicks);
 			// air time by the simulation and by the wall clock (they must match: CS2's standing jump is 0.75 s, 57 u high)
-			double realAir = (System.nanoTime() - takeoffNs) / 1e9;
+			landNs = System.nanoTime();
+			double realAir = (landNs - takeoffNs) / 1e9;
 			last = String.format("%.1f u  |  pre %.0f  max %.0f  |  %d strafes  %d%% sync%s  |  peak %.0f u  air %.3f s (real %.3f)", dist, pre, max,
-					strafes, sync, Math.abs(dh) > 0.5 ? String.format("  |  %+.0f u height", dh) : "", apex - sy, simAir, realAir);
+					strafes, sync, Math.abs(dh) > 0.5 ? String.format("  |  %+.0f u height", dh) : "", apex - sy, simAir, realAir)
+					+ (periodMs > 0 ? String.format("  |  hop %.0f ms, ground %.0f ms", periodMs, groundMs) : "");
 			lastUntil = System.currentTimeMillis() + 4000;
 		}
 	}

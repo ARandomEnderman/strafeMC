@@ -39,6 +39,13 @@ public final class FlatGroundCheck {
 
 	public static void main(String[] a) throws Exception {
 		var cv = new com.google.gson.Gson().fromJson(java.nio.file.Files.readString(java.nio.file.Path.of(a[0])), java.util.Map.class);
+		SourceMovement.Params p = params(cv);
+		System.out.printf("cvars: accel=%s airaccel=%s airwish=%s friction=%s stop=%s grav=%s jump=%s standable=%s ladderscale=%s%n",
+				p.accelerate, p.airAccelerate, p.airMaxWishspeed, p.friction, p.stopSpeed, p.gravity, p.jumpImpulse, p.standableNormal, p.ladderScaleSpeed);
+		run(p);
+	}
+
+	static SourceMovement.Params params(java.util.Map<?, ?> cv) {
 		SourceMovement.Params p = new SourceMovement.Params();
 		p.accelerate = d(cv, "sv_accelerate");
 		p.airAccelerate = d(cv, "sv_airaccelerate");
@@ -59,8 +66,10 @@ public final class FlatGroundCheck {
 		p.stepMoveVelMin = 64;
 		p.jumpSpamPenalty = 0.015625;
 		p.weaponMaxSpeed = 250; // knife m_flMaxSpeed from weapons.vdata
-		System.out.printf("cvars: accel=%s airaccel=%s airwish=%s friction=%s stop=%s grav=%s jump=%s standable=%s ladderscale=%s%n",
-				p.accelerate, p.airAccelerate, p.airMaxWishspeed, p.friction, p.stopSpeed, p.gravity, p.jumpImpulse, p.standableNormal, p.ladderScaleSpeed);
+		return p;
+	}
+
+	static void run(SourceMovement.Params p) {
 
 		TestWorld flat = new TestWorld().floor();
 
