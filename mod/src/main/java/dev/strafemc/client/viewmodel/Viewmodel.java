@@ -181,6 +181,7 @@ public final class Viewmodel {
 		boolean toAttack = to.startsWith("shoot") || to.startsWith("light_") || to.startsWith("heavy_");
 		boolean fromAttack = from.startsWith("shoot") || from.startsWith("light_") || from.startsWith("heavy_");
 		if (to.equals("draw")) return 0;
+		if (from.equals("pullpin") && to.startsWith("throwcharge")) return 0.1f;
 		if (toAttack) return 0;
 		if (to.startsWith("lookat")) return knife || from.equals("draw") ? 0.2f : 0.3f;
 		if (to.equals("idle")) {
@@ -246,7 +247,8 @@ public final class Viewmodel {
 		if (clip == null) play("draw");
 		float t = clipTime();
 		// clips that end in a held pose (a grenade's charged throw: single-frame poses) stay until the next animation
-		if (t > clip.duration && !clip.name.equals("idle") && !clip.name.startsWith("throwcharge")) {
+		// (and pulling the pin, which hands over to the charged pose without dropping to idle in between)
+		if (t > clip.duration && !clip.name.equals("idle") && !clip.name.startsWith("throwcharge") && !clip.name.equals("pullpin")) {
 			play("idle");
 			t = 0;
 		}
