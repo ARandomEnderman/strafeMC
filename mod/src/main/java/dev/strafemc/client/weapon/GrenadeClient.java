@@ -38,7 +38,10 @@ public final class GrenadeClient {
 
 	private static final List<Smoke> SMOKES = new ArrayList<>();
 	private static final List<Fire> FIRES = new ArrayList<>();
-	private static final double SMOKE_SECONDS = 18, SMOKE_FADE = 2, FIRE_SECONDS = 7;
+	/** CS2's smoke timing (server code): smoothstep in over 0.1..1.5 s, full until 17 s, gone at 22 s. */
+	private static final double SMOKE_IN0 = 0.1, SMOKE_IN1 = 1.5, SMOKE_OUT0 = 17, SMOKE_GONE = 22;
+	/** CS2's inferno_flame_lifetime (7 s, incendiary 5.5 s); the server sends each flame as it spreads. */
+	private static final double FLAME_SECONDS = 7, FLAME_SECONDS_INC = 5.5, FLAME_REACH = 21;
 	private static final int PUFFS = 70;
 	private static Identifier puffTexture;
 
@@ -71,18 +74,22 @@ public final class GrenadeClient {
 				}
 				CsSounds.play("BaseSmokeEffect.Sound", at.x, at.y, at.z, 1.0);
 			}
+			case GrenadeEffects.EV_FLAME, GrenadeEffects.EV_FLAME_INC -> {
+				boolean inc = m.kind() == GrenadeEffects.EV_FLAME_INC;
+				synchronized (FIRES) {
+					FIRES.add(new Fire(at, System.nanoTime() + (long) ((inc ? FLAME_SECONDS_INC : FLAME_SECONDS) * 1e9), inc));
+				}
+			}
 			case GrenadeEffects.EV_FIRE, GrenadeEffects.EV_FIRE_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FIRE_INC;
-				synchronized (FIRES) {
-					FIRES.add(new Fire(at, System.nanoTime() + (long) (FIRE_SECONDS * 1e9), inc));
-				}
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up);
 				CsSounds.play(inc ? "IncGrenade.Start" : "Inferno.Fire.Ignite", at.x, at.y, at.z, 1.0);
 				CsSounds.play("Inferno.Loop", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_FIRE_OUT, GrenadeEffects.EV_FIRE_END -> {
+				double range = 160 / StrafeConfig.unitsPerBlock;
 				synchronized (FIRES) {
-					FIRES.removeIf(f -> f.at.distanceToSqr(at) < 0.01);
+					FIRES.removeIf(f -> f.at.distanceToSqr(at) < range * range);
 				}
 				CsSounds.play(m.kind() == GrenadeEffects.EV_FIRE_OUT ? "Molotov.Extinguish" : "Inferno.FadeOut", at.x, at.y, at.z, 1.0);
 			}
@@ -123,19 +130,19 @@ public final class GrenadeClient {
 	public static void tick(Minecraft mc) {
 		if (mc.level == null || mc.isPaused()) return;
 		long now = System.nanoTime();
-		double r = 120 / StrafeConfig.unitsPerBlock;
+		double r = FLAME_REACH / StrafeConfig.unitsPerBlock;
 		Random rnd = new Random();
 		synchronized (FIRES) {
 			FIRES.removeIf(f -> now > f.until);
 			for (Fire f : FIRES)
-				for (int i = 0; i < 8; i++) {
+				for (int i = 0; i < 2; i++) {
 					double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * r;
 					double x = f.at.x + Math.cos(a) * d, z = f.at.z + Math.sin(a) * d;
 					mc.level.addParticle(i % 4 == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, x, f.at.y + 0.05, z, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
 				}
 		}
 		synchronized (SMOKES) {
-			SMOKES.removeIf(s -> (now - s.start) / 1e9 > SMOKE_SECONDS + SMOKE_FADE);
+			SMOKES.removeIf(s -> (now - s.start) / 1e9 > SMOKE_GONE);
 		}
 	}
 
@@ -152,6 +159,12 @@ public final class GrenadeClient {
 			p[i * 4 + 3] = (float) ((50 + rnd.nextDouble() * 30) / u);
 		}
 		return p;
+	}
+
+	/** CS2's smoothstep: 0 at e0, 1 at e1 (either order), smooth in between. */
+	private static double smoothstep(double e0, double e1, double x) {
+		double t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+		return t * t * (3 - 2 * t);
 	}
 
 	/** A soft round puff, made once (no CS2 files needed). */
@@ -187,8 +200,8 @@ public final class GrenadeClient {
 		List<float[]> quads = new ArrayList<>();
 		for (Smoke s : smokes) {
 			double t = (now - s.start) / 1e9;
-			double grow = Math.min(1, t / 1.0), fade = t > SMOKE_SECONDS ? Math.max(0, 1 - (t - SMOKE_SECONDS) / SMOKE_FADE) : 1;
-			float alpha = (float) (0.85 * Math.min(grow * 1.5, 1) * fade);
+			double grow = smoothstep(SMOKE_IN0, SMOKE_IN1, t), fade = smoothstep(SMOKE_GONE, SMOKE_OUT0, t);
+			float alpha = (float) (0.85 * grow * fade);
 			for (int i = 0; i < PUFFS; i++) {
 				float x = (float) (s.at.x + s.puffs[i * 4] * grow - c.x), y = (float) (s.at.y + s.puffs[i * 4 + 1] * grow - c.y),
 						z = (float) (s.at.z + s.puffs[i * 4 + 2] * grow - c.z), size = (float) (s.puffs[i * 4 + 3] * (0.6 + 0.4 * grow));

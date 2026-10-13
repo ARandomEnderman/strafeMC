@@ -27,7 +27,7 @@ public final class GrenadeEffects {
 
 	/** What happened, for the clients (GrenadeFx.kind). */
 	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,
-			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9;
+			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9, EV_FLAME = 10, EV_FLAME_INC = 11;
 	/** How far away players still get the effect message (blocks). */
 	private static final double FX_RANGE = 160;
 
