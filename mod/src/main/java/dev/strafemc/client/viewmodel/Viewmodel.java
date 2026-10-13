@@ -154,6 +154,7 @@ public final class Viewmodel {
 					for (VmModel.Part part : m.parts)
 						if (part.texture != null) {
 							downscaled(part.texture);
+							part.metal = metalPerVertex(part);
 							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
 								decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
 						}
@@ -414,10 +415,10 @@ public final class Viewmodel {
 				int[] idx = p.idx;
 				try {
 				for (int i = 0; i + 2 < idx.length; i += 3) {
-					vertex(vc, pose, sp, sn, p.uv, idx[i], light);
-					vertex(vc, pose, sp, sn, p.uv, idx[i + 1], light);
-					vertex(vc, pose, sp, sn, p.uv, idx[i + 2], light);
-					vertex(vc, pose, sp, sn, p.uv, idx[i + 2], light); // entity render types draw quads
+					vertex(vc, pose, sp, sn, p, idx[i], light);
+					vertex(vc, pose, sp, sn, p, idx[i + 1], light);
+					vertex(vc, pose, sp, sn, p, idx[i + 2], light);
+					vertex(vc, pose, sp, sn, p, idx[i + 2], light); // entity render types draw quads
 				}
 				} catch (RuntimeException e) { // never crash the game over the viewmodel: fall back to the vanilla hand
 					broken = true;
@@ -427,8 +428,10 @@ public final class Viewmodel {
 		}
 	}
 
-	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, float[] uv, int i, int light) {
-		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(-1).setUv(uv[i * 2], uv[i * 2 + 1])
+	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, VmModel.Part p, int i, int light) {
+		float[] uv = p.uv;
+		int col = p.metal == null ? -1 : shade(p.metal[i], sn[i * 3 + 1]);
+		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(col).setUv(uv[i * 2], uv[i * 2 + 1])
 				.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, sn[i * 3], sn[i * 3 + 1], sn[i * 3 + 2]);
 	}
 
@@ -461,8 +464,42 @@ public final class Viewmodel {
 		}
 	}
 
+	/** The setup's 1024 px colour with CS2's ambient occlusion baked in, or the older plain copy. */
 	private static Path downscaledPath(Path p) {
-		return p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024b.png"));
+		Path c = p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024c.png"));
+		return Files.exists(c) ? c : p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024b.png"));
+	}
+
+	/** Samples CS2's metalness mask (made by the setup) at each vertex's UV; null if the material has no metal. */
+	static float[] metalPerVertex(VmModel.Part part) {
+		Path mask = part.texture.resolveSibling(part.texture.getFileName().toString().replace(".png", ".vm1024m.png"));
+		if (!Files.exists(mask)) return null;
+		try {
+			BufferedImage m = ImageIO.read(mask.toFile());
+			int w = m.getWidth(), h = m.getHeight(), n = part.uv.length / 2;
+			float[] out = new float[n];
+			boolean any = false;
+			for (int i = 0; i < n; i++) {
+				double u = part.uv[i * 2] - Math.floor(part.uv[i * 2]), v = part.uv[i * 2 + 1] - Math.floor(part.uv[i * 2 + 1]);
+				out[i] = (m.getRGB(Math.min(w - 1, (int) (u * w)), Math.min(h - 1, (int) (v * h))) & 255) / 255f;
+				any |= out[i] > 0.05f;
+			}
+			return any ? out : null;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/**
+	 * Metal has no diffuse colour in CS2: it shows its colour as a tint on what it reflects. Without reflections, a
+	 * stand-in environment by the camera-space normal: bright sky above, dark ground below (FLAGGED: ours).
+	 */
+	private static int shade(float metal, float ny) {
+		if (metal <= 0.05f) return -1;
+		float t = Math.max(0, Math.min(1, (ny + 0.3f) / 1.3f)), env = 0.3f + 1.1f * t * t * (3 - 2 * t);
+		float k = Math.min(1, 1 + (env - 1) * metal);
+		int c = Math.round(k * 255);
+		return 0xFF000000 | c << 16 | c << 8 | c;
 	}
 
 	/**

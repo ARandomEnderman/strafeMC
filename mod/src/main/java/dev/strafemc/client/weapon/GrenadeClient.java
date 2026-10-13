@@ -110,7 +110,8 @@ public final class GrenadeClient {
 			case GrenadeEffects.EV_FIRE, GrenadeEffects.EV_FIRE_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FIRE_INC;
 				dev.strafemc.client.particle.Effects.at(inc ? GrenadeEffects.INCENDIARY_GROUND_EFFECT : GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up);
-				CsSounds.play(inc ? "IncGrenade.Start" : "Inferno.Fire.Ignite", at.x, at.y, at.z, 1.0);
+				CsSounds.play(inc ? "IncGrenade.Start" : "Molotov.Start", at.x, at.y, at.z, 1.0); // the burst (CS2's server plays these)
+				CsSounds.play("Inferno.Fire.Ignite", at.x, at.y, at.z, 1.0);
 				synchronized (FIRE_SOUNDS) {
 					FIRE_SOUNDS.add(new FireSound(at));
 				}
@@ -133,7 +134,8 @@ public final class GrenadeClient {
 			case GrenadeEffects.EV_FIZZLE, GrenadeEffects.EV_FIZZLE_INC -> {
 				dev.strafemc.client.particle.Effects.at(m.kind() == GrenadeEffects.EV_FIZZLE_INC ? GrenadeEffects.INCENDIARY_AIR_EFFECT
 						: GrenadeEffects.MOLOTOV_AIR_EFFECT, at, up);
-				CsSounds.play("Molotov.Extinguish", at.x, at.y, at.z, 1.0);
+				// FLAGGED: CS2's "failed to start" sounds for both an air burst and landing in a smoke
+				CsSounds.play(m.kind() == GrenadeEffects.EV_FIZZLE_INC ? "IncGrenade.StartFailed" : "Molotov.StartFailed", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_DECOY_POP -> CsSounds.play("BaseGrenade.Explode", at.x, at.y, at.z, 0.4);
 			default -> {}

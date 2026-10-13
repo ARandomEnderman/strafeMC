@@ -43,7 +43,7 @@ public final class Setup {
 		m.put("sounds", 1);
 		m.put("clips", 1);
 		m.put("graphs", 1);
-		m.put("models", 1);
+		m.put("models", 2); // 2: AO baked into the colour + metalness mask
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 4); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov
 		m.put("decals", 1);
@@ -254,17 +254,24 @@ public final class Setup {
 		return path.endsWith("_c") ? path : path + "_c";
 	}
 
-	/** Keeps a 1024 px copy of each model's base-colour textures (what the mod renders) and deletes the full-size files. */
+	/**
+	 * Keeps a 1024 px copy of each model's base-colour textures (what the mod renders) with CS2's ambient occlusion
+	 * multiplied in (.vm1024c.png), plus a 1024 px metalness mask (.vm1024m.png) where the material has metal parts,
+	 * and deletes the full-size files.
+	 */
 	private void shrinkTextures(List<String> models) throws IOException {
 		Set<Path> keep = new LinkedHashSet<>(), folders = new LinkedHashSet<>();
 		for (String m : models) {
 			Path glb = cache.resolve("gltf").resolve(m.substring(0, m.lastIndexOf('.')) + ".glb");
 			if (!Files.exists(glb)) continue;
 			folders.add(glb.getParent());
-			for (Path tex : baseColors(glb)) {
-				Path small = tex.resolveSibling(tex.getFileName().toString().replace(".png", ".vm1024b.png"));
-				if (!Files.exists(small) && Files.exists(tex)) shrink(tex, small);
+			for (Path[] mat : materials(glb)) {
+				Path tex = mat[0], small = tex.resolveSibling(tex.getFileName().toString().replace(".png", ".vm1024c.png")),
+						mask = tex.resolveSibling(tex.getFileName().toString().replace(".png", ".vm1024m.png"));
+				if (!Files.exists(small) && Files.exists(tex)) composite(tex, mat[1], small);
+				if (!Files.exists(mask) && mat[2] != null && Files.exists(mat[2])) metalMask(mat[2], tex, mask);
 				keep.add(small);
+				keep.add(mask);
 			}
 		}
 		for (Path dir : folders)
@@ -274,23 +281,69 @@ public final class Setup {
 			}
 	}
 
-	/** Base-colour texture files referenced by a .glb's materials. */
-	private static List<Path> baseColors(Path glb) throws IOException {
+	/** Per material with a base colour: {colour, ambient occlusion or null, metalness or null} texture files. */
+	private static List<Path[]> materials(Path glb) throws IOException {
 		byte[] b = Files.readAllBytes(glb);
 		ByteBuffer bb = ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN);
-		int jsonLen = bb.getInt(12);
-		JsonObject g = GSON.fromJson(new String(b, 20, jsonLen, StandardCharsets.UTF_8), JsonObject.class);
-		List<Path> out = new ArrayList<>();
+		JsonObject g = GSON.fromJson(new String(b, 20, bb.getInt(12), StandardCharsets.UTF_8), JsonObject.class);
+		List<Path[]> out = new ArrayList<>();
 		if (!g.has("materials") || !g.has("textures") || !g.has("images")) return out;
-		for (var me : g.getAsJsonArray("materials")) {
-			JsonObject pbr = me.getAsJsonObject().getAsJsonObject("pbrMetallicRoughness");
-			if (pbr == null || !pbr.has("baseColorTexture")) continue;
-			int t = pbr.getAsJsonObject("baseColorTexture").get("index").getAsInt();
-			int img = g.getAsJsonArray("textures").get(t).getAsJsonObject().get("source").getAsInt();
+		java.util.function.Function<JsonObject, Path> file = ref -> {
+			if (ref == null || !ref.has("index")) return null;
+			int img = g.getAsJsonArray("textures").get(ref.get("index").getAsInt()).getAsJsonObject().get("source").getAsInt();
 			JsonObject im = g.getAsJsonArray("images").get(img).getAsJsonObject();
-			if (im.has("uri")) out.add(glb.getParent().resolve(im.get("uri").getAsString()));
+			return im.has("uri") ? glb.getParent().resolve(im.get("uri").getAsString()) : null;
+		};
+		for (var me : g.getAsJsonArray("materials")) {
+			JsonObject mat = me.getAsJsonObject(), pbr = mat.getAsJsonObject("pbrMetallicRoughness");
+			if (pbr == null || !pbr.has("baseColorTexture")) continue;
+			Path color = file.apply(pbr.getAsJsonObject("baseColorTexture"));
+			if (color == null) continue;
+			out.add(new Path[] {color, file.apply(mat.getAsJsonObject("occlusionTexture")), file.apply(pbr.getAsJsonObject("metallicRoughnessTexture"))});
 		}
 		return out;
+	}
+
+	/** The colour shrunk to 1024 px with the ambient occlusion (its red channel, same UVs) multiplied in. */
+	private static void composite(Path color, Path ao, Path out) throws IOException {
+		shrink(color, out);
+		if (ao == null || !Files.exists(ao)) return;
+		BufferedImage c = ImageIO.read(out.toFile()), a = ImageIO.read(ao.toFile());
+		if (c == null || a == null) return;
+		int w = c.getWidth(), h = c.getHeight();
+		for (int y = 0; y < h; y++)
+			for (int x = 0; x < w; x++) {
+				int p = c.getRGB(x, y), o = a.getRGB(x * a.getWidth() / w, y * a.getHeight() / h) >> 16 & 255;
+				int r = (p >> 16 & 255) * o / 255, gg = (p >> 8 & 255) * o / 255, bl = (p & 255) * o / 255;
+				c.setRGB(x, y, p & 0xFF000000 | r << 16 | gg << 8 | bl);
+			}
+		ImageIO.write(c, "png", out.toFile());
+	}
+
+	/**
+	 * CS2's metalness (green channel of its g_tMetalness texture; blue if the export moved it there, as glTF does) as a
+	 * grey 1024 px mask; none if nothing is metal.
+	 */
+	private static void metalMask(Path metal, Path color, Path out) throws IOException {
+		BufferedImage m = ImageIO.read(metal.toFile()), c = ImageIO.read(color.toFile());
+		if (m == null) return;
+		int w = Math.min(1024, c != null ? c.getWidth() : 1024), h = Math.min(1024, c != null ? c.getHeight() : 1024);
+		int maxG = 0, maxB = 0;
+		for (int y = 0; y < m.getHeight(); y += 8)
+			for (int x = 0; x < m.getWidth(); x += 8) {
+				int p = m.getRGB(x, y);
+				maxG = Math.max(maxG, p >> 8 & 255);
+				maxB = Math.max(maxB, p & 255);
+			}
+		int shift = maxB > 0 ? 0 : 8;
+		if ((shift == 0 ? maxB : maxG) == 0) return;
+		BufferedImage o = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		for (int y = 0; y < h; y++)
+			for (int x = 0; x < w; x++) {
+				int v = m.getRGB(x * m.getWidth() / w, y * m.getHeight() / h) >> shift & 255;
+				o.setRGB(x, y, v << 16 | v << 8 | v);
+			}
+		ImageIO.write(o, "png", out.toFile());
 	}
 
 	/** Same filter as the viewmodel's own downscale: power-of-two box filter per channel, alpha kept as is. */
