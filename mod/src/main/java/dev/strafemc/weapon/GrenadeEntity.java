@@ -24,6 +24,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	public static EntityType<GrenadeEntity> TYPE;
 
 	static final double GRAVITY_SCALE = 0.4, ELASTICITY = 0.45, STOP_SPEED = 20, STEP = 1 / 64.0;
+	/** The grenade's collision radius in units: its centre stays this far from surfaces (matches the drawn model). */
+	static final double RADIUS = 3.6;
 	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2: 1.6 s, measured by the user). */
 	static final double FUSE = 1.6;
 
@@ -79,7 +81,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (vel == Vec3.ZERO && !resting && age == 0 && level().isClientSide()) vel = getDeltaMovement().scale(20); // client copy from the spawn packet
 		double upb = StrafeConfig.unitsPerBlock;
 		double g = gravity() * GRAVITY_SCALE / upb;
-		if (resting && level().noCollision(this, getBoundingBox().move(0, -0.05, 0))) resting = false; // the floor went away
+		if (resting && level().clip(new ClipContext(position(), position().add(0, -(RADIUS / upb + 0.05), 0), ClipContext.Block.COLLIDER,
+				ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS) resting = false; // the floor went away
 		if (!resting) {
 			stepTime += 0.05;
 			while (stepTime >= STEP && !resting) {
@@ -111,15 +114,18 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	/** One 1/64 s step: half the gravity before the move, half after (as Source), bounce on blocks. */
 	private void step(double g, double upb) {
 		vel = vel.add(0, -g * STEP * 0.5, 0);
-		Vec3 from = position(), to = from.add(vel.scale(STEP));
-		BlockHitResult hit = level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+		Vec3 from = position(), move = vel.scale(STEP), to = from.add(move);
+		double r = RADIUS / upb, len = move.length();
+		// the centre stays a radius away from surfaces: trace a radius further along the move
+		Vec3 reach = len > 1e-9 ? to.add(move.scale(r / len)) : to;
+		BlockHitResult hit = level().clip(new ClipContext(from, reach, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
 		if (hit.getType() == HitResult.Type.BLOCK) {
 			Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
 			double into = vel.dot(n);
 			double speed = vel.length() * upb;
 			vel = vel.subtract(n.scale(into * 2)).scale(ELASTICITY); // reflect, keep 45%
 			spinScale *= ELASTICITY;
-			setPos(hit.getLocation().add(n.scale(0.02)));
+			setPos(hit.getLocation().add(n.scale(r)));
 			if (level() instanceof ServerLevel sl && speed > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
 			if (n.y > 0.7 && vel.length() * upb < STOP_SPEED) {
 				vel = Vec3.ZERO;

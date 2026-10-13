@@ -48,6 +48,14 @@ public final class ParticleTextures {
 	private static final Map<String, Object[]> PENDING = new ConcurrentHashMap<>();
 	private static final Map<String, Boolean> LOADING = new ConcurrentHashMap<>();
 
+	/** The texture as a layer reads it: its channel mode picks the variant (alpha-only, brightness as alpha, or as is). */
+	public static String variant(String vtex, String channels) {
+		if (vtex == null) return null;
+		if ("SPRITECARD_TEXTURE_CHANNEL_MIX_A".equals(channels)) return vtex + ALPHA_ONLY;
+		if (channels != null && channels.endsWith("RGBALPHA")) return vtex + LUMA_ALPHA;
+		return vtex;
+	}
+
 	/** Suffix on a texture name: the same texture with its alpha taken from the colour's brightness (..._RGBALPHA channels). */
 	public static final String LUMA_ALPHA = "#luma";
 	/** Suffix on a texture name: the same texture with RGB forced white (alpha-only texture channel). */

@@ -54,10 +54,8 @@ public final class EffectRenderer {
 				if (!tp.b("m_bEnabled", true)) continue;
 				tex = tp.str("m_hTexture", null);
 				// alpha-only channel (smoke: shape in A, colour from a second zoomed texture): use the shape with white RGB
-				String channels = tp.str("m_nTextureChannels", "");
-				if (tex != null && channels.equals("SPRITECARD_TEXTURE_CHANNEL_MIX_A")) tex = tex + ParticleTextures.ALPHA_ONLY;
-				// ..._RGBALPHA: the colour's brightness is also the transparency (glows on an opaque black background)
-				else if (tex != null && channels.endsWith("RGBALPHA")) tex = tex + ParticleTextures.LUMA_ALPHA;
+				// alpha-only channel (smoke: shape in A) / ..._RGBALPHA (brightness is the transparency: glows on opaque black)
+				tex = ParticleTextures.variant(tex, tp.str("m_nTextureChannels", ""));
 				if (tex != null) break;
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);

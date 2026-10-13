@@ -72,8 +72,7 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 		ps.pushPose();
 		ps.mulPose(Axis.YP.rotationDegrees(-st.yaw - st.spinYaw)); // throw direction + CS2's random yaw tumble
 		if (st.resting) { // on its side, resting on the ground
-			ps.translate(0, m.halfThickness() * k, 0);
-			ps.mulPose(Axis.ZP.rotationDegrees(90));
+			ps.mulPose(Axis.ZP.rotationDegrees(90)); // its centre already rests a collision radius above the ground
 		} else ps.mulPose(Axis.XP.rotationDegrees(st.spin)); // CS2's 600 deg/s end over end
 		ps.scale(k, k, k);
 		ps.translate(-m.cx(), -m.cy(), -m.cz());

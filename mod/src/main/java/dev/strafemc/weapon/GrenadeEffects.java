@@ -33,7 +33,7 @@ public final class GrenadeEffects {
 		Map<String, Object> d = dev.strafemc.data.WeaponData.get(Grenade.HE.cls);
 		double damage = d != null && d.get("m_nDamage") instanceof Number n ? n.doubleValue() : 99;
 		double radius = damage * 3.5, sigma = radius / 3;
-		Vec3 at = g.position().add(0, 0.05, 0);
+		Vec3 at = g.position(); // the grenade's centre, kept a radius out of surfaces
 		for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, new AABB(at, at).inflate(radius / upb), LivingEntity::isAlive)) {
 			Vec3 spot = e.getBoundingBox().getCenter();
 			double dist = spot.distanceTo(at) * upb;

@@ -154,8 +154,8 @@ public final class Effects {
 		for (java.util.Map<String, Object> r : s.renderers) {
 			Object t = r.get("m_hTexture");
 			if (r.get("m_vecTexturesInput") instanceof java.util.List<?> l)
-				for (Object o : l) if (o instanceof java.util.Map<?, ?> m && m.get("m_hTexture") != null)
-					ParticleTextures.prefetch(m.get("m_hTexture") + ("SPRITECARD_TEXTURE_CHANNEL_MIX_A".equals(String.valueOf(m.get("m_nTextureChannels"))) ? ParticleTextures.ALPHA_ONLY : ""));
+				for (Object o : l) if (o instanceof java.util.Map<?, ?> m && m.get("m_hTexture") != null) // the same variant the renderer will ask for
+					ParticleTextures.prefetch(ParticleTextures.variant(String.valueOf(m.get("m_hTexture")), String.valueOf(m.get("m_nTextureChannels"))));
 			if (t != null) ParticleTextures.prefetch(t.toString());
 		}
 		for (PSystem c : s.children) prefetchTextures(c);
