@@ -20,7 +20,8 @@ public abstract class MinecraftAttackMixin {
 	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
 	private void strafemc$knifeUse(CallbackInfo ci) { // right click stabs (GunClient) while a CS knife is held
 		var p = ((Minecraft) (Object) this).player;
-		if (p != null && p.getMainHandItem().getItem() instanceof dev.strafemc.weapon.KnifeItem) ci.cancel();
+		if (p != null && (p.getMainHandItem().getItem() instanceof dev.strafemc.weapon.KnifeItem
+				|| p.getMainHandItem().getItem() instanceof dev.strafemc.weapon.GrenadeItem)) ci.cancel(); // right click: stab / underhand throw
 	}
 
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)

@@ -90,6 +90,12 @@ public final class MovementController {
 		sim.noclip = on; // like Source, leaving noclip keeps your current velocity
 	}
 
+	/** The player's velocity in units/s (Source movement's own while active), for grenade throws. */
+	public net.minecraft.world.phys.Vec3 velocityUnits(net.minecraft.client.player.LocalPlayer p) {
+		if (active) return new net.minecraft.world.phys.Vec3(sim.vx, sim.vy, sim.vz);
+		return p.getDeltaMovement().scale(20 * StrafeConfig.unitsPerBlock);
+	}
+
 	public void queueWheelJump() {
 		wheelJumps.incrementAndGet();
 	}

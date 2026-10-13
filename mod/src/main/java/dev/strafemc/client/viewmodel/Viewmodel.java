@@ -39,12 +39,21 @@ public final class Viewmodel {
 	/** mesh: the model's mesh node to draw; clips: the animations loaded (files via GunServer.clipPath). */
 	private record Weapon(String cls, String model, String mesh, String[] clips) {}
 
-	private static final Map<String, Weapon> WEAPONS = Map.of(
+	private static final Map<String, Weapon> WEAPONS = withGrenades(Map.of(
 			"weapon_ak47", new Weapon("weapon_ak47", "weapons/models/ak47/weapon_rif_ak47.vmdl_c", ".body_hd",
 					new String[] {"draw", "idle", "shoot1", "reload", "lookat01"}),
 			"weapon_knife_falchion", new Weapon("weapon_knife_falchion", "weapons/models/knife/knife_falchion/weapon_knife_falchion.vmdl_c",
 					".body_legacy", new String[] {"draw", "idle", "lookat01", "lookat02", "light_miss1", "light_miss2", "light_hit1", "light_hit2",
-					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"}));
+					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"})));
+
+	/** Every CS2 grenade: its model's ".body" mesh and the grenade animations. */
+	private static Map<String, Weapon> withGrenades(Map<String, Weapon> base) {
+		Map<String, Weapon> m = new java.util.HashMap<>(base);
+		for (dev.strafemc.weapon.Grenade g : dev.strafemc.weapon.Grenade.values())
+			m.put(g.cls, new Weapon(g.cls, g.model, ".body", new String[] {"draw", "idle", "lookat01", "pullpin", "throwcharge_high", "throwcharge_mid",
+					"throwcharge_low", "throw_overhand", "throw_underhand"}));
+		return Map.copyOf(m);
+	}
 
 	private volatile Loaded loaded;
 	/** Set after any rendering error: the vanilla hand is used from then on (logged once). */

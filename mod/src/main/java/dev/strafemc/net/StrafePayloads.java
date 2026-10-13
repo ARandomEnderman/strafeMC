@@ -94,6 +94,36 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Client -> server: throw the held grenade (strength 1 overhand, 0 underhand, 0.5 both buttons; velocity in units/s). */
+	public record Throw(float strength, float yaw, float pitch, float vx, float vy, float vz) implements CustomPacketPayload {
+		public static final Type<Throw> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "throw"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Throw> CODEC = StreamCodec.of((b, v) -> {
+			b.writeFloat(v.strength);
+			b.writeFloat(v.yaw);
+			b.writeFloat(v.pitch);
+			b.writeFloat(v.vx);
+			b.writeFloat(v.vy);
+			b.writeFloat(v.vz);
+		}, b -> new Throw(b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat()));
+
+		@Override
+		public Type<Throw> type() {
+			return TYPE;
+		}
+	}
+
+	/** Server -> client: a grenade went off here (kind = Grenade ordinal): show its effect, play its sound. */
+	public record GrenadeFx(int kind, double x, double y, double z) implements CustomPacketPayload {
+		public static final Type<GrenadeFx> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "grenade_fx"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, GrenadeFx> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, GrenadeFx::kind,
+				ByteBufCodecs.DOUBLE, GrenadeFx::x, ByteBufCodecs.DOUBLE, GrenadeFx::y, ByteBufCodecs.DOUBLE, GrenadeFx::z, GrenadeFx::new);
+
+		@Override
+		public Type<GrenadeFx> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client, every tick: the server's tick number (lag compensation: client.LagClock). */
 	public record ServerTick(int tick) implements CustomPacketPayload {
 		public static final Type<ServerTick> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "server_tick"));

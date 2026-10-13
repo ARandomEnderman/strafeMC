@@ -22,7 +22,7 @@ public final class WeaponItems {
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
-	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM;
+	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, HEGRENADE;
 	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE;
 
 	private WeaponItems() {}
@@ -33,6 +33,11 @@ public final class WeaponItems {
 		AK47 = item("weapon_ak47", p -> new GunItem(p, "weapon_ak47", "mag_ak47"));
 		MAG_AK47 = item("mag_ak47", p -> new MagazineItem(p.stacksTo(64), "weapon_ak47")); // full mags stack (partly used ones differ in rounds)
 		KNIFE_FALCHION = item("weapon_knife_falchion", p -> new KnifeItem(p, "weapon_knife_falchion"));
+		HEGRENADE = item("weapon_hegrenade", p -> new GrenadeItem(p.stacksTo(16), Grenade.HE));
+		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
+		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
+				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
+						.sized(0.1f, 0.1f).clientTrackingRange(8).updateInterval(1).noSummon().noSave().build(grenadeKey));
 		ResourceKey<net.minecraft.world.level.block.Block> rampKey = ResourceKey.create(Registries.BLOCK, id("surf_ramp"));
 		SURF_RAMP = Registry.register(BuiltInRegistries.BLOCK, rampKey, new dev.strafemc.world.SurfRampBlock(
 				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(rampKey).strength(1.5f)
@@ -55,6 +60,7 @@ public final class WeaponItems {
 			e.accept(AK47);
 			e.accept(MAG_AK47);
 			e.accept(KNIFE_FALCHION);
+			e.accept(HEGRENADE);
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
 		});

@@ -117,6 +117,7 @@ public final class GunClient {
 		if (slot != lastSlot || !ItemStack.isSameItem(held, lastHeld)) {
 			lastSlot = slot;
 			lastHeld = held;
+			grenadeState = GRENADE_IDLE;
 			sounds.clear();
 			CsSounds.stopAnim();
 			inspectUntil = 0;
@@ -138,6 +139,10 @@ public final class GunClient {
 		updateReload(p, now, dt);
 		if (held.getItem() instanceof dev.strafemc.weapon.KnifeItem k) {
 			knifeFrame(mc, p, k, now);
+			return;
+		}
+		if (held.getItem() instanceof dev.strafemc.weapon.GrenadeItem gi) {
+			grenadeFrame(mc, p, gi, now);
 			return;
 		}
 		if (!(held.getItem() instanceof GunItem g)) return;
@@ -173,6 +178,80 @@ public final class GunClient {
 	}
 
 	private long knifeNextLight, knifeNextHeavy;
+
+	// grenades: idle -> pulling the pin -> charged (held) -> thrown -> the next one is drawn
+	private static final int GRENADE_IDLE = 0, GRENADE_PULLING = 1, GRENADE_CHARGED = 2, GRENADE_THROWN = 3;
+	private int grenadeState;
+	private long pinDoneAt, throwDoneAt;
+	private float throwStrength = 1;
+	private String chargeAnim;
+	private boolean throwQueued;
+
+	/**
+	 * CS grenade handling: holding left and/or right pulls the pin (its animation and sounds); while held, the charge pose
+	 * shows the throw: left = overhand (strength 1), right = underhand (0), both = in between (0.5). Releasing throws
+	 * (if the pin is still being pulled, as soon as it's out). The server spawns the grenade.
+	 */
+	private void grenadeFrame(Minecraft mc, LocalPlayer p, dev.strafemc.weapon.GrenadeItem g, long now) {
+		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
+		if (grenadeState == GRENADE_THROWN) {
+			if (now < throwDoneAt) return;
+			grenadeState = GRENADE_IDLE; // another one in the stack (or creative): draw it
+			deployUntil = now + sec(0.4);
+			vm.play("draw");
+			schedule(g, "draw", now);
+			return;
+		}
+		if (mc.screen != null || now < deployUntil) return;
+		boolean left = mc.options.keyAttack.isDown(), right = mc.options.keyUse.isDown(), held = left || right;
+		if (held) throwStrength = left && right ? 0.5f : left ? 1f : 0f;
+		switch (grenadeState) {
+			case GRENADE_IDLE -> {
+				if (!held) return;
+				vm.play("pullpin");
+				schedule(g, "pullpin", now);
+				pinDoneAt = now + sec(clipSeconds(g, "pullpin", 0.8));
+				grenadeState = GRENADE_PULLING;
+				throwQueued = false;
+				chargeAnim = null;
+			}
+			case GRENADE_PULLING -> {
+				if (!held) throwQueued = true;
+				if (now < pinDoneAt) return;
+				grenadeState = GRENADE_CHARGED;
+				if (throwQueued) throwGrenade(p, g, now);
+			}
+			case GRENADE_CHARGED -> {
+				if (!held) {
+					throwGrenade(p, g, now);
+					return;
+				}
+				String anim = throwStrength >= 1 ? "throwcharge_high" : throwStrength <= 0 ? "throwcharge_low" : "throwcharge_mid";
+				if (!anim.equals(chargeAnim)) {
+					vm.play(anim);
+					chargeAnim = anim;
+				}
+			}
+			default -> {}
+		}
+	}
+
+	private void throwGrenade(LocalPlayer p, dev.strafemc.weapon.GrenadeItem g, long now) {
+		String anim = throwStrength >= 0.5f ? "throw_overhand" : "throw_underhand";
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
+		schedule(g, anim, now);
+		var v = dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p);
+		if (ClientPlayNetworking.canSend(StrafePayloads.Throw.TYPE))
+			ClientPlayNetworking.send(new StrafePayloads.Throw(throwStrength, p.getYRot(), p.getXRot(), (float) v.x, (float) v.y, (float) v.z));
+		grenadeState = GRENADE_THROWN;
+		throwDoneAt = now + sec(clipSeconds(g, anim, 0.5));
+	}
+
+	private static double clipSeconds(GunItem g, String anim, double fallback) {
+		String path = GunServer.clipPath(g.weaponClass, anim);
+		AnimClip c = path == null ? null : AnimClip.load(path);
+		return c != null && c.duration() > 0 ? c.duration() : fallback;
+	}
 	private int knifeSwing;
 
 	/** CS knife: left = slash, right = stab (held = repeats when ready), animation by hit/miss/backstab, server decides damage. */

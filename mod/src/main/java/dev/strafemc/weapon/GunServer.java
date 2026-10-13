@@ -119,8 +119,52 @@ public final class GunServer {
 		return switch (cls) {
 			case "weapon_ak47" -> "animation/anims/viewmodel/rifle/rifle_ak/" + anim + "_ak.vnmclip_c";
 			case "weapon_knife_falchion" -> "animation/anims/viewmodel/knife/knife_falchion/" + (anim.equals("idle") ? "idle1" : anim) + "_falchion.vnmclip_c";
-			default -> null;
+			default -> {
+				Grenade g = Grenade.of(cls);
+				yield g == null ? null : g.clipPath(anim);
+			}
 		};
+	}
+
+	/** A CS2 sound at a position for every player in range, following an entity (bounces follow the grenade). */
+	static void soundAt(net.minecraft.server.level.ServerLevel level, String event, Vec3 at, Entity follow) {
+		var msg = new dev.strafemc.net.StrafePayloads.CsSound(event, at.x, at.y, at.z, false, follow == null ? -1 : follow.getId());
+		for (ServerPlayer o : level.players())
+			if (o.distanceToSqr(at) < SOUND_SEND_RANGE * SOUND_SEND_RANGE
+					&& net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.CsSound.TYPE))
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
+	}
+
+	/**
+	 * Throws the held grenade like CS: speed = clamp(m_flThrowVelocity x 0.9, 15, 750) x (0.3 + 0.7 x strength), aimed
+	 * 10 degrees higher at the horizon (pitch -= (90 - |pitch|) x 10 / 90), from the eyes lowered by 12 units for an
+	 * underhand throw, plus 1.25 x the thrower's velocity. FLAGGED: CS:GO's throw code as we know it.
+	 */
+	public static void throwGrenade(ServerPlayer p, dev.strafemc.net.StrafePayloads.Throw t) {
+		ItemStack held = p.getMainHandItem();
+		if (!(held.getItem() instanceof GrenadeItem gi)) return;
+		State st = state(p);
+		long now = System.nanoTime();
+		if (now < st.deployUntil - 120_000_000L) return;
+		double upb = StrafeConfig.unitsPerBlock;
+		java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(gi.type.cls);
+		double throwVel = d != null && d.get("m_flThrowVelocity") instanceof Number n ? n.doubleValue() : 750;
+		double strength = Math.max(0, Math.min(1, t.strength()));
+		double speed = Math.max(15, Math.min(750, throwVel * 0.9)) * (strength * 0.7 + 0.3);
+		float pitch = Math.max(-90, Math.min(90, t.pitch()));
+		pitch -= (90 - Math.abs(pitch)) * 10f / 90f;
+		Vec3 dir = Vec3.directionFromRotation(pitch, t.yaw());
+		Vec3 src = p.getEyePosition().add(0, (strength * 12 - 12) / upb, 0);
+		Vec3 ahead = src.add(dir.scale(22 / upb));
+		HitResult b = p.level().clip(new ClipContext(src, ahead, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+		Vec3 start = b.getType() == HitResult.Type.MISS ? ahead : b.getLocation().subtract(dir.scale(2 / upb));
+		Vec3 own = new Vec3(t.vx(), t.vy(), t.vz());
+		if (own.length() > 3500) own = own.normalize().scale(3500);
+		Vec3 vel = dir.scale(speed).add(own.scale(1.25)).scale(1 / upb);
+		p.level().addFreshEntity(new GrenadeEntity(p.level(), p, held.copyWithCount(1), start, vel));
+		if (!p.getAbilities().instabuild) held.shrink(1);
+		broadcast(p, gi.type.sounds + ".Throw");
+		st.deployUntil = now + sec(0.4); // the next one comes out after the throw
 	}
 
 	static int infiniteAmmo() {

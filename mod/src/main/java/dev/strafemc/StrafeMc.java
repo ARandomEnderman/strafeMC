@@ -51,6 +51,10 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE, dev.strafemc.net.StrafePayloads.ShotCorrection.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Tagged.TYPE, dev.strafemc.net.StrafePayloads.Tagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ServerTick.TYPE, dev.strafemc.net.StrafePayloads.ServerTick.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GrenadeFx.TYPE, dev.strafemc.net.StrafePayloads.GrenadeFx.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Throw.TYPE, dev.strafemc.net.StrafePayloads.Throw.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Throw.TYPE,
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "throw", 5)) dev.strafemc.weapon.GunServer.throwGrenade(ctx.player(), msg); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
 			dev.strafemc.server.LagHistory.tick(server);
 			var msg = new dev.strafemc.net.StrafePayloads.ServerTick(server.getTickCount());

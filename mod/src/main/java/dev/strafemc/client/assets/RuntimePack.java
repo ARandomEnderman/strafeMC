@@ -36,6 +36,11 @@ public final class RuntimePack {
 			safe(() -> icon("panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.vtex_c",
 					"panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.png", tex.resolve("item/weapon_knife_falchion.png"), 128),
 					tex.resolve("item/weapon_knife_falchion.png"), Placeholders.Icon.KNIFE, 32);
+			for (dev.strafemc.weapon.Grenade g : dev.strafemc.weapon.Grenade.values()) {
+				String icon = "panorama/images/econ/weapons/base_weapons/" + g.cls + "_png";
+				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + g.cls + ".png"), 128), tex.resolve("item/" + g.cls + ".png"),
+						Placeholders.Icon.GRENADE, 32);
+			}
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32),
 					tex.resolve("item/mag_ak47.png"), Placeholders.Icon.MAG, 32);
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64),

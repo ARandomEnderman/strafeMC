@@ -20,6 +20,8 @@
 	"item.strafemc.weapon_ak47": "AK-47",
 	"item.strafemc.mag_ak47": "AK-47 Magazine",
 	"item.strafemc.weapon_knife_falchion": "Falchion Knife",
+	"item.strafemc.weapon_hegrenade": "HE Grenade",
+	"entity.strafemc.grenade": "Grenade",
 	"itemGroup.strafemc.weapons": "strafeMC Weapons",
 	"key.strafemc.reload": "Reload (CS weapons)",
 	"block.strafemc.surf_ramp": "Surf Ramp",
