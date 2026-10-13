@@ -192,6 +192,13 @@ public final class GunClient {
 	private long pinDoneAt, throwDoneAt;
 	private long pinAnimDoneAt, ragLitAt;
 	private float throwStrength = 1;
+	/**
+	 * Throw strength moves toward the buttons held (left 1, both 0.5, right 0) at this rate per second instead of
+	 * jumping, so releasing both buttons a moment apart still throws at about 0.5 (FLAGGED: CS:GO's approach rate as we
+	 * know it).
+	 */
+	private static final float STRENGTH_RATE = 2f;
+	private long strengthNs;
 	private String chargeAnim;
 	private boolean throwQueued;
 	private long chargedSince, pinPulledAt;
@@ -225,7 +232,15 @@ public final class GunClient {
 		}
 		if (mc.screen != null || now < deployUntil) return;
 		boolean left = mc.options.keyAttack.isDown(), right = mc.options.keyUse.isDown(), held = left || right;
-		if (held) throwStrength = left && right ? 0.5f : left ? 1f : 0f;
+		if (held) {
+			float target = left && right ? 0.5f : left ? 1f : 0f;
+			if (grenadeState == GRENADE_IDLE) throwStrength = target; // a new pull starts where the buttons say
+			else {
+				float step = STRENGTH_RATE * Math.min(0.1f, (now - strengthNs) / 1e9f);
+				throwStrength += Math.max(-step, Math.min(step, target - throwStrength));
+			}
+		}
+		strengthNs = now;
 		switch (grenadeState) {
 			case GRENADE_IDLE -> {
 				if (!held) return;
