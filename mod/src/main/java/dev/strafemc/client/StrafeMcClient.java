@@ -22,6 +22,9 @@ public class StrafeMcClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		StrafeConfig.load();
+		// the surf slope's outer corner as real triangles (Fabric renderer)
+		net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(ctx -> ctx.modifyBlockModelAfterBake()
+				.register((model, c) -> SurfSlopeCornerModel.wrap(model, c.state())));
 		dev.strafemc.client.assets.RuntimePack.build();
 		Cs2Bridge.INSTANCE.start();
 		dev.strafemc.weapon.GunItem.clientThread = Thread.currentThread(); // client init runs on the render thread
