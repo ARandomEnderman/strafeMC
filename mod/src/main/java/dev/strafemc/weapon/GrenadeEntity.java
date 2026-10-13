@@ -32,6 +32,12 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	private double stepTime;
 	private boolean resting;
 	private int age;
+	/** Client: spin (degrees, end over end) while flying and the flight heading (degrees) for drawing the model. */
+	public float spin, prevSpin, heading;
+
+	public boolean resting() {
+		return resting;
+	}
 
 	public GrenadeEntity(EntityType<? extends GrenadeEntity> type, Level level) {
 		super(type, level);
@@ -68,6 +74,12 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 			}
 		}
 		setDeltaMovement(resting ? Vec3.ZERO : vel.scale(0.05));
+		prevSpin = spin;
+		if (!resting) {
+			double horizontal = Math.hypot(vel.x, vel.z);
+			if (horizontal > 0.05) heading = (float) Math.toDegrees(Math.atan2(-vel.x, vel.z));
+			spin += (float) Math.min(36, vel.length() * 3); // degrees per tick, faster the faster it flies
+		}
 		age++;
 		if (level() instanceof ServerLevel sl) serverTick(sl);
 	}

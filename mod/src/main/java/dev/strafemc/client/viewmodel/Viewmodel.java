@@ -409,7 +409,7 @@ public final class Viewmodel {
 	}
 
 	/** Uploads a cached texture once (render thread). */
-	private Identifier texture(Path png, boolean opaque) {
+	Identifier texture(Path png, boolean opaque) {
 		if (png == null) return null;
 		return textures.computeIfAbsent(png, p -> {
 			try (InputStream in = Files.newInputStream(downscaledPath(p))) {
@@ -436,7 +436,7 @@ public final class Viewmodel {
 	 * CS2 textures are up to 4096 px; keep a 1024 px copy for the viewmodel. Box filter per channel without premultiplying:
 	 * CS2 color alpha is metalness, and a premultiplied (Java2D) scale wipes the color wherever it is 0.
 	 */
-	private static void downscaled(Path p) throws Exception {
+	static void downscaled(Path p) throws Exception {
 		Path out = downscaledPath(p);
 		if (Files.exists(out) || !Files.exists(p)) return;
 		BufferedImage in = ImageIO.read(p.toFile());
