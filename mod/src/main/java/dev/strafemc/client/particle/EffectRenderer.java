@@ -28,7 +28,7 @@ public final class EffectRenderer {
 
 	/** Parsed renderer definition. */
 	static final class Info {
-		final boolean sprites, trails, additive, bloomOnly, worldZ, cpNormal;
+		final boolean sprites, trails, additive, bloomOnly, worldZ, cpNormal, refract;
 		final String texture;
 		final float animationRate, lengthScale, minLength, maxLength, lengthFadeIn, constrainRatio, forwardShift;
 		final String animationType;
@@ -54,10 +54,15 @@ public final class EffectRenderer {
 				if (!tp.b("m_bEnabled", true)) continue;
 				tex = tp.str("m_hTexture", null);
 				// alpha-only channel (smoke: shape in A, colour from a second zoomed texture): use the shape with white RGB
-				if (tex != null && tp.str("m_nTextureChannels", "").equals("SPRITECARD_TEXTURE_CHANNEL_MIX_A")) tex = tex + ParticleTextures.ALPHA_ONLY;
+				String channels = tp.str("m_nTextureChannels", "");
+				if (tex != null && channels.equals("SPRITECARD_TEXTURE_CHANNEL_MIX_A")) tex = tex + ParticleTextures.ALPHA_ONLY;
+				// ..._RGBALPHA: the colour's brightness is also the transparency (glows on an opaque black background)
+				else if (tex != null && channels.endsWith("RGBALPHA")) tex = tex + ParticleTextures.LUMA_ALPHA;
 				if (tex != null) break;
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);
+			// heat shimmer: the texture is a normal map that bends the picture behind it, not something to draw (not done yet)
+			refract = p.b("m_bRefract", false) || tex != null && (tex.contains("_normal") || tex.contains("/warp"));
 			texture = tex;
 			animationRate = p.f("m_flAnimationRate", 0.1f);
 			animationType = p.behaviorVersion >= 10 || trails ? p.str("m_nAnimationType", "ANIMATION_TYPE_FIXED_RATE") : "ANIMATION_TYPE_FIXED_RATE";
@@ -102,7 +107,7 @@ public final class EffectRenderer {
 			if (s.count() == 0 || Effects.hidden(s.name)) continue;
 			for (Map<String, Object> def : s.renderers) {
 				Info in = info(s, def);
-				if (!in.sprites && !in.trails || in.bloomOnly) continue;
+				if (!in.sprites && !in.trails || in.bloomOnly || in.refract) continue;
 				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
 				if (tex == null) continue;
 				RenderType type = in.additive ? ParticleBlend.additive(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
@@ -195,7 +200,9 @@ public final class EffectRenderer {
 		Vector3f diff = new Vector3f(prev).sub(p.position);
 		if (diff.lengthSquared() == 0) return;
 		float dt = s.frameTime() > 0 ? s.frameTime() : 1 / 64f;
-		float len = in.lengthScale * p.trailLength * diff.length() / dt;
+		// the previous position moves every frame (length = speed x trail time); any other source (a spawn point kept in a
+		// scratch vector, e.g. the HE explosion's smoke blasts) is a distance already
+		float len = in.lengthScale * p.trailLength * diff.length() / (in.prevSource == Particle.POSITION_PREVIOUS ? dt : 1);
 		len *= Math.min(1, p.age / Math.max(in.lengthFadeIn, 1e-9f));
 		len = Math.max(in.minLength, Math.min(in.maxLength, len));
 		if (len == 0) return;

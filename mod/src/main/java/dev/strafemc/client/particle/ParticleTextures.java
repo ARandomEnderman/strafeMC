@@ -48,6 +48,8 @@ public final class ParticleTextures {
 	private static final Map<String, Object[]> PENDING = new ConcurrentHashMap<>();
 	private static final Map<String, Boolean> LOADING = new ConcurrentHashMap<>();
 
+	/** Suffix on a texture name: the same texture with its alpha taken from the colour's brightness (..._RGBALPHA channels). */
+	public static final String LUMA_ALPHA = "#luma";
 	/** Suffix on a texture name: the same texture with RGB forced white (alpha-only texture channel). */
 	public static final String ALPHA_ONLY = "#a";
 
@@ -82,8 +84,9 @@ public final class ParticleTextures {
 
 	private static void load(String vtex) {
 		try {
-			boolean alphaOnly = vtex.endsWith(ALPHA_ONLY);
-			String name = alphaOnly ? vtex.substring(0, vtex.length() - ALPHA_ONLY.length()) : vtex;
+			boolean alphaOnly = vtex.endsWith(ALPHA_ONLY), luma = vtex.endsWith(LUMA_ALPHA);
+			String name = alphaOnly ? vtex.substring(0, vtex.length() - ALPHA_ONLY.length())
+					: luma ? vtex.substring(0, vtex.length() - LUMA_ALPHA.length()) : vtex;
 			String c = name.endsWith("_c") ? name : name + "_c";
 			String base = c.substring(0, c.length() - "vtex_c".length());
 			Path png = StrafeConfig.cacheDir().resolve(base + "png");
@@ -94,6 +97,17 @@ public final class ParticleTextures {
 			int f = 1;
 			while (Math.max(img.getWidth(), img.getHeight()) / f > 2048) f *= 2;
 			if (f > 1) img = boxDown(img, f);
+			if (luma) {
+				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
+				for (int i = 0; i < px.length; i++) {
+					int r = px[i] >> 16 & 255, gr = px[i] >> 8 & 255, b = px[i] & 255, a = px[i] >>> 24;
+					int l = Math.max(r, Math.max(gr, b));
+					px[i] = (a * l / 255) << 24 | (px[i] & 0xFFFFFF);
+				}
+				BufferedImage w = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
+				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());
+				img = w;
+			}
 			if (alphaOnly) {
 				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
 				for (int i = 0; i < px.length; i++) px[i] |= 0xFFFFFF;

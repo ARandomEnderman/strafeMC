@@ -74,6 +74,7 @@ public final class GunClient {
 		Thread t = new Thread(() -> {
 			for (String a : new String[] {"draw", "reload", "lookat01", "shoot1"}) AnimClip.load(GunServer.clipPath("weapon_ak47", a));
 			preloadEffects("weapon_ak47");
+			dev.strafemc.client.particle.Effects.warm(dev.strafemc.weapon.GrenadeEffects.HE_EFFECT);
 			dev.strafemc.data.InspectGraph.options("knife_falchion");
 			for (String a : new String[] {"draw", "lookat01", "lookat02", "light_miss1", "light_hit1", "heavy_miss1", "heavy_hit1"})
 				AnimClip.load(GunServer.clipPath("weapon_knife_falchion", a));
@@ -136,6 +137,7 @@ public final class GunClient {
 		}
 		lastHeld = held;
 		playDue(p, now);
+		inspectHold(now);
 		updateReload(p, now, dt);
 		if (held.getItem() instanceof dev.strafemc.weapon.KnifeItem k) {
 			knifeFrame(mc, p, k, now);
@@ -520,13 +522,41 @@ public final class GunClient {
 		long now = System.nanoTime();
 		if (reloadLocked() || now < deployUntil || now < inspectUntil || now < Math.min(knifeNextLight, knifeNextHeavy)) return;
 		// which inspect (knives: lookat01 / rare lookat02) comes from the weapon's CS2 inspect graph weights
-		String anim = g instanceof dev.strafemc.weapon.KnifeItem
-				? dev.strafemc.data.InspectGraph.pick(g.weaponClass.substring("weapon_".length()), rng, "lookat01") : "lookat01";
+		if (g instanceof dev.strafemc.weapon.GrenadeItem && grenadeState != GRENADE_IDLE) return;
+		String anim = g instanceof dev.strafemc.weapon.KnifeItem ? dev.strafemc.data.InspectGraph.pick(g.weaponClass.substring("weapon_".length()), rng, "lookat01")
+				: g instanceof dev.strafemc.weapon.GrenadeItem gi ? dev.strafemc.data.InspectGraph.pick(gi.type.inspectGraph, rng, "lookat01") : "lookat01";
 		AnimClip c = AnimClip.load(GunServer.clipPath(g.weaponClass, anim));
 		if (c == null) return;
 		inspectUntil = now + sec(c.duration());
 		schedule(g, anim, now);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
+		// rare inspects: holding the key repeats the clip's WPN_INSPECT_LOOP part (CS2: the knife keeps being balanced)
+		inspectLoop = null;
+		if (!anim.equals("lookat01"))
+			for (AnimClip.Event e : c.events())
+				if (e.name().equals("WPN_INSPECT_LOOP") && e.duration() > 0.05) inspectLoop = new double[] {e.time(), e.time() + e.duration()};
+		inspectItem = g;
+		inspectAnim = anim;
+	}
+
+	private double[] inspectLoop;
+	private GunItem inspectItem;
+	private String inspectAnim;
+
+	/** While the inspect key is held at the end of a rare inspect's loop part, jump back to its start (and replay its sounds). */
+	private void inspectHold(long now) {
+		if (inspectLoop == null || inspectUntil == 0 || now >= inspectUntil) return;
+		if (!Minecraft.getInstance().options.keySwapOffhand.isDown()) return;
+		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
+		if (vm.time() < inspectLoop[1]) return;
+		double back = vm.time() - inspectLoop[0];
+		vm.seek((float) inspectLoop[0]);
+		inspectUntil += sec(back);
+		String path = GunServer.clipPath(inspectItem.weaponClass, inspectAnim);
+		AnimClip c = path == null ? null : AnimClip.load(path);
+		if (c != null) for (AnimClip.Event e : c.events())
+			if (e.isSound() && !e.name().isEmpty() && e.time() >= inspectLoop[0] && e.time() < inspectLoop[1])
+				sounds.add(new Scheduled(now + sec(e.time() - inspectLoop[0]), e.name()));
 	}
 
 	/** Schedules the sound events of a weapon animation clip at their real times. */

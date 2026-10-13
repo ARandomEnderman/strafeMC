@@ -50,7 +50,7 @@ public final class Viewmodel {
 	private static Map<String, Weapon> withGrenades(Map<String, Weapon> base) {
 		Map<String, Weapon> m = new java.util.HashMap<>(base);
 		for (dev.strafemc.weapon.Grenade g : dev.strafemc.weapon.Grenade.values())
-			m.put(g.cls, new Weapon(g.cls, g.model, ".body", new String[] {"draw", "idle", "lookat01", "pullpin", "throwcharge_high", "throwcharge_mid",
+			m.put(g.cls, new Weapon(g.cls, g.model, ".body", new String[] {"draw", "idle", "lookat01", "lookat02", "pullpin", "throwcharge_high", "throwcharge_mid",
 					"throwcharge_low", "throw_overhand", "throw_underhand"}));
 		return Map.copyOf(m);
 	}
@@ -217,6 +217,17 @@ public final class Viewmodel {
 
 	private float clipTime() {
 		return clipBase + (System.nanoTime() - clipStart) / 1e9f * rate;
+	}
+
+	/** The current clip's time in seconds. */
+	public float time() {
+		return clip == null ? 0 : clipTime();
+	}
+
+	/** Jumps the current clip to a time (no blend). */
+	public void seek(float t) {
+		clipBase = t;
+		clipStart = System.nanoTime();
 	}
 
 	/** Changes the playback rate of the current clip without a jump in time. */

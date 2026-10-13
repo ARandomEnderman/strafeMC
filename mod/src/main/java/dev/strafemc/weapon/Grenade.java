@@ -5,21 +5,24 @@ package dev.strafemc.weapon;
  * prefix. How each one goes off is in GrenadeEntity.
  */
 public enum Grenade {
-	HE("weapon_hegrenade", "grenade_hegrenade", "hegrenade", "weapons/models/grenade/hegrenade/weapon_hegrenade.vmdl_c", "HEGrenade"),
-	FLASHBANG("weapon_flashbang", "grenade_flashbang", "flashbang", "weapons/models/grenade/flashbang/weapon_flashbang.vmdl_c", "Flashbang"),
-	SMOKE("weapon_smokegrenade", "grenade_smokegrenade", "smoke", "weapons/models/grenade/smokegrenade/weapon_smokegrenade.vmdl_c", "SmokeGrenade"),
-	MOLOTOV("weapon_molotov", "grenade_molotov", "molotov", "weapons/models/grenade/molotov/weapon_molotov.vmdl_c", "Molotov"),
-	INCENDIARY("weapon_incgrenade", "grenade_incendiary", "incendiary", "weapons/models/grenade/incendiary/weapon_incendiarygrenade.vmdl_c", "IncGrenade"),
-	DECOY("weapon_decoy", "_default_grenade", "grenade", "weapons/models/grenade/decoy/weapon_decoy.vmdl_c", "Decoy");
+	HE("weapon_hegrenade", "grenade_hegrenade", "hegrenade", "weapons/models/grenade/hegrenade/weapon_hegrenade.vmdl_c", "HEGrenade", "he_grenade"),
+	FLASHBANG("weapon_flashbang", "grenade_flashbang", "flashbang", "weapons/models/grenade/flashbang/weapon_flashbang.vmdl_c", "Flashbang", "flashbang_grenade"),
+	SMOKE("weapon_smokegrenade", "grenade_smokegrenade", "smoke", "weapons/models/grenade/smokegrenade/weapon_smokegrenade.vmdl_c", "SmokeGrenade", "smoke_grenade"),
+	MOLOTOV("weapon_molotov", "grenade_molotov", "molotov", "weapons/models/grenade/molotov/weapon_molotov.vmdl_c", "Molotov", "molotov"),
+	INCENDIARY("weapon_incgrenade", "grenade_incendiary", "incendiary", "weapons/models/grenade/incendiary/weapon_incendiarygrenade.vmdl_c", "IncGrenade",
+			"incendiary_grenade"),
+	DECOY("weapon_decoy", "_default_grenade", "grenade", "weapons/models/grenade/decoy/weapon_decoy.vmdl_c", "Decoy", "decoy_grenade");
 
-	public final String cls, clipFolder, clipSuffix, model, sounds;
+	/** inspectGraph: its viewmodel_inspects graph variant (inspect odds). */
+	public final String cls, clipFolder, clipSuffix, model, sounds, inspectGraph;
 
-	Grenade(String cls, String clipFolder, String clipSuffix, String model, String sounds) {
+	Grenade(String cls, String clipFolder, String clipSuffix, String model, String sounds, String inspectGraph) {
 		this.cls = cls;
 		this.clipFolder = clipFolder;
 		this.clipSuffix = clipSuffix;
 		this.model = model;
 		this.sounds = sounds;
+		this.inspectGraph = inspectGraph;
 	}
 
 	/** The item id ("weapon_hegrenade"). */
