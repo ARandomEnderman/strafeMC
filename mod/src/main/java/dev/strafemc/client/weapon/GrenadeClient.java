@@ -41,6 +41,33 @@ public final class GrenadeClient {
 	private static final float[] CT_TINT = {75 / 255f, 127 / 255f, 155 / 255f}, T_TINT = {180 / 255f, 129 / 255f, 50 / 255f};
 	private static final float TINT = 0.3f;
 
+	/**
+	 * HE grenades blow a hole in smoke that fills back in (CS2 keeps recent HE blasts per smoke on its client).
+	 * FLAGGED: radius and timing are ours: 150 units, clear for 0.5 s, refilled from the edge by 2 s.
+	 */
+	private record Blast(Vec3 at, long time) {}
+
+	private static final List<Blast> BLASTS = new ArrayList<>();
+	private static final double BLAST_RADIUS = 150, BLAST_CLEAR = 0.5, BLAST_REFILLED = 2.0, BLAST_EDGE = 20;
+
+	/** How much of the smoke at p survives recent HE blasts (0 inside a fresh hole, 1 untouched). */
+	private static double blastKeep(Vec3 p, long now) {
+		double keep = 1, upb = StrafeConfig.unitsPerBlock;
+		List<Blast> blasts;
+		synchronized (BLASTS) {
+			if (BLASTS.isEmpty()) return 1;
+			blasts = new ArrayList<>(BLASTS);
+		}
+		for (Blast b : blasts) {
+			double t = (now - b.time) / 1e9;
+			double r = BLAST_RADIUS * (1 - smoothstep(BLAST_CLEAR, BLAST_REFILLED, t)); // the hole shrinks as it refills
+			if (r <= 0) continue;
+			double d = p.distanceTo(b.at) * upb;
+			keep = Math.min(keep, Math.max(0, Math.min(1, (d - r) / BLAST_EDGE + 1)));
+		}
+		return keep;
+	}
+
 	private static final class Fire {
 		final Vec3 at;
 		final long until;
@@ -91,9 +118,13 @@ public final class GrenadeClient {
 		Vec3 at = new Vec3(m.x(), m.y(), m.z());
 		Vec3 up = new Vec3(0, 1, 0);
 		// the flight direction: molotov bursts splash forward (their effects' +X), not towards world east
-		Vec3 fwd = Float.isNaN(m.heading()) ? null : new Vec3(Math.cos(m.heading()), 0, Math.sin(m.heading()));
+		// (the effect's +X points back along the throw: its fireballs splash forward through -X)
+		Vec3 fwd = Float.isNaN(m.heading()) ? null : new Vec3(-Math.cos(m.heading()), 0, -Math.sin(m.heading()));
 		switch (m.kind()) {
 			case GrenadeEffects.EV_HE -> {
+				synchronized (BLASTS) {
+					BLASTS.add(new Blast(at, System.nanoTime()));
+				}
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.HE_EFFECT, at, up);
 				CsSounds.play("BaseGrenade.Explode", at.x, at.y, at.z, 1.0);
 			}
@@ -228,6 +259,9 @@ public final class GrenadeClient {
 		synchronized (SMOKES) {
 			SMOKES.removeIf(s -> (now - s.start) / 1e9 > SMOKE_GONE);
 		}
+		synchronized (BLASTS) {
+			BLASTS.removeIf(b -> (now - b.time) / 1e9 > BLAST_REFILLED);
+		}
 	}
 
 	/** CS2's smoothstep: 0 at e0, 1 at e1 (either order), smooth in between. */
@@ -288,7 +322,7 @@ public final class GrenadeClient {
 				if (appear <= 0) continue;
 				int cell = v.cells[n];
 				Vec3 p = v.center(cell);
-				double dens = v.density(p);
+				double dens = v.density(p) * blastKeep(p, now);
 				if (dens <= 0) continue;
 				int h = cell * 0x9E3779B1; // a fixed per-voxel wobble so the puffs don't sit on a grid
 				float jx = ((h >>> 8 & 255) / 255f - 0.5f) * 0.3f, jy = ((h >>> 16 & 255) / 255f - 0.5f) * 0.3f, jz = ((h >>> 24) / 255f - 0.5f) * 0.3f;
@@ -302,7 +336,14 @@ public final class GrenadeClient {
 				int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(p));
 				float shade = 0.64f + ((h >>> 4 & 7) - 3.5f) * 0.012f;
 				float r = shade * (1 - TINT) + tint[0] * TINT, g = shade * (1 - TINT) + tint[1] * TINT, b = shade * (1 - TINT) + tint[2] * TINT;
-				quads.add(new float[] {x, y, z, (float) (vs * 1.25), r, alpha, Float.intBitsToFloat(light), g, b, depthAlpha});
+				// edge voxels (next to a wall or the cloud's end) get small puffs: big ones would hang through the wall
+				float size = (float) (vs * (inner ? 1.25 : 0.6));
+				if (!inner) {
+					x -= jx * vs;
+					y -= jy * vs;
+					z -= jz * vs;
+				}
+				quads.add(new float[] {x, y, z, size, r, alpha, Float.intBitsToFloat(light), g, b, depthAlpha});
 			}
 		}
 		quads.sort(Comparator.comparingDouble((float[] q) -> -(q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));

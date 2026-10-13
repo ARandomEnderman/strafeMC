@@ -493,11 +493,18 @@ public final class GunServer {
 		target.setDeltaMovement(motion);
 		target.hurtMarked = marked;
 		if (target instanceof ServerPlayer victim && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(victim, dev.strafemc.net.StrafePayloads.Tagged.TYPE)) {
-			java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(cls);
-			if (d == null) d = dev.strafemc.data.WeaponData.get("weapon_knife");
-			float large = (float) flinch(d, "m_flFlinchVelocityModifierLarge"), small = (float) flinch(d, "m_flFlinchVelocityModifierSmall");
-			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(victim, new dev.strafemc.net.StrafePayloads.Tagged(large, small));
+			tag(victim, cls);
 		}
+	}
+
+	/** CS2 tagging on a player: their client slows them by this weapon's flinch modifiers (1 = no slowdown). */
+	static void tag(ServerPlayer victim, String cls) {
+		if (!net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(victim, dev.strafemc.net.StrafePayloads.Tagged.TYPE)) return;
+		java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(cls);
+		if (d == null) d = dev.strafemc.data.WeaponData.get("weapon_knife");
+		float large = (float) flinch(d, "m_flFlinchVelocityModifierLarge"), small = (float) flinch(d, "m_flFlinchVelocityModifierSmall");
+		if (large >= 1 && small >= 1) return; // e.g. molotov fire: no slowdown
+		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(victim, new dev.strafemc.net.StrafePayloads.Tagged(large, small));
 	}
 
 	private static double flinch(java.util.Map<String, Object> d, String key) {

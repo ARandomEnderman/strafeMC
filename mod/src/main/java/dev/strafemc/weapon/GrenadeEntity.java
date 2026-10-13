@@ -125,6 +125,9 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (st.resting()) resting = true;
 	}
 
+	/** Smoke: the tick it went off (-1: not yet). */
+	private int smokedAt = -1;
+
 	/** Molotov / incendiary: CS's molotov_throw_detonate_time, after which one still in the air fizzles (FLAGGED: 2 s). */
 	static final double MOLOTOV_AIR_TIME = 2.0;
 	/** Decoy: fake gunfire for this long once it lies still, then it pops (FLAGGED: CS's 15 s). */
@@ -146,9 +149,12 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 					discard();
 				}
 			}
-			case SMOKE -> { // goes off once it has settled
-				if (restTicks == 10 || age >= 60 * 20) GrenadeZones.smoke(level, position(), getOwner());
-				if (restTicks >= 10 + GrenadeZones.SMOKE_TICKS || age >= 60 * 20) discard();
+			case SMOKE -> { // goes off once it has settled, or at once in a fire (CS2: it puts the fire out)
+				if (smokedAt < 0 && (restTicks == 10 || age >= 60 * 20 || GrenadeZones.burning(level, position()))) {
+					GrenadeZones.smoke(level, position(), getOwner());
+					smokedAt = age;
+				}
+				if (smokedAt >= 0 && age - smokedAt >= GrenadeZones.SMOKE_TICKS) discard();
 			}
 			case MOLOTOV, INCENDIARY -> { // bursts into fire on the ground, or fizzles if still flying
 				boolean inc = grenade() == Grenade.INCENDIARY;

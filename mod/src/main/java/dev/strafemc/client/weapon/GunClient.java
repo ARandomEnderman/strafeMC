@@ -249,12 +249,14 @@ public final class GunClient {
 				pinDoneAt = now + sec(pinSeconds(g, left));
 				pinAnimDoneAt = now + sec(clipSeconds(g, "pullpin", 0.8));
 				grenadeState = GRENADE_PULLING;
+				ragLitAt = 0;
 				pinPulledAt = now;
 				pinType = g.type;
 				throwQueued = false;
 				chargeAnim = null;
 			}
 			case GRENADE_PULLING -> {
+				lightRag(g, now);
 				if (!held) throwQueued = true;
 				if (now < pinDoneAt) return;
 				if (throwQueued) { // a quick tap: thrown as soon as the pin can go, the pin animation cut short
@@ -264,18 +266,13 @@ public final class GunClient {
 				if (now < pinAnimDoneAt) return; // still held: the charge pose once the pin is out
 				grenadeState = GRENADE_CHARGED;
 				chargedSince = now;
-				ragLitAt = 0;
 			}
 			case GRENADE_CHARGED -> {
 				if (!held) {
 					throwGrenade(p, g, now);
 					return;
 				}
-				// the burning rag: CS2 starts it from the 1 s charge clip each time it loops (it emits for 1.25 s, so they overlap)
-				if ((g.type == dev.strafemc.weapon.Grenade.MOLOTOV || g.type == dev.strafemc.weapon.Grenade.INCENDIARY) && now >= ragLitAt) {
-					dev.strafemc.client.particle.Effects.viewHeld("molotov", MOLOTOV_HELD, "molotov_particle");
-					ragLitAt = now + sec(clipSeconds(g, "throwcharge_low", 1.0));
-				}
+				lightRag(g, now);
 				if (now - chargedSince >= sec(PREVIEW_AFTER)) { // the path this throw would take, as the server will fly it
 					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, p.getEyePosition(), p.getYRot(), p.getXRot(), throwStrength,
 							dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p), 750);
@@ -288,6 +285,18 @@ public final class GunClient {
 				}
 			}
 			default -> {}
+		}
+	}
+
+	/**
+	 * The burning rag: CS2's particle event sits at the start of the 1 s charge clip, which its graph runs from the pin
+	 * pull on (FLAGGED: our reading), and fires each time that clip loops (the effect emits for 1.25 s, from 0.4 s, so
+	 * they overlap).
+	 */
+	private void lightRag(dev.strafemc.weapon.GrenadeItem g, long now) {
+		if (g.type == dev.strafemc.weapon.Grenade.MOLOTOV && now >= ragLitAt) { // only the molotov has a rag (the incendiary clips have no flame event)
+			dev.strafemc.client.particle.Effects.viewHeld("molotov", MOLOTOV_HELD, "molotov_particle");
+			ragLitAt = now + sec(clipSeconds(g, "throwcharge_low", 1.0));
 		}
 	}
 

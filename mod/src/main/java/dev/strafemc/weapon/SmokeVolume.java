@@ -72,7 +72,9 @@ public final class SmokeVolume {
 	/** Floods the grid from the detonation point (blocks). */
 	public static SmokeVolume fill(Level level, Vec3 origin) {
 		double s = size(), upb = StrafeConfig.unitsPerBlock, half = N / 2.0 * s;
-		Vec3 corner = new Vec3(origin.x - half, origin.y + ORIGIN_HEIGHT / upb - half, origin.z - half);
+		// snapped to half blocks, so every voxel lies inside one block: a wall's voxels are all solid, none straddles it
+		Vec3 corner = new Vec3(Math.floor((origin.x - half) / s) * s, Math.floor((origin.y + ORIGIN_HEIGHT / upb - half) / s) * s,
+				Math.floor((origin.z - half) / s) * s);
 		SmokeVolume shape = new SmokeVolume(origin, corner, new int[0], new int[0], 0, new BitSet());
 		BitSet seen = new BitSet(N * N * N), filled = new BitSet(N * N * N);
 		int[] cells = new int[N * N * N], steps = new int[N * N * N];

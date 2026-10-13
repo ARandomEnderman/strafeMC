@@ -108,6 +108,10 @@ public final class Footsteps {
 		if (vol <= 0.001f) return true;
 		mc.getSoundManager().play(new CsSoundInstance(CsAudio.id(e.pickFile()), Math.min(1f, vol), (float) e.randomPitch(),
 				x / units, sy / units, z / units));
+		// everyone near you hears it too (the server passes it on; it plays no Minecraft step sounds for you)
+		if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.MoveSound.TYPE))
+			net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
+					new dev.strafemc.net.StrafePayloads.MoveSound(event, x / units, y / units, z / units, (float) gain, 0));
 		if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] sound {} vol={} dist={}u", event, String.format("%.2f", vol), String.format("%.0f", dist));
 		return true;
 	}

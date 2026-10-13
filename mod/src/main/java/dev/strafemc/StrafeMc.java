@@ -59,6 +59,17 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.weapon.GrenadeZones.clear());
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Throw.TYPE, dev.strafemc.net.StrafePayloads.Throw.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE, dev.strafemc.net.StrafePayloads.TeamChoice.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
+		// a player's CS2 footsteps / jump / landing, passed on to the players near them (not back to them)
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, (msg, ctx) -> {
+			var p = ctx.player();
+			if (!dev.strafemc.server.RateLimit.allow(p, "movesound", 30) || p.position().distanceToSqr(msg.x(), msg.y(), msg.z()) > 16) return;
+			var out = new dev.strafemc.net.StrafePayloads.MoveSound(msg.event(), msg.x(), msg.y(), msg.z(), Math.min(1, msg.gain()), p.getId());
+			for (var o : p.level().players())
+				if (o != p && o.distanceToSqr(p) < 64 * 64 && ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.MoveSound.TYPE))
+					ServerPlayNetworking.send(o, out);
+		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE,
 				(msg, ctx) -> dev.strafemc.weapon.CsTeam.set(ctx.player(), msg.t()));
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Throw.TYPE,

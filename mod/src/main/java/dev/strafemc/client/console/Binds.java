@@ -144,7 +144,10 @@ public final class Binds {
 
 	public static void load() {
 		try {
-			if (!Files.exists(FILE)) return;
+			if (!Files.exists(FILE)) {
+				defaults();
+				return;
+			}
 			Properties p = new Properties();
 			try (Reader r = Files.newBufferedReader(FILE)) {
 				p.load(r);
@@ -155,6 +158,22 @@ public final class Binds {
 			StrafeMc.LOG.info("[strafemc] {} binds loaded", BINDS.size());
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] binds unreadable: {}", e.toString());
+		}
+		defaults();
+	}
+
+	/** CS2's default bind H = switchhands, added once (an existing H bind is kept). */
+	private static void defaults() {
+		if (StrafeConfig.switchHandsBound) return;
+		StrafeConfig.switchHandsBound = true;
+		synchronized (BINDS) {
+			BINDS.putIfAbsent("h", "switchhands");
+		}
+		save();
+		try {
+			StrafeConfig.save();
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] config not saved: {}", e.toString());
 		}
 	}
 

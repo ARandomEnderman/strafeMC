@@ -119,6 +119,19 @@ public final class GrenadeZones {
 		GrenadeEffects.event(f.level, f.incendiary ? GrenadeEffects.EV_FLAME_INC : GrenadeEffects.EV_FLAME, at);
 	}
 
+	/** Is a flame burning at this spot (within a flame's reach, at its height)? */
+	static boolean burning(ServerLevel level, Vec3 at) {
+		double reach = FLAME_REACH / StrafeConfig.unitsPerBlock;
+		for (Fire f : FIRES) {
+			if (f.level != level) continue;
+			for (Flame fl : f.flames) {
+				double dx = at.x - fl.at.x, dz = at.z - fl.at.z, dy = at.y - fl.at.y;
+				if (dx * dx + dz * dz <= reach * reach && dy > -0.6 && dy < 1.2) return true;
+			}
+		}
+		return false;
+	}
+
 	/** Is this spot on the ground inside the smoke (a voxel just above it is filled)? */
 	private static boolean covered(Smoke smoke, Vec3 spot) {
 		return smoke.volume.contains(spot.add(0, 0.25, 0));
@@ -171,6 +184,8 @@ public final class GrenadeZones {
 				e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (f.dps * 0.25 * StrafeConfig.hpScale));
 				e.setDeltaMovement(motion);
 				e.hurtMarked = marked;
+				// CS2 tagging by the fire's own weapon data: incendiary fire slows you (0.7 / 0.8), molotov fire doesn't (1 / 1)
+				if (e instanceof ServerPlayer sp) GunServer.tag(sp, f.incendiary ? Grenade.INCENDIARY.cls : Grenade.MOLOTOV.cls);
 			}
 		}
 	}

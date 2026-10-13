@@ -199,6 +199,7 @@ public final class Viewmodel {
 		boolean fromAttack = from.startsWith("shoot") || from.startsWith("light_") || from.startsWith("heavy_");
 		if (to.equals("draw")) return 0;
 		if (from.equals("pullpin") && to.startsWith("throwcharge")) return 0.1f;
+		if (to.startsWith("throw_")) return 0; // a quick throw cuts in from the pin pull (a blend swung the hand backwards)
 		if (toAttack) return 0;
 		if (to.startsWith("lookat")) return knife || from.equals("draw") ? 0.2f : 0.3f;
 		if (to.equals("idle")) {
@@ -287,6 +288,7 @@ public final class Viewmodel {
 		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
 				(float) -StrafeConfig.viewmodelOffsetY / upb);
 		Matrix4f toView = player != null ? offsets.mul(motion.offset(player)).mul(toView()) : offsets.mul(toView());
+		if (!StrafeConfig.rightHand) toView = new Matrix4f().scale(-1, 1, 1).mul(toView); // cl_righthand 0: mirrored into the left hand
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());

@@ -113,8 +113,13 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.CsSound.TYPE,
 				(msg, ctx) -> { // weapon sounds follow the player who made them
 					var src = ctx.client().level == null ? null : ctx.client().level.getEntity(msg.entity());
-					dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(), 1.0, msg.suppressed(), null);
+					// sounds on you (being hit, your own feedback) play as your own, not from a spot above your head
+					if (src != null && src == ctx.client().player) dev.strafemc.client.sound.CsSounds.playOn(msg.event(), src, 1.0, msg.suppressed());
+					else dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(), 1.0, msg.suppressed(), null);
 				});
+		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, // another player's CS2 footstep / jump / landing
+				(msg, ctx) -> dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(),
+						msg.gain() * dev.strafemc.config.StrafeConfig.movementVolume, false, null));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.BulletImpact.TYPE,
 				(msg, ctx) -> dev.strafemc.client.impact.BulletHoles.onImpact(msg));
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.BulletHoles::render);

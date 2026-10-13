@@ -95,6 +95,27 @@ public final class StrafePayloads {
 	}
 
 	/** Client -> server: throw the held grenade (strength 1 overhand, 0 underhand, 0.5 both buttons; velocity in units/s). */
+	/**
+	 * A movement sound (CS2 footstep, jump, landing) at a spot (blocks): client -> server from the player making it, then
+	 * server -> nearby clients with that player's entity id. gain: the sound's own extra scale (landings).
+	 */
+	public record MoveSound(String event, double x, double y, double z, float gain, int entity) implements CustomPacketPayload {
+		public static final Type<MoveSound> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "move_sound"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, MoveSound> CODEC = StreamCodec.of((b, v) -> {
+			b.writeUtf(v.event, 96);
+			b.writeDouble(v.x);
+			b.writeDouble(v.y);
+			b.writeDouble(v.z);
+			b.writeFloat(v.gain);
+			b.writeVarInt(v.entity);
+		}, b -> new MoveSound(b.readUtf(96), b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat(), b.readVarInt()));
+
+		@Override
+		public Type<MoveSound> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	public record TeamChoice(boolean t) implements CustomPacketPayload {
 		public static final Type<TeamChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "team"));

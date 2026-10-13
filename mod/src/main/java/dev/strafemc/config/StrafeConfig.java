@@ -86,6 +86,10 @@ public final class StrafeConfig {
 	public static boolean velGraph = false;
 	/** Your CS side, "ct" or "t" (console quick menu, strafemc_team): footstep set and smoke colour, later your agent. */
 	public static String team = "ct";
+	/** CS2's cl_righthand: the viewmodel in the right hand (false: mirrored into the left). switchhands flips it. */
+	public static boolean rightHand = true;
+	/** H was bound to switchhands once (like CS2's default), so a removed or changed H bind stays as the player left it. */
+	public static boolean switchHandsBound = false;
 	/** Show the raw CS2 server log in the console (otherwise only replies to your own commands). */
 	public static boolean showServerLog = false;
 	/** Verbose movement/bridge logging. */
@@ -131,6 +135,8 @@ public final class StrafeConfig {
 			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
 			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
+			rightHand = Boolean.parseBoolean(p.getProperty("rightHand", String.valueOf(rightHand)));
+			switchHandsBound = Boolean.parseBoolean(p.getProperty("switchHandsBound", String.valueOf(switchHandsBound)));
 			for (int i = 0; i < 5; i++) {
 				String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
 				grenadeCrosshair[i] = Boolean.parseBoolean(p.getProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i])));
@@ -175,6 +181,8 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
 		p.setProperty("team", team);
+		p.setProperty("rightHand", String.valueOf(rightHand));
+		p.setProperty("switchHandsBound", String.valueOf(switchHandsBound));
 		for (int i = 0; i < 5; i++) {
 			String k = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
 			p.setProperty("grenadeCrosshair." + k, String.valueOf(grenadeCrosshair[i]));
