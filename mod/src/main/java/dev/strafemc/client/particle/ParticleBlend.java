@@ -53,12 +53,35 @@ public final class ParticleBlend {
 			.withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
 			.withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
 			.build());
-	private static final Map<Identifier, RenderType> TYPES = new ConcurrentHashMap<>(), DEPTH_TYPES = new ConcurrentHashMap<>();
+	/**
+	 * Smoke puffs: normal translucent blending, lit by the world, without the 0.1 alpha cutout of Minecraft's
+	 * entity_translucent (that cut each puff's soft edge off in a hard ring, visible as circles inside the smoke).
+	 */
+	private static final RenderPipeline SMOKE = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+			.withLocation("pipeline/strafemc_smoke")
+			.withVertexShader("core/entity")
+			.withFragmentShader("core/entity")
+			.withShaderDefine("NO_OVERLAY")
+			.withShaderDefine("NO_CARDINAL_LIGHTING")
+			.withSampler("Sampler0")
+			.withSampler("Sampler2")
+			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+			.withCull(false)
+			.withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+			.withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+			.build());
+	private static final Map<Identifier, RenderType> TYPES = new ConcurrentHashMap<>(), DEPTH_TYPES = new ConcurrentHashMap<>(),
+			SMOKE_TYPES = new ConcurrentHashMap<>();
 
 	private ParticleBlend() {}
 
 	/** Called at client start so the pipeline is registered with Minecraft's own (they're compiled up front). */
 	public static void init() {}
+
+	public static RenderType smoke(Identifier texture) {
+		return SMOKE_TYPES.computeIfAbsent(texture, t -> RenderType.create("strafemc_smoke",
+				RenderSetup.builder(SMOKE).withTexture("Sampler0", t).useLightmap().createRenderSetup()));
+	}
 
 	public static RenderType depthOnly(Identifier texture) {
 		return DEPTH_TYPES.computeIfAbsent(texture, t -> RenderType.create("strafemc_smoke_depth",

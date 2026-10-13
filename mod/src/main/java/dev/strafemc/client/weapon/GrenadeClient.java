@@ -289,7 +289,7 @@ public final class GrenadeClient {
 		PoseStack.Pose pose = ctx.poseStack().last();
 		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
 		for (int pass = 0; pass < 2; pass++) {
-			net.minecraft.client.renderer.rendertype.RenderType type = pass == 0 ? RenderTypes.entityTranslucent(puff())
+			net.minecraft.client.renderer.rendertype.RenderType type = pass == 0 ? dev.strafemc.client.particle.ParticleBlend.smoke(puff())
 					: dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
 			com.mojang.blaze3d.vertex.VertexConsumer vc = buffers.getBuffer(type);
 			for (float[] q : quads) {
