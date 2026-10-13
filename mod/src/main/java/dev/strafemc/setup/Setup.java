@@ -45,7 +45,7 @@ public final class Setup {
 		m.put("graphs", 1);
 		m.put("models", 2); // 2: AO baked into the colour + metalness mask
 		m.put("icons", 2); // 2: armor icons
-		m.put("effects", 4); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov
+		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
 		return m;
 	}

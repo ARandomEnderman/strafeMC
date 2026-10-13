@@ -146,6 +146,7 @@ public final class GrenadeClient {
 				// FLAGGED: CS2's "failed to start" sounds for both an air burst and landing in a smoke
 				CsSounds.play(m.kind() == GrenadeEffects.EV_FIZZLE_INC ? "IncGrenade.StartFailed" : "Molotov.StartFailed", at.x, at.y, at.z, 1.0);
 			}
+			case GrenadeEffects.EV_DECOY_SHOT -> dev.strafemc.client.particle.Effects.at(GrenadeEffects.DECOY_SHOT_EFFECT, at, up);
 			case GrenadeEffects.EV_DECOY_POP -> CsSounds.play("BaseGrenade.Explode", at.x, at.y, at.z, 0.4);
 			default -> {}
 		}
@@ -178,8 +179,28 @@ public final class GrenadeClient {
 	}
 
 	/** Every client tick: flames over burning areas; finished smokes and fires dropped. */
+	/** Decoys lying on the ground (entity id) with their sparks running. */
+	private static final java.util.Set<Integer> DECOYS = new java.util.HashSet<>();
+
+	/** CS2's sparks under a lying decoy: started when it settles, stopped when it's gone (it pops) or moves again. */
+	private static void decoySparks(Minecraft mc) {
+		java.util.Set<Integer> now = new java.util.HashSet<>();
+		for (var e : mc.level.entitiesForRendering())
+			if (e instanceof dev.strafemc.weapon.GrenadeEntity g && g.grenade() == dev.strafemc.weapon.Grenade.DECOY && g.resting()) {
+				now.add(g.getId());
+				if (DECOYS.add(g.getId()))
+					dev.strafemc.client.particle.Effects.atHeld("decoy" + g.getId(), GrenadeEffects.DECOY_GROUND_EFFECT, g.position(), new Vec3(0, 1, 0));
+			}
+		DECOYS.removeIf(id -> {
+			if (now.contains(id)) return false;
+			dev.strafemc.client.particle.Effects.stopHeld("decoy" + id);
+			return true;
+		});
+	}
+
 	public static void tick(Minecraft mc) {
 		if (mc.level == null || mc.isPaused()) return;
+		decoySparks(mc);
 		long now = System.nanoTime();
 		double r = FLAME_REACH / StrafeConfig.unitsPerBlock;
 		Random rnd = new Random();
@@ -330,6 +351,7 @@ public final class GrenadeClient {
 
 	public static void clear() {
 		preview = null;
+		DECOYS.clear();
 		synchronized (FIRE_SOUNDS) {
 			FIRE_SOUNDS.clear();
 		}

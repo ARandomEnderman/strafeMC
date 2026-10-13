@@ -28,15 +28,20 @@ public final class GrenadeEffects {
 			// all the flames, which we don't simulate)
 			MOLOTOV_FLAME_EFFECT = "particles/inferno_fx/molotov_fire01.vpcf",
 			INCENDIARY_FLAME_EFFECT = "particles/inferno_fx/incendiary_fire01.vpcf",
-			MOLOTOV_HELD_EFFECT = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf";
+			MOLOTOV_HELD_EFFECT = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf",
+			// a decoy lying on the ground: sparks and smoke while it lies there (CS2's client), a burst with each fake shot (server)
+			DECOY_GROUND_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect.vpcf",
+			DECOY_SHOT_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect_shot.vpcf";
 	/** Every CS2 effect the grenades use (the setup converts these). */
 	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT,
-			MOLOTOV_FLAME_EFFECT, INCENDIARY_FLAME_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT};
+			MOLOTOV_FLAME_EFFECT, INCENDIARY_FLAME_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT,
+			DECOY_GROUND_EFFECT, DECOY_SHOT_EFFECT};
 
 	/** What happened, for the clients (GrenadeFx.kind). */
 	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,
 			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9, EV_FLAME = 10, EV_FLAME_INC = 11,
-			EV_SMOKE_T = 12; // a T's smoke (EV_SMOKE: CT): CS2 tints them differently
+			EV_SMOKE_T = 12, // a T's smoke (EV_SMOKE: CT): CS2 tints them differently
+			EV_DECOY_SHOT = 13;
 	/** How far away players still get the effect message (blocks). */
 	private static final double FX_RANGE = 160;
 
@@ -144,6 +149,7 @@ public final class GrenadeEffects {
 		WeaponStats w = GunServer.stats(g.decoyGun);
 		if (w == null) w = GunServer.stats("weapon_ak47");
 		if (w != null && w.shootSound() != null) GunServer.soundAt(level, w.shootSound(), g.position(), g);
+		event(level, EV_DECOY_SHOT, g.position());
 	}
 
 	/** Tells nearby players what a grenade did here (EV_*), for its effect and sound (client: client.weapon.GrenadeClient). */
