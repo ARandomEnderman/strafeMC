@@ -1,0 +1,26 @@
+{
+ "type": "minecraft:block",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:surf_ramp_lying"
+    }
+   ],
+   "conditions": [
+    {
+     "condition": "minecraft:block_state_property",
+     "block": "strafemc:surf_ramp_lying",
+     "properties": {
+      "part": "foot"
+     }
+    },
+    {
+     "condition": "minecraft:survives_explosion"
+    }
+   ]
+  }
+ ]
+}

@@ -43,6 +43,14 @@ public final class McWorld implements SourceMovement.World {
 				&& st.getValue(dev.strafemc.world.SurfRampBlock.FACING) == f;
 	}
 
+	/** The low half of a lying surf ramp whose low half is at (x, y, z), facing f (part of the same row)? */
+	private boolean sameLying(int x, int y, int z, Direction f) {
+		BlockState st = level.getBlockState(new BlockPos(x, y, z));
+		return st.getBlock() instanceof dev.strafemc.world.SurfRampLyingBlock
+				&& st.getValue(dev.strafemc.world.SurfRampLyingBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.FOOT
+				&& st.getValue(dev.strafemc.world.SurfRampLyingBlock.FACING) == f;
+	}
+
 	/** Solids touching the given box (Hammer units). */
 	private List<HullTrace.Solid> solids(double x0, double y0, double z0, double x1, double y1, double z1) {
 		List<HullTrace.Solid> out = new ArrayList<>();
@@ -69,6 +77,23 @@ public final class McWorld implements SourceMovement.World {
 							while (hi < MAX_RAMP_ROW && sameRamp(m, bx + (hi + 1) * ax, baseY, bz + (hi + 1) * az, f)) hi++;
 							for (int k = lo; k <= hi; k++) ramps.add(BlockPos.asLong(bx + k * ax, baseY, bz + k * az));
 							out.add(HullTrace.Solid.ramp((bx + lo * ax) * s, baseY * s, (bz + lo * az) * s, (hi - lo + 1) * s, s, 2 * s,
+									f.getStepX(), f.getStepZ()));
+						}
+						continue;
+					}
+					if (st.getBlock() instanceof dev.strafemc.world.SurfRampLyingBlock) {
+						// one prism over both halves (two deep, one high), merged along the row like the tall ramp
+						Direction f = st.getValue(dev.strafemc.world.SurfRampLyingBlock.FACING);
+						boolean foot = st.getValue(dev.strafemc.world.SurfRampLyingBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.FOOT;
+						int fx = foot ? bx : bx - f.getStepX(), fz = foot ? bz : bz - f.getStepZ(); // the low half
+						if (!ramps.contains(BlockPos.asLong(fx, by, fz))) {
+							int ax = f.getStepX() != 0 ? 0 : 1, az = 1 - ax;
+							int lo = 0, hi = 0;
+							while (lo > -MAX_RAMP_ROW && sameLying(fx + (lo - 1) * ax, by, fz + (lo - 1) * az, f)) lo--;
+							while (hi < MAX_RAMP_ROW && sameLying(fx + (hi + 1) * ax, by, fz + (hi + 1) * az, f)) hi++;
+							for (int k = lo; k <= hi; k++) ramps.add(BlockPos.asLong(fx + k * ax, by, fz + k * az));
+							int ox = Math.min(fx, fx + f.getStepX()), oz = Math.min(fz, fz + f.getStepZ()); // footprint's low corner
+							out.add(HullTrace.Solid.ramp((ox + lo * ax) * s, by * s, (oz + lo * az) * s, (hi - lo + 1) * s, 2 * s, s,
 									f.getStepX(), f.getStepZ()));
 						}
 						continue;

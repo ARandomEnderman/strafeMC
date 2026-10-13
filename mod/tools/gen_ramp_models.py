@@ -63,4 +63,9 @@ write('surf_ramp_lower', side_slices(0, 8, 64, lambda x: 2 * x, 0) + [back_box(8
 write('surf_ramp_upper', side_slices(8, 16, 64, lambda x: 2 * x, 16) + [back_plate(), top_face(8, 0, half_len, round(ramp_angle, 4))])
 # surf slope: 45 degrees over one block
 write('surf_slope', side_slices(0, 16, 64, lambda x: x, 0) + [back_plate(), top_face(0, 0, 16 * math.sqrt(2), 45)])
+lying_angle = math.degrees(math.atan2(1, 2))  # 26.5651: one up per two across
+lying_len = math.hypot(16, 8)
+# lying surf ramp (one high, two deep): low half rises 0..8, high half 8..16; the high half ends in the full back face
+write('surf_ramp_lying_low', side_slices(0, 16, 64, lambda x: x / 2, 0) + [top_face(0, 0, lying_len, round(lying_angle, 4))])
+write('surf_ramp_lying_high', side_slices(0, 16, 64, lambda x: 8 + x / 2, 0) + [back_plate(), top_face(0, 8, lying_len, round(lying_angle, 4))])
 print('ok')

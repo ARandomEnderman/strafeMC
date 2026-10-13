@@ -1,0 +1,34 @@
+{
+ "variants": {
+  "facing=east,part=foot": {
+   "model": "strafemc:block/surf_ramp_lying_low"
+  },
+  "facing=east,part=head": {
+   "model": "strafemc:block/surf_ramp_lying_high"
+  },
+  "facing=south,part=foot": {
+   "model": "strafemc:block/surf_ramp_lying_low",
+   "y": 90
+  },
+  "facing=south,part=head": {
+   "model": "strafemc:block/surf_ramp_lying_high",
+   "y": 90
+  },
+  "facing=west,part=foot": {
+   "model": "strafemc:block/surf_ramp_lying_low",
+   "y": 180
+  },
+  "facing=west,part=head": {
+   "model": "strafemc:block/surf_ramp_lying_high",
+   "y": 180
+  },
+  "facing=north,part=foot": {
+   "model": "strafemc:block/surf_ramp_lying_low",
+   "y": 270
+  },
+  "facing=north,part=head": {
+   "model": "strafemc:block/surf_ramp_lying_high",
+   "y": 270
+  }
+ }
+}

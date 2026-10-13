@@ -22,11 +22,11 @@ public final class WeaponItems {
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
-	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, HEGRENADE;
+	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item KEVLAR, ASSAULTSUIT;
-	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE;
+	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING;
 
 	private WeaponItems() {}
 
@@ -58,6 +58,13 @@ public final class WeaponItems {
 		ResourceKey<Item> slopeItem = ResourceKey.create(Registries.ITEM, id("surf_slope"));
 		SURF_SLOPE_ITEM = Registry.register(BuiltInRegistries.ITEM, slopeItem,
 				new net.minecraft.world.item.BlockItem(SURF_SLOPE, new Item.Properties().setId(slopeItem).useBlockDescriptionPrefix()));
+		ResourceKey<net.minecraft.world.level.block.Block> lyingKey = ResourceKey.create(Registries.BLOCK, id("surf_ramp_lying"));
+		SURF_RAMP_LYING = Registry.register(BuiltInRegistries.BLOCK, lyingKey, new dev.strafemc.world.SurfRampLyingBlock(
+				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(lyingKey).strength(1.5f)
+						.sound(net.minecraft.world.level.block.SoundType.STONE).noOcclusion()));
+		ResourceKey<Item> lyingItem = ResourceKey.create(Registries.ITEM, id("surf_ramp_lying"));
+		SURF_RAMP_LYING_ITEM = Registry.register(BuiltInRegistries.ITEM, lyingItem,
+				new net.minecraft.world.item.BlockItem(SURF_RAMP_LYING, new Item.Properties().setId(lyingItem).useBlockDescriptionPrefix()));
 		ResourceKey<CreativeModeTab> tab = ResourceKey.create(Registries.CREATIVE_MODE_TAB, id("weapons"));
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, tab, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
 				.title(Component.translatable("itemGroup.strafemc.weapons"))
@@ -71,6 +78,7 @@ public final class WeaponItems {
 			e.accept(ASSAULTSUIT);
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
+			e.accept(SURF_RAMP_LYING_ITEM);
 		});
 	}
 
