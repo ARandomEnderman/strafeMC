@@ -21,8 +21,9 @@ CS2 install.
 ![Surfing along a surf ramp](https://cdn.modrinth.com/data/xu9Tirxr/images/dbab36874421bb809d5ec2c0076cbbed5eec2a02.jpeg)
 
 - Air strafing, bunnyhopping and surfing that follow CS2's rules, including its sub-tick input
+- CS2's 2026 jump (a weaker jump right after landing), with the pre-2026 jump as a quick setting
 - Stairs climb as smooth ramps; ladders, water, ice, slime and soul sand all work with it
-- Surf ramp and surf slope blocks (with corners) for building your own maps
+- Surf ramp, lying surf ramp and surf slope blocks (with corners) for building your own maps
 - CS2 fall damage, plus an optional half-block step for slabs
 
 ### Weapons
@@ -34,11 +35,23 @@ CS2 install.
 
 - The AK-47, the Falchion knife and every grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real first-person models, animations and sounds
 - Spray patterns, recoil, inaccuracy, reloads (including silent reload), inspects and rare inspects (hold to keep them going)
-- Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs; wallbangs through thin blocks
+- Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs; wallbangs through blocks with CS2's penetration rules per material
 - CS2 tagging (hits slow you instead of knocking you back), kevlar and helmets with CS armor rules, hit sounds and the dink
-- Grenades with CS throws, physics, spin and a trajectory preview; smokes put out fires, and molotov-killed chickens drop cooked chicken
+- Grenades with CS throws (left, right and both buttons), physics, spin, a trajectory preview and CS2's lineup crosshair
+- Volumetric smokes that fill rooms and corridors, in T and CT colours; HE grenades blow holes in them, and molotovs pop into flames that smokes put out
+- Flashbangs with CS2's blind strength and fade (depends on distance and where you look), decoys that fake gunfire
+- `sv_rethrow_last_grenade` for practising lineups
+- The Medi-Shot
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects per block material
-- Viewmodel bob and sway, viewmodel_fov and viewmodel_offset_x/y/z
+- Viewmodel bob and sway, viewmodel_fov, viewmodel_offset_x/y/z and switching hands (`switchhands`, H by default)
+
+### Gloves and buy menu
+- Every CS2 glove type in every finish, always Factory New, drawn on your first-person arms (right-click to wear).
+  Finishes are rebuilt on your PC from your own CS2 files; they're cosmetic only and have nothing to do with your Steam inventory
+- CS2's buy menu (B): gear, rifles and grenades in CS2's layout and loadout order, with CS2's grenade limits.
+  Operators choose who can buy (nobody, creative players or everyone) and for how long after respawning
+- CS2's killfeed, with headshot, wallbang, through-smoke, no-scope, blind and in-air icons
+- Pick T or CT in the console's quick menu: smoke colours and footsteps follow your side
 
 ### Console and multiplayer
 - In-game developer console (default key: the one under Esc, left of 1) with autocomplete, binds, movement presets, speed and jump stats
