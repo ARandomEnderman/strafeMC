@@ -63,6 +63,46 @@ write('surf_ramp_lower', side_slices(0, 8, 64, lambda x: 2 * x, 0) + [back_box(8
 write('surf_ramp_upper', side_slices(8, 16, 64, lambda x: 2 * x, 16) + [back_plate(), top_face(8, 0, half_len, round(ramp_angle, 4))])
 # surf slope: 45 degrees over one block
 write('surf_slope', side_slices(0, 16, 64, lambda x: x, 0) + [back_plate(), top_face(0, 0, 16 * math.sqrt(2), 45)])
+
+
+def outer_corner(n=32):
+    """Outer corner of two 45 degree slopes (the pyramid tip at x = 16, z = 0): height = min(x, 16 - z).
+    Each of the two triangular slope faces is a stack of thin tilted strips (models can't draw triangles), each strip
+    ending just short of the ridge so neither face pokes through the other; the two high sides are thin plates."""
+    els = []
+    r2 = math.sqrt(2)
+    d = 16 / n
+    for i in range(n):
+        a0, a1 = i * d, (i + 1) * d
+        mid = round((a0 + a1) / 2, 4)
+        # face rising toward +x (y = x), where x <= 16 - z: strips across z, each running from x = 0 to the ridge
+        run = 16 - a1
+        if run > 0:
+            els.append({"from": [0, -0.5, round(a0, 4)], "to": [round(run * r2, 4), 0, round(a1, 4)],
+                        "faces": {"up": {"texture": "#t", "uv": [0, round(a0, 4), round(run, 4), round(a1, 4)]},
+                                  "down": {"texture": "#t", "uv": [0, round(a0, 4), round(run, 4), round(a1, 4)]}},
+                        "rotation": {"origin": [0, 0, mid], "axis": "z", "angle": 45}})
+        # face rising toward -z (y = 16 - z), where 16 - z <= x: strips across x, each running from z = 16 to the ridge
+        run = a0
+        if run > 0:
+            els.append({"from": [round(a0, 4), -0.5, round(16 - run * r2, 4)], "to": [round(a1, 4), 0, 16],
+                        "faces": {"up": {"texture": "#t", "uv": [round(a0, 4), round(16 - run, 4), round(a1, 4), 16]},
+                                  "down": {"texture": "#t", "uv": [round(a0, 4), round(16 - run, 4), round(a1, 4), 16]}},
+                        "rotation": {"origin": [mid, 0, 16], "axis": "x", "angle": 45}})
+        # east side (x = 16): height 16 - z; north side (z = 0): height x
+        h = 16 - a1
+        if h > 0:
+            els.append({"from": [15.99, 0, round(a0, 4)], "to": [16, round(h, 4), round(a1, 4)],
+                        "faces": {"east": {"texture": "#t", "uv": [round(16 - a1, 4), round(16 - h, 4), round(16 - a0, 4), 16]}}})
+        h = a0
+        if h > 0:
+            els.append({"from": [round(a0, 4), 0, 0], "to": [round(a1, 4), round(h, 4), 0.01],
+                        "faces": {"north": {"texture": "#t", "uv": [round(16 - a1, 4), round(16 - h, 4), round(16 - a0, 4), 16]}}})
+    els.append({"from": [0, 0, 0], "to": [16, 0.01, 16], "faces": {"down": {"texture": "#t", "uv": [0, 0, 16, 16]}}})
+    return els
+
+
+write('surf_slope_outer', outer_corner())
 lying_angle = math.degrees(math.atan2(1, 2))  # 26.5651: one up per two across
 lying_len = math.hypot(16, 8)
 # lying surf ramp (one high, two deep): low half rises 0..8, high half 8..16; the high half ends in the full back face
