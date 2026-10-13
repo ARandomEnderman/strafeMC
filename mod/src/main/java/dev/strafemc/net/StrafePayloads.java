@@ -112,6 +112,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: you were flashed for this many seconds (client: white-out, then fade). */
+	public record Flashed(float seconds) implements CustomPacketPayload {
+		public static final Type<Flashed> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "flashed"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Flashed> CODEC = StreamCodec.composite(ByteBufCodecs.FLOAT, Flashed::seconds, Flashed::new);
+
+		@Override
+		public Type<Flashed> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: a grenade went off here (kind = Grenade ordinal): show its effect, play its sound. */
 	public record GrenadeFx(int kind, double x, double y, double z) implements CustomPacketPayload {
 		public static final Type<GrenadeFx> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "grenade_fx"));

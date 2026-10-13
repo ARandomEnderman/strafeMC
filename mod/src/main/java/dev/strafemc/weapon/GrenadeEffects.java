@@ -17,7 +17,17 @@ import java.util.Map;
 /** What grenades do when they go off (server), and the effect message every nearby player gets. */
 public final class GrenadeEffects {
 	/** Explosion effects and sounds per grenade (effect files from CS2, converted by the setup). */
-	public static final String HE_EFFECT = "particles/explosions_fx/explosion_hegrenade.vpcf";
+	public static final String HE_EFFECT = "particles/explosions_fx/explosion_hegrenade.vpcf",
+			FLASH_EFFECT = "particles/explosions_fx/explosion_flashbang.vpcf",
+			MOLOTOV_GROUND_EFFECT = "particles/inferno_fx/explosion_molotov_ground.vpcf",
+			MOLOTOV_AIR_EFFECT = "particles/inferno_fx/explosion_molotov_air.vpcf",
+			INCENDIARY_AIR_EFFECT = "particles/inferno_fx/explosion_incend_air.vpcf";
+	/** Every CS2 effect the grenades use (the setup converts these). */
+	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT};
+
+	/** What happened, for the clients (GrenadeFx.kind). */
+	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,
+			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9;
 	/** How far away players still get the effect message (blocks). */
 	private static final double FX_RANGE = 160;
 
@@ -51,12 +61,42 @@ public final class GrenadeEffects {
 			}
 			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] HE hit {} at {}u: {} CS dmg", e.getType().toShortString(), Math.round(dist), String.format("%.1f", dmg));
 		}
-		effect(level, Grenade.HE, at);
+		event(level, EV_HE, at);
 	}
 
-	/** Tells nearby players to show the grenade's effect and play its sound (client: client.weapon.GrenadeClient). */
-	static void effect(ServerLevel level, Grenade type, Vec3 at) {
-		var msg = new StrafePayloads.GrenadeFx(type.ordinal(), at.x, at.y, at.z);
+	/**
+	 * Flashbang: every player who can see the flash (line of sight to their eyes) is blinded; looking at it and being
+	 * close make it longer. FLAGGED (CS:GO-like, not in CS2's data): up to 4.9 s, x1 within 60 degrees of the view,
+	 * x0.6 to the side, x0.25 behind; full within 800 units, fading out to 2400.
+	 */
+	static void flash(ServerLevel level, GrenadeEntity g) {
+		Vec3 at = g.position();
+		double upb = StrafeConfig.unitsPerBlock;
+		for (ServerPlayer p : level.players()) {
+			Vec3 eye = p.getEyePosition();
+			double d = eye.distanceTo(at) * upb;
+			if (d > 2400) continue;
+			if (level.clip(new ClipContext(at, eye, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, g)).getType() != HitResult.Type.MISS) continue;
+			double dot = p.getLookAngle().dot(at.subtract(eye).normalize());
+			double angle = dot > 0.5 ? 1 : dot > -0.3 ? 0.6 : 0.25;
+			double dist = d < 800 ? 1 : Math.max(0, 1 - (d - 800) / 1600);
+			double seconds = 4.9 * angle * dist;
+			if (seconds < 0.25) continue;
+			if (ServerPlayNetworking.canSend(p, StrafePayloads.Flashed.TYPE)) ServerPlayNetworking.send(p, new StrafePayloads.Flashed((float) seconds));
+		}
+		event(level, EV_FLASH, at);
+	}
+
+	/** The decoy's fake gunfire: the thrower's last held gun's shot sound from the grenade, heard like a real shot. */
+	static void decoyShot(ServerLevel level, GrenadeEntity g) {
+		WeaponStats w = GunServer.stats(g.decoyGun);
+		if (w == null) w = GunServer.stats("weapon_ak47");
+		if (w != null && w.shootSound() != null) GunServer.soundAt(level, w.shootSound(), g.position(), g);
+	}
+
+	/** Tells nearby players what a grenade did here (EV_*), for its effect and sound (client: client.weapon.GrenadeClient). */
+	static void event(ServerLevel level, int kind, Vec3 at) {
+		var msg = new StrafePayloads.GrenadeFx(kind, at.x, at.y, at.z);
 		for (ServerPlayer p : level.players())
 			if (p.distanceToSqr(at) < FX_RANGE * FX_RANGE && ServerPlayNetworking.canSend(p, StrafePayloads.GrenadeFx.TYPE)) ServerPlayNetworking.send(p, msg);
 	}

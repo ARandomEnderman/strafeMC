@@ -45,7 +45,7 @@ public final class Setup {
 		m.put("graphs", 1);
 		m.put("models", 1);
 		m.put("icons", 1);
-		m.put("effects", 2); // 2: grenade explosion effects
+		m.put("effects", 3); // 2: HE explosion, 3: all grenade effects
 		m.put("decals", 1);
 		return m;
 	}
@@ -197,7 +197,7 @@ public final class Setup {
 		if (Files.isDirectory(clips)) try (Stream<Path> s = Files.walk(clips)) {
 			for (Path p : s.filter(x -> x.toString().endsWith(".DATA.kv3")).toList()) collect(Files.readString(p), ".vpcf", roots);
 		}
-		roots.add(dev.strafemc.weapon.GrenadeEffects.HE_EFFECT);
+		roots.addAll(java.util.List.of(dev.strafemc.weapon.GrenadeEffects.EFFECTS));
 		Set<String> done = new LinkedHashSet<>(), textures = new LinkedHashSet<>();
 		Set<String> frontier = new LinkedHashSet<>();
 		for (String r : roots) frontier.add(compiled(r));

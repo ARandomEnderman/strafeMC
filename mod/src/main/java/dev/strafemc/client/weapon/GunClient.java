@@ -74,7 +74,7 @@ public final class GunClient {
 		Thread t = new Thread(() -> {
 			for (String a : new String[] {"draw", "reload", "lookat01", "shoot1"}) AnimClip.load(GunServer.clipPath("weapon_ak47", a));
 			preloadEffects("weapon_ak47");
-			dev.strafemc.client.particle.Effects.warm(dev.strafemc.weapon.GrenadeEffects.HE_EFFECT);
+			for (String fx : dev.strafemc.weapon.GrenadeEffects.EFFECTS) dev.strafemc.client.particle.Effects.warm(fx);
 			dev.strafemc.data.InspectGraph.options("knife_falchion");
 			for (String a : new String[] {"draw", "lookat01", "lookat02", "light_miss1", "light_hit1", "heavy_miss1", "heavy_hit1"})
 				AnimClip.load(GunServer.clipPath("weapon_knife_falchion", a));

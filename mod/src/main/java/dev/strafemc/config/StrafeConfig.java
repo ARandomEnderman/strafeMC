@@ -34,6 +34,8 @@ public final class StrafeConfig {
 	public static boolean setupNeverAsk = false;
 	/** Advanced: start CS2's dedicated server from the player's CS2 folder when they open their own world. */
 	public static boolean hostServer = false;
+	/** The "run a CS2 server with your worlds?" question was answered (asked on the first singleplayer world). */
+	public static boolean hostAsked = false;
 
 	/** Master switch for Source movement. */
 	public static boolean movementEnabled = true;
@@ -130,6 +132,7 @@ public final class StrafeConfig {
 			launcherPath = p.getProperty("launcherPath", launcherPath);
 			setupNeverAsk = Boolean.parseBoolean(p.getProperty("setupNeverAsk", String.valueOf(setupNeverAsk)));
 			hostServer = Boolean.parseBoolean(p.getProperty("hostServer", String.valueOf(hostServer)));
+			hostAsked = Boolean.parseBoolean(p.getProperty("hostAsked", String.valueOf(hostAsked)));
 			save();
 			StrafeMc.LOG.info("[strafemc] config {} : unitsPerBlock={} hpScale={} scrollJump={} debug={}", FILE, unitsPerBlock, hpScale, scrollJump, debug);
 		} catch (IOException | RuntimeException e) {
@@ -165,6 +168,7 @@ public final class StrafeConfig {
 		p.setProperty("launcherPath", launcherPath);
 		p.setProperty("setupNeverAsk", String.valueOf(setupNeverAsk));
 		p.setProperty("hostServer", String.valueOf(hostServer));
+		p.setProperty("hostAsked", String.valueOf(hostAsked));
 		try (Writer w = Files.newBufferedWriter(FILE)) {
 			p.store(w, "strafeMC settings (unitsPerBlock: Hammer units per block; hpScale: MC HP per CS HP)");
 		}

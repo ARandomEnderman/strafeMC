@@ -26,6 +26,12 @@ public class StrafeMcClient implements ClientModInitializer {
 				(msg, ctx) -> ClientGameplay.apply(msg.json()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GunClient.INSTANCE.setShotSeed(msg.seed(), msg.next()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Flashed.TYPE,
+				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onFlashed(msg));
+		dev.strafemc.client.weapon.GrenadeClient.registerHud();
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.weapon.GrenadeClient::render);
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GrenadeFx.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onEffect(msg));
 		net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(dev.strafemc.weapon.GrenadeEntity.TYPE,
@@ -57,8 +63,11 @@ public class StrafeMcClient implements ClientModInitializer {
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
-			// advanced hosting: your own world gets your CS2 server (started once; it keeps running until Minecraft closes)
-			if (mc.getSingleplayerServer() != null && StrafeConfig.hostServer && !dev.strafemc.bridge.Cs2Bridge.INSTANCE.connected())
+			// your own world gets your CS2 server (started once; it keeps running until Minecraft closes); asked once
+			if (mc.getSingleplayerServer() == null) return;
+			if (!StrafeConfig.hostAsked && !StrafeConfig.hostServer && dev.strafemc.client.console.ServerLauncher.canOfferHosting())
+				mc.execute(() -> mc.setScreen(new HostConsentScreen()));
+			else if (StrafeConfig.hostServer && !dev.strafemc.bridge.Cs2Bridge.INSTANCE.connected())
 				dev.strafemc.client.console.ServerLauncher.start();
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {

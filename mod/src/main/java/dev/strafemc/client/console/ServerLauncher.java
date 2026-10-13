@@ -41,6 +41,11 @@ public final class ServerLauncher {
 		return scriptConfigured() || StrafeConfig.hostServer && executable() != null;
 	}
 
+	/** This PC could host (a CS2 folder, Windows) and no launcher script of its own is set up: worth asking about. */
+	public static boolean canOfferHosting() {
+		return !scriptConfigured() && executable() != null;
+	}
+
 	private static Path executable() {
 		if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) return null; // Windows only for now
 		Path cs2 = Cs2Finder.find(StrafeConfig.cs2Path);

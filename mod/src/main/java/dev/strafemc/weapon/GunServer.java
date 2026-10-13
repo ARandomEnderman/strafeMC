@@ -36,6 +36,8 @@ public final class GunServer {
 
 	private static final class State {
 		ItemStack lastHeld = ItemStack.EMPTY;
+		/** The last gun held (a decoy fakes its shots). */
+		String lastGun = "weapon_ak47";
 		long deployUntil, nextFire, lastTick, knifeNextLight, knifeNextHeavy;
 		/** Current reload in animation time (null = not reloading); see ReloadTimeline for CS2 silent reload. */
 		ReloadTimeline reload;
@@ -161,7 +163,9 @@ public final class GunServer {
 		Vec3 own = new Vec3(t.vx(), t.vy(), t.vz());
 		if (own.length() > 3500) own = own.normalize().scale(3500);
 		Vec3 vel = dir.scale(speed).add(own.scale(1.25)).scale(1 / upb);
-		p.level().addFreshEntity(new GrenadeEntity(p.level(), p, held.copyWithCount(1), start, vel));
+		GrenadeEntity thrown = new GrenadeEntity(p.level(), p, held.copyWithCount(1), start, vel);
+		thrown.decoyGun = st.lastGun;
+		p.level().addFreshEntity(thrown);
 		if (!p.getAbilities().instabuild) held.shrink(1);
 		broadcast(p, gi.type.sounds + ".Throw");
 		st.deployUntil = now + sec(0.4); // the next one comes out after the throw
@@ -185,6 +189,7 @@ public final class GunServer {
 		long now = System.nanoTime();
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 			State st = state(p);
+			if (p.getMainHandItem().getItem() instanceof GunItem gun && !(gun instanceof KnifeItem) && !(gun instanceof GrenadeItem)) st.lastGun = gun.weaponClass;
 			ItemStack held = p.getMainHandItem();
 			if (held != st.lastHeld && !ItemStack.isSameItem(held, st.lastHeld)) {
 				st.lastHeld = held;

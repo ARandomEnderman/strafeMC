@@ -33,7 +33,10 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	private Vec3 vel = Vec3.ZERO;
 	private double stepTime;
 	private boolean resting;
-	private int age;
+	private int age, restTicks, decoyNext, decoyShots;
+	private boolean hitFloor;
+	/** Decoy: the thrower's last held gun, whose shots it fakes. */
+	public String decoyGun = "weapon_ak47";
 	/**
 	 * Tumble, as CS2 sets it at the throw: 600 deg/s pitch (end over end) and a random whole -1200..1200 deg/s yaw
 	 * (server-chosen, synced), no roll. Each bounce slows it by the bounce factor (FLAGGED: CS:GO's behaviour); it stops at rest.
@@ -127,6 +130,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 			spinScale *= ELASTICITY;
 			setPos(hit.getLocation().add(n.scale(r)));
 			if (level() instanceof ServerLevel sl && speed > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
+			if (n.y > 0.7) hitFloor = true;
 			if (n.y > 0.7 && vel.length() * upb < STOP_SPEED) {
 				vel = Vec3.ZERO;
 				resting = true;
@@ -136,16 +140,59 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		vel = vel.add(0, -g * STEP * 0.5, 0);
 	}
 
+	/** Molotov / incendiary: CS's molotov_throw_detonate_time, after which one still in the air fizzles (FLAGGED: 2 s). */
+	static final double MOLOTOV_AIR_TIME = 2.0;
+	/** Decoy: fake gunfire for this long once it lies still, then it pops (FLAGGED: CS's 15 s). */
+	static final double DECOY_TIME = 15;
+
 	private void serverTick(ServerLevel level) {
+		ServerPlayer owner = getOwner() instanceof ServerPlayer sp ? sp : null;
+		restTicks = resting ? restTicks + 1 : 0;
 		switch (grenade()) {
 			case HE -> {
 				if (age >= FUSE * 20) {
-					GrenadeEffects.explodeHE(level, this, getOwner() instanceof ServerPlayer sp ? sp : null);
+					GrenadeEffects.explodeHE(level, this, owner);
 					discard();
 				}
 			}
-			default -> {
-				if (age >= 30 * 20) discard(); // other types: their effect comes in later steps
+			case FLASHBANG -> {
+				if (age >= FUSE * 20) {
+					GrenadeEffects.flash(level, this);
+					discard();
+				}
+			}
+			case SMOKE -> { // goes off once it has settled
+				if (restTicks == 10 || age >= 60 * 20) GrenadeZones.smoke(level, position());
+				if (restTicks >= 10 + GrenadeZones.SMOKE_TICKS || age >= 60 * 20) discard();
+			}
+			case MOLOTOV, INCENDIARY -> { // bursts into fire on the ground, or fizzles if still flying
+				boolean inc = grenade() == Grenade.INCENDIARY;
+				if (hitFloor) {
+					Vec3 ground = position().add(0, -RADIUS / StrafeConfig.unitsPerBlock, 0);
+					if (!GrenadeZones.fire(level, ground, owner, this, inc))
+						GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position());
+					discard();
+				} else if (age >= MOLOTOV_AIR_TIME * 20) {
+					GrenadeEffects.event(level, inc ? GrenadeEffects.EV_FIZZLE_INC : GrenadeEffects.EV_FIZZLE, position());
+					discard();
+				}
+			}
+			case DECOY -> { // once still: bursts of fake gunfire, then a pop
+				if (restTicks == 0) return;
+				if (restTicks >= DECOY_TIME * 20) {
+					GrenadeEffects.event(level, GrenadeEffects.EV_DECOY_POP, position());
+					discard();
+					return;
+				}
+				if (restTicks >= decoyNext) {
+					GrenadeEffects.decoyShot(level, this);
+					var rnd = level.getRandom();
+					if (decoyShots-- > 0) decoyNext = restTicks + 2 + rnd.nextInt(2); // a burst: shots ~0.1 s apart
+					else {
+						decoyShots = rnd.nextInt(4);
+						decoyNext = restTicks + 10 + rnd.nextInt(30); // pause 0.5..2 s
+					}
+				}
 			}
 		}
 	}
