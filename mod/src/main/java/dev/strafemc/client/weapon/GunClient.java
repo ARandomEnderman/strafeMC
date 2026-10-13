@@ -119,6 +119,7 @@ public final class GunClient {
 			lastSlot = slot;
 			lastHeld = held;
 			grenadeState = GRENADE_IDLE;
+			GrenadeClient.preview(null);
 			sounds.clear();
 			CsSounds.stopAnim();
 			inspectUntil = 0;
@@ -188,6 +189,9 @@ public final class GunClient {
 	private float throwStrength = 1;
 	private String chargeAnim;
 	private boolean throwQueued;
+	private long chargedSince;
+	/** Show the trajectory preview after holding a charged grenade this long (seconds). */
+	private static final double PREVIEW_AFTER = 2.0;
 
 	/**
 	 * CS grenade handling: holding left and/or right pulls the pin (its animation and sounds); while held, the charge pose
@@ -221,6 +225,7 @@ public final class GunClient {
 				if (!held) throwQueued = true;
 				if (now < pinDoneAt) return;
 				grenadeState = GRENADE_CHARGED;
+				chargedSince = now;
 				if (throwQueued) throwGrenade(p, g, now);
 			}
 			case GRENADE_CHARGED -> {
@@ -228,6 +233,11 @@ public final class GunClient {
 					throwGrenade(p, g, now);
 					return;
 				}
+				if (now - chargedSince >= sec(PREVIEW_AFTER)) { // the path this throw would take, as the server will fly it
+					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, p.getEyePosition(), p.getYRot(), p.getXRot(), throwStrength,
+							dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p), 750);
+					GrenadeClient.preview(dev.strafemc.weapon.GrenadeFlight.simulate(p.level(), p, l, dev.strafemc.weapon.GrenadeFlight.gravity(), 4));
+				} else GrenadeClient.preview(null);
 				String anim = throwStrength >= 1 ? "throwcharge_high" : throwStrength <= 0 ? "throwcharge_low" : "throwcharge_mid";
 				if (!anim.equals(chargeAnim)) {
 					vm.play(anim);
@@ -239,6 +249,7 @@ public final class GunClient {
 	}
 
 	private void throwGrenade(LocalPlayer p, dev.strafemc.weapon.GrenadeItem g, long now) {
+		GrenadeClient.preview(null);
 		String anim = throwStrength >= 0.5f ? "throw_overhand" : "throw_underhand";
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		schedule(g, anim, now);

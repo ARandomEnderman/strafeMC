@@ -83,13 +83,13 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		baseTick(); // not Projectile's tick: it would hit, stick or discard; the flight is ours
 		if (vel == Vec3.ZERO && !resting && age == 0 && level().isClientSide()) vel = getDeltaMovement().scale(20); // client copy from the spawn packet
 		double upb = StrafeConfig.unitsPerBlock;
-		double g = gravity() * GRAVITY_SCALE / upb;
+		double g = GrenadeFlight.gravity();
 		if (resting && level().clip(new ClipContext(position(), position().add(0, -(RADIUS / upb + 0.05), 0), ClipContext.Block.COLLIDER,
 				ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS) resting = false; // the floor went away
 		if (!resting) {
 			stepTime += 0.05;
 			while (stepTime >= STEP && !resting) {
-				step(g, upb);
+				step(g);
 				stepTime -= STEP;
 			}
 		}
@@ -105,39 +105,17 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (level() instanceof ServerLevel sl) serverTick(sl);
 	}
 
-	private double gravity() {
-		String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar("sv_gravity");
-		try {
-			return v == null ? 800 : Double.parseDouble(v);
-		} catch (NumberFormatException e) {
-			return 800;
-		}
-	}
-
-	/** One 1/64 s step: half the gravity before the move, half after (as Source), bounce on blocks. */
-	private void step(double g, double upb) {
-		vel = vel.add(0, -g * STEP * 0.5, 0);
-		Vec3 from = position(), move = vel.scale(STEP), to = from.add(move);
-		double r = RADIUS / upb, len = move.length();
-		// the centre stays a radius away from surfaces: trace a radius further along the move
-		Vec3 reach = len > 1e-9 ? to.add(move.scale(r / len)) : to;
-		BlockHitResult hit = level().clip(new ClipContext(from, reach, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
-		if (hit.getType() == HitResult.Type.BLOCK) {
-			Vec3 n = Vec3.atLowerCornerOf(hit.getDirection().getUnitVec3i());
-			double into = vel.dot(n);
-			double speed = vel.length() * upb;
-			vel = vel.subtract(n.scale(into * 2)).scale(ELASTICITY); // reflect, keep 45%
+	/** One 1/64 s step (GrenadeFlight, shared with the client's trajectory preview); bounce sounds on the server. */
+	private void step(double gravity) {
+		GrenadeFlight.Step st = GrenadeFlight.step(level(), this, age < 5 ? getOwner() : null, position(), vel, gravity);
+		setPos(st.pos());
+		vel = st.vel();
+		if (st.normal() != null) {
 			spinScale *= ELASTICITY;
-			setPos(hit.getLocation().add(n.scale(r)));
-			if (level() instanceof ServerLevel sl && speed > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
-			if (n.y > 0.7) hitFloor = true;
-			if (n.y > 0.7 && vel.length() * upb < STOP_SPEED) {
-				vel = Vec3.ZERO;
-				resting = true;
-				return;
-			}
-		} else setPos(to);
-		vel = vel.add(0, -g * STEP * 0.5, 0);
+			if (st.normal().y > 0.7) hitFloor = true;
+			if (level() instanceof ServerLevel sl && st.impactSpeed() > 80) GunServer.soundAt(sl, grenade().sounds + ".Bounce", position(), this);
+		}
+		if (st.resting()) resting = true;
 	}
 
 	/** Molotov / incendiary: CS's molotov_throw_detonate_time, after which one still in the air fizzles (FLAGGED: 2 s). */

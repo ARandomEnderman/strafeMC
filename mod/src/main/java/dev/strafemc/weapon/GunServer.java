@@ -148,21 +148,11 @@ public final class GunServer {
 		State st = state(p);
 		long now = System.nanoTime();
 		if (now < st.deployUntil - 120_000_000L) return;
-		double upb = StrafeConfig.unitsPerBlock;
 		java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(gi.type.cls);
 		double throwVel = d != null && d.get("m_flThrowVelocity") instanceof Number n ? n.doubleValue() : 750;
-		double strength = Math.max(0, Math.min(1, t.strength()));
-		double speed = Math.max(15, Math.min(750, throwVel * 0.9)) * (strength * 0.7 + 0.3);
-		float pitch = Math.max(-90, Math.min(90, t.pitch()));
-		pitch -= (90 - Math.abs(pitch)) * 10f / 90f;
-		Vec3 dir = Vec3.directionFromRotation(pitch, t.yaw());
-		Vec3 src = p.getEyePosition().add(0, (strength * 12 - 12) / upb, 0);
-		Vec3 ahead = src.add(dir.scale(22 / upb));
-		HitResult b = p.level().clip(new ClipContext(src, ahead, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-		Vec3 start = b.getType() == HitResult.Type.MISS ? ahead : b.getLocation().subtract(dir.scale(2 / upb));
-		Vec3 own = new Vec3(t.vx(), t.vy(), t.vz());
-		if (own.length() > 3500) own = own.normalize().scale(3500);
-		Vec3 vel = dir.scale(speed).add(own.scale(1.25)).scale(1 / upb);
+		GrenadeFlight.Launch l = GrenadeFlight.launch(p.level(), p, p.getEyePosition(), t.yaw(), t.pitch(), t.strength(),
+				new Vec3(t.vx(), t.vy(), t.vz()), throwVel);
+		Vec3 start = l.start(), vel = l.vel();
 		GrenadeEntity thrown = new GrenadeEntity(p.level(), p, held.copyWithCount(1), start, vel);
 		thrown.decoyGun = st.lastGun;
 		p.level().addFreshEntity(thrown);

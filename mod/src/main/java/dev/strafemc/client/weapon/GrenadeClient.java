@@ -42,6 +42,13 @@ public final class GrenadeClient {
 	private static final int PUFFS = 70;
 	private static Identifier puffTexture;
 
+	/** The trajectory preview: the path of the grenade being held charged (null = none). */
+	private static volatile List<Vec3> preview;
+
+	public static void preview(List<Vec3> path) {
+		preview = path;
+	}
+
 	/** Flashbang: when the white-out started and how long it lasts (seconds). */
 	private static volatile long flashStart;
 	private static volatile float flashSeconds;
@@ -163,8 +170,9 @@ public final class GrenadeClient {
 		return puffTexture;
 	}
 
-	/** Draws the smoke clouds as camera-facing puffs, far ones first. */
+	/** Draws the trajectory preview (dots, a bigger one where it ends) and the smoke clouds. */
 	public static void render(LevelRenderContext ctx) {
+		renderPreview(ctx);
 		List<Smoke> smokes;
 		synchronized (SMOKES) {
 			if (SMOKES.isEmpty()) return;
@@ -206,7 +214,29 @@ public final class GrenadeClient {
 		});
 	}
 
+	private static void renderPreview(LevelRenderContext ctx) {
+		List<Vec3> path = preview;
+		Minecraft mc = Minecraft.getInstance();
+		if (path == null || path.size() < 2 || mc.level == null) return;
+		Camera cam = mc.gameRenderer.getMainCamera();
+		Vec3 c = cam.position();
+		Vector3f up = new Vector3f(cam.upVector()), right = new Vector3f(cam.forwardVector()).cross(up).normalize();
+		ctx.submitNodeCollector().submitCustomGeometry(ctx.poseStack(), RenderTypes.entityTranslucentEmissive(puff()), (pose, vc) -> {
+			for (int i = 3; i < path.size(); i += 3) dot(vc, pose, path.get(i).subtract(c), right, up, 0.035f, 0xC0FFFFFF);
+			dot(vc, pose, path.get(path.size() - 1).subtract(c), right, up, 0.12f, 0xE0FFFFFF);
+		});
+	}
+
+	private static void dot(com.mojang.blaze3d.vertex.VertexConsumer vc, PoseStack.Pose pose, Vec3 p, Vector3f right, Vector3f up, float sz, int col) {
+		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
+		for (float[] k : corners)
+			vc.addVertex(pose, (float) p.x + (right.x * k[0] + up.x * k[1]) * sz, (float) p.y + (right.y * k[0] + up.y * k[1]) * sz,
+							(float) p.z + (right.z * k[0] + up.z * k[1]) * sz)
+					.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(0xF000F0).setNormal(pose, 0, 1, 0);
+	}
+
 	public static void clear() {
+		preview = null;
 		synchronized (SMOKES) {
 			SMOKES.clear();
 		}
