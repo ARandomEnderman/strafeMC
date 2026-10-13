@@ -83,10 +83,21 @@ public final class McWorld implements SourceMovement.World {
 						}
 						continue;
 					}
-					if (st.getBlock() instanceof StairBlock && st.getValue(StairBlock.HALF) == Half.BOTTOM
-							&& st.getValue(StairBlock.SHAPE) == StairsShape.STRAIGHT) {
+					if (st.getBlock() instanceof StairBlock && st.getValue(StairBlock.HALF) == Half.BOTTOM) {
+						// stairs ramp like the surf slope: straight, inner corner (both ramps) or outer corner (where both meet)
 						Direction f = st.getValue(StairBlock.FACING); // the tall side: stairs rise toward FACING
-						out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ()));
+						StairsShape shape = st.getValue(StairBlock.SHAPE);
+						Direction d2 = switch (shape) {
+							case OUTER_LEFT, INNER_LEFT -> f.getCounterClockWise();
+							case OUTER_RIGHT, INNER_RIGHT -> f.getClockWise();
+							default -> null;
+						};
+						if (d2 != null && (shape == StairsShape.OUTER_LEFT || shape == StairsShape.OUTER_RIGHT))
+							out.add(HullTrace.Solid.outerCorner(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ(), d2.getStepX(), d2.getStepZ()));
+						else {
+							out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ()));
+							if (d2 != null) out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, d2.getStepX(), d2.getStepZ()));
+						}
 						continue;
 					}
 					VoxelShape vs = st.getCollisionShape(level, m, ctx);

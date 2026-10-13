@@ -184,7 +184,7 @@ public final class GrenadeZones {
 			Vec3 spot = ground(f.level, want);
 			if (spot == null || spot.subtract(f.origin).horizontalDistance() * upb > f.range) continue;
 			if (f.level.clip(new ClipContext(parent.at.add(0, 0.2, 0), spot.add(0, 0.2, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
-					(net.minecraft.world.entity.Entity) null)).getType() != HitResult.Type.MISS) continue; // not through walls
+					net.minecraft.world.phys.shapes.CollisionContext.empty())).getType() != HitResult.Type.MISS) continue; // not through walls
 			boolean crowded = false;
 			for (Flame o : f.flames) if (o.at.distanceTo(spot) * upb < FLAME_SPACING * 0.99) crowded = true;
 			for (Flame o : born) if (o.at.distanceTo(spot) * upb < FLAME_SPACING * 0.99) crowded = true;
@@ -201,7 +201,7 @@ public final class GrenadeZones {
 	/** The ground under (or just over) a spot, within a block and a half: fire runs over the floor, not through walls. */
 	private static Vec3 ground(ServerLevel level, Vec3 spot) {
 		Vec3 top = spot.add(0, 1.5, 0), bottom = spot.add(0, -1.5, 0);
-		HitResult h = level.clip(new ClipContext(top, bottom, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
+		HitResult h = level.clip(new ClipContext(top, bottom, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
 		return h.getType() == HitResult.Type.MISS ? null : h.getLocation();
 	}
 

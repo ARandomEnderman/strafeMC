@@ -32,8 +32,11 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 		boolean resting;
 	}
 
-	/** A loaded model and its centre (model units, meters) so it turns about its middle. */
-	private record Model(VmModel model, float cx, float cy, float cz, float halfThickness) {}
+	/**
+	 * A loaded model in its rest pose (each part skinned through its bones once: cloth like the molotov's rag hangs
+	 * where it belongs) and its centre (model units, meters) so it turns about its middle.
+	 */
+	private record Model(VmModel model, float[][] pos, float[][] nrm, float cx, float cy, float cz, float halfThickness) {}
 
 	/** True CS2 scale (~5 units = 0.125 blocks for the HE) read as half size in game (user): drawn 2x. */
 	private static final float WORLD_SCALE = 2f;
@@ -77,16 +80,19 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 		ps.scale(k, k, k);
 		ps.translate(-m.cx(), -m.cy(), -m.cz());
 		int light = s.lightCoords;
-		for (VmModel.Part p : m.model().parts) {
+		for (int pi = 0; pi < m.model().parts.size(); pi++) {
+			VmModel.Part p = m.model().parts.get(pi);
 			if (p.alphaMode.equals("BLEND")) continue;
 			Identifier tex = Viewmodel.INSTANCE.texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;
+			float[] pos = m.pos()[pi], nrm = m.nrm()[pi];
+			// (entityCutout draws both sides: the molotov's rag is one-sided)
 			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (pose, vc) -> {
 				int[] idx = p.idx;
 				for (int i = 0; i + 2 < idx.length; i += 3)
 					for (int c : new int[] {idx[i], idx[i + 1], idx[i + 2], idx[i + 2]}) // entity render types draw quads
-						vc.addVertex(pose, p.pos[c * 3], p.pos[c * 3 + 1], p.pos[c * 3 + 2]).setColor(-1).setUv(p.uv[c * 2], p.uv[c * 2 + 1])
-								.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, p.nrm[c * 3], p.nrm[c * 3 + 1], p.nrm[c * 3 + 2]);
+						vc.addVertex(pose, pos[c * 3], pos[c * 3 + 1], pos[c * 3 + 2]).setColor(-1).setUv(p.uv[c * 2], p.uv[c * 2 + 1])
+								.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, nrm[c * 3], nrm[c * 3 + 1], nrm[c * 3 + 2]);
 			});
 		}
 		ps.popPose();
@@ -98,17 +104,27 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 		if (m != null || dev.strafemc.client.Placeholders.active() || !LOADING.add(g)) return m;
 		Thread t = new Thread(() -> {
 			try {
-				VmModel vm = VmModel.load(Glb.read(AssetCache.exportGlb(g.model, true)), ".body");
+				Glb glb = Glb.read(AssetCache.exportGlb(g.model, true));
+				VmModel vm = VmModel.load(glb, ".body");
+				if (vm.parts.isEmpty()) return;
+				VmClip rest = new VmClip("rest", glb); // no animation: every node at its rest transform
+				org.joml.Matrix4f[] pose = rest.pose(0);
+				org.joml.Matrix4f[][] skins = Viewmodel.skins(vm, rest, pose, null);
+				float[][] pos = new float[vm.parts.size()][], nrm = new float[vm.parts.size()][];
 				float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE}, max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-				for (VmModel.Part p : vm.parts) {
+				for (int k = 0; k < vm.parts.size(); k++) {
+					VmModel.Part p = vm.parts.get(k);
 					if (p.texture != null) Viewmodel.downscaled(p.texture);
-					for (int i = 0; i < p.pos.length; i++) {
-						min[i % 3] = Math.min(min[i % 3], p.pos[i]);
-						max[i % 3] = Math.max(max[i % 3], p.pos[i]);
+					org.joml.Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : new org.joml.Matrix4f[0];
+					float[][] r = Viewmodel.skinVertices(p, skin, new org.joml.Matrix4f());
+					pos[k] = r[0];
+					nrm[k] = r[1];
+					for (int i = 0; i < pos[k].length; i++) {
+						min[i % 3] = Math.min(min[i % 3], pos[k][i]);
+						max[i % 3] = Math.max(max[i % 3], pos[k][i]);
 					}
 				}
-				if (vm.parts.isEmpty()) return;
-				MODELS.put(g, new Model(vm, (min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2, (max[0] - min[0]) / 2));
+				MODELS.put(g, new Model(vm, pos, nrm, (min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2, (max[0] - min[0]) / 2));
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] grenade model {} failed: {}", g.model, e.toString());
 			}
