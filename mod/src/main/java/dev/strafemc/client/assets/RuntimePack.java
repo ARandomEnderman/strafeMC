@@ -47,6 +47,13 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + k.id + ".png"), 128), tex.resolve("item/" + k.id + ".png"),
 						Placeholders.Icon.ARMOR, 32);
 			}
+			// killfeed icons (CS2's death notices): weapons and the kill modifiers, 48 px high, as wide as they are
+			for (String w : dev.strafemc.client.DeathNotices.WEAPON_ICONS)
+				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",
+						tex.resolve("gui/deathnotice/" + w + ".png"), 48), tex.resolve("gui/deathnotice/" + w + ".png"), Placeholders.Icon.BULLET, 32);
+			for (String m : dev.strafemc.client.DeathNotices.MODIFIER_ICONS)
+				safe(() -> svgH("panorama/images/hud/deathnotice/" + m + ".vsvg_c", "panorama/images/hud/deathnotice/" + m + ".svg",
+						tex.resolve("gui/deathnotice/" + m + ".png"), 48), tex.resolve("gui/deathnotice/" + m + ".png"), Placeholders.Icon.BULLET, 32);
 			for (String a : new String[] {"kevlar", "assaultsuit"}) {
 				String item = a.equals("kevlar") ? "item_kevlar" : "item_assaultsuit";
 				safe(() -> svg("panorama/images/icons/equipment/" + a + ".vsvg_c", "panorama/images/icons/equipment/" + a + ".svg",
@@ -110,6 +117,13 @@ public final class RuntimePack {
 		g.drawImage(in, (size - w) / 2, (size - h) / 2, w, h, null);
 		g.dispose();
 		write(img, out);
+	}
+
+	private static void svgH(String vpk, String exported, Path out, int height) throws Exception {
+		if (Files.exists(out)) return;
+		Path src = StrafeConfig.cacheDir().resolve(exported);
+		AssetCache.ensureDecompiled(vpk, src);
+		write(SvgIcon.rasterize(src, height, true), out);
 	}
 
 	private static void svg(String vpk, String exported, Path out, int size) throws Exception {

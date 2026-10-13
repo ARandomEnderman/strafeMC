@@ -116,6 +116,29 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: a death notice (killfeed): who killed whom with what, sides, and KillFeed's modifier flags. */
+	public record KillNotice(String attacker, boolean attackerT, int attackerId, String victim, boolean victimT, int victimId, boolean victimPlayer,
+							 String icon, int flags) implements CustomPacketPayload {
+		public static final Type<KillNotice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "kill_notice"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, KillNotice> CODEC = StreamCodec.of((b, v) -> {
+			b.writeUtf(v.attacker, 64);
+			b.writeBoolean(v.attackerT);
+			b.writeVarInt(v.attackerId);
+			b.writeUtf(v.victim, 64);
+			b.writeBoolean(v.victimT);
+			b.writeVarInt(v.victimId);
+			b.writeBoolean(v.victimPlayer);
+			b.writeUtf(v.icon, 48);
+			b.writeVarInt(v.flags);
+		}, b -> new KillNotice(b.readUtf(64), b.readBoolean(), b.readVarInt(), b.readUtf(64), b.readBoolean(), b.readVarInt(), b.readBoolean(),
+				b.readUtf(48), b.readVarInt()));
+
+		@Override
+		public Type<KillNotice> type() {
+			return TYPE;
+		}
+	}
+
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	public record TeamChoice(boolean t) implements CustomPacketPayload {
 		public static final Type<TeamChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "team"));

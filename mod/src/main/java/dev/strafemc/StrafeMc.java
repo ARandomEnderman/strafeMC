@@ -65,6 +65,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE, dev.strafemc.net.StrafePayloads.TeamChoice.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, dev.strafemc.net.StrafePayloads.KillNotice.CODEC);
 		// a player's CS2 footsteps / jump / landing, passed on to the players near them (not back to them)
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, (msg, ctx) -> {
 			var p = ctx.player();

@@ -65,6 +65,8 @@ public final class GrenadeZones {
 		final double dps, range, lifetime, speed;
 		final List<Flame> flames = new ArrayList<>();
 		int spawned;
+		/** Who threw it (for the killfeed). */
+		java.util.UUID owner;
 
 		Fire(ServerLevel level, Vec3 origin, boolean incendiary, double dps) {
 			this.level = level;
@@ -102,6 +104,7 @@ public final class GrenadeZones {
 		Fire f = new Fire(level, at, incendiary, d != null && d.get("m_nDamage") instanceof Number n ? n.doubleValue() : 40);
 		long t = level.getGameTime();
 		f.flames.add(new Flame(at, Vec3.ZERO, 0, t, t + lifetimeTicks(f, level.getRandom()), t));
+		f.owner = owner != null ? owner.getUUID() : null;
 		f.spawned = 1;
 		FIRES.add(f);
 		GrenadeEffects.event(level, incendiary ? GrenadeEffects.EV_FIRE_INC : GrenadeEffects.EV_FIRE, at,
@@ -117,6 +120,18 @@ public final class GrenadeZones {
 
 	private static void flameEvent(Fire f, Vec3 at) {
 		GrenadeEffects.event(f.level, f.incendiary ? GrenadeEffects.EV_FLAME_INC : GrenadeEffects.EV_FLAME, at);
+	}
+
+	/** Does the line from -> to pass through a smoke (CS2's through-smoke kill)? Checked every quarter block. */
+	static boolean throughSmoke(net.minecraft.world.level.Level level, Vec3 from, Vec3 to) {
+		if (SMOKES.isEmpty()) return false;
+		double len = from.distanceTo(to);
+		for (Smoke s : SMOKES) {
+			if (s.level != level) continue;
+			for (double d = 0; d < len; d += 0.25)
+				if (s.volume().contains(from.add(to.subtract(from).scale(d / len)))) return true;
+		}
+		return false;
 	}
 
 	/** Is a flame burning at this spot (within a flame's reach, at its height)? */
@@ -181,7 +196,10 @@ public final class GrenadeZones {
 				e.invulnerableTime = 0;
 				Vec3 motion = e.getDeltaMovement();
 				boolean marked = e.hurtMarked;
+				boolean wasAlive = e.isAlive();
 				e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (f.dps * 0.25 * StrafeConfig.hpScale));
+				if (wasAlive && e.isDeadOrDying() && f.owner != null && f.level.getServer().getPlayerList().getPlayer(f.owner) instanceof ServerPlayer killer)
+					KillFeed.notice(killer, e, "inferno", 0);
 				e.setDeltaMovement(motion);
 				e.hurtMarked = marked;
 				// CS2 tagging by the fire's own weapon data: incendiary fire slows you (0.7 / 0.8), molotov fire doesn't (1 / 1)

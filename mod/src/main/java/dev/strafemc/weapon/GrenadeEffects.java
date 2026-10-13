@@ -70,7 +70,9 @@ public final class GrenadeEffects {
 			e.invulnerableTime = 0;
 			double ratio = d != null && d.get("m_flArmorRatio") instanceof Number r ? r.doubleValue() : 1.2;
 			dmg = CsArmor.apply(e, dmg, ratio, "chest");
+			boolean wasAlive = e.isAlive();
 			e.hurtServer(level, level.damageSources().explosion(g, owner), (float) (dmg * StrafeConfig.hpScale));
+			if (wasAlive && e.isDeadOrDying()) KillFeed.notice(owner, e, "hegrenade", owner != null ? KillFeed.attackerFlags(owner) : 0);
 			if (!dev.strafemc.server.StrafeSettings.mcKnockback()) {
 				e.setDeltaMovement(motion);
 				e.hurtMarked = marked;
@@ -118,6 +120,7 @@ public final class GrenadeEffects {
 			}
 			if (ServerPlayNetworking.canSend(p, StrafePayloads.Flashed.TYPE))
 				ServerPlayNetworking.send(p, new StrafePayloads.Flashed((float) (hold * seen), (float) (fade * seen)));
+			KillFeed.blinded(p, hold * seen, fade * seen);
 		}
 		event(level, EV_FLASH, at);
 	}

@@ -120,6 +120,10 @@ public class StrafeMcClient implements ClientModInitializer {
 					if (src != null && src == ctx.client().player) dev.strafemc.client.sound.CsSounds.playOn(msg.event(), src, 1.0, msg.suppressed());
 					else dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(), 1.0, msg.suppressed(), null);
 				});
+		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, (msg, ctx) -> DeathNotices.receive(msg));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> DeathNotices.clear());
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "deathnotices"),
+				(g, delta) -> DeathNotices.render(g));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, // another player's CS2 footstep / jump / landing
 				(msg, ctx) -> dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(),
 						msg.gain() * dev.strafemc.config.StrafeConfig.movementVolume, false, null));

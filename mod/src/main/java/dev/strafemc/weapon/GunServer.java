@@ -256,6 +256,7 @@ public final class GunServer {
 		boolean lag = dev.strafemc.server.StrafeSettings.lagComp();
 		Vec3 from = eye;
 		double dmg = w.damage(), left = w.range() / units, travelled = 0; // dmg: CS2's current damage, worn down by range and walls
+		int walls = 0;
 		EntityHitResult hit = null;
 		dev.strafemc.server.LagHistory.Hit rewound = null;
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
@@ -287,6 +288,7 @@ public final class GunServer {
 			travelled += exit.distanceTo(bh.getLocation()) * units;
 			left -= exit.distanceTo(from);
 			from = exit.add(dir.scale(0.01));
+			walls++;
 		}
 		if (hit == null) return;
 		Vec3 at = hit.getLocation();
@@ -308,8 +310,12 @@ public final class GunServer {
 		dmg = CsArmor.apply(target, dmg, w.armorRatio(), group);
 		float mc = (float) (dmg * StrafeConfig.hpScale);
 		target.invulnerableTime = 0; // 600 RPM: every bullet counts, like CS
+		boolean wasAlive = target.isAlive();
 		hurtCs(p, target, mc, w.cls());
 		hitSounds(p, target, group.equals("head"), armored, target.isDeadOrDying());
+		if (wasAlive && target.isDeadOrDying())
+			KillFeed.notice(p, target, w.cls().replace("weapon_", ""), KillFeed.attackerFlags(p) | (group.equals("head") ? KillFeed.HEADSHOT : 0)
+					| (walls > 0 ? KillFeed.PENETRATE : 0) | (GrenadeZones.throughSmoke(p.level(), eye, at) ? KillFeed.THROUGH_SMOKE : 0));
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
@@ -399,7 +405,9 @@ public final class GunServer {
 		target.invulnerableTime = 0;
 		WeaponStats knifeStats = stats("weapon_knife");
 		dmg = CsArmor.apply(target, dmg, knifeStats != null ? knifeStats.armorRatio() : 1.7, "chest");
+		boolean wasAlive = target.isAlive();
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
+		if (wasAlive && target.isDeadOrDying()) KillFeed.notice(p, target, "knife_falchion", KillFeed.attackerFlags(p));
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
 	}

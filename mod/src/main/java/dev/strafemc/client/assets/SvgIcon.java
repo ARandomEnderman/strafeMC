@@ -24,6 +24,11 @@ public final class SvgIcon {
 	private SvgIcon() {}
 
 	public static BufferedImage rasterize(Path svg, int size) throws Exception {
+		return rasterize(svg, size, false);
+	}
+
+	/** heightOnly: the image is `size` high and as wide as the SVG's aspect needs (wide weapon silhouettes). */
+	public static BufferedImage rasterize(Path svg, int size, boolean heightOnly) throws Exception {
 		String s = Files.readString(svg);
 		double vx = 0, vy = 0, vw = 32, vh = 32;
 		Matcher vb = VIEWBOX.matcher(s);
@@ -34,12 +39,13 @@ public final class SvgIcon {
 			vw = Double.parseDouble(p[2]);
 			vh = Double.parseDouble(p[3]);
 		}
-		BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		int w = heightOnly ? Math.max(1, (int) Math.round(size * vw / vh)) : size;
+		BufferedImage img = new BufferedImage(w, size, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		double scale = size / Math.max(vw, vh);
+		double scale = heightOnly ? size / vh : size / Math.max(vw, vh);
 		AffineTransform t = new AffineTransform();
-		t.translate((size - vw * scale) / 2, (size - vh * scale) / 2);
+		t.translate((w - vw * scale) / 2, (size - vh * scale) / 2);
 		t.scale(scale, scale);
 		t.translate(-vx, -vy);
 		g.setColor(Color.WHITE);
