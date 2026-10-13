@@ -74,7 +74,7 @@ public final class Placeholders {
 		mc.level.playLocalSound(m.x(), m.y(), m.z(), snd.getHitSound(), SoundSource.BLOCKS, 0.6f, snd.getPitch() * 1.2f, false);
 	}
 
-	public enum Icon { GUN, KNIFE, MAG, BULLET, FULLAUTO, GRENADE }
+	public enum Icon { GUN, KNIFE, MAG, BULLET, FULLAUTO, GRENADE, ARMOR }
 
 	/** A simple drawn icon (side view silhouettes in grey), used when the CS2 icon can't be converted. */
 	public static BufferedImage icon(Icon kind, int size) {
@@ -98,6 +98,12 @@ public final class Placeholders {
 				g.fillRect(1, 7, 5, 2); // handle
 			}
 			case MAG -> g.fillRect(5, 2, 6, 12);
+			case ARMOR -> {
+				g.setColor(new Color(0x5A6A7A));
+				g.fillRoundRect(3, 2, 10, 12, 4, 4); // vest
+				g.setColor(new Color(0x3A4A5A));
+				g.fillRect(6, 2, 4, 3); // neck
+			}
 			case GRENADE -> {
 				g.setColor(new Color(0x4A5A3A));
 				g.fillOval(4, 5, 8, 9); // body

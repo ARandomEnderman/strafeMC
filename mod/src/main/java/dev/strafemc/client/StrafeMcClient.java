@@ -15,6 +15,10 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 
 public class StrafeMcClient implements ClientModInitializer {
+	/** Your CS armor (server-synced) for the HUD. */
+	static volatile int armor;
+	static volatile boolean helmet;
+
 	@Override
 	public void onInitializeClient() {
 		StrafeConfig.load();
@@ -29,6 +33,15 @@ public class StrafeMcClient implements ClientModInitializer {
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Flashed.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onFlashed(msg));
 		dev.strafemc.client.weapon.GrenadeClient.registerHud();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ArmorSync.TYPE,
+				(msg, ctx) -> { armor = msg.value(); helmet = msg.helmet(); });
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> armor = 0);
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "armor"),
+				(g, delta) -> { // CS armor: shown while worn
+					var mc = Minecraft.getInstance();
+					if (armor <= 0 || mc.options.hideGui || mc.player == null) return;
+					g.text(mc.font, (helmet ? "\u00a7f\u26e8+ " : "\u00a7f\u26e8 ") + armor, 8, g.guiHeight() - 20, 0xFFFFFFFF, true);
+				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.weapon.GrenadeClient::render);
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());

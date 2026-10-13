@@ -25,6 +25,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
+	public static Item KEVLAR, ASSAULTSUIT;
 	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE;
 
 	private WeaponItems() {}
@@ -37,6 +38,8 @@ public final class WeaponItems {
 		KNIFE_FALCHION = item("weapon_knife_falchion", p -> new KnifeItem(p, "weapon_knife_falchion"));
 		for (Grenade g : Grenade.values()) GRENADES.put(g, item(g.cls, p -> new GrenadeItem(p.stacksTo(16), g)));
 		HEGRENADE = GRENADES.get(Grenade.HE);
+		KEVLAR = item("item_kevlar", p -> new ArmorItem(p.stacksTo(16), false));
+		ASSAULTSUIT = item("item_assaultsuit", p -> new ArmorItem(p.stacksTo(16), true));
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
@@ -64,6 +67,8 @@ public final class WeaponItems {
 			e.accept(MAG_AK47);
 			e.accept(KNIFE_FALCHION);
 			for (Item g : GRENADES.values()) e.accept(g);
+			e.accept(KEVLAR);
+			e.accept(ASSAULTSUIT);
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
 		});

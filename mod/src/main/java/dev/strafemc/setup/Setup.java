@@ -44,7 +44,7 @@ public final class Setup {
 		m.put("clips", 1);
 		m.put("graphs", 1);
 		m.put("models", 1);
-		m.put("icons", 1);
+		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 3); // 2: HE explosion, 3: all grenade effects
 		m.put("decals", 1);
 		return m;
@@ -179,7 +179,8 @@ public final class Setup {
 		progress(base, "Weapon icons");
 		vrf.decompile(List.of("panorama/images/econ/weapons/base_weapons/"), "vtex_c", cache);
 		vrf.decompile(List.of("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_fullauto.vsvg_c",
-				"panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c"), null, cache);
+				"panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c", "panorama/images/icons/equipment/kevlar.vsvg_c",
+				"panorama/images/icons/equipment/assaultsuit.vsvg_c"), null, cache);
 	}
 
 	/**

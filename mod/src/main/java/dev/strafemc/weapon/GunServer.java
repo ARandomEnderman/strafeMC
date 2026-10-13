@@ -266,10 +266,12 @@ public final class GunServer {
 			case "legs" -> LEG_MULT;
 			default -> 1.0;
 		};
+		boolean armored = CsArmor.protects(CsArmor.of(target), group);
+		dmg = CsArmor.apply(target, dmg, w.armorRatio(), group);
 		float mc = (float) (dmg * StrafeConfig.hpScale);
 		target.invulnerableTime = 0; // 600 RPM: every bullet counts, like CS
 		hurtCs(p, target, mc, w.cls());
-		hitSounds(p, target, group.equals("head"), target.isDeadOrDying());
+		hitSounds(p, target, group.equals("head"), armored, target.isDeadOrDying());
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
@@ -357,6 +359,8 @@ public final class GunServer {
 		broadcast(p, heavy ? (k.backstab() ? "Weapon_Knife.Hit.Heavy.Backstab" : "Weapon_Knife.Hit.Heavy")
 				: k.backstab() ? "Weapon_Knife.Hit.Light.Backstab" : "Weapon_Knife.Hit.Slice");
 		target.invulnerableTime = 0;
+		WeaponStats knifeStats = stats("weapon_knife");
+		dmg = CsArmor.apply(target, dmg, knifeStats != null ? knifeStats.armorRatio() : 1.7, "chest");
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
@@ -416,8 +420,8 @@ public final class GunServer {
 	 * hears it as the victim, players nearby as onlookers. Headshot vs body, damage vs kill; a headshot kill adds the
 	 * dink. (Helmet dinks on every headshot come with armor.)
 	 */
-	static void hitSounds(ServerPlayer p, LivingEntity target, boolean head, boolean died) {
-		String base = (died ? "Player.Death" : "Player.Damage") + (head ? "HeadShot" : "Body");
+	static void hitSounds(ServerPlayer p, LivingEntity target, boolean head, boolean armored, boolean died) {
+		String base = (died ? "Player.Death" : "Player.Damage") + (head ? "HeadShot" : "Body") + (armored ? "Armor" : ""); // armored: the dink
 		soundTo(p, base + ".AttackerFeedback", p);
 		if (died && head) soundTo(p, "Player.DeathHeadShot.AttackerFeedback.Dink", p);
 		if (target instanceof ServerPlayer victim) soundTo(victim, base + ".Victim", victim);

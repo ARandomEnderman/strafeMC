@@ -41,6 +41,11 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + g.cls + ".png"), 128), tex.resolve("item/" + g.cls + ".png"),
 						Placeholders.Icon.GRENADE, 32);
 			}
+			for (String a : new String[] {"kevlar", "assaultsuit"}) {
+				String item = a.equals("kevlar") ? "item_kevlar" : "item_assaultsuit";
+				safe(() -> svg("panorama/images/icons/equipment/" + a + ".vsvg_c", "panorama/images/icons/equipment/" + a + ".svg",
+						tex.resolve("item/" + item + ".png"), 32), tex.resolve("item/" + item + ".png"), Placeholders.Icon.ARMOR, 32);
+			}
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32),
 					tex.resolve("item/mag_ak47.png"), Placeholders.Icon.MAG, 32);
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64),

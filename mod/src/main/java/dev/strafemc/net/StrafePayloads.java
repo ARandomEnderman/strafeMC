@@ -112,6 +112,18 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: your CS armor (0..100) and whether you have a helmet. */
+	public record ArmorSync(int value, boolean helmet) implements CustomPacketPayload {
+		public static final Type<ArmorSync> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "armor"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ArmorSync> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, ArmorSync::value,
+				ByteBufCodecs.BOOL, ArmorSync::helmet, ArmorSync::new);
+
+		@Override
+		public Type<ArmorSync> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: you were flashed for this many seconds (client: white-out, then fade). */
 	public record Flashed(float seconds) implements CustomPacketPayload {
 		public static final Type<Flashed> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "flashed"));

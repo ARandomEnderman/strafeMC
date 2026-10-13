@@ -54,6 +54,8 @@ public final class GrenadeEffects {
 			Vec3 motion = e.getDeltaMovement();
 			boolean marked = e.hurtMarked;
 			e.invulnerableTime = 0;
+			double ratio = d != null && d.get("m_flArmorRatio") instanceof Number r ? r.doubleValue() : 1.2;
+			dmg = CsArmor.apply(e, dmg, ratio, "chest");
 			e.hurtServer(level, level.damageSources().explosion(g, owner), (float) (dmg * StrafeConfig.hpScale));
 			if (!dev.strafemc.server.StrafeSettings.mcKnockback()) {
 				e.setDeltaMovement(motion);
