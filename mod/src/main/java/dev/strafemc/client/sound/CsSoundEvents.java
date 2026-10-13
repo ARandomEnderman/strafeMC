@@ -20,6 +20,13 @@ public final class CsSoundEvents {
 	public static final String[] FILES = {"soundevents/game_sounds_footsteps.vsndevts_c", "soundevents/game_sounds_player.vsndevts_c",
 			"soundevents/game_sounds_weapons.vsndevts_c", "soundevents/game_sounds_physics.vsndevts_c"};
 
+	/**
+	 * CS2's sound mixer lifts some mix groups well above their events' own volume (its mix data isn't readable here):
+	 * hit feedback (the helmet dink at volume 0.5) has to cut through gunfire. FLAGGED: the x2 is ours; volume still caps
+	 * at 1 as in Minecraft.
+	 */
+	private static final java.util.Map<String, Double> MIX_GAIN = java.util.Map.of("PlayerAttackerFeedback", 2.0, "PlayerVictim", 2.0);
+
 	public record Event(String name, List<String> files, double volume, double pitch, double pitchRandMin, double pitchRandMax,
 						double[][] distanceCurve, double offsetUp, boolean suppression, double suppressionVolume, double suppressionFalloff) {
 		private static final Random RNG = new Random();
@@ -81,7 +88,8 @@ public final class CsSoundEvents {
 			if (!(files instanceof List<?> l) || l.isEmpty()) continue;
 			List<String> fl = new ArrayList<>();
 			for (Object o : l) fl.add(o.toString());
-			out.put(name, new Event(name, fl, num(r.get("volume"), 1), num(r.get("pitch"), 1), num(r.get("pitch_random_min"), 0),
+			double mix = MIX_GAIN.getOrDefault(String.valueOf(r.get("mixgroup")), 1.0);
+			out.put(name, new Event(name, fl, num(r.get("volume"), 1) * mix, num(r.get("pitch"), 1), num(r.get("pitch_random_min"), 0),
 					num(r.get("pitch_random_max"), 0),
 					Boolean.TRUE.equals(r.get("use_distance_volume_mapping_curve")) ? curve(r.get("distance_volume_mapping_curve")) : null,
 					r.get("position_offset") instanceof List<?> po && po.size() == 3 ? num(po.get(2), 0) : 0,
