@@ -50,7 +50,7 @@ CS2 install.
   Finishes are rebuilt on your PC from your own CS2 files; they're cosmetic only and have nothing to do with your Steam inventory
 - CS2's buy menu (B): gear, rifles and grenades in CS2's layout and loadout order, with CS2's grenade limits.
   Operators choose who can buy (nobody, creative players or everyone) and for how long after respawning
-- CS2's killfeed, with headshot, wallbang, through-smoke, no-scope, blind and in-air icons
+- CS2's killfeed, with headshot, wallbang, through-smoke, blind and in-air icons
 - Pick T or CT in the console's quick menu: smoke colours and footsteps follow your side
 
 ### Console and multiplayer
