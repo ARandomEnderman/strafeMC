@@ -39,7 +39,11 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Action.TYPE,
-				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "action", 5)) dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg()); });
+				(msg, ctx) -> { // rethrow is meant to be spammed (bound to the wheel): its own, higher limit
+					boolean rethrow = msg.cmd().equals("sv_rethrow_last_grenade");
+					if (dev.strafemc.server.RateLimit.allow(ctx.player(), rethrow ? "rethrow" : "action", rethrow ? 20 : 5))
+						dev.strafemc.server.ConsoleActions.run(ctx.player(), msg.cmd(), msg.arg());
+				});
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Fire.TYPE, dev.strafemc.net.StrafePayloads.Fire.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Reload.TYPE, dev.strafemc.net.StrafePayloads.Reload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Knife.TYPE, dev.strafemc.net.StrafePayloads.Knife.CODEC);

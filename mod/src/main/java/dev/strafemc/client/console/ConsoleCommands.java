@@ -260,6 +260,8 @@ public final class ConsoleCommands {
 			else ServerLauncher.stop();
 		});
 		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
+		local("sv_rethrow_last_grenade", "Throw your last grenade again from the same spot (needs sv_cheats 1). Spammable.",
+				a -> action("sv_rethrow_last_grenade", "", true));
 		local("explode", "Explode (CS explode).", a -> action("explode", "", false));
 		local("god", "Toggle godmode (needs sv_cheats 1 and operator).", a -> action("god", "", true));
 		local("healme", "healme [CS HP]: heal yourself (default: fully). Needs sv_cheats 1 and operator.", a -> action("healme", a.length > 0 ? a[0] : "", true));

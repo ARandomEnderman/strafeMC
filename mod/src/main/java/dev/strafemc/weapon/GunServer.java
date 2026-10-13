@@ -38,6 +38,9 @@ public final class GunServer {
 		ItemStack lastHeld = ItemStack.EMPTY;
 		/** The last gun held (a decoy fakes its shots). */
 		String lastGun = "weapon_ak47";
+		/** The last grenade thrown (for sv_rethrow_last_grenade): what, from where, at what velocity. */
+		ItemStack lastThrown = ItemStack.EMPTY;
+		Vec3 lastThrowStart, lastThrowVel;
 		long deployUntil, nextFire, lastTick, knifeNextLight, knifeNextHeavy;
 		/** Current reload in animation time (null = not reloading); see ReloadTimeline for CS2 silent reload. */
 		ReloadTimeline reload;
@@ -142,6 +145,20 @@ public final class GunServer {
 	 * 10 degrees higher at the horizon (pitch -= (90 - |pitch|) x 10 / 90), from the eyes lowered by 12 units for an
 	 * underhand throw, plus 1.25 x the thrower's velocity. FLAGGED: CS:GO's throw code as we know it.
 	 */
+	/**
+	 * CS2's sv_rethrow_last_grenade (a cheat): throws your last grenade again from the same spot with the same velocity,
+	 * without using one up. As often as you like. Returns false if you haven't thrown one yet.
+	 */
+	public static boolean rethrow(ServerPlayer p) {
+		State st = state(p);
+		if (st.lastThrown.isEmpty() || !(st.lastThrown.getItem() instanceof GrenadeItem gi)) return false;
+		GrenadeEntity thrown = new GrenadeEntity(p.level(), p, st.lastThrown.copy(), st.lastThrowStart, st.lastThrowVel);
+		thrown.decoyGun = st.lastGun;
+		p.level().addFreshEntity(thrown);
+		soundAt((net.minecraft.server.level.ServerLevel) p.level(), gi.type.sounds + ".Throw", st.lastThrowStart, thrown);
+		return true;
+	}
+
 	public static void throwGrenade(ServerPlayer p, dev.strafemc.net.StrafePayloads.Throw t) {
 		ItemStack held = p.getMainHandItem();
 		if (!(held.getItem() instanceof GrenadeItem gi)) return;
@@ -156,6 +173,9 @@ public final class GunServer {
 		GrenadeEntity thrown = new GrenadeEntity(p.level(), p, held.copyWithCount(1), start, vel);
 		thrown.decoyGun = st.lastGun;
 		p.level().addFreshEntity(thrown);
+		st.lastThrown = held.copyWithCount(1);
+		st.lastThrowStart = start;
+		st.lastThrowVel = vel;
 		if (!p.getAbilities().instabuild) held.shrink(1);
 		broadcast(p, gi.type.sounds + ".Throw");
 		st.deployUntil = now + sec(0.4); // the next one comes out after the throw

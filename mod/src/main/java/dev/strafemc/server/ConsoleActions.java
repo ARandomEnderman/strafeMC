@@ -76,6 +76,10 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Lag compensation " + (StrafeSettings.lagComp() ? "ON" : "OFF")
 						+ ", max rewind " + StrafeSettings.maxUnlagMs() + " ms (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "sv_rethrow_last_grenade" -> {
+				if (!cheat) break;
+				if (!dev.strafemc.weapon.GunServer.rethrow(p)) p.sendSystemMessage(Component.literal("No grenade thrown yet."));
+			}
 			case "kill" -> p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			case "explode" -> {
 				// CS "explode": you blow up. A harmless-to-blocks explosion for the effect, then death.

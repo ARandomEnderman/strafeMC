@@ -192,15 +192,19 @@ public final class GrenadeClient {
 				p.getX(), p.getEyeY(), p.getZ(), 1.0);
 	}
 
-	/** The white-out: full white for CS2's hold time, then fading out until its fade time (FLAGGED: the curve's shape). */
+	/**
+	 * The white-out, CS2's client curve: with `left` the time left of the flash duration (the server's fade time), fully
+	 * white while more than 3 s are left, then (left / 3)^2 over the last 3 s. (CS2 also blends a frozen frame from the
+	 * flash moment that fades linearly over the whole duration; not done yet.)
+	 */
 	public static void registerHud() {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "grenade_crosshair"),
 				(g, delta) -> GrenadeCrosshair.render(g));
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "flashbang"), (g, delta) -> {
 			float secs = flashSeconds;
 			if (secs <= 0) return;
-			float t = (System.nanoTime() - flashStart) / 1e9f, hold = Math.min(flashHold, secs * 0.99f);
-			float a = t < hold ? 1 : 1 - (t - hold) / (secs - hold);
+			float left = secs - (System.nanoTime() - flashStart) / 1e9f;
+			float a = left >= 3 ? 1 : left > 0 ? (left / 3) * (left / 3) : 0;
 			if (a <= 0) {
 				flashSeconds = 0;
 				return;
