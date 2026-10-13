@@ -27,6 +27,18 @@ public final class HullTrace {
 		 * 45-degree ramp prism filling a block of size s at (bx,by,bz), rising toward direction (fx,fz)
 		 * (a unit cardinal vector). Low edge at the side opposite (fx,fz), high edge on the (fx,fz) side.
 		 */
+		/**
+		 * Outer corner of two 45 degree slopes rising toward (ax, az) and (bx2, bz2) (perpendicular): the part both
+		 * ramps share, a pyramid over the block's square with its tip above the corner where both are high.
+		 */
+		public static Solid outerCorner(double bx, double by, double bz, double s, int ax, int az, int bx2, int bz2) {
+			double tx = bx + (ax > 0 || bx2 > 0 ? s : 0), tz = bz + (az > 0 || bz2 > 0 ? s : 0);
+			double[][] v = {{bx, by, bz}, {bx + s, by, bz}, {bx, by, bz + s}, {bx + s, by, bz + s}, {tx, by + s, tz}};
+			double r = Math.sqrt(2);
+			double[] n1 = {-ax / r, 1 / r, -az / r}, n2 = {-bx2 / r, 1 / r, -bz2 / r};
+			return new Solid(new double[][] {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, n1, n2}, v);
+		}
+
 		public static Solid ramp(double bx, double by, double bz, double s, int fx, int fz) {
 			return ramp(bx, by, bz, s, s, s, fx, fz);
 		}

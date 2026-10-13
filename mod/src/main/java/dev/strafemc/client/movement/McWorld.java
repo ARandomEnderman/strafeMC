@@ -74,8 +74,13 @@ public final class McWorld implements SourceMovement.World {
 						continue;
 					}
 					if (st.getBlock() instanceof dev.strafemc.world.SurfSlopeBlock) {
-						Direction f = st.getValue(dev.strafemc.world.SurfSlopeBlock.FACING);
-						out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ()));
+						Direction f = st.getValue(dev.strafemc.world.SurfSlopeBlock.FACING), d2 = dev.strafemc.world.SurfSlopeBlock.second(st);
+						if (d2 != null && dev.strafemc.world.SurfSlopeBlock.outer(st)) // pyramid tip: where both slopes overlap
+							out.add(HullTrace.Solid.outerCorner(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ(), d2.getStepX(), d2.getStepZ()));
+						else {
+							out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, f.getStepX(), f.getStepZ()));
+							if (d2 != null) out.add(HullTrace.Solid.ramp(bx * s, by * s, bz * s, s, d2.getStepX(), d2.getStepZ())); // inner: both
+						}
 						continue;
 					}
 					if (st.getBlock() instanceof StairBlock && st.getValue(StairBlock.HALF) == Half.BOTTOM

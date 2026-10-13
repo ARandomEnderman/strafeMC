@@ -1,19 +1,199 @@
 {
- "variants": {
-  "facing=east": {
-   "model": "strafemc:block/surf_slope"
+ "multipart": [
+  {
+   "when": {
+    "facing": "east",
+    "shape": "straight|inner_left|inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope"
+   }
   },
-  "facing=south": {
-   "model": "strafemc:block/surf_slope",
-   "y": 90
+  {
+   "when": {
+    "facing": "east",
+    "shape": "inner_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 270
+   }
   },
-  "facing=west": {
-   "model": "strafemc:block/surf_slope",
-   "y": 180
+  {
+   "when": {
+    "facing": "east",
+    "shape": "inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 90
+   }
   },
-  "facing=north": {
-   "model": "strafemc:block/surf_slope",
-   "y": 270
+  {
+   "when": {
+    "facing": "east",
+    "shape": "outer_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer"
+   }
+  },
+  {
+   "when": {
+    "facing": "east",
+    "shape": "outer_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "shape": "straight|inner_left|inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "shape": "inner_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope"
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "shape": "inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "shape": "outer_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "south",
+    "shape": "outer_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "shape": "straight|inner_left|inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "shape": "inner_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 90
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "shape": "inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "shape": "outer_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "west",
+    "shape": "outer_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "shape": "straight|inner_left|inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "shape": "inner_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope",
+    "y": 180
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "shape": "inner_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope"
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "shape": "outer_left"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer",
+    "y": 270
+   }
+  },
+  {
+   "when": {
+    "facing": "north",
+    "shape": "outer_right"
+   },
+   "apply": {
+    "model": "strafemc:block/surf_slope_outer"
+   }
   }
- }
+ ]
 }
