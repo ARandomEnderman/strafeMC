@@ -56,6 +56,7 @@ public final class Viewmodel {
 	}
 
 	private volatile Loaded loaded;
+	private final ViewmodelMotion motion = new ViewmodelMotion();
 	/** Set after any rendering error: the vanilla hand is used from then on (logged once). */
 	private volatile boolean broken;
 	private volatile String loading;
@@ -261,7 +262,8 @@ public final class Viewmodel {
 
 		Matrix4f[][] armSkin = skins(l.arms, clip, pose, null);
 		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
-		Matrix4f toView = toView();
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		Matrix4f toView = player != null ? motion.offset(player).mul(toView()) : toView(); // bob + sway, then the model
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());
