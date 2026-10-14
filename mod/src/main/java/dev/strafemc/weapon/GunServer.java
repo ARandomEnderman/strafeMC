@@ -432,7 +432,7 @@ public final class GunServer {
 		if (inf != 1 && g.weaponClass.equals(ZeusRecharge.CLS)) ZeusRecharge.fired(p, held); // CS2's Zeus recharges instead of reloading
 
 		double units = StrafeConfig.unitsPerBlock;
-		Vec3 eye = p.getEyePosition();
+		Vec3 eye = shooterEye(p, f.eye());
 		ServerShots.Result shot = ServerShots.resolve(p, w, f, shotAt); // the server decides spread + recoil (the client only predicted)
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
@@ -443,6 +443,16 @@ public final class GunServer {
 					shot.shot(), n);
 			bullet(p, w, f, shot, dir, eye, n == 0);
 		}
+	}
+
+	/**
+	 * Where the shot starts: the shooter's own eye height (CS2's view offset, 64 units standing = 1.60 blocks, not
+	 * Minecraft's 1.62, so bullets leave from where the camera is), kept within a block of Minecraft's eye.
+	 */
+	private static Vec3 shooterEye(ServerPlayer p, float eye) {
+		double mc = p.getEyeY() - p.getY();
+		double e = Float.isFinite(eye) && eye > 0.2f && Math.abs(eye - mc) < 1.0 ? eye : mc;
+		return new Vec3(p.getX(), p.getY() + e, p.getZ());
 	}
 
 	/** Shots in a FAMAS / Glock-18 burst (CS2's burst fires 3). */

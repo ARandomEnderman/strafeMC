@@ -645,7 +645,8 @@ public final class GunClient {
 		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
-					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0)));
+					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0),
+						(float) (p.getEyeY() - p.getY())));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
 			sounds.clear();
