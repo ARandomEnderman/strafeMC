@@ -133,6 +133,11 @@ public final class GunServer {
 	 * its WPN_SILENCER_ATTACH / WPN_SILENCER_DETACH event (about 3.4 s in); no shooting until then; switching away
 	 * cancels it.
 	 */
+	/** switchhands: CS2 deploys the held weapon again (draw delay, a reload in progress dropped). */
+	public static void redeploy(ServerPlayer p) {
+		state(p).lastHeld = ItemStack.EMPTY;
+	}
+
 	public static void toggleSilencer(ServerPlayer p) {
 		ItemStack held = p.getMainHandItem();
 		if (!(held.getItem() instanceof GunItem g) || !g.hasSilencer()) return;

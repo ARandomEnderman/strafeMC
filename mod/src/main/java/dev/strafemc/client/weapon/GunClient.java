@@ -100,6 +100,25 @@ public final class GunClient {
 		t.start();
 	}
 
+	/** Odds of a knife's draw_ clip over its plain draw2_ (CS2 sets deploy_variation in code; the odds are a guess - FLAGGED). */
+	private static final double RARE_DRAW_CHANCE = 0.1;
+
+	/**
+	 * The draw clip: knives with two deploys pick by deploy_variation in their CS2 graph (0: draw_, the rare elaborate one;
+	 * 1: draw2_, the everyday one).
+	 */
+	private String drawClip(GunItem g) {
+		String draw2 = GunServer.clipPath(g.weaponClass, "draw2");
+		if (draw2 == null || !draw2.contains("draw2")) return "draw";
+		return rng.nextDouble() < RARE_DRAW_CHANCE ? "draw" : "draw2";
+	}
+
+	/** Draws the held weapon again (switchhands: CS2 redeploys it), with its deploy delay; the server redeploys too. */
+	public static void redeploy() {
+		INSTANCE.lastSlot = -1;
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("redeploy", ""));
+	}
+
 	public static boolean holdingGun(LocalPlayer p) {
 		return p != null && p.getMainHandItem().getItem() instanceof GunItem;
 	}
@@ -141,8 +160,9 @@ public final class GunClient {
 			if (held.getItem() instanceof GunItem g) { // (knives have no WeaponStats: m_flDeployDuration 1.0 from their vdata)
 				WeaponStats ds = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
 				deployUntil = now + sec(ds != null ? ds.deployDuration() : 1.0); // no attacking while drawing
-				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("draw");
-				schedule(g, "draw", now);
+				String draw = drawClip(g);
+				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(draw);
+				schedule(g, draw, now);
 			}
 		}
 		lastHeld = held;

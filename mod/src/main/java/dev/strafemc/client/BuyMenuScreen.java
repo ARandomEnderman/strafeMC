@@ -388,7 +388,8 @@ public final class BuyMenuScreen extends Screen {
 			}
 			return true;
 		}
-		if (k == GLFW.GLFW_KEY_B && selected < 0) {
+		// the buy key closes it again, and so does Minecraft's inventory key (like it closes the inventory)
+		if (selected < 0 && (dev.strafemc.client.weapon.GunClient.BUY.matches(e) || minecraft.options.keyInventory.matches(e))) {
 			onClose();
 			return true;
 		}

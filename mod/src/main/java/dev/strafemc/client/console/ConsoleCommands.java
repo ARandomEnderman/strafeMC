@@ -230,12 +230,15 @@ public final class ConsoleCommands {
 			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
 		});
 		local("cl_righthand", "Viewmodel in the right hand (1) or mirrored into the left (0).", a -> {
+			boolean was = StrafeConfig.rightHand;
 			StrafeConfig.rightHand = bool(a, !StrafeConfig.rightHand);
 			saved("cl_righthand", StrafeConfig.rightHand);
+			if (was != StrafeConfig.rightHand) dev.strafemc.client.weapon.GunClient.redeploy();
 		});
 		local("switchhands", "Swap the viewmodel to the other hand (bound to H by default).", a -> {
 			StrafeConfig.rightHand = !StrafeConfig.rightHand;
 			saved("cl_righthand", StrafeConfig.rightHand);
+			dev.strafemc.client.weapon.GunClient.redeploy();
 		});
 		local("strafemc_team", "Your CS side: ct or t (no value: switch). Footsteps and smoke colour; later your agent.", a -> {
 			StrafeConfig.team = a.length > 0 ? (a[0].equalsIgnoreCase("t") ? "t" : "ct") : ("t".equals(StrafeConfig.team) ? "ct" : "t");

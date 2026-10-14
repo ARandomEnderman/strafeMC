@@ -688,6 +688,9 @@ public final class Viewmodel {
 			Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
 			float[][] sk = skinVertices(p, skin, toView);
 			float[] sp = sk[0], sn = sk[1];
+			// mirrored into the left hand (cl_righthand 0): the triangles turn round, so swap their winding or culling
+			// keeps the insides
+			boolean mirrored = toView.determinant3x3() < 0;
 			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (ignored, vc) -> {
 				if (broken) return;
 				PoseStack.Pose pose = new PoseStack.Pose();
@@ -696,10 +699,11 @@ public final class Viewmodel {
 				int[] idx = p.idx;
 				try {
 				for (int i = 0; i + 2 < idx.length; i += 3) {
+					int b = mirrored ? idx[i + 2] : idx[i + 1], c = mirrored ? idx[i + 1] : idx[i + 2];
 					vertex(vc, pose, sp, sn, p, idx[i], light);
-					vertex(vc, pose, sp, sn, p, idx[i + 1], light);
-					vertex(vc, pose, sp, sn, p, idx[i + 2], light);
-					vertex(vc, pose, sp, sn, p, idx[i + 2], light); // entity render types draw quads
+					vertex(vc, pose, sp, sn, p, b, light);
+					vertex(vc, pose, sp, sn, p, c, light);
+					vertex(vc, pose, sp, sn, p, c, light); // entity render types draw quads
 				}
 				} catch (RuntimeException e) { // never crash the game over the viewmodel: fall back to the vanilla hand
 					broken = true;
