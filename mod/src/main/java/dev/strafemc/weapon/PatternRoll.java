@@ -15,11 +15,12 @@ public final class PatternRoll {
 
 	private PatternRoll() {}
 
+	/** Rolls offset x, offset y, then rotation: always three draws (a variable the kit doesn't list rolls between 0 and 0). */
 	public static Placement roll(int seed, Bounds b) {
 		Stream r = new Stream(seed);
-		double x = r.randomFloat(b.offsetX[0], b.offsetX[1]);
-		double y = r.randomFloat(b.offsetY[0], b.offsetY[1]);
-		double rot = r.randomFloat(b.rotation[0], b.rotation[1]);
+		double x = b.offsetX != null ? r.randomFloat(b.offsetX[0], b.offsetX[1]) : r.randomFloat(0, 0);
+		double y = b.offsetY != null ? r.randomFloat(b.offsetY[0], b.offsetY[1]) : r.randomFloat(0, 0);
+		double rot = b.rotation != null ? r.randomFloat(b.rotation[0], b.rotation[1]) : r.randomFloat(0, 0);
 		return new Placement(x, y, rot);
 	}
 

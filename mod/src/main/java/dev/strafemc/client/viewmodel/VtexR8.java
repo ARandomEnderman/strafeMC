@@ -34,6 +34,31 @@ public final class VtexR8 {
 		return img;
 	}
 
+	/**
+	 * A square RGBA16161616F texture (CS2's composite position maps, VTEX_FORMAT 10), mip 0: rgba floats per texel, row by
+	 * row. Returns {side, data...} as a float array with the side in element 0.
+	 */
+	public static float[] readHalf4(byte[] file) {
+		ByteBuffer b = ByteBuffer.wrap(file).order(ByteOrder.LITTLE_ENDIAN);
+		int blockOffsetField = 8, blockOffset = b.getInt(blockOffsetField), blockCount = b.getInt(12);
+		int end = 0;
+		for (int i = 0; i < blockCount; i++) {
+			int at = blockOffsetField + blockOffset + i * 12;
+			int off = at + 4 + b.getInt(at + 4), size = b.getInt(at + 8);
+			end = Math.max(end, off + size);
+		}
+		byte[] in = java.util.Arrays.copyOfRange(file, end, file.length);
+		int side = 1;
+		while ((long) side * side * 8 < in.length) side *= 2;
+		byte[] px = (long) side * side * 8 == in.length ? in : lz4(in);
+		side = (int) Math.round(Math.sqrt(px.length / 8.0));
+		ByteBuffer p = ByteBuffer.wrap(px).order(ByteOrder.LITTLE_ENDIAN);
+		float[] out = new float[1 + side * side * 4];
+		out[0] = side;
+		for (int i = 0; i < side * side * 4; i++) out[1 + i] = Float.float16ToFloat(p.getShort(i * 2));
+		return out;
+	}
+
 	private static boolean isSquare(int n) {
 		int s = (int) Math.round(Math.sqrt(n));
 		return n >= 64 * 64 && s * s == n && Integer.bitCount(s) == 1;

@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v19/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v23/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -143,7 +143,7 @@ public final class WeaponSkinCache {
 		double[] rot = bound(text, "g_flPatternTexCoordRotation", "X"), ox = bound(text, "g_vPatternTexCoordOffset", "X"),
 				oy = bound(text, "g_vPatternTexCoordOffset", "Y");
 		if (rot == null && ox == null && oy == null) return null;
-		return new dev.strafemc.weapon.PatternRoll.Bounds(ox != null ? ox : new double[2], oy != null ? oy : new double[2], rot != null ? rot : new double[2]);
+		return new dev.strafemc.weapon.PatternRoll.Bounds(ox, oy, rot); // null: not rolled (no draw)
 	}
 
 	/** A loose variable's {min, max} for one component (X / Y), or null. */
@@ -156,7 +156,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v19/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v23/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -183,7 +183,7 @@ public final class WeaponSkinCache {
 				? image(paint, "g_tPaintByNumberMasks") : image(ci, "g_tMasks");
 		BufferedImage ao = paint.f("g_bOverrideAmbientOcclusion", 0) != 0 && paint.textures.containsKey("g_tFinalAmbientOcclusion")
 				? image(paint, "g_tFinalAmbientOcclusion") : image(ci, "g_tAmbientOcclusion");
-		var inputs = new WeaponSkinBaker.Inputs(masks, ao, ci.f("g_flUvScale1", 1), ci.f("g_flWeaponLength1", 32));
+		var inputs = new WeaponSkinBaker.Inputs(masks, ao, ci.f("g_flUvScale1", 1), ci.f("g_flWeaponLength1", 32), posMap(ci), image(ci, "g_tSurface"));
 		BufferedImage baseImg = ImageIO.read(Viewmodel.downscaledPath(base).toFile());
 		var positions = WeaponSkinBaker.positions(parts, WeaponSkinBaker.SIZE);
 		var result = WeaponSkinBaker.bake(paint, inputs, baseImg, positions, GloveSkinCache::load);
@@ -206,7 +206,19 @@ public final class WeaponSkinCache {
 		return tex;
 	}
 
-	private static BufferedImage image(GloveSkinBaker.Params p, String name) {
+	/** The composite's position map (g_tPosition, half floats), or null. */
+	static float[] posMap(GloveSkinBaker.Params ci) {
+		String path = ci.textures.get("g_tPosition");
+		if (path == null || path.startsWith("materials/default/")) return null;
+		try {
+			return VtexR8.readHalf4(Files.readAllBytes(AssetCache.raw(path + "_c")));
+		} catch (Exception e) {
+			dev.strafemc.StrafeMc.LOG.warn("[strafemc] position map {} unreadable: {}", path, e.toString());
+			return null;
+		}
+	}
+
+	static BufferedImage image(GloveSkinBaker.Params p, String name) {
 		String path = p.textures.get(name);
 		return path == null || path.startsWith("materials/default/") ? null : GloveSkinCache.load(path);
 	}

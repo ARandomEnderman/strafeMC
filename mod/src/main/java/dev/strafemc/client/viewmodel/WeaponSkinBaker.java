@@ -26,15 +26,19 @@ public final class WeaponSkinBaker {
 	private WeaponSkinBaker() {}
 
 	/** The weapon's composite inputs (csgo_composite_inputs): masks, ambient occlusion, size scales. */
-	public record Inputs(BufferedImage masks, BufferedImage ao, double uvScale, double weaponLength) {}
+	public record Inputs(BufferedImage masks, BufferedImage ao, double uvScale, double weaponLength, float[] posMap, BufferedImage surface) {
+		public Inputs(BufferedImage masks, BufferedImage ao, double uvScale, double weaponLength) {
+			this(masks, ao, uvScale, weaponLength, null, null);
+		}
+	}
 
 	/**
 	 * Object-space position per texel (pos[3 * (y * size + x)]), NaN where no triangle covers the texel; made from the
 	 * mesh (CS2's g_tPosition holds the same, as a float texture).
 	 */
 	public record Positions(int size, float[] pos, float[] min, float[] max) {
-		/** Per texel (5 floats): object-space x, y, z, then the second UV set's u, v there (NaN: none / not covered). */
-		public static final int STRIDE = 5;
+		/** Per texel (8 floats): object-space x, y, z, the second UV set's u, v (NaN: none), the object-space normal x, y, z. */
+		public static final int STRIDE = 8;
 
 		/**
 		 * Where a UV-space pattern is read at texel (u, v): the second UV set there when the weapon has one (CS2 guns keep
@@ -58,12 +62,15 @@ public final class WeaponSkinBaker {
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
 		// pattern size: the weapon's size scale (composite inputs' g_flUvScale1) for hydrographic, patina and anodized multicolour
 		// (Tiger Tooth / Freehand checked in game by the user); spray paint denser than its raw scale; the rest as they are (FLAGGED)
-		boolean projected0 = style == 2 || style == 4 || style == 5;
+		// projected (triplanar) only for spray paint and anodized airbrushed: CS2's shader variants for every other style read
+		// the pattern at the transformed mesh UV (its vertex shader: out = (uv, Xform(uv)))
+		boolean projected0 = style == 2 || style == 5;
 		// CS2's own pattern transform (csgo_customweapon's g_vPatternTexCoordXform0/1 expressions, decoded from the shader):
 		// values rounded to 0.01; scale = pattern scale x (ignore weapon size ? 1 : the UV scale, or weapon length / 36 for the
 		// projected styles - which variant goes with which style is ours, FLAGGED)
 		double scale = round2(round2(p.f("g_flPatternTexCoordScale", 1)) * (ignoreSize ? 1 : projected0 ? in.weaponLength / 36 : in.uvScale));
 		if (scale == 0) scale = 1;
+		double[] blend = p.v("g_vSprayBlend", 1, 1, 0); // triplanar plane weights (CS2's default [1, 1, 0])
 		double rot = Math.toRadians(round2(p.f("g_flPatternTexCoordRotation", 0)));
 		double[] off0 = p.v("g_vPatternTexCoordOffset", 0, 0); // the rolled offset (PatternRoll)
 		double offX = round2(off0[0]), offY = round2(off0.length > 1 ? off0[1] : 0);
@@ -74,7 +81,7 @@ public final class WeaponSkinBaker {
 		double[] xf0 = {scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5};
 		double[] xf1 = {scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5};
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
-		boolean projected = style == 2 || style == 4 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
+		boolean projected = style == 2 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;
 		// anodized multicolour (Dopplers, Marble Fade): more saturated than a plain blend, the pattern's alpha (stretched to its
 		// own maximum) marking the dark marbling (FLAGGED: tuned by eye to CS2's previews, which are deep, not pastel)
@@ -122,22 +129,15 @@ public final class WeaponSkinBaker {
 					pu = puv[0];
 					pv = puv[1];
 				}
-				if (projected && positions != null) {
-					int px = Math.min(positions.size - 1, (int) (u * positions.size)), py = Math.min(positions.size - 1, (int) (v * positions.size));
-					int o = Positions.STRIDE * (py * positions.size + px);
-					if (!Float.isNaN(positions.pos[o])) {
-						// centred on the weapon, its longest axis across and the next one up (0.54.0's projection: the user confirmed
-						// Talon Marble Fade 412 as Fire and Ice with it; the Karambit doesn't match yet - FLAGGED, open)
-						pu = (positions.pos[o + ax] - (positions.min[ax] + positions.max[ax]) / 2) / span + 0.5;
-						pv = 0.5 - (positions.pos[o + ay] - (positions.min[ay] + positions.max[ay]) / 2) / span;
-					}
+				int pc;
+				if (projected && (in.posMap() != null || positions != null) && pattern != null)
+					pc = triplanar(in, positions, u, v, pattern, xf0, xf1, sampU, sampV, blend);
+				else {
+					double ru = address(xf0[0] * pu + xf0[1] * pv + xf0[2], sampU), rv = address(xf1[0] * pu + xf1[1] * pv + xf1[2], sampV);
+					pc = pattern == null ? 0 : GloveSkinBaker.sampleBilinear(pattern, ru, rv);
 				}
-				double ru = xf0[0] * pu + xf0[1] * pv + xf0[2], rv = xf1[0] * pu + xf1[1] * pv + xf1[2];
-				ru = address(ru, sampU);
-				rv = address(rv, sampV);
 				double[] c;
 				double alpha = 1;
-				int pc = pattern == null ? 0 : GloveSkinBaker.sampleBilinear(pattern, ru, rv);
 				double[] pt = GloveSkinBaker.unpack(pc);
 				switch (style) {
 					case 0 -> c = col[0];
@@ -177,6 +177,70 @@ public final class WeaponSkinBaker {
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
 			}
 		return new Result(out, paint);
+	}
+
+	/**
+	 * CS2's projection for spray / anodized multicolour / airbrushed (decoded from csgo_customweapon's pixel shader): the
+	 * composite's position map holds (Source-space position - the weapon's bounds centre) / weapon length + 0.5 (checked
+	 * against the Karambit's g_tPosition: exact), the shader doubles it and samples the pattern on three planes (yz, xz, yx)
+	 * through the pattern transform, blending to xz by blend.y * |n.y|^7 and to yx by blend.z * |n.z|^7 (n the object
+	 * normal). Our positions are glb (x, y, z) = Source (x, z, -y), in metres.
+	 */
+	static int triplanar(Inputs in, Positions pp, double u, double v, BufferedImage pattern, double[] xf0, double[] xf1, int sampU, int sampV, double[] blend) {
+		float[] pm = in.posMap();
+		if (pm != null) { // CS2's own position map (x2, as its shader does) and object-space normal map (g_tSurface)
+			int side = (int) pm[0], tx = Math.min(side - 1, (int) (u * side)), ty = Math.min(side - 1, (int) (v * side)), o = 1 + 4 * (ty * side + tx);
+			double X = 2 * pm[o], Y = 2 * pm[o + 1], Z = 2 * pm[o + 2];
+			double ny = 0, nz = 0;
+			if (in.surface() != null) {
+				int sc = GloveSkinBaker.sample(in.surface(), u, v);
+				double nx = (sc >> 16 & 255) / 127.5 - 1;
+				ny = (sc >> 8 & 255) / 127.5 - 1;
+				nz = (sc & 255) / 127.5 - 1;
+				double nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+				if (nl > 1e-6) {
+					ny /= nl;
+					nz /= nl;
+				}
+			}
+			return blendPlanes(pattern, X, Y, Z, ny, nz, xf0, xf1, sampU, sampV, blend);
+		}
+		double weaponLength = in.weaponLength();
+		int px = Math.min(pp.size - 1, (int) (u * pp.size)), py = Math.min(pp.size - 1, (int) (v * pp.size));
+		int o = Positions.STRIDE * (py * pp.size + px);
+		if (Float.isNaN(pp.pos[o])) return 0;
+		double inch = 1 / 0.0254;
+		double sx = pp.pos[o] * inch, sy = -pp.pos[o + 2] * inch, sz = pp.pos[o + 1] * inch;
+		double cx = (pp.min[0] + pp.max[0]) / 2 * inch, cy = -(pp.min[2] + pp.max[2]) / 2 * inch, cz = (pp.min[1] + pp.max[1]) / 2 * inch;
+		double len = weaponLength > 0 ? weaponLength : 32;
+		double X = 2 * ((sx - cx) / len + 0.5), Y = 2 * ((sy - cy) / len + 0.5), Z = 2 * ((sz - cz) / len + 0.5);
+		double nx = pp.pos[o + 5], ny = -pp.pos[o + 7], nz = pp.pos[o + 6], nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+		if (nl > 1e-6) {
+			ny /= nl;
+			nz /= nl;
+		}
+		return blendPlanes(pattern, X, Y, Z, ny, nz, xf0, xf1, sampU, sampV, blend);
+	}
+
+	/** The three plane samples (yz, xz, yx) blended by the normal like CS2's shader. */
+	private static int blendPlanes(BufferedImage pattern, double X, double Y, double Z, double ny, double nz, double[] xf0, double[] xf1, int sampU, int sampV,
+								   double[] blend) {
+		double[] a = plane(pattern, Y, Z, xf0, xf1, sampU, sampV), b = plane(pattern, X, Z, xf0, xf1, sampU, sampV),
+				c = plane(pattern, Y, X, xf0, xf1, sampU, sampV);
+		double t1 = blend[1] * Math.pow(Math.abs(ny), 7), t2 = (blend.length > 2 ? blend[2] : 0) * Math.pow(Math.abs(nz), 7);
+		int out = 0;
+		for (int k = 0; k < 4; k++) {
+			double m = (a[k] + (b[k] - a[k]) * t1) * (1 - t2) + c[k] * t2;
+			out |= (int) Math.round(Math.max(0, Math.min(255, m))) << (k == 3 ? 24 : 16 - 8 * k);
+		}
+		return out;
+	}
+
+	/** One plane's pattern sample (r, g, b, a in 0..255) at the pattern transform of (p, q). */
+	private static double[] plane(BufferedImage pattern, double p, double q, double[] xf0, double[] xf1, int sampU, int sampV) {
+		double ru = address(xf0[0] * p + xf0[1] * q + xf0[2], sampU), rv = address(xf1[0] * p + xf1[1] * q + xf1[2], sampV);
+		int c = GloveSkinBaker.sampleBilinear(pattern, ru, rv);
+		return new double[] {c >> 16 & 255, c >> 8 & 255, c & 255, c >>> 24};
 	}
 
 	private static double smooth(double e0, double e1, double x) {
@@ -237,6 +301,7 @@ public final class WeaponSkinBaker {
 						if (wa < -0.01 || wb < -0.01 || wc < -0.01) continue;
 						int o = st * (y * size + x);
 						for (int k = 0; k < 3; k++) pos[o + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
+						for (int k = 0; k < 3; k++) pos[o + 5 + k] = (float) (wa * p.nrm[a * 3 + k] + wb * p.nrm[b * 3 + k] + wc * p.nrm[c * 3 + k]);
 					}
 			}
 		}
