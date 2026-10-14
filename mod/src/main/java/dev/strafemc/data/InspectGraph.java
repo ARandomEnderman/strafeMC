@@ -53,9 +53,24 @@ public final class InspectGraph {
 		return out;
 	}
 
-	/** Weighted random pick; fallback when the graph gave nothing. */
+	private static final java.util.Set<String> QUEUED = ConcurrentHashMap.newKeySet();
+	private static final java.util.concurrent.ExecutorService LOADER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+		Thread t = new Thread(r, "strafemc-inspect-graphs");
+		t.setDaemon(true);
+		return t;
+	});
+
+	/** The options if they're read already; else null, and they're read in the background (never blocks the game). */
+	public static List<Option> peek(String graphName) {
+		List<Option> o = CACHE.get(graphName);
+		if (o == null && QUEUED.add(graphName)) LOADER.execute(() -> options(graphName));
+		return o;
+	}
+
+	/** Weighted random pick; fallback when the graph gave nothing or isn't read yet (non-blocking: see peek). */
 	public static String pick(String graphName, java.util.Random rng, String fallback) {
-		List<Option> o = options(graphName);
+		List<Option> o = peek(graphName);
+		if (o == null) return fallback;
 		double total = 0;
 		for (Option x : o) total += x.weight();
 		if (total <= 0) return fallback;

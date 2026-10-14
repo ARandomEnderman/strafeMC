@@ -272,6 +272,8 @@ public final class Viewmodel {
 					l.clips.put(a, new VmClip(a, Glb.read(AssetCache.exportGlb(p, false))));
 				}
 				for (String a : w.clips) dev.strafemc.data.AnimClip.load(dev.strafemc.weapon.GunServer.clipPath(cls, a));
+				var entry = dev.strafemc.weapon.WeaponTable.get(cls); // the inspect odds, so the first inspect doesn't wait for them
+				if (entry != null && entry.inspectGraph() != null) dev.strafemc.data.InspectGraph.options(entry.inspectGraph());
 				for (VmModel m : new VmModel[] {l.arms, l.gun})
 					for (VmModel.Part part : m.parts)
 						if (part.texture != null) {
