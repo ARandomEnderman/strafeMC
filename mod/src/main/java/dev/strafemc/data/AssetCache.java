@@ -87,6 +87,35 @@ public final class AssetCache {
 		}
 	}
 
+	/**
+	 * Every pak path under a folder prefix (e.g. "weapons/paints/"), from one converter listing saved in the cache
+	 * (cache/<prefix>_list.txt); refreshed when missing.
+	 */
+	public static List<String> list(String prefix) throws IOException {
+		synchronized (lock("list " + prefix)) {
+			Path out = StrafeConfig.cacheDir().resolve(prefix + "_list.txt");
+			if (!Files.exists(out) || Files.size(out) == 0) {
+				if (!available()) throw new IOException("no CS2 install / converter (" + vpk() + ")");
+				Files.createDirectories(out.getParent());
+				Process p = new ProcessBuilder(StrafeConfig.vrfPath, "-i", vpk().toString(), "-l", "-f", prefix).redirectErrorStream(true)
+						.redirectOutput(out.toFile()).start();
+				try {
+					if (!p.waitFor(2, TimeUnit.MINUTES)) p.destroyForcibly();
+				} catch (InterruptedException e) {
+					p.destroyForcibly();
+					throw new IOException("interrupted", e);
+				}
+			}
+			List<String> paths = new ArrayList<>();
+			for (String l : Files.readAllLines(out)) {
+				String t = l.trim();
+				int sp = t.indexOf(' ');
+				if (t.startsWith(prefix)) paths.add(sp > 0 ? t.substring(0, sp) : t);
+			}
+			return paths;
+		}
+	}
+
 	/** Decompiles a single resource into the cache if its output isn't there yet (e.g. "sounds/weapons/ak47/ak47_01.vsnd_c"). */
 	public static void ensureDecompiled(String vpkPath, Path expectedOutput) throws IOException {
 		synchronized (lock(vpkPath)) {
