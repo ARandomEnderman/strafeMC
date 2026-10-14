@@ -62,7 +62,10 @@ public class SkinWrapItem extends Item {
 	public Component getName(ItemStack stack) {
 		SkinWraps.Wrap w = SkinWraps.get(skin(stack));
 		if (w == null) return super.getName(stack);
-		return Component.literal(w.name() + (knife ? " Knife Wrap" : " Wrap"));
+		// the name in CS2's rarity colour
+		var r = w.rarity();
+		var name = Component.literal(w.name() + (knife ? " Knife Wrap" : " Wrap"));
+		return r == null ? name : name.withColor(r.color);
 	}
 
 	@Override

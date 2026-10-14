@@ -16,8 +16,40 @@ import java.util.Map;
  * else another knife's: new combinations are allowed).
  */
 public final class SkinWraps {
-	/** pattern: the finish has a pattern (not a solid colour or plain anodizing), so a pattern seed changes how it looks. */
-	public record Wrap(String id, String name, boolean knife, Map<String, String> kits, boolean pattern) {}
+	/**
+	 * pattern: the finish has a pattern (not a solid colour or plain anodizing), so a pattern seed changes how it looks.
+	 * rarities: CS2's rarity of the skin on each weapon (its collection's loot list; knives ancient).
+	 */
+	public record Wrap(String id, String name, boolean knife, Map<String, String> kits, boolean pattern, Map<String, Rarity> rarities) {
+		/** The wrap's rarity: the highest it has on any weapon, or null if CS2 doesn't list one. */
+		public Rarity rarity() {
+			Rarity best = null;
+			for (Rarity r : rarities.values()) if (best == null || r.ordinal() > best.ordinal()) best = r;
+			return best;
+		}
+	}
+
+	/** CS2's item rarities (items_game "rarities") with their name colours ("colors" desc_*). */
+	public enum Rarity {
+		COMMON("Consumer Grade", 0xB0C3D9), UNCOMMON("Industrial Grade", 0x5E98D9), RARE("Mil-Spec", 0x4B69FF), MYTHICAL("Restricted", 0x8847FF),
+		LEGENDARY("Classified", 0xD32CE6), ANCIENT("Covert", 0xEB4B4B), IMMORTAL("Contraband", 0xE4AE39);
+
+		public final String weaponName;
+		public final int color;
+
+		Rarity(String weaponName, int color) {
+			this.weaponName = weaponName;
+			this.color = color;
+		}
+
+		static Rarity of(String id) {
+			try {
+				return valueOf(id.toUpperCase(java.util.Locale.ROOT));
+			} catch (IllegalArgumentException e) {
+				return null;
+			}
+		}
+	}
 
 	private static final Map<String, Wrap> ALL = load();
 
@@ -52,7 +84,15 @@ public final class SkinWraps {
 					int eq = pair.indexOf('=');
 					if (eq > 0) kits.put(pair.substring(0, eq), pair.substring(eq + 1));
 				}
-				out.put(f[0], new Wrap(f[0], f[1], f[0].startsWith("knife:"), Collections.unmodifiableMap(kits), f.length > 3 && f[3].equals("pattern")));
+				Map<String, Rarity> rarities = new LinkedHashMap<>();
+				if (f.length > 4)
+					for (String pair : f[4].split(" ")) {
+						int eq = pair.indexOf('=');
+						Rarity rarity = eq > 0 ? Rarity.of(pair.substring(eq + 1)) : null;
+						if (rarity != null) rarities.put(pair.substring(0, eq), rarity);
+					}
+				out.put(f[0], new Wrap(f[0], f[1], f[0].startsWith("knife:"), Collections.unmodifiableMap(kits), f.length > 3 && f[3].equals("pattern"),
+						Collections.unmodifiableMap(rarities)));
 			}
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.error("[strafemc] skin wraps unreadable", e);
