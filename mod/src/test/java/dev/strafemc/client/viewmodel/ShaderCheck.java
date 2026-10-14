@@ -4,7 +4,11 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL20;
 
-/** Compiles the viewmodel shaders in a hidden OpenGL window (Minecraft's #moj_import includes resolved) and prints any errors. */
+/**
+ * Compiles and links the viewmodel shader programs in a hidden OpenGL window, as the game does (Minecraft's #moj_import
+ * includes resolved, the pipeline's defines added), and fails on any error: a broken shader leaves the viewmodel
+ * invisible in game without an exception.
+ */
 public final class ShaderCheck {
 	public static void main(String[] a) throws Exception {
 		if (!GLFW.glfwInit()) throw new IllegalStateException("no GLFW");
@@ -16,13 +20,32 @@ public final class ShaderCheck {
 		GLFW.glfwMakeContextCurrent(w);
 		GL.createCapabilities();
 		int failed = 0;
-		for (String[] s : new String[][] {{"viewmodel.vsh", "" + GL20.GL_VERTEX_SHADER}, {"viewmodel.fsh", "" + GL20.GL_FRAGMENT_SHADER}}) {
-			String src = resolve(read("/assets/strafemc/shaders/core/" + s[0]), new java.util.HashSet<>());
-			int sh = GL20.glCreateShader(Integer.parseInt(s[1]));
-			GL20.glShaderSource(sh, src);
-			GL20.glCompileShader(sh);
-			boolean ok = GL20.glGetShaderi(sh, GL20.GL_COMPILE_STATUS) != 0;
-			System.out.println(s[0] + (ok ? " OK" : " FAILED\n" + GL20.glGetShaderInfoLog(sh)));
+		// each program as the game links it: vertex + fragment shader, with the pipeline's defines
+		String[][] programs = {{"viewmodel.vsh", "viewmodel.fsh", ""}, {"viewmodel_skinned.vsh", "viewmodel.fsh", "#define MAX_JOINTS " + GpuSkin.MAX_JOINTS}};
+		for (String[] prog : programs) {
+			int program = GL20.glCreateProgram();
+			boolean ok = true;
+			for (int k = 0; k < 2; k++) {
+				String src = resolve(read("/assets/strafemc/shaders/core/" + prog[k]), new java.util.HashSet<>());
+				if (!prog[2].isEmpty()) {
+					int eol = src.indexOf('\n') + 1; // after #version
+					src = src.substring(0, eol) + prog[2] + "\n" + src.substring(eol);
+				}
+				int sh = GL20.glCreateShader(k == 0 ? GL20.GL_VERTEX_SHADER : GL20.GL_FRAGMENT_SHADER);
+				GL20.glShaderSource(sh, src);
+				GL20.glCompileShader(sh);
+				if (GL20.glGetShaderi(sh, GL20.GL_COMPILE_STATUS) == 0) {
+					System.out.println(prog[k] + " FAILED\n" + GL20.glGetShaderInfoLog(sh));
+					ok = false;
+				}
+				GL20.glAttachShader(program, sh);
+			}
+			if (ok) {
+				GL20.glLinkProgram(program);
+				ok = GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) != 0;
+				if (!ok) System.out.println("link FAILED\n" + GL20.glGetProgramInfoLog(program));
+			}
+			System.out.println(prog[0] + " + " + prog[1] + (ok ? " OK" : " FAILED"));
 			if (!ok) failed++;
 		}
 		GLFW.glfwDestroyWindow(w);
@@ -37,7 +60,7 @@ public final class ShaderCheck {
 		}
 	}
 
-	/** #moj_import <ns:file> -> assets/ns/shaders/include/file, once each. */
+	/** #moj_import <ns:file> -> assets/ns/shaders/include/file, once each, without its own #version. */
 	private static String resolve(String src, java.util.Set<String> seen) throws Exception {
 		var m = java.util.regex.Pattern.compile("#moj_import <([a-z0-9_]+):([^>]+)>").matcher(src);
 		StringBuilder out = new StringBuilder();

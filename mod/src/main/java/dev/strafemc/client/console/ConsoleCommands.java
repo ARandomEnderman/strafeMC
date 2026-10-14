@@ -244,6 +244,10 @@ public final class ConsoleCommands {
 			saved("cl_righthand", StrafeConfig.rightHand);
 			if (was != StrafeConfig.rightHand) dev.strafemc.client.weapon.GunClient.redeploy();
 		});
+		local("strafemc_gpu_skinning", "Skin the viewmodel on the GPU (1, fast) or on the CPU every frame (0).", a -> {
+			StrafeConfig.gpuSkinning = bool(a, !StrafeConfig.gpuSkinning);
+			saved("strafemc_gpu_skinning", StrafeConfig.gpuSkinning);
+		});
 		local("switchhands", "Swap the viewmodel to the other hand (bound to H by default).", a -> {
 			StrafeConfig.rightHand = !StrafeConfig.rightHand;
 			saved("cl_righthand", StrafeConfig.rightHand);

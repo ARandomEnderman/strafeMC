@@ -742,6 +742,22 @@ public final class Viewmodel {
 		return m;
 	}
 
+	/** The CPU path for one opaque part, when GPU skinning failed this frame (into the render type's own buffer). */
+	private void cpuFallback(VmModel.Part p, Matrix4f[] skin, Matrix4f toView, Matrix4f cam, int light, Identifier tex,
+							 com.mojang.blaze3d.vertex.VertexConsumer vc) {
+		float[][] sk = skinVertices(p, skin, toView);
+		PoseStack.Pose pose = new PoseStack.Pose();
+		pose.pose().set(RenderSystem.getModelViewMatrix()).invert().mul(cam);
+		pose.normal().set(pose.pose()).invert().transpose();
+		int[] idx = p.idx;
+		for (int i = 0; i + 2 < idx.length; i += 3) {
+			vertex(vc, pose, sk[0], sk[1], p, idx[i], light);
+			vertex(vc, pose, sk[0], sk[1], p, idx[i + 1], light);
+			vertex(vc, pose, sk[0], sk[1], p, idx[i + 2], light);
+			vertex(vc, pose, sk[0], sk[1], p, idx[i + 2], light);
+		}
+	}
+
 	/** Skins one model on the CPU into camera space; static so the headless check runs the exact production math. */
 	static float[][] skinVertices(VmModel.Part p, Matrix4f[] skin, Matrix4f toView) {
 		int verts = p.pos.length / 3;
@@ -788,6 +804,14 @@ public final class Viewmodel {
 			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;
 			Matrix4f[] skin = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
+			// opaque parts: skinned on the GPU from static buffers (only the joints change per frame)
+			if (GpuSkin.supports(p, skin.length)) {
+				Matrix4f view = new Matrix4f(toView);
+				out.submitCustomGeometry(ps, VmRender.opaque(tex), (ignored, vc) -> {
+					if (!broken && !GpuSkin.draw(p, skin, view, cam, light, tex)) cpuFallback(p, skin, view, cam, light, tex, vc);
+				});
+				continue;
+			}
 			float[][] sk = skinVertices(p, skin, toView);
 			float[] sp = sk[0], sn = sk[1];
 			// mirrored into the left hand (cl_righthand 0): the triangles turn round, so swap their winding or culling
