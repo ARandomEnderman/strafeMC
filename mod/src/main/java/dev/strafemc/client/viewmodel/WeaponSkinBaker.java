@@ -34,7 +34,7 @@ public final class WeaponSkinBaker {
 	 */
 	public record Positions(int size, float[] pos, float[] min, float[] max) {
 		/** Per texel (5 floats): object-space x, y, z, then the second UV set's u, v there (NaN: none / not covered). */
-		static final int STRIDE = 5;
+		public static final int STRIDE = 5;
 
 		/**
 		 * Where a UV-space pattern is read at texel (u, v): the second UV set there when the weapon has one (CS2 guns keep
@@ -126,8 +126,11 @@ public final class WeaponSkinBaker {
 					int px = Math.min(positions.size - 1, (int) (u * positions.size)), py = Math.min(positions.size - 1, (int) (v * positions.size));
 					int o = Positions.STRIDE * (py * positions.size + px);
 					if (!Float.isNaN(positions.pos[o])) {
-						pu = (positions.pos[o + ax] - (positions.min[ax] + positions.max[ax]) / 2) / span + 0.5;
-						pv = 0.5 - (positions.pos[o + ay] - (positions.min[ay] + positions.max[ay]) / 2) / span;
+						// the object-space position (glb metres -> inches) over the weapon length, on the model's y / z axes: with this
+						// the known Karambit Marble Fade Fire and Ice seeds (412, 359, 602, 393, 649) rank least yellow of all 1001
+						double inches = in.weaponLength * 0.0254;
+						pu = positions.pos[o + 1] / inches;
+						pv = positions.pos[o + 2] / inches;
 					}
 				}
 				double ru = xf0[0] * pu + xf0[1] * pv + xf0[2], rv = xf1[0] * pu + xf1[1] * pv + xf1[2];
@@ -149,6 +152,8 @@ public final class WeaponSkinBaker {
 							for (int k = 0; k < 3; k++) c[k] = Math.pow(pt[k], 2.2) * col[0][k];
 					}
 					default -> { // palette styles: hydrographic, spray, anodized multicolour / airbrushed
+						if (style == 4) // anodized multicolour: crisper colour borders than the pattern's soft gradients (by eye, FLAGGED)
+							for (int k = 0; k < 3; k++) pt[k] = smooth(0.15, 0.75, pt[k]);
 						c = col[0];
 						c = GloveSkinBaker.lerp(c, col[1], pt[0]);
 						c = GloveSkinBaker.lerp(c, col[2], pt[1]);
@@ -163,7 +168,7 @@ public final class WeaponSkinBaker {
 				if (style == 4) { // deep anodized colour: saturated, darkened by the marbling in the pattern's alpha
 					double ma = Math.min(1, (pc >>> 24) / 255.0 / chMax[3]);
 					double l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
-					for (int k = 0; k < 3; k++) c[k] = Math.max(0, l + (c[k] - l) * 1.6) * (1 - 0.45 * ma);
+					for (int k = 0; k < 3; k++) c[k] = Math.max(0, l + (c[k] - l) * 1.9) * (1 - 0.6 * ma);
 				}
 				c = GloveSkinBaker.scale(c, bright);
 				double a = in.ao == null ? 1 : 0.35 + 0.65 * ((GloveSkinBaker.sample(in.ao, u, v) >> 8 & 255) / 255.0);
@@ -173,6 +178,11 @@ public final class WeaponSkinBaker {
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
 			}
 		return new Result(out, paint);
+	}
+
+	private static double smooth(double e0, double e1, double x) {
+		double t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+		return t * t * (3 - 2 * t);
 	}
 
 	private static double round2(double x) {
