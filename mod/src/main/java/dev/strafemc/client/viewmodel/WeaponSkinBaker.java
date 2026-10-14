@@ -107,6 +107,7 @@ public final class WeaponSkinBaker {
 		float[] paint = new float[SIZE * SIZE], rough = new float[SIZE * SIZE], cover = new float[SIZE * SIZE];
 		java.util.Arrays.fill(rough, Float.NaN);
 		double paintRough = p.f("g_flPaintRoughness", 0.6);
+		double albedoScale = p.f("strafemc_albedo_scale", 1); // 1 for every kit but Black Pearl (WeaponSkinCache)
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
@@ -171,6 +172,7 @@ public final class WeaponSkinBaker {
 							k = 1 - Math.max(1 - mr, smooth(0.58, 0.68, (edge + (style == 4 ? band : 0)) * d));
 						}
 					}
+					c = GloveSkinBaker.scale(c, albedoScale);
 					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k))));
 					paint[y * SIZE + x] = (float) (anodized ? 0 : k);
 					// CS2's roughness output: anodized multicolour reads it from the pattern's alpha (below 0.5; the

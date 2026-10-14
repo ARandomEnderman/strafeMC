@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v27/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v28/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -165,7 +165,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v27/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v28/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -192,6 +192,9 @@ public final class WeaponSkinCache {
 			}
 			if (bounds.rotation() != null) paint.values.put("g_flPatternTexCoordRotation", new double[] {place.rotation()});
 		}
+		// Black Pearl only: its pattern is mostly strong colour weights, so CS2's maths alone reads lighter than CS2 shows
+		// it; its paint is darkened in linear light (FLAGGED: factor by eye, user-reported)
+		if (kit.startsWith("am_blackpearl_marbleized")) paint.values.put("strafemc_albedo_scale", new double[] {0.35});
 		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
 		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
 				? image(paint, "g_tPaintByNumberMasks") : image(ci, "g_tMasks");
