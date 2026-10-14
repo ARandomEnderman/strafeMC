@@ -19,15 +19,15 @@ public final class AimPunch {
 
 	/** Punch angle at the time of the last {@link #advance} call (output). */
 	public final double[] angle = new double[2];
-	/** Integrator state on the 1/128 s grid anchored at the last kick. */
-	private final double[] grid = new double[2];
+	/** Punch at the last kick: the 1/128 s step grid is anchored there. */
+	private final double[] anchor = new double[2];
 	/** Punch velocity as set at {@link #velTime}. */
 	private final double[] vel0 = new double[2];
-	private double gridTime, velTime;
+	private double anchorTime, velTime;
 
 	public void reset(double now) {
-		angle[0] = angle[1] = grid[0] = grid[1] = vel0[0] = vel0[1] = 0;
-		gridTime = velTime = now;
+		angle[0] = angle[1] = anchor[0] = anchor[1] = vel0[0] = vel0[1] = 0;
+		anchorTime = velTime = now;
 	}
 
 	private void velAt(double t, double[] out) {
@@ -37,20 +37,29 @@ public final class AimPunch {
 		if (Math.hypot(out[0], out[1]) < VEL_EPS) out[0] = out[1] = 0;
 	}
 
-	/** Punch at 'now': whole 1/128 s steps on the grid, the partial step interpolated (the grid itself is kept). */
+	/**
+	 * Punch at 'now', integrated from the last kick: whole 1/128 s steps, the partial step interpolated. Doesn't change
+	 * the stored state, so any time after the last kick can be asked for (the server evaluates a shot at its own time,
+	 * not when its packet arrived, after a tick may already have asked for a later time).
+	 */
 	public void advance(double now) {
-		int steps = 0;
-		while (gridTime + STEP <= now && steps++ < 1024) {
-			step(gridTime, grid);
-			gridTime += STEP;
+		double dt = now - anchorTime;
+		if (dt > 8) { // long idle: everything has decayed
+			angle[0] = angle[1] = 0;
+			return;
 		}
-		if (steps >= 1024) gridTime = now; // long idle: everything has decayed anyway
-		double frac = (now - gridTime) / STEP;
-		angle[0] = grid[0];
-		angle[1] = grid[1];
+		double[] g = {anchor[0], anchor[1]};
+		double t = anchorTime;
+		while (t + STEP <= now) {
+			step(t, g);
+			t += STEP;
+		}
+		double frac = (now - t) / STEP;
+		angle[0] = g[0];
+		angle[1] = g[1];
 		if (frac > 1e-9) {
-			double[] next = {grid[0], grid[1]};
-			step(gridTime, next);
+			double[] next = {g[0], g[1]};
+			step(t, next);
 			angle[0] += (next[0] - angle[0]) * frac;
 			angle[1] += (next[1] - angle[1]) * frac;
 		}
@@ -81,9 +90,9 @@ public final class AimPunch {
 		vel0[0] = v[0] - Math.cos(r) * magnitude * RECOIL_SCALE;
 		vel0[1] = v[1] - Math.sin(r) * magnitude * RECOIL_SCALE;
 		velTime = now;
-		grid[0] = angle[0]; // the stored punch and its step grid restart at the shot
-		grid[1] = angle[1];
-		gridTime = now;
+		anchor[0] = angle[0]; // the stored punch and its step grid restart at the shot
+		anchor[1] = angle[1];
+		anchorTime = now;
 		return new double[] {-Math.cos(r) * magnitude * VIEW_PUNCH_EXTRA, -Math.sin(r) * magnitude * VIEW_PUNCH_EXTRA};
 	}
 }

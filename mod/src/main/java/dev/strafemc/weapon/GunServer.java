@@ -120,6 +120,9 @@ public final class GunServer {
 	}
 
 	/** First-person animation clips of a weapon (folder/suffix mapping; derived from the viewmodel graph later). */
+	/** How late a shot's packet may arrive and still count as fired on time (a bit over two server ticks). */
+	private static final long SPRAY_LATE_NS = 120_000_000L;
+
 	public static String clipPath(String cls, String anim) {
 		WeaponTable.Entry e = WeaponTable.get(cls); // every gun and knife: clips by name from CS2's animation graphs
 		if (e != null) {
@@ -254,13 +257,17 @@ public final class GunServer {
 			ServerShots.skip(p, f.shot()); // a rejected shot still uses up its number, so client and server stay in step
 			return;
 		}
-		st.nextFire = Math.max(now, st.nextFire) + sec(w.cycleTime());
+		// the shot's own time: during a spray it's the previous shot + the cycle time, not when its packet arrived (packets are
+		// handled on 20 per second ticks, so a 0.075 s gun's shots arrive 0.05 / 0.1 s apart). Late shots catch up; a
+		// paused trigger restarts the clock, so no time can be banked for faster shooting.
+		long shotAt = now - st.nextFire > SPRAY_LATE_NS ? now : Math.max(st.nextFire, now - SPRAY_LATE_NS);
+		st.nextFire = shotAt + sec(w.cycleTime());
 		broadcast(p, w.shootSound());
 		if (inf != 1) held.set(WeaponItems.CLIP, clip - 1);
 
 		double units = StrafeConfig.unitsPerBlock;
 		Vec3 eye = p.getEyePosition();
-		ServerShots.Result shot = ServerShots.resolve(p, w, f); // the server decides spread + recoil (the client only predicted)
+		ServerShots.Result shot = ServerShots.resolve(p, w, f, shotAt); // the server decides spread + recoil (the client only predicted)
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
 		// m_nNumBullets: shotguns fire several pellets, each traced and hurting on its own; the shooter's client predicts pellet 0

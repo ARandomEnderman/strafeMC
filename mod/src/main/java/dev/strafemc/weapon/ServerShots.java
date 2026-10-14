@@ -92,9 +92,9 @@ public final class ServerShots {
 	}
 
 	/** Decides one accepted shot (fire rate / ammo already checked) from the client's report. */
-	public static Result resolve(ServerPlayer p, WeaponStats w, StrafePayloads.Fire f) {
+	public static Result resolve(ServerPlayer p, WeaponStats w, StrafePayloads.Fire f, long shotAtNs) {
 		St s = st(p);
-		double now = System.nanoTime() / 1e9;
+		double now = shotAtNs / 1e9; // the shot's own time (GunServer's shot clock), not the packet's arrival
 		s.punch.advance(now);
 		boolean corrected = f.shot() != s.shot;
 		int shot = s.shot++;
@@ -121,7 +121,7 @@ public final class ServerShots {
 			s.punch.kick(now, rc.angle[0][i], rc.magnitude[0][i]);
 			s.recoilIndex += 1;
 		}
-		s.lastShotNs = System.nanoTime();
+		s.lastShotNs = shotAtNs;
 		return new Result(dir, shot, corrected, f.pitch(), f.yaw(), pp, py, inacc, s.seed);
 	}
 
