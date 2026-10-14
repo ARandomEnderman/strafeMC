@@ -210,8 +210,11 @@ public final class WeaponSkinBaker {
 				double k = w * alpha;
 				out.setRGB(x, y, GloveSkinBaker.rgb(GloveSkinBaker.lerp(b, c, k)));
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
-				rough[y * SIZE + x] = (float) paintRough;
-				cover[y * SIZE + x] = (float) (w * alpha);
+				// patina (Case Hardened) is the polished steel itself: it keeps the weapon's own (glossy) roughness
+				if (style != 7) {
+					rough[y * SIZE + x] = (float) paintRough;
+					cover[y * SIZE + x] = (float) (w * alpha);
+				}
 			}
 		return new Result(out, paint, rough, cover);
 	}
