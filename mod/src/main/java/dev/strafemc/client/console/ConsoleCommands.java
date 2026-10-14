@@ -111,12 +111,12 @@ public final class ConsoleCommands {
 			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
 			action("strafemc_movement", on ? "1" : "0", false);
 		});
-		local("strafemc_pattern", "Set the pattern template (0-1000) of the skin wrap in your hand (operators, creative).", a -> {
+		local("strafemc_pattern", "Set the pattern template (0-1000) of the skin wrap in your hand (cheat: sv_cheats 1, operators, creative).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_pattern <0-1000>");
 				return;
 			}
-			action("strafemc_pattern", a[0], false);
+			action("strafemc_pattern", a[0], true);
 		});
 		local("strafemc_knockback", "Gun/knife hits push targets back like Minecraft (1) or slow them like CS2 (0, default), for the whole server (operators).", a -> {
 			if (a.length == 0) {

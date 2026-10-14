@@ -43,9 +43,9 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(
 						Component.literal("Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
-			case "strafemc_pattern" -> { // a skin wrap's pattern template, for operators in creative (cases will roll it)
+			case "strafemc_pattern" -> { // a skin wrap's pattern template: a cheat (sv_cheats 1, operator, creative); cases will roll it
 				var held = p.getMainHandItem();
-				if (!op || !p.getAbilities().instabuild) p.sendSystemMessage(Component.literal("Only operators in creative can set patterns."));
+				if (!cheat || !p.getAbilities().instabuild) p.sendSystemMessage(Component.literal("Setting patterns needs sv_cheats 1, operator and creative."));
 				else if (!(held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem)) p.sendSystemMessage(Component.literal("Hold a skin wrap."));
 				else try {
 					int n = Math.max(0, Math.min(1000, Integer.parseInt(arg.trim())));
