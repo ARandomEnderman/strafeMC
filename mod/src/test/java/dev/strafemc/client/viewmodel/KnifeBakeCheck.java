@@ -15,7 +15,17 @@ public final class KnifeBakeCheck {
 		var e = dev.strafemc.weapon.WeaponTable.get(cls);
 		Glb glb = Glb.read(AssetCache.exportGlb(e.model(), true));
 		String tag = "";
+		int seed = 0;
 		for (int i = 2; i < a.length; i++) {
+			if (a[i].startsWith("s=")) { // pattern template
+				seed = Integer.parseInt(a[i].substring(2));
+				continue;
+			}
+			if (a[i].startsWith("sign=")) { // offset direction for comparisons
+				System.setProperty("strafemc.offSign", a[i].substring(5));
+				tag = "_sign" + a[i].substring(5);
+				continue;
+			}
 			if (a[i].startsWith("f=")) { // pattern size factor for comparisons
 				System.setProperty("strafemc.patternFactor", a[i].substring(2));
 				tag = "_" + a[i];
@@ -33,12 +43,12 @@ public final class KnifeBakeCheck {
 				}
 			Viewmodel.downscaled(base);
 			System.out.println(a[i] + (legacy ? " legacy " : " hd ") + pm);
-			Path t = WeaponSkinCache.texture(cls, a[i], 0);
-			Files.deleteIfExists(t.resolveSibling(a[i] + "_0.vm1024b.png"));
+			Path t = WeaponSkinCache.texture(cls, a[i], seed);
+			Files.deleteIfExists(t.resolveSibling(a[i] + "_" + seed + ".vm1024b.png"));
 			long t0 = System.nanoTime();
-			Path r = WeaponSkinCache.ensure(cls, pm.material(), a[i], 0, parts, base);
+			Path r = WeaponSkinCache.ensure(cls, pm.material(), a[i], seed, parts, base);
 			System.out.printf("%s %s -> %s (%.1f s)%n", cls, a[i], r, (System.nanoTime() - t0) / 1e9);
-			if (r != null) Files.copy(r.resolveSibling(a[i] + "_0.vm1024b.png"), out.resolve(cls + "_" + a[i] + tag + ".png"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+			if (r != null) Files.copy(r.resolveSibling(a[i] + "_" + seed + ".vm1024b.png"), out.resolve(cls + "_" + a[i] + "_" + seed + tag + ".png"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		}
 	}
 }

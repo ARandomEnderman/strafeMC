@@ -60,10 +60,9 @@ public final class WeaponSkinBaker {
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
 		// pattern size: the weapon's size scale (composite inputs' g_flUvScale1) for hydrographic, patina and anodized multicolour
 		// (Tiger Tooth / Freehand checked in game by the user); spray paint denser than its raw scale; the rest as they are (FLAGGED)
-		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 || style == 4 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1)
-				* Double.parseDouble(System.getProperty("strafemc.patternFactor", "1"));
+		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 || style == 4 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1);
 		double rot = Math.toRadians(p.f("g_flPatternTexCoordRotation", 0));
-		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0);
+		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0); // the rolled offset (PatternRoll); direction checked on AK Case Hardened 661
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
 		boolean projected = style == 2 || style == 4 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;

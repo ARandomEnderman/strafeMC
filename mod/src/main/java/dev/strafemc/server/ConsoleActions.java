@@ -43,6 +43,18 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(
 						Component.literal("Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "strafemc_pattern" -> { // a skin wrap's pattern template, for operators in creative (cases will roll it)
+				var held = p.getMainHandItem();
+				if (!op || !p.getAbilities().instabuild) p.sendSystemMessage(Component.literal("Only operators in creative can set patterns."));
+				else if (!(held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem)) p.sendSystemMessage(Component.literal("Hold a skin wrap."));
+				else try {
+					int n = Math.max(0, Math.min(1000, Integer.parseInt(arg.trim())));
+					held.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
+					p.sendSystemMessage(Component.literal("Pattern template: " + n));
+				} catch (NumberFormatException e) {
+					p.sendSystemMessage(Component.literal("strafemc_pattern <0-1000>"));
+				}
+			}
 			case "strafemc_knockback" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change knockback for the server."));

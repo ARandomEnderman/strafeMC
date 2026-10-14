@@ -121,6 +121,40 @@ public final class WeaponSkinCache {
 		return p;
 	}
 
+	/**
+	 * The kit's pattern roll bounds: its composite's econ_instance g_vPatternTexCoordOffset / g_flPatternTexCoordRotation
+	 * bounds (legacy kits: weapons/paints/legacy/<kit>.vcompmat; newer ones: their composite in the cache), or null.
+	 */
+	static dev.strafemc.weapon.PatternRoll.Bounds rollBounds(String kit) {
+		String text = null;
+		try {
+			text = Files.readString(AssetCache.dataBlock("weapons/paints/legacy/" + kit + ".vcompmat_c"));
+		} catch (Exception ignored) {
+		}
+		if (text == null || !text.contains("econ_instance")) {
+			try (var s = Files.walk(StrafeConfig.cacheDir().resolve("weapons/paints"))) {
+				Path comp = s.filter(f -> f.getFileName().toString().equals(kit + ".vcompmat_c.DATA.kv3")).findFirst().orElse(null);
+				text = comp == null ? null : Files.readString(comp);
+			} catch (Exception e) {
+				return null;
+			}
+		}
+		if (text == null) return null;
+		double[] rot = bound(text, "g_flPatternTexCoordRotation", "X"), ox = bound(text, "g_vPatternTexCoordOffset", "X"),
+				oy = bound(text, "g_vPatternTexCoordOffset", "Y");
+		if (rot == null && ox == null && oy == null) return null;
+		return new dev.strafemc.weapon.PatternRoll.Bounds(ox != null ? ox : new double[2], oy != null ? oy : new double[2], rot != null ? rot : new double[2]);
+	}
+
+	/** A loose variable's {min, max} for one component (X / Y), or null. */
+	private static double[] bound(String text, String var, String axis) {
+		Matcher v = Pattern.compile("m_strName = \"" + var + "\"(.*?)(?=m_strName = |\\z)", Pattern.DOTALL).matcher(text);
+		if (!v.find()) return null;
+		Matcher lo = Pattern.compile("m_flValueFloat" + axis + "_Min = (-?[0-9.eE+-]+)").matcher(v.group(1)),
+				hi = Pattern.compile("m_flValueFloat" + axis + "_Max = (-?[0-9.eE+-]+)").matcher(v.group(1));
+		return lo.find() && hi.find() ? new double[] {Double.parseDouble(lo.group(1)), Double.parseDouble(hi.group(1))} : null;
+	}
+
 	public static Path texture(String cls, String kit, int pattern) {
 		return StrafeConfig.cacheDir().resolve("weapon_skins/v14/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
@@ -137,6 +171,13 @@ public final class WeaponSkinCache {
 		if (!m.find()) return null;
 		var ci = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(m.group(1) + "_c")));
 		var paint = paintParams(kit);
+		// the wrap's pattern template, rolled like CS2 within the kit's bounds, places the pattern
+		var bounds = rollBounds(kit);
+		if (bounds != null) {
+			var place = dev.strafemc.weapon.PatternRoll.roll(pattern, bounds);
+			paint.values.put("g_vPatternTexCoordOffset", new double[] {place.offsetX(), place.offsetY()});
+			paint.values.put("g_flPatternTexCoordRotation", new double[] {place.rotation()});
+		}
 		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
 		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
 				? image(paint, "g_tPaintByNumberMasks") : image(ci, "g_tMasks");

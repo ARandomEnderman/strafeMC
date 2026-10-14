@@ -85,7 +85,7 @@ public class SkinWrapItem extends Item {
 			for (String cls : w.kits().keySet()) guns.add(SkinWraps.WEAPON_NAMES.getOrDefault(cls, cls));
 			out.accept(Component.literal("§7Fits: " + String.join(", ", guns)));
 		}
-		if (w.pattern()) out.accept(Component.literal("§7Pattern: " + pattern(stack)));
+		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));
 		out.accept(Component.literal(knife ? "§7Right click: put on (sneak: open your loadout)" : "§7Right click: open your loadout"));
 	}
 }
