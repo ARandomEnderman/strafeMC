@@ -17,6 +17,12 @@ public final class KnifeBakeCheck {
 		String tag = "";
 		int seed = 0;
 		for (int i = 2; i < a.length; i++) {
+			if (a[i].startsWith("D:")) { // a system property for comparisons
+				String[] kv = a[i].substring(2).split("=", 2);
+				System.setProperty(kv[0], kv[1]);
+				tag = "_" + kv[0].substring(kv[0].lastIndexOf('.') + 1) + kv[1];
+				continue;
+			}
 			if (a[i].startsWith("s=")) { // pattern template
 				seed = Integer.parseInt(a[i].substring(2));
 				continue;
