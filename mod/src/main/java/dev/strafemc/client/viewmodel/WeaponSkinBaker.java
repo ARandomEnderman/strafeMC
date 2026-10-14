@@ -192,8 +192,6 @@ public final class WeaponSkinBaker {
 						if (wa < -0.01 || wb < -0.01 || wc < -0.01) continue;
 						int o = st * (y * size + x);
 						for (int k = 0; k < 3; k++) pos[o + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
-						if (p.uv1 != null)
-							for (int k = 0; k < 2; k++) pos[o + 3 + k] = (float) (wa * p.uv1[a * 2 + k] + wb * p.uv1[b * 2 + k] + wc * p.uv1[c * 2 + k]);
 					}
 			}
 		}

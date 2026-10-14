@@ -42,6 +42,15 @@ public final class VmModel {
 	/** Mesh filter: the model's ".body_hd" mesh if it has one, else ".body_legacy", else ".body" (CS2 weapon models). */
 	public static final String AUTO_MESH = "auto";
 
+	/** Whether the glb has a mesh node whose name ends with this (e.g. ".body_legacy"). */
+	public static boolean hasMesh(Glb g, String suffix) {
+		for (JsonElement ne : g.arr("nodes")) {
+			JsonObject n = ne.getAsJsonObject();
+			if (n.has("mesh") && n.has("name") && n.get("name").getAsString().endsWith(suffix)) return true;
+		}
+		return false;
+	}
+
 	public static VmModel load(Glb g, String meshFilter) {
 		VmModel m = new VmModel();
 		var nodes = g.arr("nodes");

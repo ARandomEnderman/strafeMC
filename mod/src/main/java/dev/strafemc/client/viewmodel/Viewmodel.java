@@ -269,16 +269,20 @@ public final class Viewmodel {
 		dev.strafemc.client.AssetLoading.begin(label);
 		Thread t = new Thread(() -> {
 			try {
-				VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(w.model, true)), w.mesh);
-				String color = WeaponSkinCache.colorName(w.model);
+				// a paint kit with use_legacy_model puts the weapon on its legacy mesh (with that mesh's own material and inputs)
+				Glb glb = Glb.read(AssetCache.exportGlb(w.model, true));
+				boolean legacy = WeaponSkinCache.legacy(kit) && VmModel.hasMesh(glb, ".body_legacy");
+				VmModel m = VmModel.load(glb, legacy ? ".body_legacy" : w.mesh);
+				var paintMat = WeaponSkinCache.paintable(w.model, m.parts);
 				java.util.List<VmModel.Part> paintable = new java.util.ArrayList<>();
 				Path base = null;
 				for (VmModel.Part part : m.parts)
-					if (color != null && part.texture != null && part.texture.getFileName().toString().startsWith(color)) {
+					if (paintMat != null && part.texture != null && part.texture.getFileName().toString().startsWith(paintMat.color())) {
 						paintable.add(part);
 						base = part.texture;
 					}
-				Path tex = base == null ? null : WeaponSkinCache.ensure(l.cls, w.model, kit, pattern, paintable, base);
+				if (base != null) downscaled(base);
+				Path tex = base == null ? null : WeaponSkinCache.ensure(l.cls, paintMat.material(), kit, pattern, paintable, base);
 				if (tex == null) { // no finish for this weapon (CS2's default knives have no composite inputs)
 					finishes.put(key, l.gun);
 					return;
@@ -286,6 +290,7 @@ public final class Viewmodel {
 				for (VmModel.Part part : m.parts) {
 					if (paintable.contains(part)) part.texture = tex;
 					if (part.texture == null) continue;
+					if (!paintable.contains(part)) downscaled(part.texture); // the legacy mesh's other textures
 					part.metal = metalPerVertex(part);
 					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
 						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
