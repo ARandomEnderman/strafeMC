@@ -53,6 +53,15 @@ tasks.register('vmCheck', JavaExec) {
 	if (project.hasProperty('vmArgs')) args((project.findProperty('vmArgs') as String).split(','))
 }
 
+// Our core shaders must compile (a GLSL error leaves the viewmodel invisible in game): compiled in a hidden OpenGL
+// window. Fails the build on an error.
+tasks.register('shaderCheck', JavaExec) {
+	dependsOn 'testClasses'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'dev.strafemc.client.viewmodel.ShaderCheck'
+}
+tasks.named('build') { dependsOn 'shaderCheck' }
+
 // Every weapons.vdata field the gameplay classes read must be synced by the server (weapon/GameplayKeys.java), or
 // clients would silently use their own local value for it. Fails the build when one is missing.
 tasks.register('checkGameplayKeys') {
