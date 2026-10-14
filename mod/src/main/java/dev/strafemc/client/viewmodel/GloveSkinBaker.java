@@ -203,31 +203,31 @@ public final class GloveSkinBaker {
 		return o;
 	}
 
-	private static double[] lerp(double[] a, double[] b, double t) {
+	static double[] lerp(double[] a, double[] b, double t) {
 		return new double[] {a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t};
 	}
 
-	private static double[] scale(double[] c, double s) {
+	static double[] scale(double[] c, double s) {
 		return new double[] {c[0] * s, c[1] * s, c[2] * s};
 	}
 
-	private static double[] unpack(int c) {
+	static double[] unpack(int c) {
 		return new double[] {(c >> 16 & 255) / 255.0, (c >> 8 & 255) / 255.0, (c & 255) / 255.0};
 	}
 
-	private static int rgb(double[] c) {
+	static int rgb(double[] c) {
 		int r = (int) Math.round(Math.max(0, Math.min(1, c[0])) * 255), g = (int) Math.round(Math.max(0, Math.min(1, c[1])) * 255),
 				b = (int) Math.round(Math.max(0, Math.min(1, c[2])) * 255);
 		return 0xFF000000 | r << 16 | g << 8 | b;
 	}
 
-	private static int sample(BufferedImage img, double u, double v) {
+	static int sample(BufferedImage img, double u, double v) {
 		int w = img.getWidth(), h = img.getHeight();
 		int x = Math.floorMod((int) Math.floor(u * w), w), y = Math.floorMod((int) Math.floor(v * h), h);
 		return img.getRGB(x, y);
 	}
 
-	private static int sampleBilinear(BufferedImage img, double u, double v) {
+	static int sampleBilinear(BufferedImage img, double u, double v) {
 		int w = img.getWidth(), h = img.getHeight();
 		double fx = u * w - 0.5, fy = v * h - 0.5;
 		int x0 = (int) Math.floor(fx), y0 = (int) Math.floor(fy);

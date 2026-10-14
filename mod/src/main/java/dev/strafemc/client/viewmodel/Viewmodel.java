@@ -165,6 +165,7 @@ public final class Viewmodel {
 				loadAsync(g.weaponClass);
 				return;
 			}
+			if (st.getItem() instanceof dev.strafemc.weapon.KnifeItem k && cache.get(k.weaponClass) instanceof Loaded kl) gun(kl); // its wrap's finish
 			if (st.getItem() instanceof dev.strafemc.weapon.GloveItem gl) { // gloves you might put on: model + finish
 				String kit = gl.kit(st), key = gl.kind.model + "#" + kit;
 				if (!gloves.containsKey(key) && loadGloves(gl.kind.model, kit, key)) return;
@@ -241,6 +242,64 @@ public final class Viewmodel {
 		t.setDaemon(true);
 		t.start();
 		return true;
+	}
+
+	/** Weapon models in a finish (key: weapon#kit#pattern), baked and loaded in the background on first use. */
+	private final Map<String, VmModel> finishes = new java.util.concurrent.ConcurrentHashMap<>();
+	private final java.util.Set<String> finishLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** The weapon model to draw: a knife in the loadout's knife wrap once baked, the plain weapon until then (and without one). */
+	private VmModel gun(Loaded l) {
+		if (!l.cls.contains("knife") && !l.cls.equals("weapon_bayonet")) return l.gun;
+		String kit = dev.strafemc.client.WrapChoice.knifeKit(l.cls);
+		if (kit == null) return l.gun;
+		int pattern = dev.strafemc.client.WrapChoice.knifePattern();
+		String key = l.cls + "#" + kit + "#" + pattern;
+		VmModel m = finishes.get(key);
+		if (m != null) return m;
+		loadFinish(l, kit, pattern, key);
+		return l.gun;
+	}
+
+	/** Bakes (once, cached on disk) and loads a weapon in a finish; a weapon that can't wear finishes keeps its own look. */
+	private void loadFinish(Loaded l, String kit, int pattern, String key) {
+		Weapon w = WEAPONS.get(l.cls);
+		if (w == null || !finishLoading.add(key)) return;
+		String label = dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(l.cls, l.cls.replace("weapon_", "").replace('_', ' ')) + " (" + kit + ")";
+		dev.strafemc.client.AssetLoading.begin(label);
+		Thread t = new Thread(() -> {
+			try {
+				VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(w.model, true)), w.mesh);
+				String color = WeaponSkinCache.colorName(w.model);
+				java.util.List<VmModel.Part> paintable = new java.util.ArrayList<>();
+				Path base = null;
+				for (VmModel.Part part : m.parts)
+					if (color != null && part.texture != null && part.texture.getFileName().toString().startsWith(color)) {
+						paintable.add(part);
+						base = part.texture;
+					}
+				Path tex = base == null ? null : WeaponSkinCache.ensure(l.cls, w.model, kit, pattern, paintable, base);
+				if (tex == null) { // no finish for this weapon (CS2's default knives have no composite inputs)
+					finishes.put(key, l.gun);
+					return;
+				}
+				for (VmModel.Part part : m.parts) {
+					if (paintable.contains(part)) part.texture = tex;
+					if (part.texture == null) continue;
+					part.metal = metalPerVertex(part);
+					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+				}
+				finishes.put(key, m);
+			} catch (Exception e) {
+				finishes.put(key, l.gun);
+				StrafeMc.LOG.warn("[strafemc] finish {} failed: {}", key, e.toString());
+			} finally {
+				dev.strafemc.client.AssetLoading.end(label);
+			}
+		}, "strafemc-finish");
+		t.setDaemon(true);
+		t.start();
 	}
 
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
@@ -433,7 +492,7 @@ public final class Viewmodel {
 		Integer weaponNode = clip.node("weapon");
 		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
 		emit(arms, armSkin, toView, cam, ps, out, light, null);
-		emit(l.gun, gunSkin, toView, cam, ps, out, light, rigid);
+		emit(gun(l), gunSkin, toView, cam, ps, out, light, rigid); // same skeleton and mesh, its own colour (a wrap's finish)
 		updateAttachments(l, gunSkin, toView);
 		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
 		return true;
@@ -750,7 +809,7 @@ public final class Viewmodel {
 	}
 
 	/** The setup's 1024 px colour with CS2's ambient occlusion baked in, or the older plain copy. */
-	private static Path downscaledPath(Path p) {
+	static Path downscaledPath(Path p) {
 		Path c = p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024c.png"));
 		return Files.exists(c) ? c : p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024b.png"));
 	}

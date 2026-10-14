@@ -16,7 +16,8 @@ import java.util.Map;
  * else another knife's: new combinations are allowed).
  */
 public final class SkinWraps {
-	public record Wrap(String id, String name, boolean knife, Map<String, String> kits) {}
+	/** pattern: the finish has a pattern (not a solid colour or plain anodizing), so a pattern seed changes how it looks. */
+	public record Wrap(String id, String name, boolean knife, Map<String, String> kits, boolean pattern) {}
 
 	private static final Map<String, Wrap> ALL = load();
 
@@ -51,7 +52,7 @@ public final class SkinWraps {
 					int eq = pair.indexOf('=');
 					if (eq > 0) kits.put(pair.substring(0, eq), pair.substring(eq + 1));
 				}
-				out.put(f[0], new Wrap(f[0], f[1], f[0].startsWith("knife:"), Collections.unmodifiableMap(kits)));
+				out.put(f[0], new Wrap(f[0], f[1], f[0].startsWith("knife:"), Collections.unmodifiableMap(kits), f.length > 3 && f[3].equals("pattern")));
 			}
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.error("[strafemc] skin wraps unreadable", e);

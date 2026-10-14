@@ -25,6 +25,8 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> SILENCED;
 	/** FAMAS / Glock-18: 1 = burst mode (absent: off). It stays with the gun, like CS2's. */
 	public static DataComponentType<Integer> BURST;
+	/** A skin wrap's pattern seed (CS2's pattern template), on wraps whose finish has a pattern: 0 for wraps given out as they are; cases will roll it. */
+	public static DataComponentType<Integer> PATTERN;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
@@ -46,6 +48,7 @@ public final class WeaponItems {
 		RECHARGE = component("recharge");
 		SILENCED = component("silenced");
 		BURST = component("burst");
+		PATTERN = component("pattern");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

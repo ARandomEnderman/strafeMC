@@ -1,0 +1,35 @@
+package dev.strafemc.client.viewmodel;
+
+import dev.strafemc.data.AssetCache;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/** Bakes knife finishes headless and copies them to an output folder: gradlew vmCheck -PvmMain=dev.strafemc.client.viewmodel.KnifeBakeCheck -PvmArgs=<out dir>,<weapon class>,<kit>,... */
+public final class KnifeBakeCheck {
+	public static void main(String[] a) throws Exception {
+		dev.strafemc.config.StrafeConfig.load();
+		Path out = Path.of(a[0]);
+		Files.createDirectories(out);
+		String cls = a[1];
+		var e = dev.strafemc.weapon.WeaponTable.get(cls);
+		VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(e.model(), true)), VmModel.AUTO_MESH);
+		String color = WeaponSkinCache.colorName(e.model());
+		var parts = new java.util.ArrayList<VmModel.Part>();
+		Path base = null;
+		for (VmModel.Part p : m.parts)
+			if (p.texture != null && p.texture.getFileName().toString().startsWith(color)) {
+				parts.add(p);
+				base = p.texture;
+			}
+		Viewmodel.downscaled(base);
+		for (int i = 2; i < a.length; i++) {
+			Path t = WeaponSkinCache.texture(cls, a[i], 0);
+			Files.deleteIfExists(t.resolveSibling(a[i] + "_0.vm1024b.png"));
+			long t0 = System.nanoTime();
+			Path r = WeaponSkinCache.ensure(cls, e.model(), a[i], 0, parts, base);
+			System.out.printf("%s %s -> %s (%.1f s)%n", cls, a[i], r, (System.nanoTime() - t0) / 1e9);
+			if (r != null) Files.copy(r.resolveSibling(a[i] + "_0.vm1024b.png"), out.resolve(cls + "_" + a[i] + ".png"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		}
+	}
+}

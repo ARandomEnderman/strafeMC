@@ -34,10 +34,23 @@ public class SkinWrapItem extends Item {
 		return knife;
 	}
 
+	/** A wrap; a patterned finish gets pattern seed 0 (CS2's pattern template; cases will roll it). */
 	public static ItemStack stack(Item item, String wrap) {
+		return stack(item, wrap, 0);
+	}
+
+	public static ItemStack stack(Item item, String wrap, int pattern) {
 		ItemStack s = new ItemStack(item);
 		s.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(List.of(), List.of(), List.of(wrap), List.of()));
+		SkinWraps.Wrap w = SkinWraps.get(wrap);
+		if (w != null && w.pattern()) s.set(WeaponItems.PATTERN, pattern);
 		return s;
+	}
+
+	/** The wrap's pattern seed (0 if it has none). */
+	public static int pattern(ItemStack stack) {
+		Integer p = stack.get(WeaponItems.PATTERN);
+		return p == null ? 0 : p;
 	}
 
 	public static String skin(ItemStack stack) {
@@ -68,6 +81,7 @@ public class SkinWrapItem extends Item {
 			for (String cls : w.kits().keySet()) guns.add(SkinWraps.WEAPON_NAMES.getOrDefault(cls, cls));
 			out.accept(Component.literal("§7Fits: " + String.join(", ", guns)));
 		}
+		if (w.pattern()) out.accept(Component.literal("§7Pattern: " + pattern(stack)));
 		out.accept(Component.literal("§7Right click: open your loadout"));
 	}
 }
