@@ -22,6 +22,8 @@ import java.util.function.Function;
  */
 public final class WeaponSkinBaker {
 	public static final int SIZE = 1024;
+	/** Spray paint's pattern density over its raw scale, fitted by eye to CS2's knife previews (Scorched, Urban Masked, Safari Mesh). */
+	private static final double SPRAY_DENSITY = 1.6;
 
 	private WeaponSkinBaker() {}
 
@@ -56,8 +58,10 @@ public final class WeaponSkinBaker {
 		for (int i = 0; i < 4; i++) col[i] = p.v("g_vColor" + i, 0.5, 0.5, 0.5);
 		double bright = p.f("g_flColorBrightness", 1);
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
-		// the weapon's own size scale (composite inputs' g_flUvScale1) applies to every style unless the kit opts out
-		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : in.uvScale);
+		// pattern size, fitted to CS2's own preview renders: the weapon's size scale (composite inputs' g_flUvScale1) for the
+		// UV-space hydrographic and patina styles; spray paint denser than its raw scale; the rest as they are (FLAGGED)
+		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1)
+				* Double.parseDouble(System.getProperty("strafemc.patternFactor", "1"));
 		double rot = Math.toRadians(p.f("g_flPatternTexCoordRotation", 0));
 		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0);
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
@@ -132,9 +136,11 @@ public final class WeaponSkinBaker {
 					case 3 -> c = col[0];
 					case 6 -> c = pt;
 					case 7 -> c = new double[] {pt[0] * col[0][0], pt[1] * col[0][1], pt[2] * col[0][2]};
-					case 8 -> {
+					case 8 -> { // gunsmith: the artwork covers the paint mask fully (its alpha is not coverage: Slate, Searing Rage)
 						c = pt;
-						alpha = p.f("strafemc_opaque_pattern", 0) != 0 ? 1 : (pc >>> 24) / 255.0;
+						// colour adjustment mode 1: a greyscale artwork in linear light, tinted by colour 0 (Slate's dark polymer; FLAGGED)
+						if (p.f("g_nColorAdjustmentMode", 0) == 1)
+							for (int k = 0; k < 3; k++) c[k] = Math.pow(pt[k], 2.2) * col[0][k];
 					}
 					default -> { // palette styles: hydrographic, spray, anodized multicolour / airbrushed
 						c = col[0];

@@ -290,6 +290,8 @@ public final class Viewmodel {
 				for (VmModel.Part part : m.parts) {
 					if (paintable.contains(part)) part.texture = tex;
 					if (part.texture == null) continue;
+					// the Zeus charge meter is drawn by its texture's alpha (digits and bars), as on the plain weapon
+					if (part.texture.getFileName().toString().startsWith("taser_numerals")) part.alphaMode = "MASK";
 					if (!paintable.contains(part)) downscaled(part.texture); // the legacy mesh's other textures
 					part.metal = metalPerVertex(part);
 					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))

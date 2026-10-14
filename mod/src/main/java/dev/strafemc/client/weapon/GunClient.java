@@ -652,6 +652,14 @@ public final class GunClient {
 			sounds.clear();
 			CsSounds.stopAnim();
 		}
+		if (StrafeConfig.debug) { // camera vs shot: where the view looks and where the bullet goes
+			var cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+			double[] vo = viewOffset();
+			StrafeMc.LOG.info("[strafemc] shotdbg client: camY={} eyeY={} camPitch={} xRot={} viewOff={} punch={} inacc={} dirPitch={}",
+					String.format("%.4f", cam.position().y), String.format("%.4f", p.getEyeY()), String.format("%.3f", cam.xRot()),
+					String.format("%.3f", p.getXRot()), String.format("%.3f", vo[0]), String.format("%.3f", aimPunch.angle[0]), String.format("%.5f", penalty),
+					String.format("%.3f", Math.toDegrees(-Math.asin(d.y))));
+		}
 		if (shell != null && reload != null) endShellReload(); // a shot stops a shotgun's shell-by-shell reload (the server too)
 		String anim = shootAnim(w, roundsLeft, alt);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);

@@ -437,6 +437,10 @@ public final class GunServer {
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
 		broadcast(p, shootSound(w, shot.inaccuracy()));
+		if (StrafeConfig.debug)
+			StrafeMc.LOG.info("[strafemc] shotdbg server: eyeY={} clientEye={} pitch={} punch={} inacc={} corrected={} dirPitch={}", String.format("%.4f", eye.y),
+					String.format("%.4f", f.eye()), String.format("%.3f", f.pitch()), String.format("%.3f", shot.punchPitch()), String.format("%.5f", shot.inaccuracy()),
+					shot.corrected(), String.format("%.3f", Math.toDegrees(-Math.asin(shot.dir().y))));
 		// m_nNumBullets: shotguns fire several pellets, each traced and hurting on its own; the shooter's client predicts pellet 0
 		for (int n = 0; n < Math.max(1, w.bullets()); n++) {
 			Vec3 dir = n == 0 ? shot.dir() : ShotMath.pellet(shot.pitch(), shot.yaw(), shot.punchPitch(), shot.punchYaw(), shot.inaccuracy(), w.spread(), shot.seed(),

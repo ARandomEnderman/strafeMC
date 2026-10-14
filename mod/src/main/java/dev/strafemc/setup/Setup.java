@@ -47,7 +47,7 @@ public final class Setup {
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
-		m.put("wraps", 3); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template)
+		m.put("wraps", 4); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template); 4: colour-only skins
 		return m;
 	}
 
@@ -302,8 +302,10 @@ public final class Setup {
 						break;
 					}
 				}
-				if (!par.textures.containsKey("g_tPattern")) continue;
-				par.values.put("F_PAINT_STYLE", new double[] {6});
+				if (!par.textures.containsKey("g_tPattern")) {
+					if (colours == 0) continue;
+					par.values.put("F_PAINT_STYLE", new double[] {0}); // colours only (so_extended_template): a solid colour
+				} else par.values.put("F_PAINT_STYLE", new double[] {6});
 			}
 			params.put(e.getKey(), par);
 		}
