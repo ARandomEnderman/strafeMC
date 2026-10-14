@@ -62,6 +62,20 @@ public final class WeaponSkinBaker {
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
 		boolean projected = style == 2 || style == 4 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;
+		// anodized multicolour (Dopplers, Marble Fade): more saturated than a plain blend, the pattern's alpha (stretched to its
+		// own maximum) marking the dark marbling (FLAGGED: tuned by eye to CS2's previews, which are deep, not pastel)
+		double[] chMax = {1, 1, 1, 1};
+		if (style == 4 && pattern != null) {
+			java.util.Arrays.fill(chMax, 1e-3);
+			for (int y = 0; y < pattern.getHeight(); y += 2)
+				for (int x = 0; x < pattern.getWidth(); x += 2) {
+					int c = pattern.getRGB(x, y);
+					chMax[0] = Math.max(chMax[0], (c >> 16 & 255) / 255.0);
+					chMax[1] = Math.max(chMax[1], (c >> 8 & 255) / 255.0);
+					chMax[2] = Math.max(chMax[2], (c & 255) / 255.0);
+					chMax[3] = Math.max(chMax[3], (c >>> 24) / 255.0);
+				}
+		}
 		// side projection: the weapon's longest axis across, the next one up (positions centred, spanning the weapon length)
 		int ax = 0, ay = 1;
 		if (positions != null) {
@@ -131,7 +145,12 @@ public final class WeaponSkinBaker {
 				// metal styles keep the metal's own light and dark (anodizing and patina tint it); paint covers it
 				if (metalStyle) {
 					double lum = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
-					c = GloveSkinBaker.scale(c, Math.min(1.25, lum / 0.6));
+					c = GloveSkinBaker.scale(c, Math.min(1.0, lum / 0.6));
+				}
+				if (style == 4) { // deep anodized colour: saturated, darkened by the marbling in the pattern's alpha
+					double ma = Math.min(1, (pc >>> 24) / 255.0 / chMax[3]);
+					double l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+					for (int k = 0; k < 3; k++) c[k] = Math.max(0, l + (c[k] - l) * 1.6) * (1 - 0.45 * ma);
 				}
 				c = GloveSkinBaker.scale(c, bright);
 				double a = in.ao == null ? 1 : 0.35 + 0.65 * ((GloveSkinBaker.sample(in.ao, u, v) >> 8 & 255) / 255.0);
