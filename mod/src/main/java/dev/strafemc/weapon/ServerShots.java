@@ -29,7 +29,7 @@ public final class ServerShots {
 
 	private static final class St {
 		long seed = SEEDS.nextLong();
-		int shot;
+		int shot, zoom;
 		final AimPunch punch = new AimPunch();
 		float recoilIndex;
 		double penalty, lastX = Double.NaN, lastZ, speed, prevSpeed, lastTickTime;
@@ -74,7 +74,7 @@ public final class ServerShots {
 			s.speed = sp;
 			s.punch.advance(now);
 			if (!(p.getMainHandItem().getItem() instanceof GunItem g) || g instanceof KnifeItem) continue;
-			WeaponStats w = g.stats(p.getMainHandItem());
+			WeaponStats w = GunItem.statsOf(g.weaponClass, g.modeOf(p.getMainHandItem(), s.zoom, false)); // scoped: the scoped numbers
 			if (w == null) continue;
 			if (System.nanoTime() >= s.lastShotNs + (long) (w.cycleTime() * 1e9)) s.recoilIndex = Recoil.decayIndex(s.recoilIndex, dt);
 			boolean ground = !p.level().noCollision(p, p.getBoundingBox().move(0, -0.06, 0));
@@ -86,6 +86,11 @@ public final class ServerShots {
 			s.target = target;
 			s.recovery = rec;
 		}
+	}
+
+	/** The player's zoom level (right-click on a scoped gun; 0 when they switch weapons), for the server's inaccuracy. */
+	public static void setZoom(ServerPlayer p, int level) {
+		st(p).zoom = Math.max(0, Math.min(2, level));
 	}
 
 	/**

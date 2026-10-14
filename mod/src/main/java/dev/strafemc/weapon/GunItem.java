@@ -44,9 +44,20 @@ public class GunItem extends Item {
 		return hasSilencer() && (v == null || v != 0);
 	}
 
-	/** vdata mode: 1 (alt) with the silencer on, else 0. */
+	/** FAMAS / Glock-18 switched to burst fire. */
+	public boolean burst(ItemStack s) {
+		Integer v = s.get(WeaponItems.BURST);
+		return v != null && v != 0;
+	}
+
+	/** vdata mode of the stack: 1 (alt) with the silencer on or in burst mode, else 0 (scoping and the R8's alt fire: see modeOf). */
 	public int mode(ItemStack s) {
-		return silenced(s) ? 1 : 0;
+		return silenced(s) || burst(s) ? 1 : 0;
+	}
+
+	/** vdata mode for a shot: also 1 while scoped (zoom level above 0) or for the R8's alt fire. */
+	public int modeOf(ItemStack s, int zoom, boolean alt) {
+		return zoom > 0 || alt ? 1 : mode(s);
 	}
 
 	/** The client's render thread and its stats lookup (the server's synced numbers), set by the client init. */

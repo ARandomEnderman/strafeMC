@@ -276,8 +276,10 @@ public final class StrafePayloads {
 	 * viewTick: the server tick the shooter's screen showed (client.LagClock; -1 unknown), claim: the entity id their own
 	 * trace hit (-1 none). Both only guide the server's rewind (server.LagHistory), which checks them.
 	 */
-	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw, float viewTick, int claim)
+	/** flags: the zoom level (bits 0-1, ZOOM_MASK) and ALT (the R8's alt fire). */
+	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw, float viewTick, int claim, int flags)
 			implements CustomPacketPayload {
+		public static final int ZOOM_MASK = 3, ALT = 4;
 		public static final Type<Fire> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "fire"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Fire> CODEC = StreamCodec.of((b, v) -> {
 			b.writeFloat(v.yaw);
@@ -288,7 +290,9 @@ public final class StrafePayloads {
 			b.writeFloat(v.punchYaw);
 			b.writeFloat(v.viewTick);
 			b.writeVarInt(v.claim + 1);
-		}, b -> new Fire(b.readFloat(), b.readFloat(), b.readVarInt(), b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat(), b.readVarInt() - 1));
+			b.writeVarInt(v.flags);
+		}, b -> new Fire(b.readFloat(), b.readFloat(), b.readVarInt(), b.readFloat(), b.readFloat(), b.readFloat(), b.readFloat(), b.readVarInt() - 1,
+				b.readVarInt()));
 
 		@Override
 		public Type<Fire> type() {

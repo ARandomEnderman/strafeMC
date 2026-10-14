@@ -113,6 +113,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		ConsoleKeys.register();
 		dev.strafemc.client.weapon.GunClient.register();
 		dev.strafemc.client.weapon.AmmoHud.register();
+		dev.strafemc.client.weapon.ScopeHud.register();
 		ShowPosHud.register();
 		JumpStats.register();
 		Cs2Bridge.onConnectionChange = c -> Minecraft.getInstance().execute(() -> net.minecraft.client.gui.components.toasts.SystemToast.addOrUpdate(

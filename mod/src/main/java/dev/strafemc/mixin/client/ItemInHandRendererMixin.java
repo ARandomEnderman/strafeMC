@@ -16,6 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRendererMixin {
 	@Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
 	private void strafemc$viewmodel(float partial, PoseStack ps, SubmitNodeCollector out, LocalPlayer player, int light, CallbackInfo ci) {
-		if (player.getMainHandItem().getItem() instanceof GunItem g && Viewmodel.INSTANCE.render(g.weaponClass, ps, out, light)) ci.cancel();
+		if (!(player.getMainHandItem().getItem() instanceof GunItem g)) return;
+		// snipers hide the viewmodel while scoped (m_bHideViewModelWhenZoomed)
+		if (dev.strafemc.client.weapon.GunClient.INSTANCE.scopeOverlay() || Viewmodel.INSTANCE.render(g.weaponClass, ps, out, light)) ci.cancel();
 	}
 }

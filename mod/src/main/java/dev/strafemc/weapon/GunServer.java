@@ -44,6 +44,9 @@ public final class GunServer {
 		long deployUntil, nextFire, lastTick, knifeNextLight, knifeNextHeavy;
 		/** A silencer being screwed on / off: when it flips (0: none), and on which stack. */
 		long silencerAt;
+		/** Burst fire: shots of the current burst still to come, and when the next one is due. */
+		int burstLeft;
+		long burstNext;
 		ItemStack silencerStack = ItemStack.EMPTY;
 		/** Current reload in animation time (null = not reloading); see ReloadTimeline for CS2 silent reload. */
 		ReloadTimeline reload;
@@ -136,6 +139,23 @@ public final class GunServer {
 	/** switchhands: CS2 deploys the held weapon again (draw delay, a reload in progress dropped). */
 	public static void redeploy(ServerPlayer p) {
 		state(p).lastHeld = ItemStack.EMPTY;
+	}
+
+	/** Right-click on a FAMAS / Glock-18: burst fire on or off (it stays with the gun). */
+	public static void toggleBurst(ServerPlayer p) {
+		ItemStack held = p.getMainHandItem();
+		if (!(held.getItem() instanceof GunItem g) || g.stats() == null || !g.stats().q().burst()) return;
+		held.set(WeaponItems.BURST, g.burst(held) ? 0 : 1);
+	}
+
+	/** Right-click on a scoped gun: the zoom level the client is at now (the server's inaccuracy follows it). */
+	public static void zoom(ServerPlayer p, String level) {
+		ItemStack held = p.getMainHandItem();
+		if (!(held.getItem() instanceof GunItem g) || g.stats() == null) return;
+		try {
+			ServerShots.setZoom(p, Math.min(Integer.parseInt(level.trim()), g.stats().q().zoomLevels()));
+		} catch (NumberFormatException ignored) {
+		}
 	}
 
 	public static void toggleSilencer(ServerPlayer p) {
@@ -260,6 +280,8 @@ public final class GunServer {
 				st.lastHeld = held;
 				st.reload = null;
 				st.pendingSounds.clear();
+				st.burstLeft = 0;
+				ServerShots.setZoom(p, 0); // CS2 unzooms on a weapon switch
 				if (held.getItem() instanceof GunItem g && g.stats() != null) st.deployUntil = now + sec(g.stats().deployDuration());
 			} else {
 				st.lastHeld = held;
@@ -286,7 +308,16 @@ public final class GunServer {
 
 	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
 		ItemStack held = p.getMainHandItem();
+		int zoom = f.flags() & dev.strafemc.net.StrafePayloads.Fire.ZOOM_MASK;
+		boolean alt = (f.flags() & dev.strafemc.net.StrafePayloads.Fire.ALT) != 0;
 		WeaponStats w = held.getItem() instanceof GunItem gi && !(gi instanceof KnifeItem) ? gi.stats(held) : null;
+		if (w != null) { // scoped (up to the gun's zoom levels) or the R8's alt fire: the alt numbers
+			GunItem gi = (GunItem) held.getItem();
+			zoom = Math.min(zoom, w.q().zoomLevels());
+			ServerShots.setZoom(p, zoom);
+			alt &= w.q().revolver();
+			w = GunItem.statsOf(gi.weaponClass, gi.modeOf(held, zoom, alt));
+		}
 		if (w == null) {
 			ServerShots.skip(p, f.shot());
 			return;
@@ -297,16 +328,30 @@ public final class GunServer {
 		// first shot can arrive a tick later than a later one (no time can be banked: the clock never runs ahead of shots)
 		long now = System.nanoTime(), tolerance = 60_000_000L;
 		int clip = g.clip(held), inf = infiniteAmmo();
-		if (now < st.deployUntil - tolerance || st.reloadLocked() || now < st.nextFire - tolerance || (clip <= 0 && inf != 1)) {
+		// the 2nd / 3rd shot of a burst come m_flTimeBetweenBurstShots apart, inside the burst's own cycle time
+		boolean burstShot = st.burstLeft > 0 && now >= st.burstNext - tolerance && now < st.burstNext + SPRAY_LATE_NS;
+		if (!burstShot) st.burstLeft = 0;
+		if (now < st.deployUntil - tolerance || st.reloadLocked() || (!burstShot && now < st.nextFire - tolerance) || (clip <= 0 && inf != 1)) {
 			ServerShots.skip(p, f.shot()); // a rejected shot still uses up its number, so client and server stay in step
 			return;
 		}
-		// the shot's own time: during a spray it's the previous shot + the cycle time, not when its packet arrived (packets are
-		// handled on 20 per second ticks, so a 0.075 s gun's shots arrive 0.05 / 0.1 s apart). Late shots catch up; a
-		// paused trigger restarts the clock, so no time can be banked for faster shooting.
-		long shotAt = now - st.nextFire > SPRAY_LATE_NS ? now : Math.max(st.nextFire, now - SPRAY_LATE_NS);
-		st.nextFire = shotAt + sec(w.cycleTime());
-		broadcast(p, w.shootSound());
+		long shotAt;
+		if (burstShot) {
+			shotAt = Math.max(st.burstNext, now - SPRAY_LATE_NS);
+			st.burstNext = shotAt + sec(w.q().burstGap());
+			st.burstLeft--;
+		} else {
+			// the shot's own time: during a spray it's the previous shot + the cycle time, not when its packet arrived (packets
+			// are handled on 20 per second ticks, so a 0.075 s gun's shots arrive 0.05 / 0.1 s apart). Late shots catch up; a
+			// paused trigger restarts the clock, so no time can be banked for faster shooting.
+			shotAt = now - st.nextFire > SPRAY_LATE_NS ? now : Math.max(st.nextFire, now - SPRAY_LATE_NS);
+			boolean burst = w.q().burst() && g.burst(held);
+			st.nextFire = shotAt + sec(burst ? w.q().burstCycle() : w.cycleTime());
+			if (burst) {
+				st.burstLeft = BURST_SHOTS - 1;
+				st.burstNext = shotAt + sec(w.q().burstGap());
+			}
+		}
 		if (inf != 1) held.set(WeaponItems.CLIP, clip - 1);
 		if (inf != 1 && g.weaponClass.equals(ZeusRecharge.CLS)) ZeusRecharge.fired(p, held); // CS2's Zeus recharges instead of reloading
 
@@ -315,12 +360,22 @@ public final class GunServer {
 		ServerShots.Result shot = ServerShots.resolve(p, w, f, shotAt); // the server decides spread + recoil (the client only predicted)
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
+		broadcast(p, shootSound(w, shot.inaccuracy()));
 		// m_nNumBullets: shotguns fire several pellets, each traced and hurting on its own; the shooter's client predicts pellet 0
 		for (int n = 0; n < Math.max(1, w.bullets()); n++) {
 			Vec3 dir = n == 0 ? shot.dir() : ShotMath.pellet(shot.pitch(), shot.yaw(), shot.punchPitch(), shot.punchYaw(), shot.inaccuracy(), w.spread(), shot.seed(),
 					shot.shot(), n);
 			bullet(p, w, f, shot, dir, eye, n == 0);
 		}
+	}
+
+	/** Shots in a FAMAS / Glock-18 burst (CS2's burst fires 3). */
+	public static final int BURST_SHOTS = 3;
+
+	/** The shot sound: the Negev's focused one (WEAPON_SOUND_SINGLE_ACCURATE) once its inaccuracy is under m_flInaccuracyAltSoundThreshold. */
+	public static String shootSound(WeaponStats w, double inaccuracy) {
+		String acc = w.q().accurateSound();
+		return acc != null && w.q().altSoundThreshold() > 0 && inaccuracy < w.q().altSoundThreshold() ? acc : w.shootSound();
 	}
 
 	/** One bullet (or pellet) of a shot: traced through up to 4 thin surfaces, hurting what it hits. predicted: the shooter's client drew it. */

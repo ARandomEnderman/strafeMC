@@ -204,6 +204,8 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add("cl_landvolume = " + StrafeConfig.landVolume, ConsoleLog.OK);
 		});
+		viewmodelSetting("zoom_sensitivity_ratio", "Mouse sensitivity while scoped, relative to the zoom (default 1).", 0.001, 100,
+				() -> StrafeConfig.zoomSensitivityRatio, v -> StrafeConfig.zoomSensitivityRatio = v);
 		viewmodelSetting("viewmodel_fov", "Field of view of the first-person weapon (60-68, default 60).", 60, 68, () -> StrafeConfig.viewmodelFov,
 				v -> StrafeConfig.viewmodelFov = v);
 		// offsets unlimited on request (CS2 clamps them to -2..2.5 / -2..2)

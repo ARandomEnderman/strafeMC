@@ -126,7 +126,8 @@ public final class GunClient {
 	/** Max speed of the held CS weapon (NaN if none), for movement. */
 	public static double heldMaxSpeed(LocalPlayer p) {
 		if (p != null && p.getMainHandItem().getItem() instanceof GunItem g) {
-			WeaponStats s = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+			// scoped: CS2's scoped max speed (the AWP walks at 100)
+			WeaponStats s = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, g.modeOf(p.getMainHandItem(), INSTANCE.zoom, false));
 			if (s != null) return s.maxSpeed();
 		}
 		return Double.NaN;
@@ -152,6 +153,9 @@ public final class GunClient {
 			inspectUntil = 0;
 			reload = null;
 			silencerUntil = 0; // switching away cancels a silencer being screwed on / off
+			resetZoom(); // and unzooms (the server does the same)
+			burstLeft = 0;
+			revolverReadyAt = 0;
 			recoilIndex = 0;
 			aimPunch.reset(now / 1e9);
 			viewPunch[0] = viewPunch[1] = 0;
@@ -182,7 +186,8 @@ public final class GunClient {
 			return;
 		}
 		if (!(held.getItem() instanceof GunItem g)) return;
-		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, g.mode(held)); // silencer on: CS2's silenced numbers
+		// silencer on, burst mode, scoped: CS2's alt numbers
+		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, g.modeOf(held, zoom, false));
 		if (w == null) return;
 		updatePenalty(w, dt);
 		double t = now / 1e9;
@@ -196,6 +201,7 @@ public final class GunClient {
 		// right-click on a USP-S / M4A1-S: screw the silencer on or off (CS2's secondary attack); it flips at the clip's
 		// WPN_SILENCER_ATTACH / _DETACH event, and the gun can't shoot or reload until then (the server does the same)
 		boolean use = mc.screen == null && mc.options.keyUse.isDown();
+		if (use && !useWasDown && !w.q().revolver() && !g.hasSilencer() && now >= deployUntil && now >= silencerUntil) secondary(p, g, held, w, now);
 		if (use && !useWasDown && g.hasSilencer() && now >= deployUntil && reload == null && now >= silencerUntil && now >= nextFire) {
 			boolean on = g.silenced(held);
 			String anim = on ? "silencer_detach" : "silencer_attach";
@@ -207,6 +213,29 @@ public final class GunClient {
 			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("silencer", ""));
 		}
 		useWasDown = use;
+		// a sniper goes back to its zoom once the bolt is worked (unless reloading or empty)
+		if (resumeZoom > 0 && now >= nextFire) {
+			if (reload == null && g.clip(held) > 0) setZoom(p, dev.strafemc.client.ClientGameplay.stats(g.weaponClass), resumeZoom, false);
+			resumeZoom = 0;
+		}
+		// the rest of a burst fires by itself, m_flTimeBetweenBurstShots apart
+		if (burstLeft > 0 && now >= burstNextAt) {
+			int clip = g.clip(held);
+			if (predictedClip >= 0 && now - lastShot < sec(0.5)) clip = Math.min(clip, predictedClip);
+			if (clip <= 0 && infiniteAmmo() != 1 || reload != null) burstLeft = 0;
+			else {
+				burstLeft--;
+				burstNextAt += sec(w.q().burstGap());
+				predictedClip = clip - 1;
+				lastShot = now;
+				shoot(p, w, infiniteAmmo() == 1 ? w.clip() : predictedClip, false);
+			}
+		}
+		if (w.q().revolver()) {
+			revolverFrame(p, g, held, w, trigger, use, now);
+			triggerWasDown = trigger;
+			return;
+		}
 		if (trigger && now >= deployUntil && !reloadLocked() && now >= nextFire && now >= silencerUntil) {
 			int inf = infiniteAmmo();
 			// the server's clip update can trail a full-auto burst by a few shots: count locally while firing
@@ -217,20 +246,168 @@ public final class GunClient {
 					CsSounds.playOn("Default.ClipEmpty_Rifle", p, 1.0, false);
 					reload(false); // CS reloads when you pull the trigger on an empty magazine
 				} else if (w.fullAuto() && reload == null) reload(false); // and when a full-auto spray empties it, trigger still held
-			} else if (w.fullAuto() || !triggerWasDown) {
+			} else if (w.fullAuto() && !(w.q().burst() && g.burst(held)) || !triggerWasDown) { // a burst per click
 				predictedClip = clip - 1;
 				lastShot = now;
-				shoot(p, w, inf == 1 ? w.clip() : predictedClip);
-				nextFire = Math.max(now, nextFire) + sec(w.cycleTime());
+				boolean burst = w.q().burst() && g.burst(held);
+				long at = Math.max(now, nextFire);
+				shoot(p, w, inf == 1 ? w.clip() : predictedClip, false);
+				nextFire = at + sec(burst ? w.q().burstCycle() : w.cycleTime()); // a burst's cycle time runs from its first shot
+				if (burst) {
+					burstLeft = GunServer.BURST_SHOTS - 1;
+					burstNextAt = at + sec(w.q().burstGap());
+				}
 			}
 		}
 		triggerWasDown = trigger;
 	}
 
+	/**
+	 * Right-click (CS2's secondary attack) on guns without a silencer: scoped guns step through their zoom levels and back
+	 * to none; the FAMAS and Glock-18 switch burst fire on and off (with CS2's notice).
+	 */
+	private void secondary(LocalPlayer p, GunItem g, ItemStack held, WeaponStats w, long now) {
+		if (w.q().zoomLevels() > 0) {
+			if (reload != null || now < nextSecondary) return;
+			nextSecondary = now + sec(ZOOM_INTERVAL);
+			resumeZoom = 0;
+			cancelInspect();
+			setZoom(p, dev.strafemc.client.ClientGameplay.stats(g.weaponClass), (zoom + 1) % (w.q().zoomLevels() + 1), true);
+		} else if (w.q().burst()) {
+			boolean on = !g.burst(held);
+			held.set(dev.strafemc.weapon.WeaponItems.BURST, on ? 1 : 0); // predicted; the server sets the same
+			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("burst", ""));
+			String msg = on ? dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_BurstFire", "Switched to burst-fire mode")
+					: w.fullAuto() ? dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_FullAuto", "Switched to automatic")
+					: dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_SemiAuto", "Switched to semi-automatic");
+			p.sendOverlayMessage(net.minecraft.network.chat.Component.literal(msg));
+		}
+	}
+
+	/**
+	 * The R8 Revolver: holding the trigger cocks the hammer (prepare clip) and fires once it's back (REVOLVER_PREPARE),
+	 * again and again while held; letting go first lowers it. Right-click fans the hammer: shoot_alt with CS2's alt
+	 * numbers (less accurate, m_flCycleTime[1]).
+	 */
+	private void revolverFrame(LocalPlayer p, GunItem g, ItemStack held, WeaponStats w, boolean trigger, boolean use, long now) {
+		boolean ready = now >= deployUntil && !reloadLocked() && now >= nextFire;
+		int inf = infiniteAmmo();
+		int clip = g.clip(held);
+		if (predictedClip >= 0 && now - lastShot < sec(0.5)) clip = Math.min(clip, predictedClip);
+		if ((trigger || use) && ready && clip <= 0 && inf != 1) {
+			if (!triggerWasDown && !useWasDownRevolver) {
+				CsSounds.playOn("Default.ClipEmpty_Rifle", p, 1.0, false);
+				reload(false);
+			}
+		} else if (use && ready && revolverReadyAt == 0) {
+			WeaponStats alt = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, 1);
+			if (alt != null) {
+				predictedClip = clip - 1;
+				lastShot = now;
+				shoot(p, alt, inf == 1 ? w.clip() : predictedClip, true);
+				nextFire = now + sec(alt.cycleTime());
+			}
+		} else if (trigger && ready) {
+			if (revolverReadyAt == 0) {
+				revolverReadyAt = now + sec(REVOLVER_PREPARE);
+				cancelInspect();
+				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("prepare");
+				schedule(g, "prepare", now);
+			} else if (now >= revolverReadyAt) {
+				revolverReadyAt = 0;
+				predictedClip = clip - 1;
+				lastShot = now;
+				shoot(p, w, inf == 1 ? w.clip() : predictedClip, false);
+				nextFire = now + sec(w.cycleTime());
+			}
+		} else if (!trigger && revolverReadyAt != 0) { // let go before the shot: the hammer goes back down
+			revolverReadyAt = 0;
+			sounds.clear();
+			CsSounds.stopAnim();
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("idle");
+		}
+		useWasDownRevolver = use;
+	}
+
+	private boolean useWasDownRevolver;
+
 	private long knifeNextLight, knifeNextHeavy;
 	/** A silencer being screwed on / off: no shooting or reloading until it flips. */
 	private long silencerUntil;
 	private boolean useWasDown;
+
+	// scopes: the zoom level (0 = none), the FOV moving from zoomFromFov to zoomToFov (CS2 degrees) over zoomTime from
+	// zoomAt; resumeZoom: the level a sniper goes back to once its bolt is worked (m_bUnzoomsAfterShot)
+	private int zoom, resumeZoom;
+	private long zoomAt, nextSecondary;
+	private double zoomFromFov = 90, zoomToFov = 90, zoomTime;
+	/** Time between right-clicks on a scoped gun (CS:GO's m_flNextSecondaryAttack + 0.3 for scopes; FLAGGED as CS2's). */
+	private static final double ZOOM_INTERVAL = 0.3;
+	// burst fire: shots of the burst still to come and when the next is due
+	private int burstLeft;
+	private long burstNextAt;
+	/** R8: when the hammer is back and the held trigger fires (0: not cocking). */
+	private long revolverReadyAt;
+	/** R8: holding the trigger cocks the hammer this long before the shot (CS:GO's 0.234375 s; FLAGGED as CS2's). */
+	private static final double REVOLVER_PREPARE = 0.234375;
+
+	/** The CS2 FOV right now (90: not zoomed), moving to the zoom level's FOV over its zoom time. */
+	private double zoomFovCs() {
+		double f = zoomTime <= 0 ? 1 : Math.min(1, (System.nanoTime() - zoomAt) / 1e9 / zoomTime);
+		return zoomFromFov + (zoomToFov - zoomFromFov) * f;
+	}
+
+	/**
+	 * The world FOV while scoped: CS2's zoom FOV is relative to its 90 degree default, so the view narrows by the same
+	 * ratio of half-angle tangents from the player's own FOV.
+	 */
+	public float zoomFov(float fov) {
+		double cs = zoomFovCs();
+		if (cs >= 89.999) return fov;
+		double k = Math.tan(Math.toRadians(cs / 2)) / Math.tan(Math.toRadians(45));
+		return (float) Math.toDegrees(2 * Math.atan(Math.tan(Math.toRadians(fov / 2)) * k));
+	}
+
+	/** Mouse turning while scoped: zoom_sensitivity_ratio x zoomed FOV / 90, like CS2. */
+	public double zoomSensitivity() {
+		return zoom > 0 ? StrafeConfig.zoomSensitivityRatio * zoomToFov / 90.0 : 1;
+	}
+
+	/** Scoped with a sniper: the scope overlay instead of the viewmodel (m_bHideViewModelWhenZoomed). */
+	public boolean scopeOverlay() {
+		if (zoom <= 0) return false;
+		LocalPlayer p = Minecraft.getInstance().player;
+		if (p == null || !(p.getMainHandItem().getItem() instanceof GunItem g)) return false;
+		java.util.Map<String, Object> vd = dev.strafemc.client.ClientGameplay.weapon(g.weaponClass);
+		return vd != null && Boolean.TRUE.equals(vd.get("m_bHideViewModelWhenZoomed"));
+	}
+
+	/** The inaccuracy now (the scope's reticle blur follows it). */
+	public double inaccuracy() {
+		return penalty;
+	}
+
+	/** Changes the zoom level: the FOV moves over the level's m_flZoomTime, with CS2's zoom sounds; the server is told. */
+	private void setZoom(LocalPlayer p, WeaponStats w, int level, boolean sound) {
+		if (level == zoom) return;
+		zoomFromFov = zoomFovCs();
+		zoomToFov = w == null ? 90 : w.q().zoomFov(level);
+		zoomTime = w == null ? 0 : w.q().zoomTime()[Math.min(level, 2)];
+		zoomAt = System.nanoTime();
+		if (sound && w != null) {
+			String snd = level > zoom ? w.q().zoomInSound() : w.q().zoomOutSound();
+			if (snd != null) CsSounds.playOn(snd, p, 1.0, false);
+		}
+		zoom = level;
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("zoom", String.valueOf(level)));
+	}
+
+	/** Unzoomed at once (weapon switch). */
+	private void resetZoom() {
+		zoom = resumeZoom = 0;
+		zoomFromFov = zoomToFov = 90;
+		zoomTime = 0;
+	}
 
 	// grenades: idle -> pulling the pin -> charged (held) -> thrown -> the next one is drawn
 	private static final int GRENADE_IDLE = 0, GRENADE_PULLING = 1, GRENADE_CHARGED = 2, GRENADE_THROWN = 3;
@@ -459,7 +636,8 @@ public final class GunClient {
 	}
 	private long lastShot;
 
-	private void shoot(LocalPlayer p, WeaponStats w, int roundsLeft) {
+	/** alt: the R8's alt fire. */
+	private void shoot(LocalPlayer p, WeaponStats w, int roundsLeft, boolean alt) {
 		// predicted exactly like the server will decide it: same formula, the server's seed, the next shot number
 		double t = System.nanoTime() / 1e9;
 		aimPunch.advance(t);
@@ -467,19 +645,25 @@ public final class GunClient {
 		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
-					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d)));
+					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0)));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
 			sounds.clear();
 			CsSounds.stopAnim();
 		}
-		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("shoot1");
+		String anim = shootAnim(w, roundsLeft, alt);
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		// the shoot clip's own foley: pump-action and bolt-action guns work the action after the shot (Nova, MAG-7,
 		// Sawed-Off, AWP, SSG 08); the shot itself is the weapon's shoot sound below
-		if (p.getMainHandItem().getItem() instanceof GunItem held) schedule(held, "shoot1", System.nanoTime());
-		effects(p, w, d);
+		if (p.getMainHandItem().getItem() instanceof GunItem held) schedule(held, anim, System.nanoTime());
+		effects(p, w, d, anim);
 		predictImpact(p, w, d, shot);
-		if (w.shootSound() != null) CsSounds.playOn(w.shootSound(), p, 1.0, false);
+		String sound = GunServer.shootSound(w, penalty); // the Negev's focused sound once it's accurate
+		if (sound != null) CsSounds.playOn(sound, p, 1.0, false);
+		if (w.q().unzoomAfterShot() && zoom > 0) { // AWP / SSG 08: unscoped for the bolt, back after it
+			resumeZoom = zoom;
+			setZoom(p, w, 0, false);
+		}
 		if (w.nearlyEmptySound() != null && w.clip() > 0 && roundsLeft <= w.clip() * NEARLY_EMPTY_FRACTION)
 			CsSounds.playOn(w.nearlyEmptySound(), p, 1.0, false);
 		penalty += w.inaccuracyFire();
@@ -492,6 +676,18 @@ public final class GunClient {
 			recoilIndex += 1;
 		}
 		if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] fire {} inaccuracy={} spread={}", w.cls(), String.format("%.5f", penalty), w.spread());
+	}
+
+	/**
+	 * Which shoot clip: the R8's alt fire shoot_alt; the Dual Berettas take turns, right (shoot1) then left (shoot_left),
+	 * odd rounds left after the shot being the right gun's; the last round fires the gun's shoot_last (the slide stays back,
+	 * where the gun has one).
+	 */
+	private static String shootAnim(WeaponStats w, int roundsLeft, boolean alt) {
+		if (alt) return "shoot_alt";
+		boolean left = w.cls().equals("weapon_elite") && roundsLeft % 2 == 0;
+		if (roundsLeft <= 0) return left ? "shoot_left_last" : "shoot_last";
+		return left ? "shoot_left" : "shoot1";
 	}
 
 	/** Reload key held since the reload started (silent reload); cleared, and the server told, when it's let go. */
@@ -509,12 +705,12 @@ public final class GunClient {
 	 * m_nTracerFrequency-th shot of a burst, the weapon's m_szTracerParticle from the muzzle to where the bullet lands.
 	 * Which shots of a burst carry the tracer (index % frequency == 0) is assumed (flagged).
 	 */
-	private void effects(LocalPlayer p, WeaponStats w, Vec3 dir) {
-		AnimClip c = AnimClip.peek(GunServer.clipPath(w.cls(), "shoot1"));
+	private void effects(LocalPlayer p, WeaponStats w, Vec3 dir, String anim) {
+		AnimClip c = AnimClip.peek(GunServer.clipPath(w.cls(), anim));
 		if (c != null)
 			for (AnimClip.Event e : c.events())
-				if (e.kind().equals("CNmParticleEvent") && e.extra().startsWith("muzzleflash"))
-					dev.strafemc.client.particle.Effects.view(e.name(), "muzzle_flash");
+				if (e.kind().equals("CNmParticleEvent") && (e.extra().startsWith("muzzleflash") || e.name().contains("muzzleflash")))
+					dev.strafemc.client.particle.Effects.view(e.name(), muzzleAttachment(e.extra()));
 		java.util.Map<String, Object> vd = dev.strafemc.client.ClientGameplay.weapon(w.cls());
 		if (vd == null) return;
 		Object tracer = vd.get("m_szTracerParticle");
@@ -528,6 +724,14 @@ public final class GunClient {
 		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = hit.getLocation();
 		Vec3 start = muzzleWorld(mc);
 		dev.strafemc.client.particle.Effects.tracer(tracer.toString(), start != null ? start : eye, end);
+	}
+
+	/** The muzzle a flash comes from: the Dual Berettas' left gun flashes with config "alternate" at the second muzzle. */
+	private static String muzzleAttachment(String extra) {
+		var at = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.attachmentTransforms;
+		if (extra.contains("alternate"))
+			for (String n : new String[] {"muzzle_flash2", "muzzle_flash_2", "muzzle_flash_left"}) if (at.containsKey(n)) return n;
+		return "muzzle_flash";
 	}
 
 	private static final java.util.Random IMPACT_RNG = new java.util.Random();
@@ -653,6 +857,12 @@ public final class GunClient {
 		if (reload != null || now < deployUntil || now < silencerUntil || g.clip(p.getMainHandItem()) >= w.clip()) return;
 		if (infiniteAmmo() != 2 && !hasMagazine(p, g)) return;
 		reloadKeyHeld = byKey;
+		if (zoom > 0 || resumeZoom > 0) { // reloading takes the scope off
+			resumeZoom = 0;
+			setZoom(p, w, 0, false);
+		}
+		burstLeft = 0;
+		revolverReadyAt = 0;
 		double silentEnd = 0;
 		reloadSounds.clear();
 		AnimClip rc = AnimClip.peek(GunServer.clipPath(g.weaponClass, "reload"));

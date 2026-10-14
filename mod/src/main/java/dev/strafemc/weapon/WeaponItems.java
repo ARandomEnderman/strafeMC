@@ -23,6 +23,8 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> RECHARGE;
 	/** USP-S / M4A1-S: 0 = silencer off (absent: on, as CS2 hands them out). */
 	public static DataComponentType<Integer> SILENCED;
+	/** FAMAS / Glock-18: 1 = burst mode (absent: off). It stays with the gun, like CS2's. */
+	public static DataComponentType<Integer> BURST;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
@@ -43,6 +45,7 @@ public final class WeaponItems {
 		ROUNDS = component("rounds");
 		RECHARGE = component("recharge");
 		SILENCED = component("silenced");
+		BURST = component("burst");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

@@ -7,7 +7,8 @@ import java.util.Map;
 
 /**
  * One CS2 weapon's numbers in one mode, read from the game's weapons.vdata: pairs are [normal, alt], the alt mode being
- * the silencer on (USP-S, M4A1-S: no tracers, the longer muzzle, less recoil) or, later, scoped.
+ * the silencer on (USP-S, M4A1-S: no tracers, the longer muzzle, less recoil), scoped (AWP, AUG...), burst mode (FAMAS,
+ * Glock-18) or the R8's fanning alt fire. q: the weapon's special handling (see Quirks).
  */
 public record WeaponStats(String cls, int clip, int reserveMags, boolean reserveAsClips, double cycleTime, boolean fullAuto,
 						  int damage, double rangeModifier, double range, double headshotMultiplier, double armorRatio,
@@ -15,7 +16,21 @@ public record WeaponStats(String cls, int clip, int reserveMags, boolean reserve
 						  double spread, double inaccuracyStand, double inaccuracyCrouch, double inaccuracyMove,
 						  double inaccuracyJump, double inaccuracyLand, double inaccuracyLadder, double inaccuracyFire,
 						  double recoveryTimeStand, double recoveryTimeCrouch, double maxSpeed, String shootSound, String nearlyEmptySound,
-						  int mode, int tracerFrequency, boolean hasSilencer) {
+						  int mode, int tracerFrequency, boolean hasSilencer, Quirks q) {
+
+	/**
+	 * CS2's per-weapon special cases from weapons.vdata: zoom levels (m_nZoomLevels, m_nZoomFOV1/2, m_flZoomTime0-2: into
+	 * level 0/1/2), viewmodel hidden and unzoom after each shot (snipers), burst mode (m_flCycleTimeWhenInBurstMode from the
+	 * burst's first shot, m_flTimeBetweenBurstShots), the R8 (m_bIsRevolver), single-shell reloads (shotguns), and the
+	 * Negev's focused shot sound under m_flInaccuracyAltSoundThreshold.
+	 */
+	public record Quirks(int zoomLevels, int zoomFov1, int zoomFov2, double[] zoomTime, boolean hideViewmodelZoomed, boolean unzoomAfterShot,
+						 boolean burst, double burstCycle, double burstGap, boolean revolver, boolean singleShells, double altSoundThreshold,
+						 String zoomInSound, String zoomOutSound, String accurateSound) {
+		public int zoomFov(int level) {
+			return level <= 0 ? 90 : level == 1 ? zoomFov1 : zoomFov2;
+		}
+	}
 
 	public static WeaponStats of(String cls) {
 		return of(cls, 0);
@@ -46,7 +61,18 @@ public record WeaponStats(String cls, int clip, int reserveMags, boolean reserve
 				d(w, "m_flSpread", mode), d(w, "m_flInaccuracyStand", mode), d(w, "m_flInaccuracyCrouch", mode), d(w, "m_flInaccuracyMove", mode),
 				d(w, "m_flInaccuracyJump", mode), d(w, "m_flInaccuracyLand", mode), d(w, "m_flInaccuracyLadder", mode), d(w, "m_flInaccuracyFire", mode),
 				d(w, "m_flRecoveryTimeStand", mode), d(w, "m_flRecoveryTimeCrouch", mode), d(w, "m_flMaxSpeed", mode), sound, nearlyEmpty,
-				mode, i(w, "m_nTracerFrequency", mode), silencer);
+				mode, i(w, "m_nTracerFrequency", mode), silencer,
+				new Quirks(i(w, "m_nZoomLevels", 0), i(w, "m_nZoomFOV1", 0), i(w, "m_nZoomFOV2", 0),
+						new double[] {d(w, "m_flZoomTime0", 0), d(w, "m_flZoomTime1", 0), d(w, "m_flZoomTime2", 0)},
+						Boolean.TRUE.equals(w.get("m_bHideViewModelWhenZoomed")), Boolean.TRUE.equals(w.get("m_bUnzoomsAfterShot")),
+						Boolean.TRUE.equals(w.get("m_bHasBurstMode")), d(w, "m_flCycleTimeWhenInBurstMode", 0), d(w, "m_flTimeBetweenBurstShots", 0),
+						Boolean.TRUE.equals(w.get("m_bIsRevolver")), Boolean.TRUE.equals(w.get("m_bReloadsSingleShells")),
+						d(w, "m_flInaccuracyAltSoundThreshold", 0), sound(shoot, "WEAPON_SOUND_ZOOM_IN"), sound(shoot, "WEAPON_SOUND_ZOOM_OUT"),
+						sound(shoot, "WEAPON_SOUND_SINGLE_ACCURATE")));
+	}
+
+	private static String sound(Object shoot, String key) {
+		return shoot instanceof Map<?, ?> m && m.get(key) != null ? m.get(key).toString() : null;
 	}
 
 	/** Numbers may be a scalar or a [normal, alt] pair: the mode's value (the normal one if there's only one). */

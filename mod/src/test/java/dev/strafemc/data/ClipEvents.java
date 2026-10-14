@@ -7,7 +7,7 @@ public final class ClipEvents {
 			AnimClip c = AnimClip.load(p);
 			System.out.println("== " + p + " duration " + c.duration());
 			for (AnimClip.Event e : c.events())
-				System.out.printf("  %-34s %6.3f +%6.3f %s%n", e.name(), e.time(), e.duration(), e.isSound() ? "sound" : "");
+				System.out.printf("  %-34s %6.3f +%6.3f %s%n", e.name(), e.time(), e.duration(), e.isSound() ? "sound" : e.extra());
 		}
 	}
 }

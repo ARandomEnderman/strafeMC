@@ -49,6 +49,15 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + k.id + ".png"), 128), tex.resolve("item/" + k.id + ".png"),
 						Placeholders.Icon.ARMOR, 32);
 			}
+			// CS2's sniper scope overlay (panorama hud/scope): the round mask, the lens tint, the blurred reticle line
+			for (String[] sc : new String[][] {{"scope_circle_png", "circle"}, {"scope_lens_tga", "lens"}, {"scope_line_blur_tga", "line_blur"}}) {
+				Path out = tex.resolve("gui/scope/" + sc[1] + ".png");
+				try {
+					raw("panorama/images/hud/scope/" + sc[0] + ".vtex_c", "panorama/images/hud/scope/" + sc[0] + ".png", out);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] scope overlay {}: {}", sc[1], e.toString());
+				}
+			}
 			gloveSkins(tex);
 			wraps(tex);
 			// equipment icons for the buy menu and the killfeed: every missing one converted in a single run
@@ -252,6 +261,20 @@ public final class RuntimePack {
 		}
 		Files.createDirectories(marker.getParent());
 		Files.writeString(marker, kind);
+	}
+
+	/** A CS2 texture as it is (no resizing). */
+	private static void raw(String vpk, String exported, Path out) throws Exception {
+		if (Files.exists(out)) return;
+		Path src = StrafeConfig.cacheDir().resolve(exported);
+		AssetCache.ensureDecompiled(vpk, src);
+		Files.createDirectories(out.getParent());
+		Files.copy(src, out);
+	}
+
+	/** Whether the runtime pack has this texture (a path under assets/strafemc/textures). */
+	public static boolean hasTexture(String rel) {
+		return Files.exists(DIR.resolve("assets/strafemc/textures").resolve(rel));
 	}
 
 	private static void write(BufferedImage img, Path out) throws Exception {

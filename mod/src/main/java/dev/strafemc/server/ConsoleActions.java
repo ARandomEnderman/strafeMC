@@ -57,6 +57,8 @@ public final class ConsoleActions {
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
 			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
 			case "redeploy" -> dev.strafemc.weapon.GunServer.redeploy(p);
+			case "burst" -> dev.strafemc.weapon.GunServer.toggleBurst(p);
+			case "zoom" -> dev.strafemc.weapon.GunServer.zoom(p, arg);
 			case "strafemc_loadout_keep" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change whether loadouts drop on death."));

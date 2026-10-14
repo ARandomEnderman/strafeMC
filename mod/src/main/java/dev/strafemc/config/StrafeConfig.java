@@ -66,6 +66,8 @@ public final class StrafeConfig {
 	/** viewmodel_fov (CS2 client cvar; default 68, allowed 54-68 - Source/CS2 values, not readable from the server). */
 	/** CS2's viewmodel_fov: 60..68, default 60. */
 	public static double viewmodelFov = 60;
+	/** CS2's zoom_sensitivity_ratio: mouse sensitivity while scoped, times the zoomed FOV / 90 (default 1). */
+	public static double zoomSensitivityRatio = 1.0;
 	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up); defaults 1, 1, -1. Unlimited (CS2 clamps x -2..2.5, y and z -2..2). */
 	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
 	/**
@@ -133,6 +135,7 @@ public final class StrafeConfig {
 			doubleTapFly = Boolean.parseBoolean(p.getProperty("doubleTapFly", String.valueOf(doubleTapFly)));
 			movementVolume = Double.parseDouble(p.getProperty("movementVolume", String.valueOf(movementVolume)));
 			landVolume = Double.parseDouble(p.getProperty("landVolume", String.valueOf(landVolume)));
+			zoomSensitivityRatio = Double.parseDouble(p.getProperty("zoomSensitivityRatio", String.valueOf(zoomSensitivityRatio)));
 			viewmodelFov = Math.max(60, Math.min(68, Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)))));
 			viewmodelOffsetX = Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)));
 			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
@@ -182,6 +185,7 @@ public final class StrafeConfig {
 		p.setProperty("movementVolume", String.valueOf(movementVolume));
 		p.setProperty("landVolume", String.valueOf(landVolume));
 		p.setProperty("viewmodelFov", String.valueOf(viewmodelFov));
+		p.setProperty("zoomSensitivityRatio", String.valueOf(zoomSensitivityRatio));
 		p.setProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX));
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
