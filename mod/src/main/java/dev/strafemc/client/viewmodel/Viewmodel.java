@@ -165,7 +165,7 @@ public final class Viewmodel {
 				loadAsync(g.weaponClass);
 				return;
 			}
-			if (st.getItem() instanceof dev.strafemc.weapon.KnifeItem k && cache.get(k.weaponClass) instanceof Loaded kl) gun(kl); // its wrap's finish
+			if (st.getItem() instanceof dev.strafemc.weapon.GunItem k && cache.get(k.weaponClass) instanceof Loaded kl) gun(kl); // its wrap's finish
 			if (st.getItem() instanceof dev.strafemc.weapon.GloveItem gl) { // gloves you might put on: model + finish
 				String kit = gl.kit(st), key = gl.kind.model + "#" + kit;
 				if (!gloves.containsKey(key) && loadGloves(gl.kind.model, kit, key)) return;
@@ -248,12 +248,12 @@ public final class Viewmodel {
 	private final Map<String, VmModel> finishes = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> finishLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-	/** The weapon model to draw: a knife in the loadout's knife wrap once baked, the plain weapon until then (and without one). */
+	/** The weapon model to draw: in its loadout wrap's finish once baked, the plain weapon until then (and without one). */
 	private VmModel gun(Loaded l) {
-		if (!l.cls.contains("knife") && !l.cls.equals("weapon_bayonet")) return l.gun;
-		String kit = dev.strafemc.client.WrapChoice.knifeKit(l.cls);
+		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
+		String kit = knife ? dev.strafemc.client.WrapChoice.knifeKit(l.cls) : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		if (kit == null) return l.gun;
-		int pattern = dev.strafemc.client.WrapChoice.knifePattern();
+		int pattern = knife ? dev.strafemc.client.WrapChoice.knifePattern() : dev.strafemc.client.WrapChoice.gunPattern(l.cls);
 		String key = l.cls + "#" + kit + "#" + pattern;
 		VmModel m = finishes.get(key);
 		if (m != null) return m;
