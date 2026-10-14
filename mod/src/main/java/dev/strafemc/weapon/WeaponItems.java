@@ -65,8 +65,8 @@ public final class WeaponItems {
 		ASSAULTSUIT = item("item_assaultsuit", p -> new ArmorItem(p.stacksTo(16), true));
 		HEALTHSHOT = item(HealthshotItem.CLS, p -> new HealthshotItem(p.stacksTo(16)));
 		for (GloveItem.Kind k : GloveItem.Kind.values()) GLOVES.put(k, item(k.id, p -> new GloveItem(p.stacksTo(1), k)));
-		GUN_WRAP = item("skin_wrap", p -> new SkinWrapItem(p.stacksTo(4), false));
-		KNIFE_WRAP = item("knife_wrap", p -> new SkinWrapItem(p.stacksTo(4), true));
+		GUN_WRAP = item("skin_wrap", p -> new SkinWrapItem(p.stacksTo(1), false));
+		KNIFE_WRAP = item("knife_wrap", p -> new SkinWrapItem(p.stacksTo(1), true));
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
