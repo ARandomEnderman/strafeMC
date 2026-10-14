@@ -36,9 +36,9 @@ public final class ScopeHud {
 			pose.scale(1 / k, 1 / k);
 			int x0 = (w - h) / 2;
 			boolean tex = dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/circle.png");
-			if (tex) {
-				g.blit(RenderPipelines.GUI_TEXTURED, CIRCLE, x0, 0, 0, 0, h, h, h, h);
+			if (tex) { // the lens tint under the round mask, so the mask's edge stays black
 				if (dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/lens.png")) g.blit(RenderPipelines.GUI_TEXTURED, LENS, x0, 0, 0, 0, h, h, h, h);
+				g.blit(RenderPipelines.GUI_TEXTURED, CIRCLE, x0, 0, 0, 0, h, h, h, h);
 			}
 			g.fill(0, 0, x0, h, 0xFF000000); // the sides past the round view
 			g.fill(x0 + h, 0, w, h, 0xFF000000);
