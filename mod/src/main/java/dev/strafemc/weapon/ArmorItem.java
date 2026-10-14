@@ -35,7 +35,5 @@ public class ArmorItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("§7Right click to put on: 100 armor" + (helmet ? " and a helmet" : "")));
-		out.accept(Component.literal("§8Protects chest, stomach and arms" + (helmet ? ", and the head" : "")));
 	}
 }

@@ -18,7 +18,5 @@ public class KnifeItem extends GunItem {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("\u00a77Left click: slash, right click: stab"));
-		out.accept(Component.literal("\u00a78Backstabs: slash 90, stab 180"));
 	}
 }

@@ -112,6 +112,5 @@ public class GunItem extends Item {
 		WeaponStats st = stats();
 		if (st == null) return;
 		out.accept(Component.literal("§7" + clip(stack) + " / " + st.clip() + " rounds loaded"));
-		out.accept(Component.literal("§8" + st.damage() + " dmg, " + Math.round(60 / st.cycleTime()) + " RPM, HS x" + st.headshotMultiplier()));
 	}
 }

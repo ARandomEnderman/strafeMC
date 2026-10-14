@@ -18,7 +18,5 @@ public class GrenadeItem extends GunItem {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("§7Hold left: throw far, right: lob short, both: in between"));
-		out.accept(Component.literal("§7Release to throw"));
 	}
 }

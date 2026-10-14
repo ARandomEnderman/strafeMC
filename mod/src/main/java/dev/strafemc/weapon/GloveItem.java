@@ -86,7 +86,5 @@ public class GloveItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		out.accept(Component.literal("§7Factory New"));
-		out.accept(Component.literal("§7Right click: wear (goes into your loadout)"));
-		out.accept(Component.literal("§7Sneak + right click: take off your gloves"));
 	}
 }
