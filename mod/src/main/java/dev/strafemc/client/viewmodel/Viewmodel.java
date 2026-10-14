@@ -562,9 +562,12 @@ public final class Viewmodel {
 			}
 		}
 		if (minX > maxX) return false;
-		float k = 0.85f * Math.min(width / Math.max(1e-3f, maxX - minX), height / Math.max(1e-3f, maxY - minY));
+		// the turn widens the picture: fit what the model covers at its widest turn, and keep depth shallow so a long gun
+		// swinging towards the viewer isn't cut by the picture's depth range
+		float depth = maxZ - minZ, wide = (maxX - minX) * (float) Math.abs(Math.cos(Math.toRadians(yaw))) + depth * (float) Math.abs(Math.sin(Math.toRadians(yaw)));
+		float k = 0.85f * Math.min(width / Math.max(1e-3f, Math.max(maxX - minX, wide)), height / Math.max(1e-3f, maxY - minY));
 		ps.pushPose();
-		ps.scale(k, -k, k); // camera space (y up) into the picture (y down)
+		ps.scale(k, -k, k * 0.2f); // camera space (y up) into the picture (y down); depth flattened
 		ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yaw));
 		ps.translate(-(minX + maxX) / 2, -(minY + maxY) / 2, -(minZ + maxZ) / 2);
 		PoseStack.Pose last = ps.last();
