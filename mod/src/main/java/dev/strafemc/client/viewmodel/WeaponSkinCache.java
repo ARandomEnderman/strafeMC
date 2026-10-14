@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v8/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v9/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -117,11 +117,12 @@ public final class WeaponSkinCache {
 			else if ((m = NUM.matcher(body)).find()) p.values.put(name, new double[] {Double.parseDouble(m.group(1))});
 		}
 		p.shader = "composite " + style;
+		p.values.put("strafemc_opaque_pattern", new double[] {1}); // their albedo replaces the colour; its alpha is not coverage
 		return p;
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v8/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v9/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**

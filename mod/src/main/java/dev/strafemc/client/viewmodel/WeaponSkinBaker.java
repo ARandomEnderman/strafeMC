@@ -133,7 +133,7 @@ public final class WeaponSkinBaker {
 					case 7 -> c = new double[] {pt[0] * col[0][0], pt[1] * col[0][1], pt[2] * col[0][2]};
 					case 8 -> {
 						c = pt;
-						alpha = (pc >>> 24) / 255.0;
+						alpha = p.f("strafemc_opaque_pattern", 0) != 0 ? 1 : (pc >>> 24) / 255.0;
 					}
 					default -> { // palette styles: hydrographic, spray, anodized multicolour / airbrushed
 						c = col[0];
