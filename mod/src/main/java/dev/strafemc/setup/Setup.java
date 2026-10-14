@@ -47,7 +47,7 @@ public final class Setup {
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
-		m.put("wraps", 4); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template); 4: colour-only skins
+		m.put("wraps", 5); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template); 4: colour-only skins; 5: Doppler phases
 		return m;
 	}
 

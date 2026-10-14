@@ -51,7 +51,11 @@ public final class WeaponSkinBaker {
 	}
 
 	/** The baked colour and, per texel, how much of it is paint rather than the weapon's own metal (0..1). */
-	public record Result(BufferedImage color, float[] paint) {}
+	/**
+	 * The baked colour; per texel how much of it is paint rather than the weapon's own metal (0..1); and the finish's
+	 * roughness where it covers the weapon (NaN: the weapon's own), with how much it covers.
+	 */
+	public record Result(BufferedImage color, float[] paint, float[] rough, float[] cover) {}
 
 	public static Result bake(GloveSkinBaker.Params p, Inputs in, BufferedImage base, Positions positions, Function<String, BufferedImage> tex) {
 		int style = (int) p.f("F_PAINT_STYLE", 0);
@@ -100,7 +104,9 @@ public final class WeaponSkinBaker {
 		}
 		double span = positions == null ? 1 : Math.max(1e-6, positions.max[ax] - positions.min[ax]);
 		BufferedImage out = new BufferedImage(SIZE, SIZE, BufferedImage.TYPE_INT_ARGB);
-		float[] paint = new float[SIZE * SIZE];
+		float[] paint = new float[SIZE * SIZE], rough = new float[SIZE * SIZE], cover = new float[SIZE * SIZE];
+		java.util.Arrays.fill(rough, Float.NaN);
+		double paintRough = p.f("g_flPaintRoughness", 0.6);
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
@@ -167,6 +173,15 @@ public final class WeaponSkinBaker {
 					}
 					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k))));
 					paint[y * SIZE + x] = (float) (anodized ? 0 : k);
+					// CS2's roughness output: anodized multicolour reads it from the pattern's alpha (below 0.5; the
+					// marbling), outside colour regions 2 / 3; everything else the kit's paint roughness
+					double r = paintRough;
+					if (style == 4 && pa < 0.5) {
+						double t = 1 - Math.min(1, pa * 2);
+						r += (t * t * 0.85 + 0.15 - paintRough) * (1 - Math.max(mg, mb));
+					}
+					rough[y * SIZE + x] = (float) Math.min(1, r);
+					cover[y * SIZE + x] = (float) k;
 					continue;
 				}
 				double[] c;
@@ -195,8 +210,10 @@ public final class WeaponSkinBaker {
 				double k = w * alpha;
 				out.setRGB(x, y, GloveSkinBaker.rgb(GloveSkinBaker.lerp(b, c, k)));
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
+				rough[y * SIZE + x] = (float) paintRough;
+				cover[y * SIZE + x] = (float) (w * alpha);
 			}
-		return new Result(out, paint);
+		return new Result(out, paint, rough, cover);
 	}
 
 	/**

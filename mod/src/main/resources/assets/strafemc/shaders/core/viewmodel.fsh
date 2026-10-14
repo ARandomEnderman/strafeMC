@@ -28,6 +28,8 @@ vec3 environment(vec3 r, float rough, float metal) {
     vec3 ground = vec3(0.10, 0.09, 0.08) * mix(1.0, 0.5, metal), horizon = vec3(0.75, 0.78, 0.82) * mix(1.0, 0.55, metal),
             sky = vec3(1.05, 1.08, 1.15) * mix(1.0, 0.8, metal);
     vec3 env = mix(mix(ground, horizon, smoothstep(-0.25, 0.1, r.y)), sky, up);
+    // rough surfaces see a blurred, dimmer surrounding: towards its average
+    env = mix(env, (ground + horizon + sky) * 0.28, smoothstep(0.3, 0.9, rough));
     float spec = pow(max(dot(r, SUN), 0.0), mix(180.0, 18.0, rough));
     return env + vec3(spec) * mix(1.4, 0.3, rough);
 }
@@ -35,16 +37,18 @@ vec3 environment(vec3 r, float rough, float metal) {
 void main() {
     vec4 tex = texture(Sampler0, texCoord0);
     vec3 albedo = tex.rgb * vertexColor.rgb;
-    float metal = tex.a;
+    // alpha: metal in the top bit, CS2's roughness in the low seven
+    float packed = tex.a * 255.0;
+    float metal = step(127.5, packed);
+    float rough = clamp((packed - metal * 128.0) / 127.0, 0.0, 1.0);
     vec3 n = normalize(gl_FrontFacing ? viewNormal : -viewNormal);
     vec3 v = normalize(-viewPos);
     float ndv = max(dot(n, v), 0.0);
-    float rough = mix(0.45, 0.25, metal);
     vec3 r = reflect(-v, n);
 
     vec3 f0 = mix(vec3(0.04), albedo, metal);
     // non-metals (paint, fabric, rubber) only get a faint, rough sheen at grazing angles; metal the full Fresnel
-    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * mix(0.12, 1.0, metal);
+    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * mix(0.12, 1.0, metal) * (1.0 - 0.8 * max(0.0, rough - 0.25));
     float diffuse = 0.42 + 0.68 * max(dot(n, SUN), 0.0);
     vec3 color = albedo * (1.0 - metal) * diffuse + environment(r, rough, metal) * fresnel * mix(0.6, 1.0, metal);
 

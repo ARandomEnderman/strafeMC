@@ -840,15 +840,24 @@ public final class Viewmodel {
 	private static NativeImage decode(Path p, boolean opaque) throws java.io.IOException {
 		try (InputStream in = Files.newInputStream(downscaledPath(p))) {
 			NativeImage img = NativeImage.read(in);
-			// opaque materials: alpha isn't transparency; it carries CS2's metalness (the setup's / bake's metal mask) for
-			// the viewmodel shader (VmRender), 0 where there's none
+			// opaque materials: alpha isn't transparency; it carries CS2's metalness (the setup's / bake's metal mask, top
+			// bit) and roughness (low 7 bits: a finish's own where it covers, else ours by metal) for the viewmodel shader
 			if (opaque) {
 				Path mask = p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024m.png"));
+				Path roughness = p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024r.png"));
 				BufferedImage m = Files.exists(mask) ? ImageIO.read(mask.toFile()) : null;
+				BufferedImage r = Files.exists(roughness) ? ImageIO.read(roughness.toFile()) : null;
 				int w = img.getWidth(), h = img.getHeight();
 				for (int y = 0; y < h; y++)
 					for (int x = 0; x < w; x++) {
-						int a = m == null ? 0 : m.getRGB(x * m.getWidth() / w, y * m.getHeight() / h) & 255;
+						boolean metal = m != null && (m.getRGB(x * m.getWidth() / w, y * m.getHeight() / h) & 255) >= 128;
+						double rough = metal ? 0.25 : 0.45;
+						if (r != null) {
+							int rc = r.getRGB(x * r.getWidth() / w, y * r.getHeight() / h);
+							double cover = (rc >> 8 & 255) / 255.0;
+							rough += ((rc >> 16 & 255) / 255.0 - rough) * cover;
+						}
+						int a = (metal ? 128 : 0) + (int) Math.round(Math.max(0, Math.min(1, rough)) * 127);
 						img.setPixel(x, y, img.getPixel(x, y) & 0x00FFFFFF | a << 24);
 					}
 			}

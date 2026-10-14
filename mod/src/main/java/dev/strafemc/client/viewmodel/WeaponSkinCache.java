@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v25/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v26/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -165,7 +165,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v25/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v26/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -216,6 +216,15 @@ public final class WeaponSkinCache {
 				}
 			write(out, metal);
 		}
+		// roughness where the finish covers the weapon (R) and how much it covers (G)
+		int n = WeaponSkinBaker.SIZE;
+		BufferedImage rough = new BufferedImage(n, n, BufferedImage.TYPE_INT_RGB);
+		for (int i = 0; i < n * n; i++) {
+			float r = result.rough()[i];
+			int cv = Float.isNaN(r) ? 0 : Math.round(result.cover()[i] * 255), rv = Float.isNaN(r) ? 0 : Math.round(r * 255);
+			rough.setRGB(i % n, i / n, rv << 16 | cv << 8);
+		}
+		write(rough, sibling(tex, ".vm1024r.png"));
 		write(result.color(), pixels);
 		return tex;
 	}
