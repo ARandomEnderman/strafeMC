@@ -651,6 +651,7 @@ public final class GunClient {
 			sounds.clear();
 			CsSounds.stopAnim();
 		}
+		if (shell != null && reload != null) endShellReload(); // a shot stops a shotgun's shell-by-shell reload (the server too)
 		String anim = shootAnim(w, roundsLeft, alt);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
 		// the shoot clip's own foley: pump-action and bolt-action guns work the action after the shot (Nova, MAG-7,
@@ -865,7 +866,13 @@ public final class GunClient {
 		revolverReadyAt = 0;
 		double silentEnd = 0;
 		reloadSounds.clear();
-		AnimClip rc = AnimClip.peek(GunServer.clipPath(g.weaponClass, "reload"));
+		int loaded = g.clip(p.getMainHandItem());
+		String anim = GunServer.reloadAnim(g.weaponClass, loaded); // an empty magazine: CS2's reload_empty, where the gun has one
+		AnimClip rc = AnimClip.peek(GunServer.clipPath(g.weaponClass, anim));
+		int missing = w.clip() - loaded;
+		shell = w.q().singleShells()
+				? dev.strafemc.weapon.ShellReload.of(rc, infiniteAmmo() == 2 ? missing : Math.min(missing, roundsAvailable(p, g))) : null;
+		shellLastT = -1;
 		if (rc != null)
 			for (AnimClip.Event e : rc.events()) {
 				if (e.name().equals("WPN_RELOAD_SILENT")) silentEnd = e.time() + e.duration();
@@ -874,14 +881,46 @@ public final class GunClient {
 		// the silent window is gameplay (it decides who hears the reload): the server's timing wins over the local clip
 		silentEnd = dev.strafemc.client.ClientGameplay.timing(g.weaponClass, "reloadSilentEnd", silentEnd);
 		reload = new dev.strafemc.weapon.ReloadTimeline(silentEnd, byKey);
-		reloadLockout = w.reloadLockout();
+		reloadLockout = shell != null ? 0 : w.reloadLockout(); // a shot can stop a shotgun's reload any time
 		if (ClientPlayNetworking.canSend(StrafePayloads.Reload.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Reload(byKey ? StrafePayloads.Reload.START_HELD : StrafePayloads.Reload.START));
 		sounds.clear();
 		CsSounds.stopAnim();
 		inspectUntil = 0;
 		if (dev.strafemc.client.Placeholders.active()) dev.strafemc.client.Placeholders.reloadSound(p, false);
-		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("reload");
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
+	}
+
+	/** A shotgun's shell-by-shell reload (with reload), and the last reload time its foley was played up to. */
+	private dev.strafemc.weapon.ShellReload shell;
+	private double shellLastT;
+
+	/** Rounds in the inventory for this gun (all its magazines / shells). */
+	private static int roundsAvailable(LocalPlayer p, GunItem g) {
+		int n = 0;
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(s) * s.getCount();
+		}
+		return n;
+	}
+
+	/** A shell-by-shell reload: the clip's loop part again per shell (viewmodel and foley), over after the outro. */
+	private void updateShellReload(LocalPlayer p) {
+		double t = reload.animTime;
+		for (Object[] s : reloadSounds)
+			for (double at : shell.times((Double) s[1])) if (at > shellLastT && at <= t) CsSounds.playOn((String) s[0], p, 1.0, reload.stealthy);
+		shellLastT = t;
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.seek((float) shell.clipTime(t));
+		if (t >= shell.end()) endShellReload();
+	}
+
+	private void endShellReload() {
+		reload = null;
+		shell = null;
+		reloadSounds.clear();
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.setRate(1f);
 	}
 
 	public void inspect() {
@@ -950,6 +989,10 @@ public final class GunClient {
 		if (reload == null) return;
 		reload.advance(now / 1e9, dt, RELOAD.isDown() && reloadKeyHeld);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.setRate((float) reload.rate);
+		if (shell != null) {
+			updateShellReload(p);
+			return;
+		}
 		for (var it = reloadSounds.iterator(); it.hasNext(); ) {
 			Object[] s = it.next();
 			if (reload.animTime < (Double) s[1]) continue;

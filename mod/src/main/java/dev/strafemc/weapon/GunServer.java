@@ -44,6 +44,11 @@ public final class GunServer {
 		long deployUntil, nextFire, lastTick, knifeNextLight, knifeNextHeavy;
 		/** A silencer being screwed on / off: when it flips (0: none), and on which stack. */
 		long silencerAt;
+		/** A shotgun's shell-by-shell reload (with st.reload), shells loaded so far, its foley (event, clip time) and the last reload time handled. */
+		ShellReload shell;
+		int shellsIn;
+		final java.util.List<Object[]> shellSounds = new java.util.ArrayList<>();
+		double shellLastT;
 		/** Burst fire: shots of the current burst still to come, and when the next one is due. */
 		int burstLeft;
 		long burstNext;
@@ -281,6 +286,7 @@ public final class GunServer {
 				st.reload = null;
 				st.pendingSounds.clear();
 				st.burstLeft = 0;
+				st.shell = null;
 				ServerShots.setZoom(p, 0); // CS2 unzooms on a weapon switch
 				if (held.getItem() instanceof GunItem g && g.stats() != null) st.deployUntil = now + sec(g.stats().deployDuration());
 			} else {
@@ -289,7 +295,10 @@ public final class GunServer {
 			double dt = st.lastTick == 0 ? 0 : Math.min(0.25, (now - st.lastTick) / 1e9);
 			st.lastTick = now;
 			ReloadTimeline r = st.reload;
-			if (r != null) {
+			if (r != null && st.shell != null) {
+				r.advance(now / 1e9, dt, st.reloadKeyHeld);
+				shellTick(p, st, r, held);
+			} else if (r != null) {
 				r.advance(now / 1e9, dt, st.reloadKeyHeld);
 				for (var it = st.pendingSounds.iterator(); it.hasNext(); ) {
 					Object[] s = it.next();
@@ -304,6 +313,69 @@ public final class GunServer {
 				if (st.ammoAdded && r.animTime >= st.lockout && st.pendingSounds.isEmpty()) st.reload = null;
 			}
 		}
+	}
+
+	/** A shell-by-shell reload moving on: its foley (each loop's again), a shell at each WPN_RELOAD_ADD_AMMO, done after the outro. */
+	private static void shellTick(ServerPlayer p, State st, ReloadTimeline r, ItemStack held) {
+		ShellReload sr = st.shell;
+		double t = r.animTime;
+		for (Object[] s : st.shellSounds)
+			for (double at : sr.times((Double) s[1])) if (at > st.shellLastT && at <= t) broadcast(p, (String) s[0], r.stealthy);
+		st.shellLastT = t;
+		while (st.shellsIn < sr.shells && t >= sr.shellAt(st.shellsIn)) {
+			if (!(held.getItem() instanceof GunItem g) || !addShell(p, held, g)) {
+				sr.shells = st.shellsIn; // out of shells (or full): straight to the outro
+				break;
+			}
+			st.shellsIn++;
+		}
+		if (t >= sr.end()) {
+			st.reload = null;
+			st.shell = null;
+		}
+	}
+
+	/** One shell from the inventory's shells into the gun; false if there's none or the gun is full. */
+	private static boolean addShell(ServerPlayer p, ItemStack gun, GunItem g) {
+		WeaponStats w = g.stats();
+		int clip = g.clip(gun);
+		if (w == null || clip >= w.clip()) return false;
+		if (infiniteAmmo() != 2) {
+			int slot = findMagazine(p, g);
+			if (slot < 0) return false;
+			var inv = p.getInventory();
+			ItemStack mag = inv.getItem(slot);
+			int rounds = ((MagazineItem) mag.getItem()).rounds(mag) - 1;
+			if (mag.getCount() > 1) { // one off a stack of full ones: the rest stay full
+				mag.shrink(1);
+				if (rounds > 0) {
+					ItemStack used = new ItemStack(mag.getItem());
+					used.set(WeaponItems.ROUNDS, rounds);
+					if (!inv.add(used)) p.drop(used, false);
+				}
+			} else if (rounds > 0) mag.set(WeaponItems.ROUNDS, rounds);
+			else mag.shrink(1);
+			inv.setChanged();
+		}
+		gun.set(WeaponItems.CLIP, clip + 1);
+		return true;
+	}
+
+	/** Rounds in the inventory for this gun (all its magazines / shells). */
+	static int roundsAvailable(ServerPlayer p, GunItem g) {
+		int n = 0;
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(s) * s.getCount();
+		}
+		return n;
+	}
+
+	/** The reload clip: CS2's reload_empty when the magazine is empty and the gun has its own (CZ75-Auto, Glock-18...). */
+	public static String reloadAnim(String cls, int clip) {
+		String empty = clipPath(cls, "reload_empty");
+		return clip <= 0 && empty != null && !empty.equals(clipPath(cls, "reload")) ? "reload_empty" : "reload";
 	}
 
 	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
@@ -328,6 +400,10 @@ public final class GunServer {
 		// first shot can arrive a tick later than a later one (no time can be banked: the clock never runs ahead of shots)
 		long now = System.nanoTime(), tolerance = 60_000_000L;
 		int clip = g.clip(held), inf = infiniteAmmo();
+		if (st.shell != null && st.reload != null && (clip > 0 || inf == 1)) { // a shot stops a shotgun's shell-by-shell reload
+			st.reload = null;
+			st.shell = null;
+		}
 		// the 2nd / 3rd shot of a burst come m_flTimeBetweenBurstShots apart, inside the burst's own cycle time
 		boolean burstShot = st.burstLeft > 0 && now >= st.burstNext - tolerance && now < st.burstNext + SPRAY_LATE_NS;
 		if (!burstShot) st.burstLeft = 0;
@@ -722,20 +798,29 @@ public final class GunServer {
 		long now = System.nanoTime();
 		if (st.reload != null || now < st.deployUntil || g.clip(held) >= w.clip()) return;
 		if (infiniteAmmo() != 2 && findMagazine(p, g) < 0) return;
-		AnimClip clip = AnimClip.load(clipPath(w.cls(), "reload"));
+		int loaded = g.clip(held);
+		AnimClip clip = AnimClip.load(clipPath(w.cls(), reloadAnim(w.cls(), loaded)));
 		double addAt = clip != null ? clip.timeOf("WPN_RELOAD_ADD_AMMO", w.reloadLockout() * 0.45) : w.reloadLockout() * 0.45;
+		// shotguns: a shell per loop, as many as are missing and in the inventory
+		int missing = w.clip() - loaded;
+		ShellReload shell = w.q().singleShells()
+				? ShellReload.of(clip, infiniteAmmo() == 2 ? missing : Math.min(missing, roundsAvailable(p, g))) : null;
 		double silentEnd = 0;
 		st.pendingSounds.clear();
+		st.shellSounds.clear();
 		if (clip != null)
 			for (AnimClip.Event e : clip.events()) {
 				if (e.name().equals("WPN_RELOAD_SILENT")) silentEnd = e.time() + e.duration();
-				else if (e.isSound() && !e.name().isEmpty()) st.pendingSounds.add(new Object[] {e.name(), e.time()});
+				else if (e.isSound() && !e.name().isEmpty()) (shell != null ? st.shellSounds : st.pendingSounds).add(new Object[] {e.name(), e.time()});
 			}
 		st.reloadKeyHeld = keyHeld;
 		st.reload = new ReloadTimeline(silentEnd, keyHeld);
 		st.addAmmoAt = addAt;
-		st.lockout = w.reloadLockout();
+		st.lockout = shell != null ? 0 : w.reloadLockout(); // a shot can stop a shotgun's reload any time
 		st.ammoAdded = false;
+		st.shell = shell;
+		st.shellsIn = 0;
+		st.shellLastT = -1;
 	}
 
 	private static void finishReload(ServerPlayer p, ItemStack gun, GunItem g) {
