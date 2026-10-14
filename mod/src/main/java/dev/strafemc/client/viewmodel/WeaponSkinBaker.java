@@ -33,11 +33,14 @@ public final class WeaponSkinBaker {
 	 * mesh (CS2's g_tPosition holds the same, as a float texture).
 	 */
 	public record Positions(int size, float[] pos, float[] min, float[] max) {
-		/** Per texel (5 floats): object-space x, y, z, then the first UV set's u, v there; NaN where no triangle covers it. */
+		/** Per texel (5 floats): object-space x, y, z, then the second UV set's u, v there (NaN: none / not covered). */
 		static final int STRIDE = 5;
 
-		/** The base texture's UV at paint-space (u, v): itself when the weapon has one UV set, else the first set there. */
-		public double[] baseUv(double u, double v) {
+		/**
+		 * Where a UV-space pattern is read at texel (u, v): the second UV set there when the weapon has one (CS2 guns keep
+		 * the old CS:GO layout in it, which the artwork is drawn for), else (u, v).
+		 */
+		public double[] patternUv(double u, double v) {
 			int o = STRIDE * (Math.min(size - 1, (int) (v * size)) * size + Math.min(size - 1, (int) (u * size)));
 			return Float.isNaN(pos[o + 3]) ? new double[] {u, v} : new double[] {pos[o + 3], pos[o + 4]};
 		}
@@ -74,8 +77,7 @@ public final class WeaponSkinBaker {
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
-				double[] buv = positions == null ? new double[] {u, v} : positions.baseUv(u, v); // guns: base colour from the first UV set
-				int bc = GloveSkinBaker.sampleBilinear(base, buv[0], buv[1]);
+				int bc = GloveSkinBaker.sampleBilinear(base, u, v);
 				double[] b = GloveSkinBaker.unpack(bc);
 				int m = in.masks == null ? 0xFFFF0000 : GloveSkinBaker.sample(in.masks, u, v);
 				double mr = (m >> 16 & 255) / 255.0, mg = (m >> 8 & 255) / 255.0, mb = (m & 255) / 255.0;
@@ -87,6 +89,11 @@ public final class WeaponSkinBaker {
 				}
 				// pattern coordinates: UV space, or the side projection for spray / anodized styles
 				double pu = u, pv = v;
+				if (!projected && positions != null) {
+					double[] puv = positions.patternUv(u, v);
+					pu = puv[0];
+					pv = puv[1];
+				}
 				if (projected && positions != null) {
 					int px = Math.min(positions.size - 1, (int) (u * positions.size)), py = Math.min(positions.size - 1, (int) (v * positions.size));
 					int o = Positions.STRIDE * (py * positions.size + px);
@@ -155,8 +162,8 @@ public final class WeaponSkinBaker {
 	}
 
 	/**
-	 * Object-space positions (and first-set UVs) per texel of the paint layout, rasterised from the mesh triangles in the
-	 * paint UV set (the second set where the mesh has one: CS2 guns), gaps at seams filled outward.
+	 * Object-space positions (and second-set UVs) per texel of the texture, rasterised from the mesh triangles in UV
+	 * space, gaps at seams filled outward.
 	 */
 	public static Positions positions(java.util.List<VmModel.Part> parts, int size) {
 		final int st = Positions.STRIDE;
@@ -169,7 +176,7 @@ public final class WeaponSkinBaker {
 					min[k] = Math.min(min[k], p.pos[i + k]);
 					max[k] = Math.max(max[k], p.pos[i + k]);
 				}
-			float[] puv = p.uv1 != null ? p.uv1 : p.uv;
+			float[] puv = p.uv;
 			for (int t = 0; t + 2 < p.idx.length; t += 3) {
 				int a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
 				double ax = frac(puv[a * 2]) * size, ay = frac(puv[a * 2 + 1]) * size, bx = frac(puv[b * 2]) * size, by = frac(puv[b * 2 + 1]) * size,
@@ -185,7 +192,8 @@ public final class WeaponSkinBaker {
 						if (wa < -0.01 || wb < -0.01 || wc < -0.01) continue;
 						int o = st * (y * size + x);
 						for (int k = 0; k < 3; k++) pos[o + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
-						for (int k = 0; k < 2; k++) pos[o + 3 + k] = (float) (wa * p.uv[a * 2 + k] + wb * p.uv[b * 2 + k] + wc * p.uv[c * 2 + k]);
+						if (p.uv1 != null)
+							for (int k = 0; k < 2; k++) pos[o + 3 + k] = (float) (wa * p.uv1[a * 2 + k] + wb * p.uv1[b * 2 + k] + wc * p.uv1[c * 2 + k]);
 					}
 			}
 		}

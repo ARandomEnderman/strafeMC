@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v2/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v3/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -39,7 +39,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v2/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v3/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -68,8 +68,7 @@ public final class WeaponSkinCache {
 			BufferedImage out = new BufferedImage(n, n, BufferedImage.TYPE_INT_RGB);
 			for (int y = 0; y < n; y++)
 				for (int x = 0; x < n; x++) {
-					double[] buv = positions.baseUv((x + 0.5) / n, (y + 0.5) / n);
-					int v = GloveSkinBaker.sample(bm, buv[0], buv[1]) & 255;
+					int v = GloveSkinBaker.sample(bm, (x + 0.5) / n, (y + 0.5) / n) & 255;
 					v = Math.round(v * (1 - result.paint()[y * n + x]));
 					out.setRGB(x, y, v << 16 | v << 8 | v);
 				}
