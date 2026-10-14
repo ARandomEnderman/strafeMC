@@ -17,6 +17,15 @@ import java.util.concurrent.TimeUnit;
 public final class AssetCache {
 	private AssetCache() {}
 
+	/** One lock per cached file: the same file is converted once, different files in parallel (VRF runs capped below). */
+	private static final java.util.concurrent.ConcurrentHashMap<String, Object> LOCKS = new java.util.concurrent.ConcurrentHashMap<>();
+	/** At most this many converter processes at once (each is a .NET process). */
+	private static final java.util.concurrent.Semaphore VRF_SLOTS = new java.util.concurrent.Semaphore(4);
+
+	private static Object lock(String key) {
+		return LOCKS.computeIfAbsent(key, k -> new Object());
+	}
+
 	private static volatile boolean availableCache;
 	private static volatile long availableAt;
 
@@ -38,65 +47,73 @@ public final class AssetCache {
 	 * Returns the decompiled/extracted cache path for a VPK entry (e.g. "scripts/weapons.vdata_c" ->
 	 * cache/scripts/weapons.vdata), running VRF if it is not cached yet. Blocking; call off the render thread.
 	 */
-	public static synchronized Path decompiled(String vpkPath) throws IOException {
-		Path out = StrafeConfig.cacheDir();
-		Path expected = out.resolve(vpkPath.endsWith("_c") ? vpkPath.substring(0, vpkPath.length() - 2) : vpkPath);
-		if (Files.exists(expected)) return expected;
-		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", out.toString(), "-d"));
-		if (!Files.exists(expected)) throw new IOException("VRF produced no " + expected);
-		return expected;
+	public static Path decompiled(String vpkPath) throws IOException {
+		synchronized (lock(vpkPath)) {
+			Path out = StrafeConfig.cacheDir();
+			Path expected = out.resolve(vpkPath.endsWith("_c") ? vpkPath.substring(0, vpkPath.length() - 2) : vpkPath);
+			if (Files.exists(expected)) return expected;
+			runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", out.toString(), "-d"));
+			if (!Files.exists(expected)) throw new IOException("VRF produced no " + expected);
+			return expected;
+		}
 	}
 
 	/**
 	 * The DATA block of a resource as KV3 text (e.g. an animation clip's events), cached as "<path>.DATA.kv3".
 	 * VRF prints it to stdout, which is redirected into the cache file.
 	 */
-	public static synchronized Path dataBlock(String vpkPath) throws IOException {
+	public static Path dataBlock(String vpkPath) throws IOException {
 		return block(vpkPath, "DATA");
 	}
 
 	/** Any resource block as VRF's text dump (e.g. a model's "MDAT" with its attachments), cached as "<path>.<BLOCK>.kv3". */
-	public static synchronized Path block(String vpkPath, String blockName) throws IOException {
-		Path out = StrafeConfig.cacheDir().resolve(vpkPath + "." + blockName + ".kv3");
-		if (Files.exists(out) && Files.size(out) > 0) return out;
-		if (!available()) throw new IOException("no CS2 install / converter (" + vpk() + ")");
-		Files.createDirectories(out.getParent());
-		Path exe = Path.of(StrafeConfig.vrfPath);
-		Process p = new ProcessBuilder(exe.toString(), "-i", vpk().toString(), "--vpk_filepath", vpkPath, "--block", blockName)
-				.redirectErrorStream(true).redirectOutput(out.toFile()).start();
-		try {
-			if (!p.waitFor(2, TimeUnit.MINUTES)) p.destroyForcibly();
-		} catch (InterruptedException e) {
-			p.destroyForcibly();
-			throw new IOException("interrupted", e);
+	public static Path block(String vpkPath, String blockName) throws IOException {
+		synchronized (lock(vpkPath + "." + blockName)) {
+			Path out = StrafeConfig.cacheDir().resolve(vpkPath + "." + blockName + ".kv3");
+			if (Files.exists(out) && Files.size(out) > 0) return out;
+			if (!available()) throw new IOException("no CS2 install / converter (" + vpk() + ")");
+			Files.createDirectories(out.getParent());
+			Path exe = Path.of(StrafeConfig.vrfPath);
+			Process p = new ProcessBuilder(exe.toString(), "-i", vpk().toString(), "--vpk_filepath", vpkPath, "--block", blockName)
+					.redirectErrorStream(true).redirectOutput(out.toFile()).start();
+			try {
+				if (!p.waitFor(2, TimeUnit.MINUTES)) p.destroyForcibly();
+			} catch (InterruptedException e) {
+				p.destroyForcibly();
+				throw new IOException("interrupted", e);
+			}
+			if (!Files.exists(out) || Files.size(out) == 0) throw new IOException("VRF printed no " + blockName + " block for " + vpkPath);
+			return out;
 		}
-		if (!Files.exists(out) || Files.size(out) == 0) throw new IOException("VRF printed no " + blockName + " block for " + vpkPath);
-		return out;
 	}
 
 	/** Decompiles a single resource into the cache if its output isn't there yet (e.g. "sounds/weapons/ak47/ak47_01.vsnd_c"). */
-	public static synchronized void ensureDecompiled(String vpkPath, Path expectedOutput) throws IOException {
-		if (Files.exists(expectedOutput)) return;
-		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", StrafeConfig.cacheDir().toString(), "-d"));
+	public static void ensureDecompiled(String vpkPath, Path expectedOutput) throws IOException {
+		synchronized (lock(vpkPath)) {
+			if (Files.exists(expectedOutput)) return;
+			runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", StrafeConfig.cacheDir().toString(), "-d"));
+		}
 	}
 
 	/**
 	 * Exports a model or animation clip to binary glTF (with skeleton/animations; materials+textures for models)
 	 * into cache/gltf, once. Returns the .glb path.
 	 */
-	public static synchronized Path exportGlb(String vpkPath, boolean materials) throws IOException {
-		Path dir = StrafeConfig.cacheDir().resolve("gltf");
-		String base = vpkPath.substring(0, vpkPath.lastIndexOf('.'));
-		Path glb = dir.resolve(base + ".glb");
-		// a model first exported without materials (e.g. for its skeleton) has no textures next to it: export again
-		if (Files.exists(glb) && (!materials || texturesPresent(glb))) return glb;
-		Files.createDirectories(dir); // VRF treats a missing -o folder as an output file name
-		List<String> args = new java.util.ArrayList<>(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", dir.toString(), "-d",
-				"--gltf_export_format", "glb", "--gltf_export_animations"));
-		if (materials) args.add("--gltf_export_materials");
-		runVrf(args);
-		if (!Files.exists(glb)) throw new IOException("VRF produced no " + glb);
-		return glb;
+	public static Path exportGlb(String vpkPath, boolean materials) throws IOException {
+		synchronized (lock("gltf export")) { // exports write shared textures next to the models: one at a time
+			Path dir = StrafeConfig.cacheDir().resolve("gltf");
+			String base = vpkPath.substring(0, vpkPath.lastIndexOf('.'));
+			Path glb = dir.resolve(base + ".glb");
+			// a model first exported without materials (e.g. for its skeleton) has no textures next to it: export again
+			if (Files.exists(glb) && (!materials || texturesPresent(glb))) return glb;
+			Files.createDirectories(dir); // VRF treats a missing -o folder as an output file name
+			List<String> args = new java.util.ArrayList<>(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", dir.toString(), "-d",
+					"--gltf_export_format", "glb", "--gltf_export_animations"));
+			if (materials) args.add("--gltf_export_materials");
+			runVrf(args);
+			if (!Files.exists(glb)) throw new IOException("VRF produced no " + glb);
+			return glb;
+		}
 	}
 
 	/** Every image a .glb names (glTF "images" uris) exists next to it. */
@@ -119,24 +136,30 @@ public final class AssetCache {
 	}
 
 	/** Decompiles several resources in one converter run (paths joined for VRF's file filter). */
-	public static synchronized void decompileAll(List<String> vpkPaths) throws IOException {
-		if (vpkPaths.isEmpty()) return;
-		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", String.join(",", vpkPaths), "-o", StrafeConfig.cacheDir().toString(), "-d"));
+	public static void decompileAll(List<String> vpkPaths) throws IOException {
+		synchronized (lock(String.join(",", vpkPaths))) {
+			if (vpkPaths.isEmpty()) return;
+			runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", String.join(",", vpkPaths), "-o", StrafeConfig.cacheDir().toString(), "-d"));
+		}
 	}
 
 	/** Decompiles every file under a VPK folder prefix (e.g. "sounds/player/") into the cache. */
-	public static synchronized void extractFolder(String prefix) throws IOException {
-		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", prefix, "-o", StrafeConfig.cacheDir().toString(), "-d"));
+	public static void extractFolder(String prefix) throws IOException {
+		synchronized (lock(prefix)) {
+			runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", prefix, "-o", StrafeConfig.cacheDir().toString(), "-d"));
+		}
 	}
 
 	/** Extracts a raw file (no decompile), e.g. "scripts/items/items_game.txt". */
-	public static synchronized Path raw(String vpkPath) throws IOException {
-		Path out = StrafeConfig.cacheDir();
-		Path expected = out.resolve(vpkPath);
-		if (Files.exists(expected)) return expected;
-		runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", out.toString()));
-		if (!Files.exists(expected)) throw new IOException("VRF produced no " + expected);
-		return expected;
+	public static Path raw(String vpkPath) throws IOException {
+		synchronized (lock(vpkPath)) {
+			Path out = StrafeConfig.cacheDir();
+			Path expected = out.resolve(vpkPath);
+			if (Files.exists(expected)) return expected;
+			runVrf(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", out.toString()));
+			if (!Files.exists(expected)) throw new IOException("VRF produced no " + expected);
+			return expected;
+		}
 	}
 
 	static void runVrf(List<String> args) throws IOException {
@@ -147,17 +170,25 @@ public final class AssetCache {
 		cmd.add(exe.toString());
 		cmd.addAll(args);
 		Files.createDirectories(StrafeConfig.cacheDir());
-		Path log = StrafeConfig.RUNTIME_DIR.resolve("vrf-last.log");
+		// each loader thread its own log: several conversions can run at once
+		Path log = StrafeConfig.RUNTIME_DIR.resolve("vrf-last-" + Thread.currentThread().getName().replaceAll("[^A-Za-z0-9_-]", "_") + ".log");
 		long t = System.nanoTime();
-		Process p = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(log.toFile()).start();
 		try {
+			VRF_SLOTS.acquire();
+		} catch (InterruptedException e) {
+			throw new IOException("interrupted", e);
+		}
+		Process p;
+		try {
+			p = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(log.toFile()).start();
 			if (!p.waitFor(10, TimeUnit.MINUTES)) {
 				p.destroyForcibly();
 				throw new IOException("VRF timed out");
 			}
 		} catch (InterruptedException e) {
-			p.destroyForcibly();
 			throw new IOException("interrupted", e);
+		} finally {
+			VRF_SLOTS.release();
 		}
 		StrafeMc.LOG.info("[strafemc] VRF {} -> exit {} in {} ms (log {})", args, p.exitValue(), (System.nanoTime() - t) / 1_000_000, log);
 	}

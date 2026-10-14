@@ -107,7 +107,21 @@ public final class ParticleTextures {
 			String c = name.endsWith("_c") ? name : name + "_c";
 			String base = c.substring(0, c.length() - "vtex_c".length());
 			Path png = StrafeConfig.cacheDir().resolve(base + "png");
-			AssetCache.ensureDecompiled(c, png);
+			// the finished texture (atlas built, channels moved, downscaled) from an earlier session: no VRF, no rebuild
+			String variant = alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n";
+			Path ready = StrafeConfig.cacheDir().resolve(base + "strafemc1" + variant + ".png");
+			if (Files.exists(ready)) {
+				List<Sequence> sheet = sheet(c);
+				try (var in = Files.newInputStream(ready)) {
+					PENDING.put(vtex, new Object[] {NativeImage.read(in), sheet});
+				}
+				return;
+			}
+			// sheet textures come out as <name>_seq<S>_<F>.png (or _seq<S>.png), never <name>.png: those count as done too
+			String stem = base.substring(0, base.length() - 1);
+			if (!Files.exists(png) && !Files.exists(StrafeConfig.cacheDir().resolve(stem + "_seq0_0.png"))
+					&& !Files.exists(StrafeConfig.cacheDir().resolve(stem + "_seq0.png")))
+				AssetCache.ensureDecompiled(c, png);
 			List<Sequence> sheet = sheet(c);
 			// sheet textures: VRF writes each (alpha-cropped) frame as <name>_seq<S>_<F>.png; rebuild the atlas from them
 			BufferedImage img = Files.exists(png) ? ImageIO.read(png.toFile()) : atlas(c, base, sheet);
@@ -134,6 +148,7 @@ public final class ParticleTextures {
 			}
 			ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 			ImageIO.write(img, "png", bytes);
+			Files.write(ready, bytes.toByteArray());
 			NativeImage ni = NativeImage.read(new ByteArrayInputStream(bytes.toByteArray()));
 			PENDING.put(vtex, new Object[] {ni, sheet});
 		} catch (Exception e) {
