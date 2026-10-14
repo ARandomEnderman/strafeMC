@@ -20,7 +20,7 @@ public final class AmmoHud {
 			Minecraft mc = Minecraft.getInstance();
 			if (mc.player == null || mc.options.hideGui || !(mc.player.getMainHandItem().getItem() instanceof GunItem gun)
 					|| gun instanceof dev.strafemc.weapon.KnifeItem || gun instanceof dev.strafemc.weapon.GrenadeItem
-					|| gun instanceof dev.strafemc.weapon.HealthshotItem) return;
+					|| gun instanceof dev.strafemc.weapon.HealthshotItem || gun.weaponClass.equals(dev.strafemc.weapon.ZeusRecharge.CLS)) return; // the Zeus shows its charge on the gun
 			WeaponStats w = dev.strafemc.client.ClientGameplay.stats(gun.weaponClass);
 			if (w == null) return;
 			int clip = gun.clip(mc.player.getMainHandItem());

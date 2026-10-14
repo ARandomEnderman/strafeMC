@@ -6,8 +6,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * CS2's Zeus x27: it can't be reloaded; an empty Zeus recharges mp_taser_recharge_time seconds after it fired (CS2's
- * default 30; a negative value: never), held or not. The game tick it's charged again is the stack's RECHARGE component,
- * which also drives the item's charging bar.
+ * default 30; a negative value: never), held or not, with CS2's Weapon_Taser.ChargeReady for its owner. The game tick it's
+ * charged again is the stack's RECHARGE component, which also drives the item's charging bar and the meter on the gun.
  */
 public final class ZeusRecharge {
 	public static final String CLS = "weapon_taser";
@@ -45,6 +45,10 @@ public final class ZeusRecharge {
 				if (at == null || now < at) continue;
 				s.remove(WeaponItems.RECHARGE);
 				s.set(WeaponItems.CLIP, 1);
+				// CS2's charged sound for the owner, wherever the Zeus is in the inventory
+				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CsSound.TYPE))
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p,
+							new dev.strafemc.net.StrafePayloads.CsSound("Weapon_Taser.ChargeReady", p.getX(), p.getEyeY(), p.getZ(), false, p.getId()));
 			}
 		}
 	}

@@ -42,6 +42,9 @@ public final class GunServer {
 		ItemStack lastThrown = ItemStack.EMPTY;
 		Vec3 lastThrowStart, lastThrowVel;
 		long deployUntil, nextFire, lastTick, knifeNextLight, knifeNextHeavy;
+		/** A silencer being screwed on / off: when it flips (0: none), and on which stack. */
+		long silencerAt;
+		ItemStack silencerStack = ItemStack.EMPTY;
 		/** Current reload in animation time (null = not reloading); see ReloadTimeline for CS2 silent reload. */
 		ReloadTimeline reload;
 		double addAmmoAt, lockout;
@@ -111,15 +114,44 @@ public final class GunServer {
 	private GunServer() {}
 
 	public static WeaponStats stats(String cls) {
-		WeaponStats s = STATS.get(cls);
+		return stats(cls, 0);
+	}
+
+	public static WeaponStats stats(String cls, int mode) {
+		String key = mode == 0 ? cls : cls + "#" + mode;
+		WeaponStats s = STATS.get(key);
 		if (s == null) {
-			s = WeaponStats.of(cls);
-			if (s != null) STATS.put(cls, s);
+			s = WeaponStats.of(cls, mode);
+			if (s != null) STATS.put(key, s);
 		}
 		return s;
 	}
 
 	/** First-person animation clips of a weapon (folder/suffix mapping; derived from the viewmodel graph later). */
+	/**
+	 * CS2's silencer (USP-S, M4A1-S; right-click): the attach / detach animation plays, and the silencer goes on or off at
+	 * its WPN_SILENCER_ATTACH / WPN_SILENCER_DETACH event (about 3.4 s in); no shooting until then; switching away
+	 * cancels it.
+	 */
+	public static void toggleSilencer(ServerPlayer p) {
+		ItemStack held = p.getMainHandItem();
+		if (!(held.getItem() instanceof GunItem g) || !g.hasSilencer()) return;
+		State st = state(p);
+		long now = System.nanoTime();
+		if (st.silencerAt != 0 || st.reload != null || now < st.deployUntil) return;
+		boolean on = g.silenced(held);
+		String anim = on ? "silencer_detach" : "silencer_attach";
+		double at = 3.4;
+		try {
+			String path = clipPath(g.weaponClass, anim);
+			if (path != null) at = dev.strafemc.data.AnimClip.load(path).timeOf(on ? "WPN_SILENCER_DETACH" : "WPN_SILENCER_ATTACH", at);
+		} catch (Exception ignored) {
+		}
+		st.silencerAt = now + sec(at);
+		st.silencerStack = held;
+		st.nextFire = Math.max(st.nextFire, st.silencerAt);
+	}
+
 	/** How late a shot's packet may arrive and still count as fired on time (a bit over two server ticks). */
 	private static final long SPRAY_LATE_NS = 120_000_000L;
 
@@ -214,6 +246,11 @@ public final class GunServer {
 			State st = state(p);
 			if (p.getMainHandItem().getItem() instanceof GunItem gun && !(gun instanceof KnifeItem) && !(gun instanceof GrenadeItem)) st.lastGun = gun.weaponClass;
 			ItemStack held = p.getMainHandItem();
+			if (st.silencerAt != 0 && (held != st.silencerStack)) st.silencerAt = 0; // switched away: CS2 cancels it
+			if (st.silencerAt != 0 && now >= st.silencerAt) {
+				st.silencerAt = 0;
+				if (held.getItem() instanceof GunItem g) held.set(WeaponItems.SILENCED, g.silenced(held) ? 0 : 1);
+			}
 			if (held != st.lastHeld && !ItemStack.isSameItem(held, st.lastHeld)) {
 				st.lastHeld = held;
 				st.reload = null;
@@ -244,7 +281,7 @@ public final class GunServer {
 
 	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
 		ItemStack held = p.getMainHandItem();
-		WeaponStats w = held.getItem() instanceof GunItem gi && !(gi instanceof KnifeItem) ? gi.stats() : null;
+		WeaponStats w = held.getItem() instanceof GunItem gi && !(gi instanceof KnifeItem) ? gi.stats(held) : null;
 		if (w == null) {
 			ServerShots.skip(p, f.shot());
 			return;

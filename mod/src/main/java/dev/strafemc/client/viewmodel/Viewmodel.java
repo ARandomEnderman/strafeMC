@@ -418,6 +418,7 @@ public final class Viewmodel {
 		VmModel arms = arms(l);
 		Matrix4f[][] armSkin = skins(arms, clip, pose, null);
 		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
+		hideSilencer(l, gunSkin);
 		var player = net.minecraft.client.Minecraft.getInstance().player;
 		// CS2's viewmodel_offset_x/y/z (units right / forward / up), then bob + sway, then the model
 		float upb = (float) StrafeConfig.unitsPerBlock;
@@ -489,6 +490,25 @@ public final class Viewmodel {
 		}
 		ps.popPose();
 		return true;
+	}
+
+	/**
+	 * A USP-S / M4A1-S with its silencer off: the "silencer" bone at scale 0 (how CS2's detach clip ends), except while
+	 * the attach / detach clips play (they animate it themselves).
+	 */
+	private void hideSilencer(Loaded l, Matrix4f[][] gunSkin) {
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player == null || clip == null || clip.name.startsWith("silencer_")) return;
+		var held = player.getMainHandItem();
+		if (!(held.getItem() instanceof dev.strafemc.weapon.GunItem g) || !g.hasSilencer() || g.silenced(held)) return;
+		for (int si = 0; si < l.gun.skins.size() && si < gunSkin.length; si++) {
+			VmModel.Skin sk = l.gun.skins.get(si);
+			for (int j = 0; j < sk.joints.length; j++) {
+				if (!sk.joints[j].equals("silencer") || gunSkin[si][j] == null) continue;
+				Matrix4f ibm = sk.inverseBind[j];
+				gunSkin[si][j] = new Matrix4f(gunSkin[si][j]).mul(new Matrix4f(ibm).invert()).scale(0).mul(ibm);
+			}
+		}
 	}
 
 	/**

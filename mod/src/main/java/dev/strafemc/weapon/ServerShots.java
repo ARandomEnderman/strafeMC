@@ -74,7 +74,7 @@ public final class ServerShots {
 			s.speed = sp;
 			s.punch.advance(now);
 			if (!(p.getMainHandItem().getItem() instanceof GunItem g) || g instanceof KnifeItem) continue;
-			WeaponStats w = g.stats();
+			WeaponStats w = g.stats(p.getMainHandItem());
 			if (w == null) continue;
 			if (System.nanoTime() >= s.lastShotNs + (long) (w.cycleTime() * 1e9)) s.recoilIndex = Recoil.decayIndex(s.recoilIndex, dt);
 			boolean ground = !p.level().noCollision(p, p.getBoundingBox().move(0, -0.06, 0));
@@ -128,7 +128,7 @@ public final class ServerShots {
 		Recoil rc = Recoil.of(w.cls());
 		if (rc != null) {
 			int i = ((int) s.recoilIndex) & (Recoil.TABLE - 1);
-			s.punch.kick(now, rc.angle[0][i], rc.magnitude[0][i]);
+			s.punch.kick(now, rc.angle[w.mode()][i], rc.magnitude[w.mode()][i]);
 			s.recoilIndex += 1;
 		}
 		s.lastShotNs = shotAtNs;

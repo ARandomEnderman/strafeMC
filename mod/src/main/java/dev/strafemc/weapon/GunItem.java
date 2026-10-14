@@ -27,18 +27,44 @@ public class GunItem extends Item {
 		return statsOf(weaponClass);
 	}
 
+	/** This gun's numbers in its current mode (a USP-S / M4A1-S with the silencer on uses CS2's silenced numbers). */
+	public WeaponStats stats(ItemStack s) {
+		return statsOf(weaponClass, mode(s));
+	}
+
+	/** Whether this gun has a silencer at all (CS2's m_eSilencerType). */
+	public boolean hasSilencer() {
+		WeaponStats w = stats();
+		return w != null && w.hasSilencer();
+	}
+
+	/** Silencer on: CS2 hands these guns out with it on, so a stack that was never toggled has it on. */
+	public boolean silenced(ItemStack s) {
+		Integer v = s.get(WeaponItems.SILENCED);
+		return hasSilencer() && (v == null || v != 0);
+	}
+
+	/** vdata mode: 1 (alt) with the silencer on, else 0. */
+	public int mode(ItemStack s) {
+		return silenced(s) ? 1 : 0;
+	}
+
 	/** The client's render thread and its stats lookup (the server's synced numbers), set by the client init. */
 	public static volatile Thread clientThread;
-	public static volatile java.util.function.Function<String, WeaponStats> clientStats;
+	public static volatile java.util.function.BiFunction<String, Integer, WeaponStats> clientStats;
 
 	/**
 	 * Stats as the calling side must see them: on the client thread the server's synced numbers (a player without CS2
 	 * files has no local ones), elsewhere (dedicated or integrated server) the server's own data.
 	 */
 	public static WeaponStats statsOf(String cls) {
+		return statsOf(cls, 0);
+	}
+
+	public static WeaponStats statsOf(String cls, int mode) {
 		var f = clientStats;
-		if (f != null && Thread.currentThread() == clientThread) return f.apply(cls);
-		return GunServer.stats(cls);
+		if (f != null && Thread.currentThread() == clientThread) return f.apply(cls, mode);
+		return GunServer.stats(cls, mode);
 	}
 
 	/** Rounds loaded; a gun that never had its clip set starts with a full magazine. */

@@ -132,6 +132,7 @@ public final class GunClient {
 			CsSounds.stopAnim();
 			inspectUntil = 0;
 			reload = null;
+			silencerUntil = 0; // switching away cancels a silencer being screwed on / off
 			recoilIndex = 0;
 			aimPunch.reset(now / 1e9);
 			viewPunch[0] = viewPunch[1] = 0;
@@ -161,7 +162,7 @@ public final class GunClient {
 			return;
 		}
 		if (!(held.getItem() instanceof GunItem g)) return;
-		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, g.mode(held)); // silencer on: CS2's silenced numbers
 		if (w == null) return;
 		updatePenalty(w, dt);
 		double t = now / 1e9;
@@ -172,7 +173,21 @@ public final class GunClient {
 		viewPunch[1] *= vd;
 
 		boolean trigger = mc.screen == null && mc.options.keyAttack.isDown();
-		if (trigger && now >= deployUntil && !reloadLocked() && now >= nextFire) {
+		// right-click on a USP-S / M4A1-S: screw the silencer on or off (CS2's secondary attack); it flips at the clip's
+		// WPN_SILENCER_ATTACH / _DETACH event, and the gun can't shoot or reload until then (the server does the same)
+		boolean use = mc.screen == null && mc.options.keyUse.isDown();
+		if (use && !useWasDown && g.hasSilencer() && now >= deployUntil && reload == null && now >= silencerUntil && now >= nextFire) {
+			boolean on = g.silenced(held);
+			String anim = on ? "silencer_detach" : "silencer_attach";
+			AnimClip c = AnimClip.peek(GunServer.clipPath(g.weaponClass, anim));
+			silencerUntil = now + sec(c != null ? c.timeOf(on ? "WPN_SILENCER_DETACH" : "WPN_SILENCER_ATTACH", 3.4) : 3.4);
+			cancelInspect();
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(anim);
+			schedule(g, anim, now);
+			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("silencer", ""));
+		}
+		useWasDown = use;
+		if (trigger && now >= deployUntil && !reloadLocked() && now >= nextFire && now >= silencerUntil) {
 			int inf = infiniteAmmo();
 			// the server's clip update can trail a full-auto burst by a few shots: count locally while firing
 			int clip = g.clip(held);
@@ -193,6 +208,9 @@ public final class GunClient {
 	}
 
 	private long knifeNextLight, knifeNextHeavy;
+	/** A silencer being screwed on / off: no shooting or reloading until it flips. */
+	private long silencerUntil;
+	private boolean useWasDown;
 
 	// grenades: idle -> pulling the pin -> charged (held) -> thrown -> the next one is drawn
 	private static final int GRENADE_IDLE = 0, GRENADE_PULLING = 1, GRENADE_CHARGED = 2, GRENADE_THROWN = 3;
@@ -448,7 +466,7 @@ public final class GunClient {
 		dev.strafemc.weapon.Recoil rc = dev.strafemc.client.ClientGameplay.recoil(w.cls());
 		if (rc != null) {
 			int i = ((int) recoilIndex) & (dev.strafemc.weapon.Recoil.TABLE - 1);
-			double[] vp = aimPunch.kick(t, rc.angle[0][i], rc.magnitude[0][i]);
+			double[] vp = aimPunch.kick(t, rc.angle[w.mode()][i], rc.magnitude[w.mode()][i]);
 			viewPunch[0] += vp[0];
 			viewPunch[1] += vp[1];
 			recoilIndex += 1;
@@ -480,7 +498,7 @@ public final class GunClient {
 		java.util.Map<String, Object> vd = dev.strafemc.client.ClientGameplay.weapon(w.cls());
 		if (vd == null) return;
 		Object tracer = vd.get("m_szTracerParticle");
-		int freq = vd.get("m_nTracerFrequency") instanceof Number n ? n.intValue() : 0;
+		int freq = w.tracerFrequency(); // a [normal, silenced] pair in CS2's data (the M4A1-S: 3, 0)
 		if (tracer == null || freq <= 0 || ((int) recoilIndex) % freq != 0) return;
 		Minecraft mc = Minecraft.getInstance();
 		Vec3 eye = p.getEyePosition();
@@ -612,7 +630,7 @@ public final class GunClient {
 		}
 		if (w == null) return;
 		long now = System.nanoTime();
-		if (reload != null || now < deployUntil || g.clip(p.getMainHandItem()) >= w.clip()) return;
+		if (reload != null || now < deployUntil || now < silencerUntil || g.clip(p.getMainHandItem()) >= w.clip()) return;
 		if (infiniteAmmo() != 2 && !hasMagazine(p, g)) return;
 		reloadKeyHeld = byKey;
 		double silentEnd = 0;

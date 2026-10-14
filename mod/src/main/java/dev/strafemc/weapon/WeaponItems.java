@@ -21,6 +21,8 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> CLIP;
 	/** Zeus x27: the game tick it's charged again (ZeusRecharge). */
 	public static DataComponentType<Integer> RECHARGE;
+	/** USP-S / M4A1-S: 0 = silencer off (absent: on, as CS2 hands them out). */
+	public static DataComponentType<Integer> SILENCED;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
@@ -40,6 +42,7 @@ public final class WeaponItems {
 		CLIP = component("clip");
 		ROUNDS = component("rounds");
 		RECHARGE = component("recharge");
+		SILENCED = component("silenced");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

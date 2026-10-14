@@ -55,6 +55,7 @@ public final class ConsoleActions {
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
 			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
+			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
 			case "strafemc_loadout_keep" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change whether loadouts drop on death."));

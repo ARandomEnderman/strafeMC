@@ -28,7 +28,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		dev.strafemc.client.assets.RuntimePack.build();
 		Cs2Bridge.INSTANCE.start();
 		dev.strafemc.weapon.GunItem.clientThread = Thread.currentThread(); // client init runs on the render thread
-		dev.strafemc.weapon.GunItem.clientStats = ClientGameplay::stats;
+		dev.strafemc.weapon.GunItem.clientStats = ClientGameplay::stats; // (class, mode)
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GameplaySync.TYPE,
 				(msg, ctx) -> ClientGameplay.apply(msg.json()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ShotSeed.TYPE,

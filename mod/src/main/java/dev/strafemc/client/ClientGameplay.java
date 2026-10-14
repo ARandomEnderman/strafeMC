@@ -110,9 +110,13 @@ public final class ClientGameplay {
 	}
 
 	public static WeaponStats stats(String cls) {
-		if (weapons == null) return localAllowed() ? GunServer.stats(cls) : null;
+		return stats(cls, 0);
+	}
+
+	public static WeaponStats stats(String cls, int mode) {
+		if (weapons == null) return localAllowed() ? GunServer.stats(cls, mode) : null;
 		Map<String, Object> w = weapon(cls);
-		return w == null ? null : STATS.computeIfAbsent(cls, c -> WeaponStats.of(c, w));
+		return w == null ? null : STATS.computeIfAbsent(mode == 0 ? cls : cls + "#" + mode, c -> WeaponStats.of(cls, w, mode));
 	}
 
 	public static Recoil recoil(String cls) {
