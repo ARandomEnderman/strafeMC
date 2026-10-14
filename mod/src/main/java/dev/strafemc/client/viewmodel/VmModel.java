@@ -35,9 +35,22 @@ public final class VmModel {
 	public final List<Skin> skins = new ArrayList<>();
 
 	/** meshFilter: only meshes whose node name contains this (e.g. ".viewmodel", ".body_hd"); null = all. */
+	/** Mesh filter: the model's ".body_hd" mesh if it has one, else ".body_legacy", else ".body" (CS2 weapon models). */
+	public static final String AUTO_MESH = "auto";
+
 	public static VmModel load(Glb g, String meshFilter) {
 		VmModel m = new VmModel();
 		var nodes = g.arr("nodes");
+		if (AUTO_MESH.equals(meshFilter)) {
+			meshFilter = null;
+			for (String want : new String[] {".body_hd", ".body_legacy", ".body"}) {
+				for (JsonElement ne : nodes) {
+					JsonObject n = ne.getAsJsonObject();
+					if (n.has("mesh") && n.has("name") && n.get("name").getAsString().endsWith(want)) meshFilter = want;
+				}
+				if (meshFilter != null) break;
+			}
+		}
 		for (JsonElement se : g.arr("skins")) {
 			JsonObject skin = se.getAsJsonObject();
 			var js = skin.getAsJsonArray("joints");

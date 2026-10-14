@@ -26,7 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Minecraft's font for CS2's Stratum.
  */
 public final class DeathNotices {
-	public static final String[] WEAPON_ICONS = {"ak47", "knife_falchion", "knife", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"};
+	public static final String[] WEAPON_ICONS = java.util.stream.Stream.concat(
+			java.util.stream.Stream.of("knife", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
+			java.util.stream.Stream.concat(dev.strafemc.weapon.WeaponTable.guns().stream(), dev.strafemc.weapon.WeaponTable.knives().stream())
+					.map(dev.strafemc.weapon.WeaponTable.Entry::shortName)).distinct().toArray(String[]::new);
 	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide"};
 	private static final double LIFETIME = 5, LOCAL_MOD = 1.5, FADE = 1;
 	private static final int CT = 0xFF6F9CE6, T = 0xFFEABE54, MOB = 0xFFFFFFFF;

@@ -31,11 +31,13 @@ public final class RuntimePack {
 					+ "\"pack_format\":" + FORMAT + ",\"min_format\":" + FORMAT + ",\"max_format\":" + FORMAT + "}}");
 			Path tex = DIR.resolve("assets/strafemc/textures");
 			// each icon falls back to a drawn placeholder without CS2 files (replaced once the real one converts)
-			safe(() -> icon("panorama/images/econ/weapons/base_weapons/weapon_ak47_png.vtex_c", "panorama/images/econ/weapons/base_weapons/weapon_ak47_png.png",
-					tex.resolve("item/weapon_ak47.png"), 128), tex.resolve("item/weapon_ak47.png"), Placeholders.Icon.GUN, 32);
-			safe(() -> icon("panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.vtex_c",
-					"panorama/images/econ/weapons/base_weapons/weapon_knife_falchion_png.png", tex.resolve("item/weapon_knife_falchion.png"), 128),
-					tex.resolve("item/weapon_knife_falchion.png"), Placeholders.Icon.KNIFE, 32);
+			// every gun and knife: CS2's inventory picture
+			for (var list : java.util.List.of(dev.strafemc.weapon.WeaponTable.guns(), dev.strafemc.weapon.WeaponTable.knives()))
+				for (var e : list) {
+					String icon = "panorama/images/econ/weapons/base_weapons/" + e.cls() + "_png";
+					safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + e.cls() + ".png"), 128), tex.resolve("item/" + e.cls() + ".png"),
+							e.knife() ? Placeholders.Icon.KNIFE : Placeholders.Icon.GUN, 32);
+				}
 			for (dev.strafemc.weapon.Grenade g : dev.strafemc.weapon.Grenade.values()) {
 				String icon = "panorama/images/econ/weapons/base_weapons/" + g.cls + "_png";
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + g.cls + ".png"), 128), tex.resolve("item/" + g.cls + ".png"),
@@ -49,6 +51,18 @@ public final class RuntimePack {
 			}
 			gloveSkins(tex);
 			wraps(tex);
+			// equipment icons for the buy menu and the killfeed: every missing one converted in a single run
+			java.util.List<String> svgs = new java.util.ArrayList<>();
+			for (String w : java.util.stream.Stream.concat(java.util.Arrays.stream(dev.strafemc.client.BuyMenuScreen.ICONS),
+					java.util.Arrays.stream(dev.strafemc.client.DeathNotices.WEAPON_ICONS)).distinct().toList())
+				if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/icons/equipment/" + w + ".svg")))
+					svgs.add("panorama/images/icons/equipment/" + w + ".vsvg_c");
+			if (!svgs.isEmpty() && AssetCache.available())
+				try {
+					AssetCache.decompileAll(svgs);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] equipment icons: {}", e.toString());
+				}
 			// buy menu icons: CS2's white equipment icons, 64 px high
 			for (String w : dev.strafemc.client.BuyMenuScreen.ICONS)
 				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",

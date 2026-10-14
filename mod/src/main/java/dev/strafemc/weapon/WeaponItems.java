@@ -27,6 +27,9 @@ public final class WeaponItems {
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
+	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
+	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
+			KNIVES = new java.util.LinkedHashMap<>();
 	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING;
 
 	private WeaponItems() {}
@@ -34,9 +37,16 @@ public final class WeaponItems {
 	public static void register() {
 		CLIP = component("clip");
 		ROUNDS = component("rounds");
-		AK47 = item("weapon_ak47", p -> new GunItem(p, "weapon_ak47", "mag_ak47"));
-		MAG_AK47 = item("mag_ak47", p -> new MagazineItem(p.stacksTo(64), "weapon_ak47")); // full mags stack (partly used ones differ in rounds)
-		KNIFE_FALCHION = item("weapon_knife_falchion", p -> new KnifeItem(p, "weapon_knife_falchion"));
+		for (WeaponTable.Entry e : WeaponTable.guns()) {
+			String mag = "mag_" + e.shortName();
+			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));
+			// full mags stack (partly used ones differ in rounds). FLAGGED: shotguns too, though CS2 reloads them shell by shell
+			MAGS.put(e.cls(), item(mag, p -> new MagazineItem(p.stacksTo(64), e.cls())));
+		}
+		for (WeaponTable.Entry e : WeaponTable.knives()) KNIVES.put(e.cls(), item(e.cls(), p -> new KnifeItem(p, e.cls())));
+		AK47 = GUNS.get("weapon_ak47");
+		MAG_AK47 = MAGS.get("weapon_ak47");
+		KNIFE_FALCHION = KNIVES.get("weapon_knife_falchion");
 		for (Grenade g : Grenade.values()) GRENADES.put(g, item(g.cls, p -> new GrenadeItem(p.stacksTo(16), g)));
 		HEGRENADE = GRENADES.get(Grenade.HE);
 		KEVLAR = item("item_kevlar", p -> new ArmorItem(p.stacksTo(16), false));
@@ -70,14 +80,15 @@ public final class WeaponItems {
 		ResourceKey<Item> lyingItem = ResourceKey.create(Registries.ITEM, id("surf_ramp_lying"));
 		SURF_RAMP_LYING_ITEM = Registry.register(BuiltInRegistries.ITEM, lyingItem,
 				new net.minecraft.world.item.BlockItem(SURF_RAMP_LYING, new Item.Properties().setId(lyingItem).useBlockDescriptionPrefix()));
-		ResourceKey<CreativeModeTab> tab = ResourceKey.create(Registries.CREATIVE_MODE_TAB, id("weapons"));
-		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, tab, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
-				.title(Component.translatable("itemGroup.strafemc.weapons"))
-				.icon(() -> new ItemStack(AK47)).build());
-		net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(tab).register(e -> {
-			e.accept(AK47);
-			e.accept(MAG_AK47);
-			e.accept(KNIFE_FALCHION);
+		// guns (with their magazines), knives, utility and blocks: a tab each
+		tab("guns", () -> new ItemStack(AK47), e -> {
+			for (var g : GUNS.entrySet()) {
+				e.accept(g.getValue());
+				if (WeaponStats.of(g.getKey()) == null || WeaponStats.of(g.getKey()).clip() > 1) e.accept(MAGS.get(g.getKey()));
+			}
+		});
+		tab("knives", () -> new ItemStack(KNIVES.get("weapon_knife_karambit")), e -> { for (Item k : KNIVES.values()) e.accept(k); });
+		tab("utility", () -> new ItemStack(GRENADES.get(Grenade.SMOKE)), e -> {
 			for (Item g : GRENADES.values()) e.accept(g);
 			e.accept(KEVLAR);
 			e.accept(ASSAULTSUIT);

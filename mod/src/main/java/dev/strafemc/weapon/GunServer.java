@@ -121,6 +121,15 @@ public final class GunServer {
 
 	/** First-person animation clips of a weapon (folder/suffix mapping; derived from the viewmodel graph later). */
 	public static String clipPath(String cls, String anim) {
+		WeaponTable.Entry e = WeaponTable.get(cls); // every gun and knife: clips by name from CS2's animation graphs
+		if (e != null) {
+			String c = e.clips().get(anim);
+			if (c == null && anim.equals("shoot_last")) c = e.clips().get("shoot1");
+			if (c == null && anim.equals("reload_empty")) c = e.clips().get("reload");
+			// knives without a second swing / backstab variant (light_hit2, light_backstab2...): the first one
+			if (c == null && anim.matches(".*[0-9]$")) c = e.clips().getOrDefault(anim.replaceAll("[0-9]+$", "1"), e.clips().get(anim.replaceAll("[0-9]+$", "")));
+			if (c != null) return c;
+		}
 		return switch (cls) {
 			case "weapon_ak47" -> "animation/anims/viewmodel/rifle/rifle_ak/" + anim + "_ak.vnmclip_c";
 			case HealthshotItem.CLS -> "animation/anims/viewmodel/equipment/healthshot/" + anim + "_healthshot.vnmclip_c";
@@ -252,7 +261,19 @@ public final class GunServer {
 		double units = StrafeConfig.unitsPerBlock;
 		Vec3 eye = p.getEyePosition();
 		ServerShots.Result shot = ServerShots.resolve(p, w, f); // the server decides spread + recoil (the client only predicted)
-		Vec3 dir = shot.dir();
+		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
+		// m_nNumBullets: shotguns fire several pellets, each traced and hurting on its own; the shooter's client predicts pellet 0
+		for (int n = 0; n < Math.max(1, w.bullets()); n++) {
+			Vec3 dir = n == 0 ? shot.dir() : ShotMath.pellet(shot.pitch(), shot.yaw(), shot.punchPitch(), shot.punchYaw(), shot.inaccuracy(), w.spread(), shot.seed(),
+					shot.shot(), n);
+			bullet(p, w, f, shot, dir, eye, n == 0);
+		}
+	}
+
+	/** One bullet (or pellet) of a shot: traced through up to 4 thin surfaces, hurting what it hits. predicted: the shooter's client drew it. */
+	private static void bullet(ServerPlayer p, WeaponStats w, dev.strafemc.net.StrafePayloads.Fire f, ServerShots.Result shot, Vec3 dir, Vec3 eye, boolean predicted) {
+		double units = StrafeConfig.unitsPerBlock;
 		// the bullet's path: through up to 4 thin surfaces (wallbangs), losing damage in each (see penetrate)
 		boolean lag = dev.strafemc.server.StrafeSettings.lagComp();
 		Vec3 from = eye;
@@ -260,8 +281,6 @@ public final class GunServer {
 		int walls = 0;
 		EntityHitResult hit = null;
 		dev.strafemc.server.LagHistory.Hit rewound = null;
-		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
-			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
 		for (int pen = 0; pen <= 4 && left > 0; pen++) {
 			Vec3 end = from.add(dir.scale(left));
 			HitResult block = p.level().clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
@@ -275,9 +294,9 @@ public final class GunServer {
 				hit = new EntityHitResult(rewound.entity(), rewound.at());
 			else rewound = null;
 			if (hit != null || !(block instanceof net.minecraft.world.phys.BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) break;
-			if (pen == 0) impact(p, bh);
-			else impactAll(p, bh); // past a wallbang: the shooter's own client didn't predict this one
-			if (pen == 0 && shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
+			if (pen == 0 && predicted) impact(p, bh);
+			else impactAll(p, bh); // past a wallbang, or a later pellet: the shooter's own client didn't predict this one
+			if (pen == 0 && predicted && shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, impactMessage(p.level(), bh, eye, IMPACT_SEEDS.nextInt())); // the real hole
 			double seg = bh.getLocation().distanceTo(from) * units;
 			dmg *= Math.pow(w.rangeModifier(), seg / FALLOFF_UNITS); // range falloff up to the wall (CS2 applies it before penetrating)
@@ -408,7 +427,8 @@ public final class GunServer {
 		dmg = CsArmor.apply(target, dmg, knifeStats != null ? knifeStats.armorRatio() : 1.7, "chest");
 		boolean wasAlive = target.isAlive();
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
-		if (wasAlive && target.isDeadOrDying()) KillFeed.notice(p, target, "knife_falchion", KillFeed.attackerFlags(p));
+		if (wasAlive && target.isDeadOrDying())
+			KillFeed.notice(p, target, p.getMainHandItem().getItem() instanceof KnifeItem usedKnife ? usedKnife.weaponClass.replace("weapon_", "") : "knife", KillFeed.attackerFlags(p));
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
 	}

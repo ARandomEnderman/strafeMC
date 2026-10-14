@@ -26,14 +26,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * 10 px apart in CS2's loadout order; dark tiles with the key top left, the name top right, the white equipment icon
  * in the middle and the price bottom right; a number key picks a column, a second one buys from it. Prices are
  * CS2's (weapons.vdata m_nPrice) though strafeMC has no money. Sizes are CS2's 1080p pixels scaled to the window.
- * Slots strafeMC doesn't have yet stay empty, Zeus and the defuse kit are shown but not for sale. The server decides
- * whether you may buy (strafemc_buymenu, strafemc_buytime) and applies CS2's grenade limits. FLAGGED: the AK-47
- * sits in its T slot for CTs too (strafeMC has no CT rifle yet); Minecraft's font for CS2's Stratum; no agent model.
+ * The defuse kit is shown but not for sale (no C4 yet). The server decides
+ * whether you may buy (strafemc_buymenu, strafemc_buytime) and applies CS2's grenade limits. Weapon columns show CS2's
+ * default loadout for your side (items_game flexible_loadout_default). FLAGGED: Minecraft's font for CS2's Stratum; no
+ * agent model; no way yet to pick a non-default weapon for a slot (CS2's loadout screen).
  */
 public final class BuyMenuScreen extends Screen {
 	/** CS2 equipment icons the runtime pack converts for this menu. */
-	public static final String[] ICONS = {"ak47", "flashbang", "smokegrenade", "hegrenade", "molotov", "incgrenade", "decoy", "kevlar", "assaultsuit",
-			"taser", "defuser"};
+	public static final String[] ICONS = java.util.stream.Stream.concat(java.util.stream.Stream.of("flashbang", "smokegrenade", "hegrenade", "molotov",
+			"incgrenade", "decoy", "kevlar", "assaultsuit", "defuser"), dev.strafemc.weapon.WeaponTable.guns().stream().map(dev.strafemc.weapon.WeaponTable.Entry::shortName))
+			.distinct().toArray(String[]::new);
 
 	/** One slot: the buy command's item (null: shown, not for sale), CS2's name, icon and the class its price is read from. */
 	private record Slot(String buy, String name, String icon, String priceOf) {}
@@ -75,14 +77,22 @@ public final class BuyMenuScreen extends Screen {
 		boolean t = "t".equals(StrafeConfig.team);
 		return new Slot[][] {
 				{new Slot("kevlar", "Kevlar Vest", "kevlar", "item_kevlar"), new Slot("assaultsuit", "Kevlar & Helmet", "assaultsuit", "item_assaultsuit"),
-						new Slot(null, "Zeus x27", "taser", "weapon_taser"), t ? null : new Slot(null, "Defuse Kit", "defuser", "item_defuser"), null},
-				{null, null, null, null, null},
-				{null, null, null, null, null},
-				{null, new Slot("ak47", "AK-47", "ak47", "weapon_ak47"), null, null, null},
+						new Slot("taser", "Zeus x27", "taser", "weapon_taser"), t ? null : new Slot(null, "Defuse Kit", "defuser", "item_defuser"), null},
+				column("secondary", t), column("smg", t), column("rifle", t),
 				{new Slot("flashbang", "Flashbang", "flashbang", "weapon_flashbang"), new Slot("smokegrenade", "Smoke Grenade", "smokegrenade", "weapon_smokegrenade"),
 						new Slot("hegrenade", "High Explosive Grenade", "hegrenade", "weapon_hegrenade"),
 						t ? new Slot("molotov", "Molotov", "molotov", "weapon_molotov") : new Slot("incgrenade", "Incendiary Grenade", "incgrenade", "weapon_incgrenade"),
 						new Slot("decoy", "Decoy Grenade", "decoy", "weapon_decoy")}};
+	}
+
+	/** A weapon column: CS2's loadout slots <group>0..4 for your side (WeaponTable.inSlot). */
+	private static Slot[] column(String group, boolean t) {
+		Slot[] out = new Slot[5];
+		for (int i = 0; i < 5; i++) {
+			var e = dev.strafemc.weapon.WeaponTable.inSlot(group + i, t);
+			if (e != null) out[i] = new Slot(e.shortName(), dev.strafemc.weapon.WeaponTable.name(e.cls()), e.shortName(), e.cls());
+		}
+		return out;
 	}
 
 	/** Seconds of buy time left (Integer.MAX_VALUE without a limit). */

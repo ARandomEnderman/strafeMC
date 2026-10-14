@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "strafemc:item/weapon_knife_m9_bayonet"
+  }
+}

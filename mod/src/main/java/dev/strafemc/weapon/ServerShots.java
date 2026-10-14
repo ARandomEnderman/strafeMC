@@ -35,7 +35,8 @@ public final class ServerShots {
 	}
 
 	/** Server's decision for one shot. */
-	public record Result(Vec3 dir, int shot, boolean corrected) {}
+	/** The shot's direction and number, and what went into it (for the other pellets of a shotgun shot). */
+	public record Result(Vec3 dir, int shot, boolean corrected, float pitch, float yaw, double punchPitch, double punchYaw, double inaccuracy, long seed) {}
 
 	private static final Map<UUID, St> STATES = new ConcurrentHashMap<>();
 
@@ -121,7 +122,7 @@ public final class ServerShots {
 			s.recoilIndex += 1;
 		}
 		s.lastShotNs = System.nanoTime();
-		return new Result(dir, shot, corrected);
+		return new Result(dir, shot, corrected, f.pitch(), f.yaw(), pp, py, inacc, s.seed);
 	}
 
 	private static boolean close(double client, double server) {

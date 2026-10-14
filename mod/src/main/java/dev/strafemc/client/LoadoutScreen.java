@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_EMPTY = 0x80202020, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
-	private int previewSlot = 2; // the knife until the mouse picks another
+	private int previewSlot = 0; // the gloves until the mouse picks another
 
 	public LoadoutScreen(Loadout.Menu menu, Inventory inv, Component title) {
 		super(menu, inv, title, Loadout.Menu.WIDTH, Loadout.Menu.HEIGHT);
@@ -42,17 +42,30 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		g.fill(0, 0, width, height, BG);
 		g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
 		var defs = Loadout.defs();
-		for (int i = 0; i < defs.size(); i++) {
+		for (int i = 0; i < Math.min(3, defs.size()); i++) { // gloves, agent, knife: a tile with text
 			Loadout.Def d = defs.get(i);
-			int x = leftPos + Loadout.Menu.TILES_X + (i % 2) * (Loadout.Menu.TILE_W + 8), y = topPos + Loadout.Menu.TILES_Y + (i / 2) * (Loadout.Menu.TILE_H + 4);
+			int x = leftPos + Loadout.Menu.TILES_X + i * (Loadout.Menu.TILE_W + 8), y = topPos + Loadout.Menu.TILES_Y;
 			ItemStack in = menu.getSlot(i).getItem();
 			boolean usable = d.kind() != Loadout.Kind.AGENT;
 			g.fill(x, y, x + Loadout.Menu.TILE_W, y + Loadout.Menu.TILE_H, usable ? TILE : TILE_EMPTY);
 			if (i == previewSlot) g.outline(x, y, Loadout.Menu.TILE_W, Loadout.Menu.TILE_H, ACCENT);
 			g.fill(x + 3, y + 3, x + 21, y + 21, SLOT);
 			g.text(font, d.label(), x + 26, y + 3, usable ? 0xFFFFFFFF : 0xFF707070, false);
-			String sub = !usable ? "Coming with agents" : in.isEmpty() ? "Empty" : in.getHoverName().getString();
+			String sub = !usable ? "Coming later" : in.isEmpty() ? "Empty" : in.getHoverName().getString();
 			g.text(font, font.plainSubstrByWidth(sub, Loadout.Menu.TILE_W - 30), x + 26, y + 13, in.isEmpty() ? 0xFF808080 : 0xFFB8B8B8, false);
+		}
+		g.text(font, "GUN WRAPS", leftPos + Loadout.Menu.GUNS_X, topPos + Loadout.Menu.GUNS_Y - 11, 0xFFB0B0B0, false);
+		for (int i = 3; i < defs.size(); i++) { // the guns: a slot each, the gun's picture faded in while it's empty
+			int x = leftPos + Loadout.Menu.slotX(i), y = topPos + Loadout.Menu.slotY(i);
+			g.fill(x - 1, y - 1, x + 17, y + 17, i == previewSlot ? ACCENT : SLOT);
+			if (i == previewSlot) g.fill(x, y, x + 16, y + 16, SLOT);
+			if (menu.getSlot(i).getItem().isEmpty()) {
+				var gun = dev.strafemc.weapon.WeaponItems.GUNS.get(defs.get(i).weapon());
+				if (gun != null) {
+					g.item(new ItemStack(gun), x, y);
+					g.fill(x, y, x + 16, y + 16, 0xA0101317); // faded: nothing in the slot yet
+				}
+			}
 		}
 		for (int i = defs.size(); i < menu.slots.size(); i++) { // inventory slot backgrounds
 			Slot s = menu.slots.get(i);
@@ -75,11 +88,14 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		g.text(font, d.label().toUpperCase(), px + 8, top + 8, ACCENT, false);
 		if (d.kind() == Loadout.Kind.GLOVES) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104); // the worn gloves in 3D
 		else {
+			// the wrap if there is one, else the gun itself
+			ItemStack shown = !s.isEmpty() ? s : d.weapon() != null && dev.strafemc.weapon.WeaponItems.GUNS.containsKey(d.weapon())
+					? new ItemStack(dev.strafemc.weapon.WeaponItems.GUNS.get(d.weapon())) : ItemStack.EMPTY;
 			var pose = g.pose();
 			pose.pushMatrix();
 			pose.translate(px + pw / 2f - 32, top + 34);
 			pose.scale(4, 4);
-			if (!s.isEmpty()) g.item(s, 0, 0);
+			if (!shown.isEmpty()) g.item(shown, 0, 0);
 			pose.popMatrix();
 		}
 		int y = top + 110;
@@ -107,11 +123,13 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		// the whole tile (the box with the slot and its text) picks what the preview shows
+		// the whole tile (the box with the slot and its text) or the gun's slot picks what the preview shows
 		var defs = Loadout.defs();
 		for (int i = 0; i < defs.size(); i++) {
-			int x = leftPos + Loadout.Menu.TILES_X + (i % 2) * (Loadout.Menu.TILE_W + 8), y = topPos + Loadout.Menu.TILES_Y + (i / 2) * (Loadout.Menu.TILE_H + 4);
-			if (mx >= x && mx < x + Loadout.Menu.TILE_W && my >= y && my < y + Loadout.Menu.TILE_H) previewSlot = i;
+			int x = i < 3 ? leftPos + Loadout.Menu.TILES_X + i * (Loadout.Menu.TILE_W + 8) : leftPos + Loadout.Menu.slotX(i) - 1;
+			int y = i < 3 ? topPos + Loadout.Menu.TILES_Y : topPos + Loadout.Menu.slotY(i) - 1;
+			int w = i < 3 ? Loadout.Menu.TILE_W : 18, h = i < 3 ? Loadout.Menu.TILE_H : 18;
+			if (mx >= x && mx < x + w && my >= y && my < y + h) previewSlot = i;
 		}
 		super.extractRenderState(g, mx, my, delta);
 		extractTooltip(g, mx, my);

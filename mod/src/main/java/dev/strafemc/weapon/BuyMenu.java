@@ -69,12 +69,16 @@ public final class BuyMenu {
 				CsArmor.set(p, 100, true);
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 			}
-			case "ak47" -> {
-				give(p, new ItemStack(WeaponItems.AK47));
-				give(p, new ItemStack(WeaponItems.MAG_AK47, 3)); // CS2's 90 reserve rounds: three 30-round magazines
-			}
-			case "knife" -> give(p, new ItemStack(WeaponItems.KNIFE_FALCHION));
+			case "knife" -> give(p, new ItemStack(WeaponItems.KNIVES.get(CsTeam.isT(p) ? "weapon_knife_t" : "weapon_knife")));
 			default -> {
+				WeaponTable.Entry gun = WeaponTable.get("weapon_" + what);
+				if (gun != null && !gun.knife()) { // a gun with CS2's reserve: m_nPrimaryReserveAmmoMax magazines (shells for shotguns)
+					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())));
+					WeaponStats st = WeaponStats.of(gun.cls());
+					int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
+					if (mags > 0) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags));
+					return;
+				}
 				Grenade g = null;
 				for (Grenade x : Grenade.values()) if (x.cls.equals("weapon_" + what) || x.cls.equals(what)) g = x;
 				if (g == null) return;

@@ -155,19 +155,22 @@ public final class ConsoleActions {
 			}
 			case "give" -> {
 				if (!cheat) break;
-				ItemStack s = switch (arg) {
-					case "weapon_ak47" -> new ItemStack(WeaponItems.AK47);
-					case "mag_ak47" -> new ItemStack(WeaponItems.MAG_AK47);
-					default -> ItemStack.EMPTY;
-				};
+				// any strafeMC weapon or magazine by its id (weapon_awp, mag_awp, weapon_knife_karambit...)
+				var id = net.minecraft.resources.Identifier.tryParse("strafemc:" + arg.trim());
+				var item = id == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+				ItemStack s = item instanceof dev.strafemc.weapon.GunItem || item instanceof dev.strafemc.weapon.MagazineItem ? new ItemStack(item) : ItemStack.EMPTY;
 				if (s.isEmpty()) p.sendSystemMessage(Component.literal("give: unknown item " + arg));
 				else p.getInventory().placeItemBackInInventory(s);
 			}
 			case "impulse" -> {
 				if (!cheat || !arg.equals("101")) break;
-				// impulse 101: every weapon + full ammo
-				p.getInventory().placeItemBackInInventory(new ItemStack(WeaponItems.AK47));
-				for (int i = 0; i < 3; i++) p.getInventory().placeItemBackInInventory(new ItemStack(WeaponItems.MAG_AK47));
+				// impulse 101: full ammo for the guns you carry (a full set of magazines each)
+				for (int i = 0; i < p.getInventory().getContainerSize(); i++)
+					if (p.getInventory().getItem(i).getItem() instanceof dev.strafemc.weapon.GunItem g && WeaponItems.MAGS.containsKey(g.weaponClass)) {
+						var st = dev.strafemc.weapon.WeaponStats.of(g.weaponClass);
+						int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
+						if (mags > 0) p.getInventory().placeItemBackInInventory(new ItemStack(WeaponItems.MAGS.get(g.weaponClass), mags));
+					}
 			}
 			default -> {
 				return;

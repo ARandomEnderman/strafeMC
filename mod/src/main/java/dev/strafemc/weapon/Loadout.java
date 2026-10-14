@@ -49,9 +49,11 @@ public final class Loadout {
 			d.add(new Def("gloves", Kind.GLOVES, null, "Gloves"));
 			d.add(new Def("agent", Kind.AGENT, null, "Agent"));
 			d.add(new Def("knife", Kind.KNIFE, null, "Knife"));
-			for (Item item : BuiltInRegistries.ITEM)
-				if (item instanceof GunItem g && !(item instanceof KnifeItem) && !(item instanceof GrenadeItem) && !(item instanceof HealthshotItem))
-					d.add(new Def(g.weaponClass, Kind.GUN, g.weaponClass, item.getName(new ItemStack(item)).getString()));
+			// guns in CS2's buy menu order: pistols, mid-tier, rifles (loadout slot), then the rest (Zeus)
+			List<WeaponTable.Entry> guns = new ArrayList<>(WeaponTable.guns());
+			guns.sort(java.util.Comparator.comparingInt((WeaponTable.Entry e) -> e.slot() == null ? 9 : e.slot().startsWith("secondary") ? 0
+					: e.slot().startsWith("smg") ? 1 : e.slot().startsWith("rifle") ? 2 : 3).thenComparing(e -> e.slot() == null ? "" : e.slot()));
+			for (WeaponTable.Entry e : guns) d.add(new Def(e.cls(), Kind.GUN, e.cls(), WeaponTable.name(e.cls())));
 			defs = List.copyOf(d);
 		}
 		return defs;
@@ -129,7 +131,21 @@ public final class Loadout {
 	/** The loadout screen's menu: the loadout slots, then the player's inventory (27 + 9 hotbar). */
 	public static final class Menu extends AbstractContainerMenu {
 		/** Layout (also used by the screen): panel size, loadout tiles in two columns, the inventory below. */
-		public static final int WIDTH = 320, HEIGHT = 248, TILE_W = 148, TILE_H = 24, TILES_X = 8, TILES_Y = 22, INV_X = 79, INV_Y = 160;
+		/**
+		 * Layout (also used by the screen): a row of three tiles (gloves, agent, knife), the gun slots in a grid of 9 per
+		 * row below, the inventory under that.
+		 */
+		public static final int WIDTH = 320, TILE_W = 98, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = 66, INV_X = 79;
+		public static final int INV_Y = GUNS_Y + 18 * ((WeaponTable.guns().size() + 8) / 9) + 22, HEIGHT = INV_Y + 84;
+
+		/** Top-left of loadout slot i (the item, inside its tile for the first three). */
+		public static int slotX(int i) {
+			return i < 3 ? TILES_X + i * (TILE_W + 8) + 4 : GUNS_X + ((i - 3) % 9) * 18;
+		}
+
+		public static int slotY(int i) {
+			return i < 3 ? TILES_Y + 4 : GUNS_Y + ((i - 3) / 9) * 18;
+		}
 
 		private final Container loadout;
 		private final ServerPlayer owner;
@@ -154,7 +170,7 @@ public final class Loadout {
 			loadout = c;
 			for (int i = 0; i < d.size(); i++) {
 				Def def = d.get(i);
-				int x = TILES_X + (i % 2) * (TILE_W + 8) + 4, y = TILES_Y + (i / 2) * (TILE_H + 4) + 4;
+				int x = slotX(i), y = slotY(i);
 				addSlot(new Slot(c, i, x, y) {
 					@Override
 					public boolean mayPlace(ItemStack s) {

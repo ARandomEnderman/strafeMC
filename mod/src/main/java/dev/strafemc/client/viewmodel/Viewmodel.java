@@ -39,14 +39,25 @@ public final class Viewmodel {
 	/** mesh: the model's mesh node to draw; clips: the animations loaded (files via GunServer.clipPath). */
 	private record Weapon(String cls, String model, String mesh, String[] clips) {}
 
-	private static final Map<String, Weapon> WEAPONS = withGrenades(Map.of(
-			"weapon_ak47", new Weapon("weapon_ak47", "weapons/models/ak47/weapon_rif_ak47.vmdl_c", ".body_hd",
-					new String[] {"draw", "idle", "shoot1", "reload", "lookat01"}),
-			"weapon_knife_falchion", new Weapon("weapon_knife_falchion", "weapons/models/knife/knife_falchion/weapon_knife_falchion.vmdl_c",
-					".body_legacy", new String[] {"draw", "idle", "lookat01", "lookat02", "light_miss1", "light_miss2", "light_hit1", "light_hit2",
-					"light_backstab", "light_backstab2", "heavy_miss1", "heavy_hit1", "heavy_backstab"}),
+	private static final Map<String, Weapon> WEAPONS = withGrenades(fromTable(Map.of(
 			dev.strafemc.weapon.HealthshotItem.CLS, new Weapon(dev.strafemc.weapon.HealthshotItem.CLS, "weapons/models/healthshot/weapon_healthshot.vmdl_c",
-					".healthshot_content_src", new String[] {"draw", "idle", "inject"})));
+					".healthshot_content_src", new String[] {"draw", "idle", "inject"}))));
+
+	/** Every gun and knife of the weapon table: its model (mesh picked by VmModel, "auto") and every clip it names. */
+	private static Map<String, Weapon> fromTable(Map<String, Weapon> base) {
+		Map<String, Weapon> m = new java.util.HashMap<>(base);
+		for (var list : java.util.List.of(dev.strafemc.weapon.WeaponTable.guns(), dev.strafemc.weapon.WeaponTable.knives()))
+			for (var e : list) {
+				// one name per clip file (the table also lists aliases like idle -> idle1)
+				java.util.Map<String, String> byPath = new java.util.LinkedHashMap<>();
+				for (var c : e.clips().entrySet()) byPath.putIfAbsent(c.getValue(), c.getKey());
+				java.util.Set<String> names = new java.util.LinkedHashSet<>(byPath.values());
+				names.addAll(java.util.List.of("draw", "idle"));
+				for (String k : new String[] {"shoot1", "reload", "lookat01"}) if (e.clips().containsKey(k)) names.add(k);
+				m.put(e.cls(), new Weapon(e.cls(), e.model(), VmModel.AUTO_MESH, names.toArray(new String[0])));
+			}
+		return m;
+	}
 
 	/** Every CS2 grenade: its model's ".body" mesh and the grenade animations. */
 	private static Map<String, Weapon> withGrenades(Map<String, Weapon> base) {

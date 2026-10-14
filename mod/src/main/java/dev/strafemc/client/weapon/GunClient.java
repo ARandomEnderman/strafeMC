@@ -636,7 +636,8 @@ public final class GunClient {
 		if (reloadLocked() || now < deployUntil || now < inspectUntil || now < Math.min(knifeNextLight, knifeNextHeavy)) return;
 		// which inspect (knives: lookat01 / rare lookat02) comes from the weapon's CS2 inspect graph weights
 		if (g instanceof dev.strafemc.weapon.GrenadeItem && grenadeState != GRENADE_IDLE) return;
-		String anim = g instanceof dev.strafemc.weapon.KnifeItem ? dev.strafemc.data.InspectGraph.pick(g.weaponClass.substring("weapon_".length()), rng, "lookat01")
+		var entry = dev.strafemc.weapon.WeaponTable.get(g.weaponClass); // guns and knives: their inspect graph from the weapon table
+		String anim = entry != null && entry.inspectGraph() != null ? dev.strafemc.data.InspectGraph.pick(entry.inspectGraph(), rng, "lookat01")
 				: g instanceof dev.strafemc.weapon.GrenadeItem gi ? dev.strafemc.data.InspectGraph.pick(gi.type.inspectGraph, rng, "lookat01") : "lookat01";
 		AnimClip c = AnimClip.peek(GunServer.clipPath(g.weaponClass, anim));
 		if (c == null) return;

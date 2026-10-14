@@ -308,7 +308,7 @@ public final class ConsoleCommands {
 			}
 		});
 		local("hurtme", "hurtme <CS damage>: damage yourself (needs sv_cheats 1).", a -> action("hurtme", a.length > 0 ? a[0] : "10", true));
-		local("give", "give <weapon_ak47|mag_ak47> (needs sv_cheats 1).", a -> action("give", a.length > 0 ? a[0] : "", true));
+		local("give", "give <weapon id or magazine id>, e.g. weapon_awp, mag_awp, weapon_knife_karambit (needs sv_cheats 1).", a -> action("give", a.length > 0 ? a[0] : "", true));
 		local("impulse", "impulse 101: all weapons + ammo (needs sv_cheats 1).", a -> action("impulse", a.length > 0 ? a[0] : "", true));
 		local("thirdperson", "Third-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
 		local("firstperson", "First-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
