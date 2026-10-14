@@ -27,6 +27,7 @@ public final class ClientGameplay {
 	private static volatile boolean movementChoice, slabStep;
 	/** The server's buy menu rules (strafemc_buymenu, strafemc_buytime); creative only and no limit until it says. */
 	private static volatile int buyMode = 1, buyTime = 0;
+	private static volatile boolean loadoutKeep = true;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
@@ -50,6 +51,7 @@ public final class ClientGameplay {
 			slabStep = Boolean.TRUE.equals(root.get("slabStep"));
 			buyMode = root.get("buyMode") instanceof Number n ? n.intValue() : 1;
 			buyTime = root.get("buyTime") instanceof Number n ? n.intValue() : 0;
+			loadoutKeep = !Boolean.FALSE.equals(root.get("loadoutKeep"));
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
@@ -153,6 +155,10 @@ public final class ClientGameplay {
 	/** The server's "step up slabs" setting (strafemc_slabstep). */
 	public static int buyMode() {
 		return buyMode;
+	}
+
+	public static boolean loadoutKeep() {
+		return loadoutKeep;
 	}
 
 	public static int buyTime() {

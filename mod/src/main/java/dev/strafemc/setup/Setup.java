@@ -47,6 +47,7 @@ public final class Setup {
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
+		m.put("wraps", 1); // skin wrap pictures
 		return m;
 	}
 
@@ -112,6 +113,7 @@ public final class Setup {
 				case "icons" -> icons(base, span);
 				case "effects" -> effects(pak, base, span);
 				case "decals" -> decals(base, span);
+				case "wraps" -> wraps(pak, base, span);
 				default -> {
 				}
 			}
@@ -241,6 +243,94 @@ public final class Setup {
 		}
 		progress(base + span / 2, "Bullet hole textures (" + tex.size() + ")");
 		vrf.decompile(tex.stream().map(Setup::compiled).toList(), null, cache);
+	}
+
+	/**
+	 * Skin wrap pictures: every weapon skin's material in one run, the pattern textures the wraps use, then one icon per
+	 * wrap (a piece of its texture, WrapIcons) into cache/wrap_icons/. The runtime pack makes item models from them.
+	 */
+	private void wraps(Map<String, Long> pak, double base, double span) throws IOException {
+		progress(base, "Skin wraps: materials");
+		String vmats = "materials/models/weapons/customization/paints/vmats/";
+		vrf.blocks(List.of(vmats), "vmat_c", "DATA", cache);
+		List<dev.strafemc.weapon.SkinWraps.Wrap> wraps = dev.strafemc.weapon.SkinWraps.all();
+		java.util.Map<String, dev.strafemc.client.viewmodel.GloveSkinBaker.Params> params = new java.util.HashMap<>();
+		Set<String> patterns = new LinkedHashSet<>();
+		for (var w : wraps) {
+			String kit = dev.strafemc.weapon.SkinWraps.iconKit(w);
+			Path p = kit == null ? null : cache.resolve(vmats + kit + ".vmat_c.DATA.kv3");
+			if (p == null || !Files.exists(p)) continue;
+			var par = dev.strafemc.client.viewmodel.GloveSkinBaker.Params.parse(Files.readAllLines(p));
+			params.put(w.id(), par);
+		}
+		// newer skins exist only as composites: their colour texture is named in the composite itself (a custom paint)
+		Map<String, String> composites = new java.util.HashMap<>();
+		for (String f : pak.keySet())
+			if (f.startsWith("weapons/paints/") && f.endsWith(".vcompmat_c"))
+				composites.put(f.substring(f.lastIndexOf('/') + 1, f.length() - ".vcompmat_c".length()), f);
+		Map<String, String> missing = new java.util.LinkedHashMap<>();
+		for (var w : wraps) {
+			String kit = dev.strafemc.weapon.SkinWraps.iconKit(w);
+			if (!params.containsKey(w.id()) && kit != null && composites.containsKey(kit)) missing.put(w.id(), composites.get(kit));
+		}
+		progress(base + span * 0.15, "Skin wraps: newer skins (" + missing.size() + ")");
+		vrf.blocks(new ArrayList<>(new LinkedHashSet<>(missing.values())), null, "DATA", cache);
+		Pattern texture = Pattern.compile("m_strTextureRuntimeResourcePath = resource_name:\"([^\"]+[.]vtex)\"");
+		for (var e : missing.entrySet()) {
+			Path p = cache.resolve(e.getValue() + ".DATA.kv3");
+			if (!Files.exists(p)) continue;
+			String text = Files.readString(p);
+			var par = new dev.strafemc.client.viewmodel.GloveSkinBaker.Params();
+			// the composite's own variables: a "g_tPattern" texture and g_vColor0..3 (0..255) like the older materials
+			Matcher v = Pattern.compile("m_strName = \"(g_tPattern|g_vColor[0-3])\"(.*?)(?=m_strName = |\\z)", Pattern.DOTALL).matcher(text);
+			int colours = 0;
+			while (v.find()) {
+				Matcher t = texture.matcher(v.group(2)), c = Pattern.compile("m_cValueColor4 = \\[ *(\\d+), *(\\d+), *(\\d+)").matcher(v.group(2));
+				if (v.group(1).equals("g_tPattern") && t.find() && !t.group(1).startsWith("materials/default/")) par.textures.put("g_tPattern", t.group(1));
+				else if (v.group(1).startsWith("g_vColor") && c.find()) {
+					par.values.put(v.group(1), new double[] {Integer.parseInt(c.group(1)) / 255.0, Integer.parseInt(c.group(2)) / 255.0, Integer.parseInt(c.group(3)) / 255.0});
+					colours++;
+				}
+			}
+			if (par.textures.containsKey("g_tPattern")) par.values.put("F_PAINT_STYLE", new double[] {colours > 0 ? 1 : 6}); // a mask for the colours, else a picture
+			else { // else its colour texture by name, used as a custom paint
+				Matcher m = texture.matcher(text);
+				while (m.find()) {
+					String t = m.group(1), name = t.substring(t.lastIndexOf('/') + 1);
+					if (!t.startsWith("materials/default/") && (name.contains("albedo") || name.contains("_color") || name.contains("_diffuse"))) {
+						par.textures.put("g_tPattern", t);
+						break;
+					}
+				}
+				if (!par.textures.containsKey("g_tPattern")) continue;
+				par.values.put("F_PAINT_STYLE", new double[] {6});
+			}
+			params.put(e.getKey(), par);
+		}
+		for (var par : params.values()) {
+			String pat = par.textures.get("g_tPattern");
+			if (pat != null && !pat.startsWith("materials/default/")) patterns.add(compiled(pat));
+		}
+		progress(base + span * 0.3, "Skin wraps: textures (" + patterns.size() + ")");
+		patterns.removeIf(t -> Files.exists(cache.resolve(t.substring(0, t.length() - "vtex_c".length()) + "png")));
+		vrf.decompile(patterns, null, cache);
+		int i = 0;
+		for (var w : wraps) {
+			if (i++ % 50 == 0) progress(base + span * (0.6 + 0.4 * i / wraps.size()), "Skin wraps: pictures (" + i + "/" + wraps.size() + ")");
+			var par = params.get(w.id());
+			if (par == null) continue;
+			String pat = par.textures.get("g_tPattern");
+			java.awt.image.BufferedImage img = null;
+			if (pat != null && !pat.startsWith("materials/default/")) {
+				Path png = cache.resolve(pat.substring(0, pat.length() - ".vtex".length()) + ".png");
+				if (Files.exists(png)) img = javax.imageio.ImageIO.read(png.toFile());
+			}
+			try {
+				WrapIcons.write(WrapIcons.make(par, img, w.knife()), cache.resolve("wrap_icons/" + WrapIcons.fileName(w.id()) + ".png"));
+			} catch (Exception e) { // one odd texture shouldn't stop the setup: that wrap keeps the plain picture
+				System.err.println("[strafemc] wrap picture " + w.id() + ": " + e);
+			}
+		}
 	}
 
 	// ---------------------------------------------------------------- helpers

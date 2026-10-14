@@ -16,10 +16,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * CS2 gloves (items_game wearables) in every CS2 finish (GloveSkins), always Factory New: right-click to wear them on
- * your viewmodel (holding the button keeps them on), sneak + right-click for your side's default gloves. Kept, not
- * used up; only your own first-person view shows them (saved on your client). The finish is the stack's custom model
- * data string, which also picks its inventory picture.
+ * CS2 gloves (items_game wearables) in every CS2 finish (GloveSkins), always Factory New, worn from the gloves slot of
+ * your loadout (Loadout): right-click puts them there (the ones worn before come back), sneak + right-click takes them
+ * off (your side's default gloves). The finish is the stack's custom model data string, which also picks its picture.
  */
 public class GloveItem extends Item {
 	/** CS2's wearables: item name, glove model (agents/models/shared/arms/...), and whether it's a T "studded" design. */
@@ -77,10 +76,9 @@ public class GloveItem extends Item {
 
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (level.isClientSide()) {
-			ItemStack stack = player.getItemInHand(hand);
-			if (player.isShiftKeyDown()) dev.strafemc.client.GloveChoice.wearDefault();
-			else dev.strafemc.client.GloveChoice.wear(kind, kit(stack));
+		if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+			if (player.isShiftKeyDown()) Loadout.takeOffGloves(sp);
+			else Loadout.wearGloves(sp, player.getItemInHand(hand));
 		}
 		return InteractionResult.SUCCESS;
 	}
@@ -88,7 +86,7 @@ public class GloveItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		out.accept(Component.literal("§7Factory New"));
-		out.accept(Component.literal("§7Right click: wear on your viewmodel"));
-		out.accept(Component.literal("§7Sneak + right click: your side's default gloves"));
+		out.accept(Component.literal("§7Right click: wear (goes into your loadout)"));
+		out.accept(Component.literal("§7Sneak + right click: take off your gloves"));
 	}
 }

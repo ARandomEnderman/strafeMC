@@ -53,6 +53,16 @@ public final class ConsoleActions {
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
+			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
+			case "strafemc_loadout_keep" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change whether loadouts drop on death."));
+					break;
+				}
+				StrafeSettings.setLoadoutKeep(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Loadout on death: "
+						+ (StrafeSettings.loadoutKeep() ? "kept" : "dropped (unless keepInventory)") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "healthshot" -> dev.strafemc.weapon.HealthshotItem.inject(p);
 			case "strafemc_buymenu" -> {
 				if (!op) {

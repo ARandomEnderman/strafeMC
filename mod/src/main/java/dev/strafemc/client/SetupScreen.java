@@ -86,7 +86,7 @@ public final class SetupScreen extends Screen {
 	/** The setup's progress while it runs, the restart reminder after it, else null (shown on menus and in game). */
 	public static String progressLine() {
 		if (running) return String.format("§e[strafeMC] Setting up: %.0f%%§7 (%s)", fraction * 100, step);
-		return restartNeeded ? "§e[strafeMC] Setup done: restart Minecraft to load the CS2 files" : null;
+		return restartNeeded ? "§e[strafeMC] Setup done: restart Minecraft to load the CS2 files" : AssetLoading.line();
 	}
 
 	/** A line at the top of the screen in game until Minecraft is restarted after the setup. */

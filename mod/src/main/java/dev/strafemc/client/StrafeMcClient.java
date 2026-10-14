@@ -77,7 +77,17 @@ public class StrafeMcClient implements ClientModInitializer {
 					if (p != null) g.centeredText(mc.font, p, s.width / 2, 2, 0xFFFFFFFF);
 				});
 			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
+			// a Loadout button next to the inventory (survival 176 x 166, creative 195 x 136 panels)
+			boolean creative = screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+			if (creative || screen instanceof net.minecraft.client.gui.screens.inventory.InventoryScreen) {
+				int iw = creative ? 195 : 176, ih = creative ? 136 : 166;
+				net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(net.minecraft.client.gui.components.Button
+						.builder(net.minecraft.network.chat.Component.literal("Loadout"), b -> LoadoutKey.open())
+						.bounds(w / 2 + iw / 2 + 4, h / 2 - ih / 2, 54, 16).build());
+			}
 		});
+		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);
+		LoadoutKey.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register(
 				(handler, sender, mc) -> dev.strafemc.client.console.ConsoleCommands.sendTeam()); // your side, for your smokes' colour

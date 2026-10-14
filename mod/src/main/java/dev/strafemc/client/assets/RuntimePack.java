@@ -48,6 +48,7 @@ public final class RuntimePack {
 						Placeholders.Icon.ARMOR, 32);
 			}
 			gloveSkins(tex);
+			wraps(tex);
 			// buy menu icons: CS2's white equipment icons, 64 px high
 			for (String w : dev.strafemc.client.BuyMenuScreen.ICONS)
 				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",
@@ -192,6 +193,39 @@ public final class RuntimePack {
 		}
 		Files.createDirectories(lang.getParent());
 		Files.writeString(lang, new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(o));
+	}
+
+	/**
+	 * Skin wraps: the plain gun / knife wrap pictures (drawn, no CS2 files needed), every wrap's own picture (made by the
+	 * setup's wraps step from the skin's texture) and the item models that pick them by the stack's custom model data.
+	 */
+	private static void wraps(Path tex) throws Exception {
+		Path models = DIR.resolve("assets/strafemc/models/item/wrap"), items = DIR.resolve("assets/strafemc/items"), icons = StrafeConfig.cacheDir().resolve("wrap_icons");
+		Files.createDirectories(models);
+		Files.createDirectories(items);
+		for (boolean knife : new boolean[] {false, true}) {
+			String base = knife ? "knife_wrap" : "skin_wrap";
+			Path png = tex.resolve("item/" + base + ".png");
+			if (!Files.exists(png)) write(dev.strafemc.setup.WrapIcons.base(knife), png);
+			Files.writeString(DIR.resolve("assets/strafemc/models/item/" + base + ".json"),
+					"{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/" + base + "\"}}");
+			StringBuilder cases = new StringBuilder();
+			for (var w : dev.strafemc.weapon.SkinWraps.all()) {
+				if (w.knife() != knife) continue;
+				String f = dev.strafemc.setup.WrapIcons.fileName(w.id());
+				Path src = icons.resolve(f + ".png"), dst = tex.resolve("item/wrap/" + f + ".png");
+				if (!Files.exists(src)) continue; // not converted yet: the plain picture
+				if (!Files.exists(dst) || Files.getLastModifiedTime(src).compareTo(Files.getLastModifiedTime(dst)) > 0) {
+					Files.createDirectories(dst.getParent());
+					Files.copy(src, dst, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				}
+				Files.writeString(models.resolve(f + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/wrap/" + f + "\"}}");
+				if (cases.length() > 0) cases.append(',');
+				cases.append("{\"when\":\"").append(w.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/wrap/").append(f).append("\"}}");
+			}
+			Files.writeString(items.resolve(base + ".json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+					+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/" + base + "\"}}}");
+		}
 	}
 
 	private static void write(BufferedImage img, Path out) throws Exception {

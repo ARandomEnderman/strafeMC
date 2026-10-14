@@ -135,6 +135,7 @@ public final class Viewmodel {
 	 */
 	public void preloadTick(Minecraft mc) {
 		if (mc.player == null) return;
+		dev.strafemc.client.AssetLoading.queue(() -> (int) WEAPONS.keySet().stream().filter(c -> !cache.containsKey(c) && !loading.contains(c)).count());
 		for (Path p : decoded.keySet()) { // one GPU upload per tick
 			texture(p, true);
 			break;
@@ -146,13 +147,18 @@ public final class Viewmodel {
 		order.add(mc.player.getMainHandItem());
 		for (int i = 0; i < 9; i++) order.add(inv.getItem(i));
 		for (int i = 9; i < inv.getContainerSize(); i++) order.add(inv.getItem(i));
-		for (var st : order)
+		if (preloadGloves()) return; // the worn gloves show on every weapon
+		for (var st : order) {
 			if (st.getItem() instanceof dev.strafemc.weapon.GunItem g && WEAPONS.containsKey(g.weaponClass) && !cache.containsKey(g.weaponClass)
 					&& loading.add(g.weaponClass)) {
 				loadAsync(g.weaponClass);
 				return;
 			}
-		if (!cache.isEmpty() && preloadGloves()) return;
+			if (st.getItem() instanceof dev.strafemc.weapon.GloveItem gl) { // gloves you might put on: model + finish
+				String kit = gl.kit(st), key = gl.kind.model + "#" + kit;
+				if (!gloves.containsKey(key) && loadGloves(gl.kind.model, kit, key)) return;
+			}
+		}
 		for (String cls : WEAPONS.keySet())
 			if (!cache.containsKey(cls) && loading.add(cls)) {
 				loadAsync(cls);
@@ -195,6 +201,8 @@ public final class Viewmodel {
 
 	private boolean loadGloves(String path, String kit, String key) {
 		if (!glovesLoading.add(key)) return false;
+		String label = kit.isEmpty() ? "gloves" : "gloves (" + kit.replace('_', ' ') + ")";
+		dev.strafemc.client.AssetLoading.begin(label);
 		Thread t = new Thread(() -> {
 			try {
 				VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(path, true)), ".viewmodel");
@@ -215,6 +223,8 @@ public final class Viewmodel {
 			} catch (Exception e) {
 				glovesFailed.add(key);
 				StrafeMc.LOG.warn("[strafemc] gloves {} failed: {}", key, e.toString());
+			} finally {
+				dev.strafemc.client.AssetLoading.end(label);
 			}
 		}, "strafemc-gloves");
 		t.setDaemon(true);
@@ -237,6 +247,8 @@ public final class Viewmodel {
 			failed.add(cls);
 			return;
 		}
+		String label = dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(cls, cls.replace("weapon_", ""));
+		dev.strafemc.client.AssetLoading.begin(label);
 		Thread t = new Thread(() -> {
 			try {
 				Loaded l = new Loaded();
@@ -262,6 +274,8 @@ public final class Viewmodel {
 			} catch (Exception e) {
 				StrafeMc.LOG.error("[strafemc] viewmodel for " + cls + " failed", e);
 				failed.add(cls);
+			} finally {
+				dev.strafemc.client.AssetLoading.end(label);
 			}
 		}, "strafemc-viewmodel");
 		t.setDaemon(true);

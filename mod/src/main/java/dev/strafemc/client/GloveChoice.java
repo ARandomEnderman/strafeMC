@@ -2,13 +2,13 @@ package dev.strafemc.client;
 
 import dev.strafemc.config.StrafeConfig;
 import dev.strafemc.weapon.GloveItem;
-import dev.strafemc.weapon.GloveSkins;
+import dev.strafemc.weapon.Loadout;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 /**
- * Which gloves your viewmodel wears: the ones you chose (StrafeConfig.glove, in finish StrafeConfig.gloveSkin), else
- * your side's default from CS2's items_game (t_gloves: glove_fingerless, ct_gloves: glove_hardknuckle).
+ * Which gloves your viewmodel wears: the ones in your loadout's gloves slot (in their finish), else your side's default
+ * from CS2's items_game (t_gloves: glove_fingerless, ct_gloves: glove_hardknuckle).
  */
 public final class GloveChoice {
 	public static final String T_DEFAULT = "agents/models/shared/arms/glove_fingerless/glove_fingerless.vmdl_c",
@@ -16,49 +16,18 @@ public final class GloveChoice {
 
 	private GloveChoice() {}
 
-	private static GloveItem.Kind kind() {
-		for (GloveItem.Kind k : GloveItem.Kind.values()) if (k.id.equals(StrafeConfig.glove)) return k;
-		return null;
+	private static ItemStack worn() {
+		var p = Minecraft.getInstance().player;
+		return p == null ? ItemStack.EMPTY : Loadout.get(p, "gloves");
 	}
 
 	public static String model() {
-		GloveItem.Kind k = kind();
-		return k != null ? k.model : "t".equals(StrafeConfig.team) ? T_DEFAULT : CT_DEFAULT;
+		return worn().getItem() instanceof GloveItem g ? g.kind.model : "t".equals(StrafeConfig.team) ? T_DEFAULT : CT_DEFAULT;
 	}
 
 	/** The worn finish (paint kit), empty for the default gloves. */
 	public static String skin() {
-		GloveItem.Kind k = kind();
-		if (k == null) return "";
-		GloveSkins.Skin s = GloveSkins.get(StrafeConfig.gloveSkin);
-		if (s != null && s.kind() == k) return s.kit();
-		var all = GloveSkins.of(k);
-		return all.isEmpty() ? "" : all.get(0).kit();
-	}
-
-	/** Puts these gloves on (no change, and no message, if they're already on: holding right-click repeats this). */
-	public static void wear(GloveItem.Kind kind, String kit) {
-		if (kind.id.equals(StrafeConfig.glove) && kit.equals(StrafeConfig.gloveSkin)) return;
-		StrafeConfig.glove = kind.id;
-		StrafeConfig.gloveSkin = kit;
-		save("Now wearing: ", Component.translatable("item.strafemc." + kind.id).append(" | ")
-				.append(Component.translatableWithFallback("strafemc.paintkit." + kit, GloveSkins.fallbackName(kit))));
-	}
-
-	public static void wearDefault() {
-		if (StrafeConfig.glove.isEmpty()) return;
-		StrafeConfig.glove = "";
-		StrafeConfig.gloveSkin = "";
-		save("Now wearing: ", Component.literal("t".equals(StrafeConfig.team) ? "T default gloves" : "CT default gloves"));
-	}
-
-	private static void save(String prefix, Component what) {
-		try {
-			StrafeConfig.save();
-		} catch (Exception ignored) {
-		}
-		var mc = Minecraft.getInstance();
-		// chat, not the action bar: the speed meter draws over action bar messages
-		if (mc.player != null) mc.gui.getChat().addClientSystemMessage(Component.literal(prefix).append(what));
+		ItemStack s = worn();
+		return s.getItem() instanceof GloveItem g ? g.kit(s) : "";
 	}
 }

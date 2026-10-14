@@ -25,7 +25,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING;
 
@@ -43,6 +43,8 @@ public final class WeaponItems {
 		ASSAULTSUIT = item("item_assaultsuit", p -> new ArmorItem(p.stacksTo(16), true));
 		HEALTHSHOT = item(HealthshotItem.CLS, p -> new HealthshotItem(p.stacksTo(16)));
 		for (GloveItem.Kind k : GloveItem.Kind.values()) GLOVES.put(k, item(k.id, p -> new GloveItem(p.stacksTo(1), k)));
+		GUN_WRAP = item("skin_wrap", p -> new SkinWrapItem(p.stacksTo(4), false));
+		KNIFE_WRAP = item("knife_wrap", p -> new SkinWrapItem(p.stacksTo(4), true));
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
@@ -80,11 +82,25 @@ public final class WeaponItems {
 			e.accept(KEVLAR);
 			e.accept(ASSAULTSUIT);
 			e.accept(HEALTHSHOT);
-			for (GloveSkins.Skin s : GloveSkins.ALL) e.accept(GloveItem.stack(GLOVES.get(s.kind()), s.kit()));
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
 			e.accept(SURF_RAMP_LYING_ITEM);
 		});
+		// a tab each for gloves, knife wraps and gun wraps (agents get theirs when they exist)
+		tab("gloves", () -> GloveItem.stack(GLOVES.get(GloveItem.Kind.SPORT), GloveSkins.of(GloveItem.Kind.SPORT).get(0).kit()),
+				e -> { for (GloveSkins.Skin s : GloveSkins.ALL) e.accept(GloveItem.stack(GLOVES.get(s.kind()), s.kit())); });
+		tab("knife_wraps", () -> SkinWrapItem.stack(KNIFE_WRAP, "knife:fade"),
+				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (w.knife()) e.accept(SkinWrapItem.stack(KNIFE_WRAP, w.id())); });
+		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov"),
+				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });
+	}
+
+	private static void tab(String name, java.util.function.Supplier<ItemStack> icon,
+			java.util.function.Consumer<net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTabOutput> fill) {
+		ResourceKey<CreativeModeTab> key = ResourceKey.create(Registries.CREATIVE_MODE_TAB, id(name));
+		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, key, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
+				.title(Component.translatable("itemGroup.strafemc." + name)).icon(icon).build());
+		net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(key).register(fill::accept);
 	}
 
 	private static DataComponentType<Integer> component(String name) {
