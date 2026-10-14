@@ -83,20 +83,12 @@ public final class WeaponSkinBaker {
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
 		boolean projected = style == 2 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;
-		// anodized multicolour (Dopplers, Marble Fade): more saturated than a plain blend, the pattern's alpha (stretched to its
-		// own maximum) marking the dark marbling (FLAGGED: tuned by eye to CS2's previews, which are deep, not pastel)
-		double[] chMax = {1, 1, 1, 1};
-		if (style == 4 && pattern != null) {
-			java.util.Arrays.fill(chMax, 1e-3);
-			for (int y = 0; y < pattern.getHeight(); y += 2)
-				for (int x = 0; x < pattern.getWidth(); x += 2) {
-					int c = pattern.getRGB(x, y);
-					chMax[0] = Math.max(chMax[0], (c >> 16 & 255) / 255.0);
-					chMax[1] = Math.max(chMax[1], (c >> 8 & 255) / 255.0);
-					chMax[2] = Math.max(chMax[2], (c & 255) / 255.0);
-					chMax[3] = Math.max(chMax[3], (c >>> 24) / 255.0);
-				}
-		}
+		// CS2's composite (csgo_customweapon ps, decoded) works in linear light: colours are SrgbGammaToLinear(g_vColorN), the
+		// weapon's colour texture is read as sRGB, the pattern raw; the result is stored as sRGB
+		double[][] lc = new double[4][];
+		for (int i = 0; i < 4; i++) lc[i] = lin(col[i]);
+		double[] durIn = p.v("g_vPaintDurability", 0, 0, 0, 0), dur = new double[4];
+		for (int i = 0; i < 4; i++) dur[i] = 1 - (i < durIn.length ? durIn[i] : 0);
 		// side projection: the weapon's longest axis across, the next one up (positions centred, spanning the weapon length)
 		int ax = 0, ay = 1;
 		if (positions != null) {
@@ -116,9 +108,11 @@ public final class WeaponSkinBaker {
 				double[] b = GloveSkinBaker.unpack(bc);
 				int m = in.masks == null ? 0xFFFF0000 : GloveSkinBaker.sample(in.masks, u, v);
 				double mr = (m >> 16 & 255) / 255.0, mg = (m >> 8 & 255) / 255.0, mb = (m & 255) / 255.0;
-				double w = artwork ? 1 : style == 2 ? Math.max(mr, mb) : mr;
-				if (!artwork) w *= 1 - mg;
-				if (w <= 0.002 || pattern == null && style != 0 && style != 3) {
+				// coverage of the older styles (patina; gunsmith covers all): the paint mask
+				double w = artwork ? 1 : style == 7 ? mr * (1 - mg) : 1;
+				// anodized styles paint mask R only
+				boolean anodized = style == 3 || style == 4 || style == 5;
+				if (w <= 0.002 || anodized && mr <= 0.002 || pattern == null && style != 0 && style != 3) {
 					out.setRGB(x, y, bc | 0xFF000000);
 					continue;
 				}
@@ -136,13 +130,52 @@ public final class WeaponSkinBaker {
 					double ru = address(xf0[0] * pu + xf0[1] * pv + xf0[2], sampU), rv = address(xf1[0] * pu + xf1[1] * pv + xf1[2], sampV);
 					pc = pattern == null ? 0 : GloveSkinBaker.sampleBilinear(pattern, ru, rv);
 				}
+				double[] pt = GloveSkinBaker.unpack(pc);
+				double pa = (pc >>> 24) / 255.0, band = smooth(0.5, 0.6, pa) * smooth(1, 0.9, pa);
+				// ambient occlusion's alpha: bare metal at the edges (a knife's sharpened edge) where the paint isn't durable
+				int aoc = in.ao == null ? 0 : GloveSkinBaker.sample(in.ao, u, v);
+				double edge = (aoc >>> 24) / 255.0;
+				double a = in.ao == null ? 1 : 0.35 + 0.65 * ((aoc >> 8 & 255) / 255.0);
+				if (style <= 5) { // CS2's composite at factory new (wear 0), per style
+					double[] bl = lin(b), c;
+					double k;
+					switch (style) {
+						case 0 -> { // solid colours by the masks
+							c = chain(lc, mr, mg, mb);
+							k = 1 - smooth(0.58, 0.68, edge * chain(dur, mr, mg, mb));
+						}
+						case 1 -> { // hydrographic: the pattern's channels pick the colours, masks G / B colours 2 / 3
+							c = clamp(GloveSkinBaker.scale(maskColours(chain(lc, pt[0], pt[1], pt[2]), lc, mg, mb), bright));
+							double d = mask(chain(dur, pt[0], pt[1], pt[2]), dur, mg, mb);
+							k = 1 - smooth(0.58, 0.68, (edge + band) * Math.max(Math.min(1, mg + mb), smooth(0, 0.5, pa)) * d);
+						}
+						case 2 -> { // spray paint: the (projected) pattern's channels pick the colours
+							c = clamp(GloveSkinBaker.scale(chain(lc, pt[0], pt[1], pt[2]), bright));
+							k = 1 - smooth(0.58, 0.68, edge * chain(dur, pt[0], pt[1], pt[2]));
+						}
+						case 3 -> { // anodized: colour 0 over mask R
+							c = clamp(GloveSkinBaker.scale(clamp(GloveSkinBaker.scale(GloveSkinBaker.lerp(bl, lc[0], mr), bright)), bright));
+							k = 1 - Math.max(1 - mr, smooth(0.58, 0.68, edge));
+						}
+						default -> { // anodized multicolour (pattern gated by mask R) / airbrushed (projected)
+							double g = style == 4 ? mr : 1;
+							double[] pal = maskColours(chain(lc, pt[0] * g, pt[1] * g, pt[2] * g), lc, mg, mb);
+							c = clamp(GloveSkinBaker.scale(clamp(GloveSkinBaker.scale(GloveSkinBaker.lerp(bl, pal, mr), bright)), bright));
+							double d = mask(chain(dur, pt[0], pt[1], pt[2]), dur, mg, mb);
+							k = 1 - Math.max(1 - mr, smooth(0.58, 0.68, (edge + (style == 4 ? band : 0)) * d));
+						}
+					}
+					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k))));
+					paint[y * SIZE + x] = (float) (anodized ? 0 : k);
+					continue;
+				}
 				double[] c;
 				double alpha = 1;
-				double[] pt = GloveSkinBaker.unpack(pc);
 				switch (style) {
-					case 0 -> c = col[0];
-					case 3 -> c = col[0];
-					case 6 -> c = pt;
+					case 6 -> { // custom artwork: bare metal only at durable-less edges under the artwork's alpha
+						c = pt;
+						w = 1 - smooth(0.58, 0.68, (edge + band) * smooth(0, 0.5, pa));
+					}
 					case 7 -> c = new double[] {pt[0] * col[0][0], pt[1] * col[0][1], pt[2] * col[0][2]};
 					case 8 -> { // gunsmith: the artwork covers the paint mask fully (its alpha is not coverage: Slate, Searing Rage)
 						c = pt;
@@ -150,27 +183,14 @@ public final class WeaponSkinBaker {
 						if (p.f("g_nColorAdjustmentMode", 0) == 1)
 							for (int k = 0; k < 3; k++) c[k] = Math.pow(pt[k], 2.2) * col[0][k];
 					}
-					default -> { // palette styles: hydrographic, spray, anodized multicolour / airbrushed
-						if (style == 4) // anodized multicolour: crisper colour borders than the pattern's soft gradients (by eye, FLAGGED)
-							for (int k = 0; k < 3; k++) pt[k] = smooth(0.15, 0.75, pt[k]);
-						c = col[0];
-						c = GloveSkinBaker.lerp(c, col[1], pt[0]);
-						c = GloveSkinBaker.lerp(c, col[2], pt[1]);
-						c = GloveSkinBaker.lerp(c, col[3], pt[2]);
-					}
+					default -> c = col[0];
 				}
-				// metal styles keep the metal's own light and dark (anodizing and patina tint it); paint covers it
+				// patina tints the metal: it keeps the metal's own light and dark
 				if (metalStyle) {
 					double lum = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
 					c = GloveSkinBaker.scale(c, Math.min(1.0, lum / 0.6));
 				}
-				if (style == 4) { // deep anodized colour: saturated, darkened by the marbling in the pattern's alpha
-					double ma = Math.min(1, (pc >>> 24) / 255.0 / chMax[3]);
-					double l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
-					for (int k = 0; k < 3; k++) c[k] = Math.max(0, l + (c[k] - l) * 1.9) * (1 - 0.6 * ma);
-				}
 				c = GloveSkinBaker.scale(c, bright);
-				double a = in.ao == null ? 1 : 0.35 + 0.65 * ((GloveSkinBaker.sample(in.ao, u, v) >> 8 & 255) / 255.0);
 				c = GloveSkinBaker.scale(c, a);
 				double k = w * alpha;
 				out.setRGB(x, y, GloveSkinBaker.rgb(GloveSkinBaker.lerp(b, c, k)));
@@ -246,6 +266,43 @@ public final class WeaponSkinBaker {
 	private static double smooth(double e0, double e1, double x) {
 		double t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
 		return t * t * (3 - 2 * t);
+	}
+
+	/** CS2's palette blend: colour 0, to 1 by r, to 2 by g, to 3 by b. */
+	private static double[] chain(double[][] c, double r, double g, double b) {
+		return GloveSkinBaker.lerp(GloveSkinBaker.lerp(GloveSkinBaker.lerp(c[0], c[1], r), c[2], g), c[3], b);
+	}
+
+	private static double chain(double[] c, double r, double g, double b) {
+		return ((c[0] + (c[1] - c[0]) * r) * (1 - g) + c[2] * g) * (1 - b) + c[3] * b;
+	}
+
+	/** Mask G paints colour 2, mask B colour 3. */
+	private static double[] maskColours(double[] c, double[][] lc, double mg, double mb) {
+		return GloveSkinBaker.lerp(GloveSkinBaker.lerp(c, lc[2], mg), lc[3], mb);
+	}
+
+	private static double mask(double v, double[] per, double mg, double mb) {
+		return (v * (1 - mg) + per[2] * mg) * (1 - mb) + per[3] * mb;
+	}
+
+	private static double[] clamp(double[] c) {
+		return new double[] {Math.max(0, Math.min(1, c[0])), Math.max(0, Math.min(1, c[1])), Math.max(0, Math.min(1, c[2]))};
+	}
+
+	private static double[] lin(double[] c) {
+		double[] o = new double[3];
+		for (int k = 0; k < 3; k++) o[k] = c[k] <= 0.04045 ? c[k] / 12.92 : Math.pow((c[k] + 0.055) / 1.055, 2.4);
+		return o;
+	}
+
+	private static double[] srgb(double[] c) {
+		double[] o = new double[3];
+		for (int k = 0; k < 3; k++) {
+			double x = Math.max(0, Math.min(1, c[k]));
+			o[k] = x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+		}
+		return o;
 	}
 
 	private static double round2(double x) {

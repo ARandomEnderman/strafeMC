@@ -21,9 +21,12 @@ out vec4 fragColor;
 
 const vec3 SUN = normalize(vec3(0.35, 0.85, 0.4));
 
-vec3 environment(vec3 r, float rough) {
+vec3 environment(vec3 r, float rough, float metal) {
     float up = smoothstep(-0.25, 0.65, r.y);
-    vec3 ground = vec3(0.10, 0.09, 0.08), horizon = vec3(0.75, 0.78, 0.82), sky = vec3(1.05, 1.08, 1.15);
+    // metal mirrors its surroundings in its own colour: a dimmer stand-in (CS2's map reflections are mostly dark), so
+    // anodized finishes (Dopplers) read deep instead of pastel
+    vec3 ground = vec3(0.10, 0.09, 0.08) * mix(1.0, 0.5, metal), horizon = vec3(0.75, 0.78, 0.82) * mix(1.0, 0.55, metal),
+            sky = vec3(1.05, 1.08, 1.15) * mix(1.0, 0.8, metal);
     vec3 env = mix(mix(ground, horizon, smoothstep(-0.25, 0.1, r.y)), sky, up);
     float spec = pow(max(dot(r, SUN), 0.0), mix(180.0, 18.0, rough));
     return env + vec3(spec) * mix(1.4, 0.3, rough);
@@ -43,7 +46,7 @@ void main() {
     // non-metals (paint, fabric, rubber) only get a faint, rough sheen at grazing angles; metal the full Fresnel
     vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * mix(0.12, 1.0, metal);
     float diffuse = 0.42 + 0.68 * max(dot(n, SUN), 0.0);
-    vec3 color = albedo * (1.0 - metal) * diffuse + environment(r, rough) * fresnel * mix(0.6, 1.0, metal);
+    vec3 color = albedo * (1.0 - metal) * diffuse + environment(r, rough, metal) * fresnel * mix(0.6, 1.0, metal);
 
     color = min(color, vec3(1.2)); // no blown-out white
     color = mix(overlayColor.rgb, color, overlayColor.a);

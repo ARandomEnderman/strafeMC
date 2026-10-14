@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v23/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v25/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -87,7 +87,7 @@ public final class WeaponSkinCache {
 		if (!p.shader.isEmpty()) return p;
 		Path comp;
 		try (var s = Files.walk(StrafeConfig.cacheDir().resolve("weapons/paints"))) {
-			comp = s.filter(f -> f.getFileName().toString().equals(kit + ".vcompmat_c.DATA.kv3")).findFirst().orElse(null);
+			comp = s.filter(f -> isComposite(f, kit)).findFirst().orElse(null);
 		}
 		if (comp == null) return p;
 		String text = Files.readString(comp);
@@ -121,6 +121,15 @@ public final class WeaponSkinCache {
 		return p;
 	}
 
+	/** The kit's composite in the cache: not the empty stub a missing legacy lookup leaves behind. */
+	private static boolean isComposite(Path f, String kit) {
+		try {
+			return f.getFileName().toString().equals(kit + ".vcompmat_c.DATA.kv3") && Files.size(f) > 64;
+		} catch (java.io.IOException e) {
+			return false;
+		}
+	}
+
 	/**
 	 * The kit's pattern roll bounds: its composite's econ_instance g_vPatternTexCoordOffset / g_flPatternTexCoordRotation
 	 * bounds (legacy kits: weapons/paints/legacy/<kit>.vcompmat; newer ones: their composite in the cache), or null.
@@ -133,7 +142,7 @@ public final class WeaponSkinCache {
 		}
 		if (text == null || !text.contains("econ_instance")) {
 			try (var s = Files.walk(StrafeConfig.cacheDir().resolve("weapons/paints"))) {
-				Path comp = s.filter(f -> f.getFileName().toString().equals(kit + ".vcompmat_c.DATA.kv3")).findFirst().orElse(null);
+				Path comp = s.filter(f -> isComposite(f, kit)).findFirst().orElse(null);
 				text = comp == null ? null : Files.readString(comp);
 			} catch (Exception e) {
 				return null;
@@ -156,7 +165,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v23/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v25/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -175,8 +184,13 @@ public final class WeaponSkinCache {
 		var bounds = rollBounds(kit);
 		if (bounds != null) {
 			var place = dev.strafemc.weapon.PatternRoll.roll(pattern, bounds);
-			paint.values.put("g_vPatternTexCoordOffset", new double[] {place.offsetX(), place.offsetY()});
-			paint.values.put("g_flPatternTexCoordRotation", new double[] {place.rotation()});
+			// only what the kit's composite rolls replaces the material's value (Fade keeps its offset -0.7, -0.7)
+			if (bounds.offsetX() != null || bounds.offsetY() != null) {
+				double[] own = paint.v("g_vPatternTexCoordOffset", 0, 0);
+				paint.values.put("g_vPatternTexCoordOffset", new double[] {bounds.offsetX() != null ? place.offsetX() : own[0],
+						bounds.offsetY() != null ? place.offsetY() : (own.length > 1 ? own[1] : 0)});
+			}
+			if (bounds.rotation() != null) paint.values.put("g_flPatternTexCoordRotation", new double[] {place.rotation()});
 		}
 		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
 		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
