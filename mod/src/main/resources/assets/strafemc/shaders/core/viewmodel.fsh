@@ -30,6 +30,8 @@ vec3 environment(vec3 r, float rough, float metal) {
     vec3 env = mix(mix(ground, horizon, smoothstep(-0.25, 0.1, r.y)), sky, up);
     // rough surfaces see a blurred, dimmer surrounding: towards its average
     env = mix(env, (ground + horizon + sky) * 0.28, smoothstep(0.3, 0.9, rough));
+    // rough metal: its blurred reflection is far dimmer than a mirror's (CS2's dark smoke on Marble Fade / Dopplers)
+    env *= mix(1.0, mix(1.0, 0.3, smoothstep(0.25, 0.75, rough)), metal);
     float spec = pow(max(dot(r, SUN), 0.0), mix(180.0, 18.0, rough));
     return env + vec3(spec) * mix(1.4, 0.3, rough);
 }
