@@ -36,6 +36,21 @@ vec3 environment(vec3 r, float rough, float metal) {
     return env + vec3(spec) * mix(1.4, 0.3, rough);
 }
 
+// metal, in linear light as CS2 lights it: it only reflects, in its own colour (F0 = albedo). Its surroundings are
+// mostly dark (CS2's map reflections), with a bright band along the horizon and a sharp sun highlight, so glossy metal
+// reads dark with bright streaks and saturated finishes keep their colour; rough metal sees only a dim blur.
+// The surroundings are ours (FLAGGED, by eye against CS2 renders), the maths CS2's.
+vec3 metalShade(vec3 albedo, vec3 r, float ndv, float rough) {
+    vec3 f0 = pow(albedo, vec3(2.2));
+    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * (1.0 - 0.8 * max(0.0, rough - 0.25));
+    float band = exp(-pow((r.y - 0.35) * 5.0, 2.0)); // a bright line above eye level (windows, sky line): a blade facing
+                                                      // the camera reflects behind it, dark, and sweeps streaks as it turns
+    float sharp = 0.05 + 0.55 * band + 0.18 * smoothstep(0.2, 1.0, r.y);
+    float env = mix(sharp, 0.07, smoothstep(0.25, 0.75, rough));
+    float sun = pow(max(dot(r, SUN), 0.0), mix(400.0, 30.0, rough)) * mix(6.0, 0.6, rough);
+    return pow(fresnel * (env + sun), vec3(1.0 / 2.2));
+}
+
 void main() {
     vec4 tex = texture(Sampler0, texCoord0);
     vec3 albedo = tex.rgb * vertexColor.rgb;
@@ -60,11 +75,12 @@ void main() {
         float sat = hi > 0.0 ? (hi - min(albedo.r, min(albedo.g, albedo.b))) / hi : 0.0;
         albedo = mix(vec3(dot(albedo, vec3(0.2125, 0.7154, 0.0721))), turned, pow(sat, 0.125));
     }
-    vec3 f0 = mix(vec3(0.04), albedo, metal);
-    // non-metals (paint, fabric, rubber) only get a faint, rough sheen at grazing angles; metal the full Fresnel
-    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * mix(0.12, 1.0, metal) * (1.0 - 0.8 * max(0.0, rough - 0.25));
+    // non-metals (paint, fabric, rubber): diffuse plus a faint, rough sheen at grazing angles
+    vec3 f0 = vec3(0.04);
+    vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * 0.12 * (1.0 - 0.8 * max(0.0, rough - 0.25));
     float diffuse = 0.42 + 0.68 * max(dot(n, SUN), 0.0);
-    vec3 color = albedo * (1.0 - metal) * diffuse + environment(r, rough, metal) * fresnel * mix(0.6, 1.0, metal);
+    vec3 paint = albedo * diffuse + environment(r, rough, 0.0) * fresnel * 0.6;
+    vec3 color = mix(paint, metalShade(albedo, r, ndv, rough), metal);
 
     color = min(color, vec3(1.2)); // no blown-out white
     color = mix(overlayColor.rgb, color, overlayColor.a);
