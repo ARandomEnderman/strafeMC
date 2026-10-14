@@ -436,6 +436,9 @@ public final class GunClient {
 			CsSounds.stopAnim();
 		}
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("shoot1");
+		// the shoot clip's own foley: pump-action and bolt-action guns work the action after the shot (Nova, MAG-7,
+		// Sawed-Off, AWP, SSG 08); the shot itself is the weapon's shoot sound below
+		if (p.getMainHandItem().getItem() instanceof GunItem held) schedule(held, "shoot1", System.nanoTime());
 		effects(p, w, d);
 		predictImpact(p, w, d, shot);
 		if (w.shootSound() != null) CsSounds.playOn(w.shootSound(), p, 1.0, false);
@@ -658,6 +661,8 @@ public final class GunClient {
 	}
 
 	private double[] inspectLoop;
+	/** How long before an inspect loop a sound may start and still count as the loop's own (seconds). */
+	private static final double LOOP_SOUND_LEAD = 0.1;
 	private GunItem inspectItem;
 	private String inspectAnim;
 
@@ -673,8 +678,10 @@ public final class GunClient {
 		String path = GunServer.clipPath(inspectItem.weaponClass, inspectAnim);
 		AnimClip c = path == null ? null : AnimClip.peek(path);
 		if (c != null) for (AnimClip.Event e : c.events())
-			if (e.isSound() && !e.name().isEmpty() && e.time() >= inspectLoop[0] && e.time() < inspectLoop[1])
-				sounds.add(new Scheduled(now + sec(e.time() - inspectLoop[0]), e.name()));
+			// the loop's sounds, plus one starting just before it that runs through it (the Deagle's 1 s spin sound starts
+			// 0.07 s before its 0.9 s loop): replayed on every loop, at once when it started before the loop
+			if (e.isSound() && !e.name().isEmpty() && e.time() >= inspectLoop[0] - LOOP_SOUND_LEAD && e.time() < inspectLoop[1])
+				sounds.add(new Scheduled(now + sec(Math.max(0, e.time() - inspectLoop[0])), e.name()));
 	}
 
 	/** Schedules the sound events of a weapon animation clip at their real times. */

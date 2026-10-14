@@ -20,7 +20,7 @@ public final class GameplayKeys {
 			"m_flRecoilAngle", "m_flRecoilAngleVariance", "m_flRecoilMagnitude", "m_flRecoilMagnitudeVariance", "m_nRecoilSeed", "m_flFlinchVelocityModifierLarge", "m_flFlinchVelocityModifierSmall", "m_flThrowVelocity");
 
 	/** Fields the gameplay classes mention that are only looks or sound (read from each player's own files). */
-	public static final Set<String> COSMETIC = Set.of("m_aShootSounds");
+	public static final Set<String> COSMETIC = Set.of("m_aShootSounds", "m_eSilencerType");
 
 	private GameplayKeys() {}
 }

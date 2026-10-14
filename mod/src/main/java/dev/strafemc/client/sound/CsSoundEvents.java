@@ -28,11 +28,13 @@ public final class CsSoundEvents {
 	private static final java.util.Map<String, Double> MIX_GAIN = java.util.Map.of("PlayerAttackerFeedback", 2.0, "PlayerVictim", 2.0);
 
 	public record Event(String name, List<String> files, double volume, double pitch, double pitchRandMin, double pitchRandMax,
-						double[][] distanceCurve, double offsetUp, boolean suppression, double suppressionVolume, double suppressionFalloff) {
+						double[][] distanceCurve, double offsetUp, boolean suppression, double suppressionVolume, double suppressionFalloff,
+						List<String> children) {
 		private static final Random RNG = new Random();
 
+		/** A file to play, or null for an event that only starts its child events. */
 		public String pickFile() {
-			return files.get(RNG.nextInt(files.size()));
+			return files.isEmpty() ? null : files.get(RNG.nextInt(files.size()));
 		}
 
 		public double randomPitch() {
@@ -84,17 +86,22 @@ public final class CsSoundEvents {
 		Map<String, Event> out = new HashMap<>();
 		for (String name : raw.keySet()) {
 			Map<String, Object> r = resolve(raw, name, 0);
+			// child events (soundevent_01): CS2 plays them together with the event, each with its own settings; a gun's
+			// crack and mechanical click are children of its shot (the Glock: Element_CRB, Element_Click), next to its distant layer
+			List<String> children = new ArrayList<>();
+			if (!Boolean.FALSE.equals(r.get("enable_child_events")) && r.get("soundevent_01") instanceof List<?> ch)
+				for (Object o : ch) children.add(o.toString());
 			Object files = r.get("vsnd_files_track_01");
-			if (!(files instanceof List<?> l) || l.isEmpty()) continue;
 			List<String> fl = new ArrayList<>();
-			for (Object o : l) fl.add(o.toString());
+			if (files instanceof List<?> l) for (Object o : l) fl.add(o.toString());
+			if (fl.isEmpty() && children.isEmpty()) continue;
 			double mix = MIX_GAIN.getOrDefault(String.valueOf(r.get("mixgroup")), 1.0);
 			out.put(name, new Event(name, fl, num(r.get("volume"), 1) * mix, num(r.get("pitch"), 1), num(r.get("pitch_random_min"), 0),
 					num(r.get("pitch_random_max"), 0),
 					Boolean.TRUE.equals(r.get("use_distance_volume_mapping_curve")) ? curve(r.get("distance_volume_mapping_curve")) : null,
 					r.get("position_offset") instanceof List<?> po && po.size() == 3 ? num(po.get(2), 0) : 0,
 					Boolean.TRUE.equals(r.get("suppression_enable")), num(r.get("suppression_volume_multiplier"), 1),
-					num(r.get("suppression_falloff_multiplier"), 1)));
+					num(r.get("suppression_falloff_multiplier"), 1), List.copyOf(children)));
 		}
 		events = out;
 		StrafeMc.LOG.info("[strafemc] CS2 sound events: {} playable (e.g. CT_Concrete.StepLeft: {})", out.size(),

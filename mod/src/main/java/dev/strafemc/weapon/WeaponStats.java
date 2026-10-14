@@ -21,7 +21,10 @@ public record WeaponStats(String cls, int clip, int reserveMags, boolean reserve
 	/** From a vdata entry (local, or the server's synced copy). */
 	public static WeaponStats of(String cls, Map<String, Object> w) {
 		Object shoot = w.get("m_aShootSounds");
-		String sound = shoot instanceof Map<?, ?> m && m.get("WEAPON_SOUND_SINGLE") != null ? m.get("WEAPON_SOUND_SINGLE").toString() : null;
+		// guns with a silencer (USP-S, M4A1-S) come with it on in CS2: their silenced shot (WEAPON_SOUND_SPECIAL1)
+		boolean silenced = w.get("m_eSilencerType") != null && !"WEAPONSILENCER_NONE".equals(String.valueOf(w.get("m_eSilencerType")));
+		String key = silenced && shoot instanceof Map<?, ?> sm && sm.get("WEAPON_SOUND_SPECIAL1") != null ? "WEAPON_SOUND_SPECIAL1" : "WEAPON_SOUND_SINGLE";
+		String sound = shoot instanceof Map<?, ?> m && m.get(key) != null ? m.get(key).toString() : null;
 		String nearlyEmpty = shoot instanceof Map<?, ?> m && m.get("WEAPON_SOUND_NEARLYEMPTY") != null ? m.get("WEAPON_SOUND_NEARLYEMPTY").toString() : null;
 		return new WeaponStats(cls, i(w, "m_iMaxClip1"), i(w, "m_nPrimaryReserveAmmoMax"), Boolean.TRUE.equals(w.get("m_bReserveAmmoAsClips")),
 				d(w, "m_flCycleTime"), Boolean.TRUE.equals(w.get("m_bIsFullAuto")), i(w, "m_nDamage"), d(w, "m_flRangeModifier"),

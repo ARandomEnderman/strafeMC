@@ -105,8 +105,9 @@ public final class Footsteps {
 		double sy = y + e.offsetUp(); // position_offset is z-up in Hammer units
 		double dist = Math.sqrt(sq(cam.x * units - x) + sq(cam.y * units - sy) + sq(cam.z * units - z));
 		float vol = (float) (e.volume() * e.volumeAt(dist) * StrafeConfig.movementVolume * gain);
-		if (vol <= 0.001f) return true;
-		mc.getSoundManager().play(new CsSoundInstance(CsAudio.id(e.pickFile()), Math.min(1f, vol), (float) e.randomPitch(),
+		String file = e.pickFile();
+		if (vol <= 0.001f || file == null) return true;
+		mc.getSoundManager().play(new CsSoundInstance(CsAudio.id(file), Math.min(1f, vol), (float) e.randomPitch(),
 				x / units, sy / units, z / units));
 		// everyone near you hears it too (the server passes it on; it plays no Minecraft step sounds for you)
 		if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.MoveSound.TYPE))
