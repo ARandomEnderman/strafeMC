@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v7/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v8/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -71,8 +71,57 @@ public final class WeaponSkinCache {
 		return null;
 	}
 
+	private static final Pattern LOOSE = Pattern.compile("m_strName = \"(\\w+)\"(.*?)(?=m_strName = |\\z)", Pattern.DOTALL);
+	private static final Pattern TEX = Pattern.compile("m_strTextureRuntimeResourcePath = resource_name:\"([^\"]+\\.vtex)\"");
+	private static final Pattern COLOR = Pattern.compile("m_cValueColor4 = \\[ *(\\d+), *(\\d+), *(\\d+)");
+	private static final Pattern NUM = Pattern.compile("m_(?:flValueFloatX|nValueIntX) = (-?[0-9.eE+-]+)");
+	private static final Pattern BOOL = Pattern.compile("m_bValueBoolean = (true|false)");
+	private static final Pattern TEMPLATE = Pattern.compile("templates/(\\w\\w)_template\\.vmat");
+
+	/**
+	 * A paint kit's material parameters: its paints/vmats material, or for newer kits (composites only) the composite's
+	 * loose variables over the style its template names (workshop/paintkits/templates/<style>_template.vmat).
+	 */
+	static GloveSkinBaker.Params paintParams(String kit) throws Exception {
+		var p = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(PAINTS + kit + ".vmat_c")));
+		if (!p.shader.isEmpty()) return p;
+		Path comp;
+		try (var s = Files.walk(StrafeConfig.cacheDir().resolve("weapons/paints"))) {
+			comp = s.filter(f -> f.getFileName().toString().equals(kit + ".vcompmat_c.DATA.kv3")).findFirst().orElse(null);
+		}
+		if (comp == null) return p;
+		String text = Files.readString(comp);
+		Matcher t = TEMPLATE.matcher(text);
+		String style = t.find() ? t.group(1) : "cu";
+		int f = switch (style) {
+			case "so" -> 0;
+			case "hy" -> 1;
+			case "sp" -> 2;
+			case "an" -> 3;
+			case "am" -> 4;
+			case "aa" -> 5;
+			case "aq" -> 7;
+			case "gs" -> 8;
+			default -> 6;
+		};
+		p.values.put("F_PAINT_STYLE", new double[] {f});
+		Matcher v = LOOSE.matcher(text);
+		while (v.find()) {
+			String name = v.group(1), body = v.group(2);
+			Matcher m;
+			if ((m = TEX.matcher(body)).find()) {
+				if (!m.group(1).startsWith("materials/default/")) p.textures.put(name, m.group(1));
+			} else if ((m = COLOR.matcher(body)).find())
+				p.values.put(name, new double[] {Integer.parseInt(m.group(1)) / 255.0, Integer.parseInt(m.group(2)) / 255.0, Integer.parseInt(m.group(3)) / 255.0});
+			else if ((m = BOOL.matcher(body)).find()) p.values.put(name, new double[] {m.group(1).equals("true") ? 1 : 0});
+			else if ((m = NUM.matcher(body)).find()) p.values.put(name, new double[] {Double.parseDouble(m.group(1))});
+		}
+		p.shader = "composite " + style;
+		return p;
+	}
+
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v7/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v8/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -86,9 +135,13 @@ public final class WeaponSkinCache {
 		Matcher m = COMPOSITE.matcher(Files.readString(AssetCache.dataBlock(material + "_c")));
 		if (!m.find()) return null;
 		var ci = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(m.group(1) + "_c")));
-		var inputs = new WeaponSkinBaker.Inputs(image(ci, "g_tMasks"), image(ci, "g_tAmbientOcclusion"), ci.f("g_flUvScale1", 1),
-				ci.f("g_flWeaponLength1", 32));
-		var paint = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(PAINTS + kit + ".vmat_c")));
+		var paint = paintParams(kit);
+		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
+		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
+				? image(paint, "g_tPaintByNumberMasks") : image(ci, "g_tMasks");
+		BufferedImage ao = paint.f("g_bOverrideAmbientOcclusion", 0) != 0 && paint.textures.containsKey("g_tFinalAmbientOcclusion")
+				? image(paint, "g_tFinalAmbientOcclusion") : image(ci, "g_tAmbientOcclusion");
+		var inputs = new WeaponSkinBaker.Inputs(masks, ao, ci.f("g_flUvScale1", 1), ci.f("g_flWeaponLength1", 32));
 		BufferedImage baseImg = ImageIO.read(Viewmodel.downscaledPath(base).toFile());
 		var positions = WeaponSkinBaker.positions(parts, WeaponSkinBaker.SIZE);
 		var result = WeaponSkinBaker.bake(paint, inputs, baseImg, positions, GloveSkinCache::load);
