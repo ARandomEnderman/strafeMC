@@ -22,8 +22,6 @@ import java.util.function.Function;
  */
 public final class WeaponSkinBaker {
 	public static final int SIZE = 1024;
-	/** Spray paint's pattern density over its raw scale, fitted by eye to CS2's knife previews (Scorched, Urban Masked, Safari Mesh). */
-	private static final double SPRAY_DENSITY = 1.6;
 
 	private WeaponSkinBaker() {}
 
@@ -60,9 +58,21 @@ public final class WeaponSkinBaker {
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
 		// pattern size: the weapon's size scale (composite inputs' g_flUvScale1) for hydrographic, patina and anodized multicolour
 		// (Tiger Tooth / Freehand checked in game by the user); spray paint denser than its raw scale; the rest as they are (FLAGGED)
-		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 || style == 4 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1);
-		double rot = Math.toRadians(p.f("g_flPatternTexCoordRotation", 0));
-		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0); // the rolled offset (PatternRoll); direction checked on AK Case Hardened 661
+		boolean projected0 = style == 2 || style == 4 || style == 5;
+		// CS2's own pattern transform (csgo_customweapon's g_vPatternTexCoordXform0/1 expressions, decoded from the shader):
+		// values rounded to 0.01; scale = pattern scale x (ignore weapon size ? 1 : the UV scale, or weapon length / 36 for the
+		// projected styles - which variant goes with which style is ours, FLAGGED)
+		double scale = round2(round2(p.f("g_flPatternTexCoordScale", 1)) * (ignoreSize ? 1 : projected0 ? in.weaponLength / 36 : in.uvScale));
+		if (scale == 0) scale = 1;
+		double rot = Math.toRadians(round2(p.f("g_flPatternTexCoordRotation", 0)));
+		double[] off0 = p.v("g_vPatternTexCoordOffset", 0, 0); // the rolled offset (PatternRoll)
+		double offX = round2(off0[0]), offY = round2(off0.length > 1 ? off0[1] : 0);
+		// the expression's extra offset: inv = 0.5 / scale turned by -rotation, its y using the already turned x (as in CS2)
+		double inv = 0.5 / scale, cn = Math.cos(-rot), sn = Math.sin(-rot);
+		double ex = inv * cn - inv * sn, ey = ex * sn + inv * cn;
+		double cr = Math.cos(rot), sr = Math.sin(rot);
+		double[] xf0 = {scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5};
+		double[] xf1 = {scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5};
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
 		boolean projected = style == 2 || style == 4 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;
@@ -120,10 +130,7 @@ public final class WeaponSkinBaker {
 						pv = 0.5 - (positions.pos[o + ay] - (positions.min[ay] + positions.max[ay]) / 2) / span;
 					}
 				}
-				double cu = (pu - 0.5) * scale, cv = (pv - 0.5) * scale;
-				// projected: centred on the weapon, so the offset places the pattern on it (a fade's colours run along the blade)
-				double c0 = projected ? 0 : 0.5;
-				double ru = cu * Math.cos(rot) - cv * Math.sin(rot) + c0 - off[0], rv = cu * Math.sin(rot) + cv * Math.cos(rot) + c0 - (off.length > 1 ? off[1] : 0);
+				double ru = xf0[0] * pu + xf0[1] * pv + xf0[2], rv = xf1[0] * pu + xf1[1] * pv + xf1[2];
 				ru = address(ru, sampU);
 				rv = address(rv, sampV);
 				double[] c;
@@ -166,6 +173,10 @@ public final class WeaponSkinBaker {
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
 			}
 		return new Result(out, paint);
+	}
+
+	private static double round2(double x) {
+		return Math.floor((x + 0.005) * 100) / 100;
 	}
 
 	/** Pattern addressing per axis: 0 wrap, 1 mirror, 2 clamp (CS2's g_nPatternTexture*Sampling; FLAGGED meaning). */
