@@ -284,7 +284,10 @@ public final class Viewmodel {
 					return;
 				}
 				for (VmModel.Part part : m.parts) {
-					if (paintable.contains(part)) part.texture = tex;
+					if (paintable.contains(part)) {
+						part.texture = tex;
+						if (part.uv1 != null) part.uv = part.uv1; // the finish is laid out in the second UV set (guns)
+					}
 					if (part.texture == null) continue;
 					part.metal = metalPerVertex(part);
 					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))

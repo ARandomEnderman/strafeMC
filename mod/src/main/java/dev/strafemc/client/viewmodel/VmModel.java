@@ -13,6 +13,8 @@ import java.util.List;
 public final class VmModel {
 	public static final class Part {
 		public float[] pos, nrm, uv, wts;
+		/** The second UV set (TEXCOORD_1), or null: CS2 guns lay their skins out in it (the old CS:GO layout). */
+		public float[] uv1;
 		public int[] jnt, idx;
 		public Path texture; // base color image next to the .glb
 		/** Per vertex: how metallic the texture is there (CS2's metalness mask at the vertex UV), or null if not metal. */
@@ -91,6 +93,7 @@ public final class VmModel {
 				part.pos = g.floats(at.get("POSITION").getAsInt());
 				part.nrm = at.has("NORMAL") ? g.floats(at.get("NORMAL").getAsInt()) : new float[part.pos.length];
 				part.uv = at.has("TEXCOORD_0") ? g.floats(at.get("TEXCOORD_0").getAsInt()) : new float[part.pos.length / 3 * 2];
+				part.uv1 = at.has("TEXCOORD_1") ? g.floats(at.get("TEXCOORD_1").getAsInt()) : null;
 				part.jnt = at.has("JOINTS_0") ? g.ints(at.get("JOINTS_0").getAsInt()) : null;
 				part.wts = at.has("WEIGHTS_0") ? g.floats(at.get("WEIGHTS_0").getAsInt()) : null;
 				part.idx = g.ints(p.get("indices").getAsInt());

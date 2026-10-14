@@ -32,7 +32,16 @@ public final class WeaponSkinBaker {
 	 * Object-space position per texel (pos[3 * (y * size + x)]), NaN where no triangle covers the texel; made from the
 	 * mesh (CS2's g_tPosition holds the same, as a float texture).
 	 */
-	public record Positions(int size, float[] pos, float[] min, float[] max) {}
+	public record Positions(int size, float[] pos, float[] min, float[] max) {
+		/** Per texel (5 floats): object-space x, y, z, then the first UV set's u, v there; NaN where no triangle covers it. */
+		static final int STRIDE = 5;
+
+		/** The base texture's UV at paint-space (u, v): itself when the weapon has one UV set, else the first set there. */
+		public double[] baseUv(double u, double v) {
+			int o = STRIDE * (Math.min(size - 1, (int) (v * size)) * size + Math.min(size - 1, (int) (u * size)));
+			return Float.isNaN(pos[o + 3]) ? new double[] {u, v} : new double[] {pos[o + 3], pos[o + 4]};
+		}
+	}
 
 	/** The baked colour and, per texel, how much of it is paint rather than the weapon's own metal (0..1). */
 	public record Result(BufferedImage color, float[] paint) {}
@@ -65,7 +74,8 @@ public final class WeaponSkinBaker {
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
-				int bc = GloveSkinBaker.sampleBilinear(base, u, v);
+				double[] buv = positions == null ? new double[] {u, v} : positions.baseUv(u, v); // guns: base colour from the first UV set
+				int bc = GloveSkinBaker.sampleBilinear(base, buv[0], buv[1]);
 				double[] b = GloveSkinBaker.unpack(bc);
 				int m = in.masks == null ? 0xFFFF0000 : GloveSkinBaker.sample(in.masks, u, v);
 				double mr = (m >> 16 & 255) / 255.0, mg = (m >> 8 & 255) / 255.0, mb = (m & 255) / 255.0;
@@ -79,7 +89,7 @@ public final class WeaponSkinBaker {
 				double pu = u, pv = v;
 				if (projected && positions != null) {
 					int px = Math.min(positions.size - 1, (int) (u * positions.size)), py = Math.min(positions.size - 1, (int) (v * positions.size));
-					int o = 3 * (py * positions.size + px);
+					int o = Positions.STRIDE * (py * positions.size + px);
 					if (!Float.isNaN(positions.pos[o])) {
 						pu = (positions.pos[o + ax] - (positions.min[ax] + positions.max[ax]) / 2) / span + 0.5;
 						pv = 0.5 - (positions.pos[o + ay] - (positions.min[ay] + positions.max[ay]) / 2) / span;
@@ -144,9 +154,13 @@ public final class WeaponSkinBaker {
 		return tex.apply(path);
 	}
 
-	/** Object-space positions per texel, rasterised from the mesh triangles in UV space (gaps at seams filled outward). */
+	/**
+	 * Object-space positions (and first-set UVs) per texel of the paint layout, rasterised from the mesh triangles in the
+	 * paint UV set (the second set where the mesh has one: CS2 guns), gaps at seams filled outward.
+	 */
 	public static Positions positions(java.util.List<VmModel.Part> parts, int size) {
-		float[] pos = new float[size * size * 3];
+		final int st = Positions.STRIDE;
+		float[] pos = new float[size * size * st];
 		java.util.Arrays.fill(pos, Float.NaN);
 		float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE}, max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
 		for (VmModel.Part p : parts) {
@@ -155,10 +169,11 @@ public final class WeaponSkinBaker {
 					min[k] = Math.min(min[k], p.pos[i + k]);
 					max[k] = Math.max(max[k], p.pos[i + k]);
 				}
+			float[] puv = p.uv1 != null ? p.uv1 : p.uv;
 			for (int t = 0; t + 2 < p.idx.length; t += 3) {
 				int a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
-				double ax = frac(p.uv[a * 2]) * size, ay = frac(p.uv[a * 2 + 1]) * size, bx = frac(p.uv[b * 2]) * size, by = frac(p.uv[b * 2 + 1]) * size,
-						cx = frac(p.uv[c * 2]) * size, cy = frac(p.uv[c * 2 + 1]) * size;
+				double ax = frac(puv[a * 2]) * size, ay = frac(puv[a * 2 + 1]) * size, bx = frac(puv[b * 2]) * size, by = frac(puv[b * 2 + 1]) * size,
+						cx = frac(puv[c * 2]) * size, cy = frac(puv[c * 2 + 1]) * size;
 				double area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
 				if (Math.abs(area) < 1e-9) continue;
 				int x0 = Math.max(0, (int) Math.floor(Math.min(ax, Math.min(bx, cx)))), x1 = Math.min(size - 1, (int) Math.ceil(Math.max(ax, Math.max(bx, cx))));
@@ -168,8 +183,9 @@ public final class WeaponSkinBaker {
 						double px = x + 0.5, py = y + 0.5;
 						double wa = ((bx - px) * (cy - py) - (cx - px) * (by - py)) / area, wb = ((cx - px) * (ay - py) - (ax - px) * (cy - py)) / area, wc = 1 - wa - wb;
 						if (wa < -0.01 || wb < -0.01 || wc < -0.01) continue;
-						int o = 3 * (y * size + x);
+						int o = st * (y * size + x);
 						for (int k = 0; k < 3; k++) pos[o + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
+						for (int k = 0; k < 2; k++) pos[o + 3 + k] = (float) (wa * p.uv[a * 2 + k] + wb * p.uv[b * 2 + k] + wc * p.uv[c * 2 + k]);
 					}
 			}
 		}
@@ -177,14 +193,14 @@ public final class WeaponSkinBaker {
 			float[] next = pos.clone();
 			for (int y = 0; y < size; y++)
 				for (int x = 0; x < size; x++) {
-					int o = 3 * (y * size + x);
+					int o = st * (y * size + x);
 					if (!Float.isNaN(pos[o])) continue;
 					for (int[] d : new int[][] {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
 						int nx = x + d[0], ny = y + d[1];
 						if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
-						int n = 3 * (ny * size + nx);
+						int n = st * (ny * size + nx);
 						if (Float.isNaN(pos[n])) continue;
-						System.arraycopy(pos, n, next, o, 3);
+						System.arraycopy(pos, n, next, o, st);
 						break;
 					}
 				}
