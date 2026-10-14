@@ -538,7 +538,9 @@ public final class Viewmodel {
 		Integer n = c.node(name);
 		Matrix4f ibm = m.inverseBind[j];
 		if (n == null && name.contains("_TWIST")) {
-			// twist helpers aren't animated: they ride rigidly on their bone, so they take that bone's bind matrix too
+			Matrix4f tw = twistJoint(m, c, pose, j, name);
+			if (tw != null) return s[j] = mount != null ? new Matrix4f(mount).mul(tw).mul(ibm) : tw.mul(ibm);
+			// fallback: ride rigidly on their bone, with that bone's bind matrix
 			String base = name.substring(0, name.indexOf("_TWIST"));
 			n = c.node(base);
 			int bj = java.util.Arrays.asList(m.joints).indexOf(base);
@@ -548,6 +550,56 @@ public final class Viewmodel {
 		Matrix4f jm = n != null ? new Matrix4f(pose[n]) : new Matrix4f();
 		if (mount != null) jm = new Matrix4f(mount).mul(jm);
 		return s[j] = jm.mul(ibm);
+	}
+
+	/**
+	 * Forearm twist helpers (arm_lower_*_TWIST, _TWIST1): the clips don't animate them and the model has no constraint
+	 * for them, so CS2 computes them in code. Here (FLAGGED: the standard swing-twist distribution, not CS2's code):
+	 * each takes the hand's roll about the forearm in proportion to how far along the forearm it sits, and undoes the
+	 * forearm's own roll against the upper arm for the rest, so the twist spreads from the elbow to the wrist instead of
+	 * pinching at both. Positions come from the bind pose. Measured over the AK's draw / idle / reload / inspect: arm
+	 * skin distortion about half of riding them rigidly (TwistCheck). Upper-arm helpers stay rigid (they barely move
+	 * the first-person arms). Returns the joint's animated matrix, or null to ride rigidly.
+	 */
+	static boolean twistOff; // TwistCheck's comparison
+
+	private static Matrix4f twistJoint(VmModel.Skin m, VmClip c, Matrix4f[] pose, int j, String name) {
+		String base = name.substring(0, name.indexOf("_TWIST"));
+		if (twistOff || !base.startsWith("arm_lower")) return null;
+		java.util.List<String> joints = java.util.Arrays.asList(m.joints);
+		String side = base.substring(base.length() - 1);
+		int jb = joints.indexOf(base), jc = joints.indexOf("hand_" + side), ju = joints.indexOf("arm_upper_" + side);
+		Integer nb = c.node(base), nc = c.node("hand_" + side), nu = c.node("arm_upper_" + side);
+		if (jb < 0 || jc < 0 || nb == null || nc == null) return null;
+		Matrix4f bindB = new Matrix4f(m.inverseBind[jb]).invert(), bindT = new Matrix4f(m.inverseBind[j]).invert(),
+				bindC = new Matrix4f(m.inverseBind[jc]).invert();
+		Matrix4f localT = new Matrix4f(bindB).invert().mul(bindT), localC = new Matrix4f(bindB).invert().mul(bindC);
+		org.joml.Vector3f axis = localC.getTranslation(new org.joml.Vector3f());
+		float len = axis.length();
+		if (len < 1e-5f) return null;
+		axis.div(len);
+		float f = Math.max(0, Math.min(1, localT.getTranslation(new org.joml.Vector3f()).dot(axis) / len)); // how far toward the wrist
+		// the hand's roll about the forearm, relative to the bind pose, in the forearm's frame
+		org.joml.Quaternionf hNow = new Matrix4f(pose[nb]).invert().mul(pose[nc]).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize(),
+				hBind = localC.getUnnormalizedRotation(new org.joml.Quaternionf()).normalize();
+		float angle = twistAngle(hNow.mul(hBind.invert()), axis) * f;
+		if (ju >= 0 && nu != null) { // the forearm's own roll against the upper arm, undone toward the elbow
+			Matrix4f bindU = new Matrix4f(m.inverseBind[ju]).invert();
+			org.joml.Quaternionf rBind = new Matrix4f(bindU).invert().mul(bindB).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize(),
+					rNow = new Matrix4f(pose[nu]).invert().mul(pose[nb]).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize();
+			angle -= twistAngle(rBind.invert().mul(rNow), axis) * (1 - f);
+		}
+		return new Matrix4f(pose[nb]).rotate(angle, axis).mul(localT);
+	}
+
+	/** The rotation angle of q about axis (the twist part of a swing-twist split), in -pi..pi. */
+	private static float twistAngle(org.joml.Quaternionf q, org.joml.Vector3f axis) {
+		float proj = q.x * axis.x + q.y * axis.y + q.z * axis.z, w = q.w;
+		if (w < 0) { // the shorter way round
+			proj = -proj;
+			w = -w;
+		}
+		return (float) (2 * Math.atan2(proj, w));
 	}
 
 	static Matrix4f toView() {
