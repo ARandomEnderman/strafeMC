@@ -53,6 +53,7 @@ public final class ConsoleActions {
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
+			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
 			case "strafemc_loadout_keep" -> {
 				if (!op) {

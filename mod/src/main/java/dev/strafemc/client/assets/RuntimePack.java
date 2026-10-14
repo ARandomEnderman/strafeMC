@@ -63,6 +63,8 @@ public final class RuntimePack {
 				} catch (Exception e) {
 					StrafeMc.LOG.warn("[strafemc] equipment icons: {}", e.toString());
 				}
+			safe(() -> svgH("panorama/images/icons/ui/undo.vsvg_c", "panorama/images/icons/ui/undo.svg", tex.resolve("gui/buymenu/undo.png"), 64),
+					tex.resolve("gui/buymenu/undo.png"), Placeholders.Icon.BULLET, 32);
 			// buy menu icons: CS2's white equipment icons, 64 px high
 			for (String w : dev.strafemc.client.BuyMenuScreen.ICONS)
 				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",

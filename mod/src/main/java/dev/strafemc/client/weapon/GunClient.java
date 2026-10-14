@@ -181,7 +181,7 @@ public final class GunClient {
 				if (!triggerWasDown) {
 					CsSounds.playOn("Default.ClipEmpty_Rifle", p, 1.0, false);
 					reload(false); // CS reloads when you pull the trigger on an empty magazine
-				}
+				} else if (w.fullAuto() && reload == null) reload(false); // and when a full-auto spray empties it, trigger still held
 			} else if (w.fullAuto() || !triggerWasDown) {
 				predictedClip = clip - 1;
 				lastShot = now;

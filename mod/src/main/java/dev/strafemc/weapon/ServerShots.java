@@ -24,6 +24,8 @@ public final class ServerShots {
 	/** Tolerances for client reports: server estimates lag (20 Hz positions) and network timing jitters. */
 	private static final double INACCURACY_SLACK = 0.8, PUNCH_SLACK_DEG = 0.35, PUNCH_SLACK_FRAC = 0.25;
 	private static final SecureRandom SEEDS = new SecureRandom();
+	/** Shots closer together than this count as one spray (shot-to-shot inaccuracy). */
+	private static final long SPRAY_GAP_NS = 500_000_000L;
 
 	private static final class St {
 		long seed = SEEDS.nextLong();
@@ -32,6 +34,8 @@ public final class ServerShots {
 		float recoilIndex;
 		double penalty, lastX = Double.NaN, lastZ, speed, prevSpeed, lastTickTime;
 		long lastShotNs;
+		/** The inaccuracy right after the last shot, and the target / recovery time the last tick saw (for shot-to-shot recovery). */
+		double penaltyAfterShot, target, recovery = 1;
 	}
 
 	/** Server's decision for one shot. */
@@ -79,6 +83,8 @@ public final class ServerShots {
 			Recoil rc = Recoil.of(w.cls());
 			double rec = rc != null ? rc.recoveryTime(ground, p.isCrouching(), s.recoilIndex) : p.isCrouching() ? w.recoveryTimeCrouch() : w.recoveryTimeStand();
 			s.penalty = InaccuracyModel.recover(s.penalty, target, rec, dt);
+			s.target = target;
+			s.recovery = rec;
 		}
 	}
 
@@ -98,6 +104,10 @@ public final class ServerShots {
 		s.punch.advance(now);
 		boolean corrected = f.shot() != s.shot;
 		int shot = s.shot++;
+		// during a spray the inaccuracy also runs on the shots' own times: what the last shot left, recovered for the time
+		// between the two shots (the tick-based value adds up two shots handled in one tick without the recovery between)
+		if (s.lastShotNs != 0 && shotAtNs > s.lastShotNs && shotAtNs - s.lastShotNs < SPRAY_GAP_NS)
+			s.penalty = InaccuracyModel.recover(s.penaltyAfterShot, s.target, s.recovery, (shotAtNs - s.lastShotNs) / 1e9);
 		// inaccuracy: the client's claim, unless it's better than the server's (lenient) estimate allows
 		double floor = s.penalty * INACCURACY_SLACK;
 		double inacc = Double.isFinite(f.inaccuracy()) ? Math.min(1, Math.max(0, f.inaccuracy())) : floor;
@@ -122,6 +132,7 @@ public final class ServerShots {
 			s.recoilIndex += 1;
 		}
 		s.lastShotNs = shotAtNs;
+		s.penaltyAfterShot = s.penalty;
 		return new Result(dir, shot, corrected, f.pitch(), f.yaw(), pp, py, inacc, s.seed);
 	}
 

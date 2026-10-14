@@ -251,7 +251,9 @@ public final class GunServer {
 		}
 		GunItem g = (GunItem) held.getItem();
 		State st = state(p);
-		long now = System.nanoTime(), tolerance = 5_000_000L; // 5 ms for network jitter
+		// a shot may arrive this much before the shot clock expects it: packets are handled on 50 ms ticks, so a spray's
+		// first shot can arrive a tick later than a later one (no time can be banked: the clock never runs ahead of shots)
+		long now = System.nanoTime(), tolerance = 60_000_000L;
 		int clip = g.clip(held), inf = infiniteAmmo();
 		if (now < st.deployUntil - tolerance || st.reloadLocked() || now < st.nextFire - tolerance || (clip <= 0 && inf != 1)) {
 			ServerShots.skip(p, f.shot()); // a rejected shot still uses up its number, so client and server stay in step

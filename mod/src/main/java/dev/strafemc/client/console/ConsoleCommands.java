@@ -262,6 +262,9 @@ public final class ConsoleCommands {
 		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
 		local("buy", "buy <item>: kevlar, assaultsuit, ak47, knife, hegrenade, flashbang, smokegrenade, molotov, incgrenade, decoy (who may buy: strafemc_buymenu).",
 				a -> { if (a.length > 0) buy(a[0]); else ConsoleLog.error("buy <item>"); });
+		local("sellbackall", "Refund everything you bought since you (re)spawned, while you may still buy (CS2's Refund All).",
+				a -> dev.strafemc.client.BuyMenuScreen.refundAll());
+		local("refund", "refund <item>: undo buying it (since you spawned, while you may still buy).", a -> refund(a.length > 0 ? a[0] : "all"));
 		local("strafemc_buymenu", "Who may buy, for the whole server (operators): 0 nobody, 1 creative players (default), 2 everyone. No value: next.",
 				a -> action("strafemc_buymenu", a.length > 0 ? a[0] : "", false));
 		local("strafemc_buytime", "Seconds after (re)spawning that buying stays open, like CS2's mp_buytime (CS2: 20); 0 = no limit (default). Operators.",
@@ -405,6 +408,11 @@ public final class ConsoleCommands {
 	/** Buys an item (the buy menu's buttons, the buy command). */
 	public static void buy(String item) {
 		action("buy", item, false);
+	}
+
+	/** Undoes a purchase made since spawning ("all": every one; CS2's refund / sellbackall). */
+	public static void refund(String item) {
+		action("refund", item, false);
 	}
 
 	/** Tells the server your side (for your smokes' colour). */

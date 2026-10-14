@@ -277,6 +277,8 @@ public final class Viewmodel {
 				for (VmModel m : new VmModel[] {l.arms, l.gun})
 					for (VmModel.Part part : m.parts)
 						if (part.texture != null) {
+							// the Zeus charge meter is drawn by its texture's alpha (digits and bars), not as an opaque block
+							if (part.texture.getFileName().toString().startsWith("taser_numerals")) part.alphaMode = "MASK";
 							downscaled(part.texture);
 							part.metal = metalPerVertex(part);
 							if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
@@ -490,6 +492,20 @@ public final class Viewmodel {
 	}
 
 	/**
+	 * The Zeus charge meter (its material's texture offset expression): recharging, the display window slides along the
+	 * red-to-yellow percentage strip by floor(charge x 99) / 128 of the 128 px texture; charged, it shows the cyan part at
+	 * 0.9. FLAGGED: which of the expression's two inputs means "charged" is our reading (the cyan part reads as ready).
+	 */
+	private static float zeusMeter() {
+		var p = net.minecraft.client.Minecraft.getInstance().player;
+		var l = net.minecraft.client.Minecraft.getInstance().level;
+		if (p == null || l == null) return 0.9f;
+		var s = p.getMainHandItem();
+		if (!s.has(dev.strafemc.weapon.WeaponItems.RECHARGE)) return 0.9f;
+		return (float) Math.floor(dev.strafemc.weapon.ZeusRecharge.progress(s, l.getGameTime()) * 99) / 128f;
+	}
+
+	/**
 	 * The weapon skeleton rides on the viewmodel's "wpn" bone: CS2 treats the weapon root bone as the wpn bone. Both carry
 	 * the same axis conversion in the export, so the mount is wpn * inverse(weapon root) (not wpn * weapon, which applies it twice).
 	 */
@@ -593,6 +609,7 @@ public final class Viewmodel {
 
 	private void emit(VmModel m, Matrix4f[][] skins, Matrix4f toView, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light, Matrix4f rigid) {
 		for (VmModel.Part p : m.parts) {
+			if (p.texture != null && p.texture.getFileName().toString().startsWith("taser_numerals")) p.uOffset = zeusMeter();
 			if (p.alphaMode.equals("BLEND")) continue; // sticker/decal overlays (sticker_gaps) need CS2's composite shader
 			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;
@@ -623,7 +640,7 @@ public final class Viewmodel {
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, VmModel.Part p, int i, int light) {
 		float[] uv = p.uv;
 		int col = p.metal == null ? -1 : shade(p.metal[i], sn[i * 3 + 1]);
-		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(col).setUv(uv[i * 2], uv[i * 2 + 1])
+		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(col).setUv(uv[i * 2] + p.uOffset, uv[i * 2 + 1])
 				.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, sn[i * 3], sn[i * 3 + 1], sn[i * 3 + 2]);
 	}
 

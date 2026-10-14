@@ -17,6 +17,8 @@ public final class VmModel {
 		public Path texture; // base color image next to the .glb
 		/** Per vertex: how metallic the texture is there (CS2's metalness mask at the vertex UV), or null if not metal. */
 		public float[] metal;
+		/** Texture U shift applied when drawing (the Zeus charge meter's display; 0 for everything else). */
+		public float uOffset;
 		/** glTF alphaMode: OPAQUE (CS2 packs paint/metal masks into alpha, so it must be ignored), MASK or BLEND (decals). */
 		public String alphaMode = "OPAQUE";
 		public int skin; // index into skins: the skin of this mesh's own node

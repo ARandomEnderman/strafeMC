@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,12 +25,57 @@ public final class BuyMenu {
 	/** When each player last (re)spawned, in server ticks. */
 	private static final Map<UUID, Long> SPAWNED = new ConcurrentHashMap<>();
 
+	/** One purchase (for refunds): the buy command's item, what was handed out, and the armor before it. */
+	private record Purchase(String what, List<ItemStack> given, CsArmor.Armor armorBefore) {}
+
+	/** Purchases since the player last (re)spawned, newest last. */
+	private static final Map<UUID, java.util.Deque<Purchase>> BOUGHT = new ConcurrentHashMap<>();
+
 	public static void spawned(ServerPlayer p) {
 		SPAWNED.put(p.getUUID(), p.level().getGameTime());
+		BOUGHT.remove(p.getUUID());
 	}
 
 	public static void forget(ServerPlayer p) {
 		SPAWNED.remove(p.getUUID());
+		BOUGHT.remove(p.getUUID());
+	}
+
+	/**
+	 * CS2's refund: while you may still buy, a purchase made since you (re)spawned is undone, the items it gave taken
+	 * back (those you still have) and the armor put back as it was. what: the buy command's item; "all": everything.
+	 */
+	public static void refund(ServerPlayer p, String what) {
+		String no = refusal(p);
+		if (no != null) {
+			p.sendSystemMessage(Component.literal(no));
+			return;
+		}
+		var list = BOUGHT.get(p.getUUID());
+		if (list == null || list.isEmpty()) return;
+		boolean all = what.equals("all");
+		for (var it = list.descendingIterator(); it.hasNext(); ) {
+			Purchase b = it.next();
+			if (!all && !b.what.equals(what)) continue;
+			it.remove();
+			for (ItemStack g : b.given) take(p, g.getItem(), g.getCount());
+			if (b.armorBefore != null) CsArmor.set(p, b.armorBefore.value(), b.armorBefore.helmet());
+			if (!all) break;
+		}
+		GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+	}
+
+	/** Takes up to count of an item back from the inventory. */
+	private static void take(ServerPlayer p, Item item, int count) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize() && count > 0; i++) {
+			ItemStack s = inv.getItem(i);
+			if (!s.is(item)) continue;
+			int n = Math.min(count, s.getCount());
+			s.shrink(n);
+			count -= n;
+		}
+		inv.setChanged();
 	}
 
 	public static String modeName(int mode) {
@@ -59,24 +105,31 @@ public final class BuyMenu {
 			p.sendSystemMessage(Component.literal(no));
 			return;
 		}
+		List<ItemStack> given = new java.util.ArrayList<>();
+		CsArmor.Armor before = CsArmor.of(p);
 		switch (what) {
 			case "kevlar" -> {
-				CsArmor.Armor a = CsArmor.of(p);
-				CsArmor.set(p, 100, a.helmet());
+				CsArmor.set(p, 100, before.helmet());
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+				bought(p, what, given, before);
 			}
 			case "assaultsuit" -> {
 				CsArmor.set(p, 100, true);
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+				bought(p, what, given, before);
 			}
-			case "knife" -> give(p, new ItemStack(WeaponItems.KNIVES.get(CsTeam.isT(p) ? "weapon_knife_t" : "weapon_knife")));
+			case "knife" -> {
+				give(p, new ItemStack(WeaponItems.KNIVES.get(CsTeam.isT(p) ? "weapon_knife_t" : "weapon_knife")), given);
+				bought(p, what, given, null);
+			}
 			default -> {
 				WeaponTable.Entry gun = WeaponTable.get("weapon_" + what);
 				if (gun != null && !gun.knife()) { // a gun with CS2's reserve: m_nPrimaryReserveAmmoMax magazines (shells for shotguns)
-					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())));
+					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);
 					WeaponStats st = WeaponStats.of(gun.cls());
 					int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
-					if (mags > 0) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags));
+					if (mags > 0) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags), given);
+					bought(p, what, given, null);
 					return;
 				}
 				Grenade g = null;
@@ -90,7 +143,8 @@ public final class BuyMenu {
 					p.sendSystemMessage(Component.literal("You cannot carry any more"));
 					return;
 				}
-				give(p, new ItemStack(WeaponItems.GRENADES.get(g)));
+				give(p, new ItemStack(WeaponItems.GRENADES.get(g)), given);
+				bought(p, what, given, null);
 			}
 		}
 	}
@@ -105,7 +159,12 @@ public final class BuyMenu {
 		return n;
 	}
 
-	private static void give(ServerPlayer p, ItemStack stack) {
+	private static void bought(ServerPlayer p, String what, List<ItemStack> given, CsArmor.Armor armorBefore) {
+		BOUGHT.computeIfAbsent(p.getUUID(), u -> new java.util.concurrent.ConcurrentLinkedDeque<>()).add(new Purchase(what, List.copyOf(given), armorBefore));
+	}
+
+	private static void give(ServerPlayer p, ItemStack stack, List<ItemStack> given) {
+		given.add(new ItemStack(stack.getItem(), stack.getCount()));
 		if (!p.getInventory().add(stack)) p.drop(stack, false);
 		GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 	}

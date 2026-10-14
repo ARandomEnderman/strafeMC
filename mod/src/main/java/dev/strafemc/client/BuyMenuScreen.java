@@ -58,11 +58,21 @@ public final class BuyMenuScreen extends Screen {
 		super(Component.literal("Buy menu"));
 	}
 
+	/** What this player bought since they (re)spawned (the server keeps the real list; this marks tiles and enables refunds). */
+	private static final java.util.List<String> BOUGHT = new java.util.ArrayList<>();
+
 	public static void watchSpawn(Minecraft mc) {
 		if (mc.player != lastPlayer) {
 			lastPlayer = mc.player;
 			spawnedAt = System.nanoTime();
+			BOUGHT.clear();
 		}
+	}
+
+	/** Refund all (CS2's sellbackall): everything bought since spawning. */
+	public static void refundAll() {
+		ConsoleCommands.refund("all");
+		BOUGHT.clear();
 	}
 
 	public static void open(Minecraft mc) {
@@ -172,6 +182,8 @@ public final class BuyMenuScreen extends Screen {
 					double slotKeyRight = rc[0] + 5 * u + font.width(String.valueOf(r + 1)) * 18 * u / 9 + 6 * u;
 					textFit(g, s.name, rc[2] - 10 * u, rc[1] + 4 * u + 7 * u, 14 * u, textCol, rc[2] - 10 * u - slotKeyRight);
 					icon(g, s.icon, (rc[0] + rc[2]) / 2.0, (rc[1] + rc[3]) / 2.0, (rc[3] - rc[1]) * 0.45, can ? 0xFFFFFFFF : 0xFF404040);
+					if (s.buy != null && BOUGHT.contains(s.buy)) // bought: CS2's undo mark (right-click refunds)
+						icon(g, "undo", rc[0] + 14 * u, rc[3] - 14 * u, 16 * u, 0xFFEABE54);
 					int price = price(s.priceOf);
 					text(g, s.buy == null ? "Not in strafeMC" : price > 0 ? "$" + price : "", rc[2] - 10 * u, rc[3] - 4 * u - 7 * u, 14 * u, textCol, 1);
 				}
@@ -187,7 +199,15 @@ public final class BuyMenuScreen extends Screen {
 			g.fill(left, fy, left + Math.max(1, (int) Math.round(3 * u)), fy + (int) Math.round(30 * u), ACCENT);
 			text(g, shown, (left + right) / 2.0, fy + 15 * u, 22 * u, 0xFFFFFFFF, 0);
 		}
-		text(g, "[1-5] Choose    [ESC] Back", (left + right) / 2.0, height - 24 * u, 20 * u, 0xFFA1A1A1, 0);
+		text(g, "[1-5] Choose    Right click: refund    [ESC] Back", (left + right) / 2.0, height - 24 * u, 20 * u, 0xFFA1A1A1, 0);
+		// CS2's Refund All, when there's something to refund
+		int[] ra = refundAllRect();
+		boolean overRa = mx >= ra[0] && mx < ra[2] && my >= ra[1] && my < ra[3];
+		if (!BOUGHT.isEmpty()) {
+			g.fill(ra[0], ra[1], ra[2], ra[3], overRa ? TILE_HOVER : TILE);
+			icon(g, "undo", ra[0] + 16 * u, (ra[1] + ra[3]) / 2.0, 18 * u, 0xFFFFFFFF);
+			text(g, "Refund All", (ra[0] + ra[2]) / 2.0 + 10 * u, (ra[1] + ra[3]) / 2.0, 20 * u, 0xFFFFFFFF, 0);
+		}
 		super.extractRenderState(g, mx, my, delta);
 	}
 
@@ -282,10 +302,41 @@ public final class BuyMenuScreen extends Screen {
 			return;
 		}
 		ConsoleCommands.buy(s.buy);
+		BOUGHT.add(s.buy);
+	}
+
+	/** Right-click on a bought tile: CS2's refund. */
+	private void refund(Slot s) {
+		if (s == null || s.buy == null || !BOUGHT.remove(s.buy)) return;
+		ConsoleCommands.refund(s.buy);
+	}
+
+	/** The Refund All button's box (GUI units), at the bottom right of the panel. */
+	private int[] refundAllRect() {
+		double[] f = frame();
+		double u = f[3];
+		int right = (int) Math.round(f[0] + f[2]), bottom = height - (int) Math.round(10 * u);
+		return new int[] {right - (int) Math.round(170 * u), bottom - (int) Math.round(34 * u), right, bottom};
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent e, boolean doubleClick) {
+		int[] ra = refundAllRect();
+		if (e.button() == 0 && !BOUGHT.isEmpty() && e.x() >= ra[0] && e.x() < ra[2] && e.y() >= ra[1] && e.y() < ra[3]) {
+			refundAll();
+			return true;
+		}
+		if (e.button() == 1) { // right-click a bought tile: refund it
+			Slot[][] cols = columns();
+			for (int c = 0; c < cols.length; c++)
+				for (int r = 0; r < 5; r++) {
+					int[] rc = slotRect(c, r);
+					if (e.x() >= rc[0] && e.x() < rc[2] && e.y() >= rc[1] && e.y() < rc[3] && cols[c][r] != null) {
+						refund(cols[c][r]);
+						return true;
+					}
+				}
+		}
 		if (e.button() == 0) {
 			Slot[][] cols = columns();
 			for (int c = 0; c < cols.length; c++)
