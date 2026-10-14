@@ -45,9 +45,11 @@ vec3 metalShade(vec3 albedo, vec3 r, float ndv, float rough) {
     vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * (1.0 - 0.8 * max(0.0, rough - 0.25));
     float band = exp(-pow((r.y - 0.35) * 5.0, 2.0)); // a bright line above eye level (windows, sky line): a blade facing
                                                       // the camera reflects behind it, dark, and sweeps streaks as it turns
-    float sharp = 0.05 + 0.55 * band + 0.18 * smoothstep(0.2, 1.0, r.y);
-    float env = mix(sharp, 0.07, smoothstep(0.25, 0.75, rough));
-    float sun = pow(max(dot(r, SUN), 0.0), mix(400.0, 30.0, rough)) * mix(6.0, 0.6, rough);
+    // how bright a reflection is falls steeply with roughness (a GGX highlight's peak ~ 1 / roughness^4): glossy smoke
+    // on an anodized finish glows while the rougher base between it goes dark, as in CS2's renders
+    float gloss = clamp(pow(0.24 / max(rough, 0.05), 2.0), 0.0, 1.5);
+    float env = 0.03 + (0.55 * band + 0.18 * smoothstep(0.2, 1.0, r.y)) * gloss;
+    float sun = pow(max(dot(r, SUN), 0.0), mix(400.0, 30.0, rough)) * 6.0 * gloss;
     return pow(fresnel * (env + sun), vec3(1.0 / 2.2));
 }
 
