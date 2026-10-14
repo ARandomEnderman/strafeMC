@@ -207,6 +207,11 @@ public final class WeaponSkinBaker {
 					double lum = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2];
 					c = GloveSkinBaker.scale(c, Math.min(1.0, lum / 0.6));
 				}
+				double sat = p.f("strafemc_saturation", 1); // 1 for every kit but Case Hardened (WeaponSkinCache)
+				if (sat != 1) {
+					double l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+					c = new double[] {Math.max(0, l + (c[0] - l) * sat), Math.max(0, l + (c[1] - l) * sat), Math.max(0, l + (c[2] - l) * sat)};
+				}
 				c = GloveSkinBaker.scale(c, bright);
 				c = GloveSkinBaker.scale(c, a);
 				double k = w * alpha;
