@@ -25,8 +25,8 @@ vec3 environment(vec3 r, float rough, float metal) {
     float up = smoothstep(-0.25, 0.65, r.y);
     // metal mirrors its surroundings in its own colour: a dimmer stand-in (CS2's map reflections are mostly dark), so
     // anodized finishes (Dopplers) read deep instead of pastel
-    vec3 ground = vec3(0.10, 0.09, 0.08) * mix(1.0, 0.5, metal), horizon = vec3(0.75, 0.78, 0.82) * mix(1.0, 0.55, metal),
-            sky = vec3(1.05, 1.08, 1.15) * mix(1.0, 0.8, metal);
+    vec3 ground = vec3(0.10, 0.09, 0.08) * mix(1.0, 0.5, metal), horizon = vec3(0.75, 0.78, 0.82) * mix(1.0, 0.45, metal),
+            sky = vec3(1.05, 1.08, 1.15) * mix(1.0, 0.55, metal);
     vec3 env = mix(mix(ground, horizon, smoothstep(-0.25, 0.1, r.y)), sky, up);
     // rough surfaces see a blurred, dimmer surrounding: towards its average
     env = mix(env, (ground + horizon + sky) * 0.28, smoothstep(0.3, 0.9, rough));
@@ -48,6 +48,18 @@ void main() {
     float ndv = max(dot(n, v), 0.0);
     vec3 r = reflect(-v, n);
 
+    // CS2's pearlescence (csgo_weapon): the finish's colour turned about the grey axis by scale x (1 - N.V) radians,
+    // as much as it's saturated (grey metal stays grey); the scale comes in the vertex alpha (255: none)
+    float pa = vertexColor.a * 255.0;
+    if (pa < 254.5) {
+        float angle = (pa - 128.0) / 100.0 * (1.0 - ndv);
+        float c = cos(angle);
+        vec3 k = vec3(0.57735);
+        vec3 turned = albedo * c + cross(k, albedo) * sin(angle) + k * dot(k, albedo) * (1.0 - c);
+        float hi = max(albedo.r, max(albedo.g, albedo.b));
+        float sat = hi > 0.0 ? (hi - min(albedo.r, min(albedo.g, albedo.b))) / hi : 0.0;
+        albedo = mix(vec3(dot(albedo, vec3(0.2125, 0.7154, 0.0721))), turned, pow(sat, 0.125));
+    }
     vec3 f0 = mix(vec3(0.04), albedo, metal);
     // non-metals (paint, fabric, rubber) only get a faint, rough sheen at grazing angles; metal the full Fresnel
     vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * mix(0.12, 1.0, metal) * (1.0 - 0.8 * max(0.0, rough - 0.25));

@@ -287,8 +287,12 @@ public final class Viewmodel {
 					finishes.put(key, l.gun);
 					return;
 				}
+				float pearl = (float) WeaponSkinCache.paintParams(kit).f("g_flPearlescentScale", 0);
 				for (VmModel.Part part : m.parts) {
-					if (paintable.contains(part)) part.texture = tex;
+					if (paintable.contains(part)) {
+						part.texture = tex;
+						part.pearl = pearl;
+					}
 					if (part.texture == null) continue;
 					// the Zeus charge meter is drawn by its texture's alpha (digits and bars), as on the plain weapon
 					if (part.texture.getFileName().toString().startsWith("taser_numerals")) part.alphaMode = "MASK";
@@ -814,9 +818,16 @@ public final class Viewmodel {
 
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, VmModel.Part p, int i, int light) {
 		float[] uv = p.uv;
-		int col = p.metal == null || !p.alphaMode.equals("MASK") ? -1 : shade(p.metal[i], sn[i * 3 + 1]); // lit parts: the shader shines
+		int col = p.metal == null || !p.alphaMode.equals("MASK") ? pearlColor(p.pearl) : shade(p.metal[i], sn[i * 3 + 1]); // lit parts: the shader shines
 		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(col).setUv(uv[i * 2] + p.uOffset, uv[i * 2 + 1])
 				.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, sn[i * 3], sn[i * 3 + 1], sn[i * 3 + 2]);
+	}
+
+	/** White, with a finish's pearlescence in alpha for the viewmodel shader: 255 none, else 128 + 100 x the scale. */
+	static int pearlColor(float pearl) {
+		if (pearl == 0) return -1;
+		int a = Math.max(1, Math.min(254, Math.round(128 + pearl * 100)));
+		return a << 24 | 0xFFFFFF;
 	}
 
 	/** Uploads a cached texture once (render thread). */
