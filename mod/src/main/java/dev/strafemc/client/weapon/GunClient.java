@@ -100,17 +100,17 @@ public final class GunClient {
 		t.start();
 	}
 
-	/** Odds of a knife's rare draw2_ clip over its everyday draw_ (CS2 sets deploy_variation in code; the odds are a guess - FLAGGED). */
+	/** Odds of a knife's rare draw_ clip over its everyday draw2_ (CS2 sets deploy_variation in code; the odds are a guess - FLAGGED). */
 	private static final double RARE_DRAW_CHANCE = 0.1;
 
 	/**
-	 * The draw clip: knives with two deploys pick by deploy_variation in their CS2 graph (0: draw_, the everyday one;
-	 * 1: draw2_, the rare secret pullout - confirmed in game by the user).
+	 * The draw clip: knives with two deploys pick by deploy_variation in their CS2 graph: draw2_ is the everyday one,
+	 * draw_ the rare secret pullout (the user, in game, 2026-10-14: the other way round was flipped).
 	 */
 	private String drawClip(GunItem g) {
 		String draw2 = GunServer.clipPath(g.weaponClass, "draw2");
 		if (draw2 == null || !draw2.contains("draw2")) return "draw";
-		return rng.nextDouble() < RARE_DRAW_CHANCE ? "draw2" : "draw";
+		return rng.nextDouble() < RARE_DRAW_CHANCE ? "draw" : "draw2";
 	}
 
 	/** Draws the held weapon again (switchhands: CS2 redeploys it), with its deploy delay; the server redeploys too. */
