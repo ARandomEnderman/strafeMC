@@ -47,7 +47,7 @@ public final class Setup {
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
-		m.put("wraps", 1); // skin wrap pictures
+		m.put("wraps", 3); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template)
 		return m;
 	}
 
@@ -247,7 +247,7 @@ public final class Setup {
 
 	/**
 	 * Skin wrap pictures: every weapon skin's material in one run, the pattern textures the wraps use, then one icon per
-	 * wrap (a piece of its texture, WrapIcons) into cache/wrap_icons/. The runtime pack makes item models from them.
+	 * wrap (a piece of its texture, WrapIcons) into cache/wrap_swatches/. The runtime pack makes the pictures and models.
 	 */
 	private void wraps(Map<String, Long> pak, double base, double span) throws IOException {
 		progress(base, "Skin wraps: materials");
@@ -326,7 +326,7 @@ public final class Setup {
 				if (Files.exists(png)) img = javax.imageio.ImageIO.read(png.toFile());
 			}
 			try {
-				WrapIcons.write(WrapIcons.make(par, img, w.knife()), cache.resolve("wrap_icons/" + WrapIcons.fileName(w.id()) + ".png"));
+				WrapIcons.write(WrapIcons.swatch(par, img), cache.resolve("wrap_swatches/" + WrapIcons.fileName(w.id()) + ".png"));
 			} catch (Exception e) { // one odd texture shouldn't stop the setup: that wrap keeps the plain picture
 				System.err.println("[strafemc] wrap picture " + w.id() + ": " + e);
 			}

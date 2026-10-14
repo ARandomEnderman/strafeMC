@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 
-/** Opens the loadout (key U by default, or the inventory's Loadout button): the server opens the menu. */
+/** Opens the loadout (key U by default): the server opens the menu. */
 public final class LoadoutKey {
 	private static KeyMapping KEY;
 

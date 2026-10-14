@@ -19,7 +19,7 @@
 		"MinecraftAttackMixin",
 		"PackRepositoryMixin",
 		"PlayerFovMixin",
-		"ItemInHandRendererMixin", "GameRendererHandViewMixin", "GameRendererInvoker", "CameraRecoilMixin"
+		"ItemInHandRendererMixin", "GameRendererHandViewMixin", "GameRendererInvoker", "CameraRecoilMixin", "GuiGraphicsExtractorAccessor"
 	],
 	"injectors": { "defaultRequire": 1 }
 }

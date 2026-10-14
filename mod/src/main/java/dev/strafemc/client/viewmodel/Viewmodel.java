@@ -418,6 +418,59 @@ public final class Viewmodel {
 	}
 
 	/**
+	 * The worn gloves for the loadout preview: posed like in first person (a loaded weapon's idle pose, the weapon left
+	 * out), centred and scaled to fit width x height (GUI pixels), turned by yaw degrees. False until something is loaded.
+	 */
+	public boolean previewArms(PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers, float width, float height, float yaw) {
+		Loaded l = loaded != null ? loaded : cache.values().stream().findFirst().orElse(null);
+		if (broken || l == null) return false;
+		VmModel arms = arms(l);
+		if (arms == l.arms && !dev.strafemc.client.GloveChoice.model().equals(ARMS) && !gloves.containsKey(dev.strafemc.client.GloveChoice.model() + "#"
+				+ dev.strafemc.client.GloveChoice.skin())) return false; // the worn gloves are still loading
+		VmClip c = l.clips.get("idle");
+		if (c == null) return false;
+		Matrix4f[] pose = c.pose(0);
+		Matrix4f[][] skin = skins(arms, c, pose, null);
+		Matrix4f toView = toView();
+		java.util.List<float[][]> skinned = new java.util.ArrayList<>();
+		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
+		for (VmModel.Part p : arms.parts) {
+			Matrix4f[] s = p.skin >= 0 && p.skin < skin.length ? skin[p.skin] : new Matrix4f[0];
+			float[][] sk = skinVertices(p, s, toView);
+			skinned.add(sk);
+			for (int i = 0; i + 2 < sk[0].length; i += 3) {
+				minX = Math.min(minX, sk[0][i]); maxX = Math.max(maxX, sk[0][i]);
+				minY = Math.min(minY, sk[0][i + 1]); maxY = Math.max(maxY, sk[0][i + 1]);
+				minZ = Math.min(minZ, sk[0][i + 2]); maxZ = Math.max(maxZ, sk[0][i + 2]);
+			}
+		}
+		if (minX > maxX) return false;
+		float k = 0.85f * Math.min(width / Math.max(1e-3f, maxX - minX), height / Math.max(1e-3f, maxY - minY));
+		ps.pushPose();
+		ps.scale(k, -k, k); // camera space (y up) into the picture (y down)
+		ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yaw));
+		ps.translate(-(minX + maxX) / 2, -(minY + maxY) / 2, -(minZ + maxZ) / 2);
+		PoseStack.Pose last = ps.last();
+		for (int n = 0; n < arms.parts.size(); n++) {
+			VmModel.Part p = arms.parts.get(n);
+			if (p.alphaMode.equals("BLEND")) continue;
+			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
+			if (tex == null) continue;
+			var vc = buffers.getBuffer(RenderTypes.entityCutout(tex));
+			float[] sp = skinned.get(n)[0], sn = skinned.get(n)[1];
+			int[] idx = p.idx;
+			for (int i = 0; i + 2 < idx.length; i += 3) {
+				vertex(vc, last, sp, sn, p, idx[i], 0xF000F0);
+				vertex(vc, last, sp, sn, p, idx[i + 1], 0xF000F0);
+				vertex(vc, last, sp, sn, p, idx[i + 2], 0xF000F0);
+				vertex(vc, last, sp, sn, p, idx[i + 2], 0xF000F0);
+			}
+		}
+		ps.popPose();
+		return true;
+	}
+
+	/**
 	 * The weapon skeleton rides on the viewmodel's "wpn" bone: CS2 treats the weapon root bone as the wpn bone. Both carry
 	 * the same axis conversion in the export, so the mount is wpn * inverse(weapon root) (not wpn * weapon, which applies it twice).
 	 */

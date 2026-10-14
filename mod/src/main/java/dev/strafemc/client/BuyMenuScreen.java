@@ -41,6 +41,8 @@ public final class BuyMenuScreen extends Screen {
 	private static final String[] TITLES = {"GEAR", "PISTOLS", "MID-TIER", "RIFLES", "GRENADES"};
 	private static final double[] WIDTHS = {0.18, 0.18, 0.22, 0.24, 0.18};
 	private static final Map<String, int[]> SIZES = new ConcurrentHashMap<>();
+	/** The loadout screen's colours (LoadoutScreen), for one look across strafeMC's menus. */
+	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_HOVER = 0xE5464C55, TILE_EMPTY = 0x40202020, ACCENT = 0xFFEABE54;
 
 	/** When this client's player last (re)spawned (a new LocalPlayer), for the buy time shown. */
 	private static Object lastPlayer;
@@ -123,19 +125,19 @@ public final class BuyMenuScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		g.fill(0, 0, width, height, 0xF2000000); // CS2's buy menu background rgba(0,0,0,0.95)
+		g.fill(0, 0, width, height, BG);
 		double[] f = frame();
 		double u = f[3];
 		int left = (int) Math.round(f[0]), right = (int) Math.round(f[0] + f[2]);
 		// info bar: buy time (CS2's "Buy Time Remaining")
 		int infoTop = (int) Math.round(180 * u), infoBottom = (int) Math.round(180 * u + 34 * u);
-		g.fill(left, infoTop, right, infoBottom, 0xBF000000);
+		g.fill(left, infoTop, right, infoBottom, PANEL);
 		int left0 = timeLeft();
 		String timer = left0 == Integer.MAX_VALUE ? "No buy time limit" : String.format("Buy Time Remaining  %d:%02d", left0 / 60, left0 % 60);
 		text(g, timer, (left + right) / 2.0, (infoTop + infoBottom) / 2.0, 22 * u, 0xFFFFFFFF, 0);
 		// panel
 		int panelTop = (int) Math.round(f[1]), panelBottom = slotRect(0, 4)[3] + (int) Math.round(15 * u);
-		g.fill(left, panelTop, right, panelBottom, 0xBF000000);
+		g.fill(left, panelTop, right, panelBottom, PANEL);
 		String no = refusal();
 		Slot[][] cols = columns();
 		double x = f[0];
@@ -144,17 +146,21 @@ public final class BuyMenuScreen extends Screen {
 			double hy = f[1] + 15 * u + 14 * u;
 			int dim = selected >= 0 && selected != c ? 0xB3000000 : 0;
 			text(g, String.valueOf(c + 1), x + 15 * u, hy, 18 * u, 0x66FFFFFF, -1);
-			text(g, TITLES[c], x + cw / 2, hy, 28 * u, 0xFFFFFFFF, 0);
+			// the title centred, moved right if it would run into its key number
+			double keyRight = x + 15 * u + font.width(String.valueOf(c + 1)) * 18 * u / 9 + 6 * u, titleW = font.width(TITLES[c]) * 28 * u / 9;
+			text(g, TITLES[c], Math.max(x + cw / 2, keyRight + titleW / 2), hy, 28 * u, ACCENT, 0);
 			for (int r = 0; r < 5; r++) {
 				int[] rc = slotRect(c, r);
 				Slot s = cols[c][r];
 				boolean hover = s != null && mx >= rc[0] && mx < rc[2] && my >= rc[1] && my < rc[3];
-				g.fill(rc[0], rc[1], rc[2], rc[3], s == null ? 0x40202020 : hover ? 0xE5606060 : 0xE52B2B2B);
+				g.fill(rc[0], rc[1], rc[2], rc[3], s == null ? TILE_EMPTY : hover ? TILE_HOVER : TILE);
 				if (s != null) {
-					boolean can = no == null && s.buy != null;
+					boolean can = no == null && s.buy != null && canCarry(s.buy);
 					int textCol = can ? 0xFFFFFFFF : 0xFF808080;
 					text(g, String.valueOf(r + 1), rc[0] + 5 * u, (rc[1] + rc[3]) / 2.0, 18 * u, 0x66FFFFFF, -1);
-					text(g, s.name, rc[2] - 10 * u, rc[1] + 4 * u + 7 * u, 14 * u, textCol, 1);
+					// the name right-aligned, shrunk to stay clear of the key number on the left
+					double slotKeyRight = rc[0] + 5 * u + font.width(String.valueOf(r + 1)) * 18 * u / 9 + 6 * u;
+					textFit(g, s.name, rc[2] - 10 * u, rc[1] + 4 * u + 7 * u, 14 * u, textCol, rc[2] - 10 * u - slotKeyRight);
 					icon(g, s.icon, (rc[0] + rc[2]) / 2.0, (rc[1] + rc[3]) / 2.0, (rc[3] - rc[1]) * 0.45, can ? 0xFFFFFFFF : 0xFF404040);
 					int price = price(s.priceOf);
 					text(g, s.buy == null ? "Not in strafeMC" : price > 0 ? "$" + price : "", rc[2] - 10 * u, rc[3] - 4 * u - 7 * u, 14 * u, textCol, 1);
@@ -167,7 +173,8 @@ public final class BuyMenuScreen extends Screen {
 		String shown = failure != null && System.nanoTime() - failureAt < 3_000_000_000L ? failure : no;
 		if (shown != null) {
 			int fy = panelBottom + (int) Math.round(10 * u);
-			g.fill(left, fy, right, fy + (int) Math.round(30 * u), 0xDEA3940E);
+			g.fill(left, fy, right, fy + (int) Math.round(30 * u), 0xE5463A12);
+			g.fill(left, fy, left + Math.max(1, (int) Math.round(3 * u)), fy + (int) Math.round(30 * u), ACCENT);
 			text(g, shown, (left + right) / 2.0, fy + 15 * u, 22 * u, 0xFFFFFFFF, 0);
 		}
 		text(g, "[1-5] Choose    [ESC] Back", (left + right) / 2.0, height - 24 * u, 20 * u, 0xFFA1A1A1, 0);
@@ -177,6 +184,45 @@ public final class BuyMenuScreen extends Screen {
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {
 		// drawn in extractRenderState (CS2's own background, no Minecraft blur)
+	}
+
+	/**
+	 * CS2 greys out what you can't take any more of, as it changes: Kevlar at 100 armor, Kevlar & Helmet at 100 armor
+	 * with a helmet, a grenade at its limit (ammo_grenade_limit_default 1, _flashbang 2) or at 4 grenades in all.
+	 */
+	private static boolean canCarry(String buy) {
+		var p = Minecraft.getInstance().player;
+		if (p == null) return true;
+		if (buy.equals("kevlar")) return StrafeMcClient.armor < 100;
+		if (buy.equals("assaultsuit")) return StrafeMcClient.armor < 100 || !StrafeMcClient.helmet;
+		dev.strafemc.weapon.Grenade g = null;
+		for (var x : dev.strafemc.weapon.Grenade.values()) if (x.cls.equals("weapon_" + buy)) g = x;
+		if (g == null) return true;
+		int have = 0, total = 0;
+		for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+			var st = p.getInventory().getItem(i);
+			if (st.getItem() instanceof dev.strafemc.weapon.GrenadeItem gi) {
+				total += st.getCount();
+				if (gi.type == g) have += st.getCount();
+			}
+		}
+		int limit = g == dev.strafemc.weapon.Grenade.FLASHBANG ? cvarInt("ammo_grenade_limit_flashbang", 2) : cvarInt("ammo_grenade_limit_default", 1);
+		return have < limit && total < cvarInt("ammo_grenade_limit_total", 4);
+	}
+
+	private static int cvarInt(String name, int fallback) {
+		try {
+			String v = ClientGameplay.cvar(name);
+			return v == null ? fallback : (int) Double.parseDouble(v);
+		} catch (NumberFormatException e) {
+			return fallback;
+		}
+	}
+
+	/** Text like text(), scaled down if it's wider than maxWidth (GUI units). */
+	private void textFit(GuiGraphicsExtractor g, String s, double x, double y, double size, int color, double maxWidth) {
+		double w = font.width(s) * size / 9;
+		text(g, s, x, y, w > maxWidth && maxWidth > 0 ? size * maxWidth / w : size, color, 1);
 	}
 
 	private static int price(String cls) {

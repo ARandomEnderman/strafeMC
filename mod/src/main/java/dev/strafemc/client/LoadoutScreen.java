@@ -12,10 +12,10 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The loadout (key U, or the button in the inventory): a full-screen page with a tile per loadout slot (gloves, agent,
- * knife, each gun), your inventory below, and a preview of the slot under the mouse on the right. Drag gloves and skin
- * wraps into their slots; shift-click moves them in and out. FLAGGED: the preview shows the item, not yet the skinned
- * 3D weapon (comes with the weapon skin renderer).
+ * The loadout (key U): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
+ * below, and a preview of the slot under the mouse on the right: the worn gloves in 3D, posed like in first person.
+ * Drag gloves and skin wraps into their slots; shift-click moves them in and out. FLAGGED: wrap slots preview the item,
+ * not yet the skinned 3D weapon (comes with the weapon skin renderer).
  */
 public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_EMPTY = 0x80202020, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
@@ -73,12 +73,15 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		int top = topPos;
 		g.fill(px, top, px + pw, top + imageHeight, PANEL);
 		g.text(font, d.label().toUpperCase(), px + 8, top + 8, ACCENT, false);
-		var pose = g.pose();
-		pose.pushMatrix();
-		pose.translate(px + pw / 2f - 32, top + 34);
-		pose.scale(4, 4);
-		if (!s.isEmpty()) g.item(s, 0, 0);
-		pose.popMatrix();
+		if (d.kind() == Loadout.Kind.GLOVES) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104); // the worn gloves in 3D
+		else {
+			var pose = g.pose();
+			pose.pushMatrix();
+			pose.translate(px + pw / 2f - 32, top + 34);
+			pose.scale(4, 4);
+			if (!s.isEmpty()) g.item(s, 0, 0);
+			pose.popMatrix();
+		}
 		int y = top + 110;
 		if (s.isEmpty()) {
 			g.text(font, d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves" : d.kind() == Loadout.Kind.AGENT ? "Agents aren't in strafeMC yet"
@@ -104,7 +107,12 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		if (hoveredSlot != null && hoveredSlot.index < Loadout.defs().size()) previewSlot = hoveredSlot.index;
+		// the whole tile (the box with the slot and its text) picks what the preview shows
+		var defs = Loadout.defs();
+		for (int i = 0; i < defs.size(); i++) {
+			int x = leftPos + Loadout.Menu.TILES_X + (i % 2) * (Loadout.Menu.TILE_W + 8), y = topPos + Loadout.Menu.TILES_Y + (i / 2) * (Loadout.Menu.TILE_H + 4);
+			if (mx >= x && mx < x + Loadout.Menu.TILE_W && my >= y && my < y + Loadout.Menu.TILE_H) previewSlot = i;
+		}
 		super.extractRenderState(g, mx, my, delta);
 		extractTooltip(g, mx, my);
 	}

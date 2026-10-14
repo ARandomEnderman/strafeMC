@@ -196,29 +196,37 @@ public final class RuntimePack {
 	}
 
 	/**
-	 * Skin wraps: the plain gun / knife wrap pictures (drawn, no CS2 files needed), every wrap's own picture (made by the
-	 * setup's wraps step from the skin's texture) and the item models that pick them by the stack's custom model data.
+	 * Skin wraps: the plain gun / knife wrap pictures, every wrap's own picture (the setup's skin piece on the wrap
+	 * template: Minecraft's old banner pattern picture from an older Minecraft on this PC, else our own drawing) and the
+	 * item models that pick them by the stack's custom model data. Pictures are redone when the template changes.
 	 */
 	private static void wraps(Path tex) throws Exception {
-		Path models = DIR.resolve("assets/strafemc/models/item/wrap"), items = DIR.resolve("assets/strafemc/items"), icons = StrafeConfig.cacheDir().resolve("wrap_icons");
+		Path models = DIR.resolve("assets/strafemc/models/item/wrap"), items = DIR.resolve("assets/strafemc/items"),
+				swatches = StrafeConfig.cacheDir().resolve("wrap_swatches"), cachedTemplate = StrafeConfig.cacheDir().resolve("wrap_template.png");
 		Files.createDirectories(models);
 		Files.createDirectories(items);
+		BufferedImage template = Files.exists(cachedTemplate) ? ImageIO.read(cachedTemplate.toFile()) : OldBannerPattern.find();
+		if (template != null && !Files.exists(cachedTemplate)) write(template, cachedTemplate); // local copy: found once, no rescans
+		String kind = template != null ? "banner" : "drawn";
+		Path marker = tex.resolve("item/wrap/template.txt");
+		boolean redo = !Files.exists(marker) || !Files.readString(marker).equals(kind);
 		for (boolean knife : new boolean[] {false, true}) {
 			String base = knife ? "knife_wrap" : "skin_wrap";
-			Path png = tex.resolve("item/" + base + ".png");
-			if (!Files.exists(png)) write(dev.strafemc.setup.WrapIcons.base(knife), png);
+			write(template != null ? dev.strafemc.setup.WrapIcons.make(new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB) {
+				{
+					for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) setRGB(x, y, 0xFFE8E8E8); // blank paper
+				}
+			}, template, knife) : dev.strafemc.setup.WrapIcons.base(knife), tex.resolve("item/" + base + ".png"));
 			Files.writeString(DIR.resolve("assets/strafemc/models/item/" + base + ".json"),
 					"{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/" + base + "\"}}");
 			StringBuilder cases = new StringBuilder();
 			for (var w : dev.strafemc.weapon.SkinWraps.all()) {
 				if (w.knife() != knife) continue;
 				String f = dev.strafemc.setup.WrapIcons.fileName(w.id());
-				Path src = icons.resolve(f + ".png"), dst = tex.resolve("item/wrap/" + f + ".png");
+				Path src = swatches.resolve(f + ".png"), dst = tex.resolve("item/wrap/" + f + ".png");
 				if (!Files.exists(src)) continue; // not converted yet: the plain picture
-				if (!Files.exists(dst) || Files.getLastModifiedTime(src).compareTo(Files.getLastModifiedTime(dst)) > 0) {
-					Files.createDirectories(dst.getParent());
-					Files.copy(src, dst, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-				}
+				if (redo || !Files.exists(dst) || Files.getLastModifiedTime(src).compareTo(Files.getLastModifiedTime(dst)) > 0)
+					write(dev.strafemc.setup.WrapIcons.make(ImageIO.read(src.toFile()), template, knife), dst);
 				Files.writeString(models.resolve(f + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/wrap/" + f + "\"}}");
 				if (cases.length() > 0) cases.append(',');
 				cases.append("{\"when\":\"").append(w.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/wrap/").append(f).append("\"}}");
@@ -226,6 +234,8 @@ public final class RuntimePack {
 			Files.writeString(items.resolve(base + ".json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
 					+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/" + base + "\"}}}");
 		}
+		Files.createDirectories(marker.getParent());
+		Files.writeString(marker, kind);
 	}
 
 	private static void write(BufferedImage img, Path out) throws Exception {
