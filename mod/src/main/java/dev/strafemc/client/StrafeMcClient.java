@@ -80,6 +80,9 @@ public class StrafeMcClient implements ClientModInitializer {
 		});
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);
 		LoadoutKey.register();
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Refundable.TYPE,
+				(msg, ctx) -> BuyMenuScreen.refundable(msg.items()));
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> BuyMenuScreen.refundable(java.util.List.of()));
 		dev.strafemc.weapon.ZeusRecharge.clientGameTime = () -> { // the Zeus charging bar
 			var l = net.minecraft.client.Minecraft.getInstance().level;
 			return l == null ? 0 : l.getGameTime();

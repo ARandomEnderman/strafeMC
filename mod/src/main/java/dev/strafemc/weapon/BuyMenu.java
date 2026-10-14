@@ -34,6 +34,16 @@ public final class BuyMenu {
 	public static void spawned(ServerPlayer p) {
 		SPAWNED.put(p.getUUID(), p.level().getGameTime());
 		BOUGHT.remove(p.getUUID());
+		sendRefundable(p);
+	}
+
+	/** Tells the player what they can still refund (their buy menu shows exactly this). */
+	private static void sendRefundable(ServerPlayer p) {
+		List<String> items = new java.util.ArrayList<>();
+		var list = BOUGHT.get(p.getUUID());
+		if (list != null) for (Purchase b : list) items.add(b.what);
+		if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.Refundable.TYPE))
+			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.Refundable(items));
 	}
 
 	public static void forget(ServerPlayer p) {
@@ -63,6 +73,7 @@ public final class BuyMenu {
 			if (!all) break;
 		}
 		GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+		sendRefundable(p);
 	}
 
 	/** Takes up to count of an item back from the inventory. */
@@ -161,6 +172,7 @@ public final class BuyMenu {
 
 	private static void bought(ServerPlayer p, String what, List<ItemStack> given, CsArmor.Armor armorBefore) {
 		BOUGHT.computeIfAbsent(p.getUUID(), u -> new java.util.concurrent.ConcurrentLinkedDeque<>()).add(new Purchase(what, List.copyOf(given), armorBefore));
+		sendRefundable(p);
 	}
 
 	private static void give(ServerPlayer p, ItemStack stack, List<ItemStack> given) {

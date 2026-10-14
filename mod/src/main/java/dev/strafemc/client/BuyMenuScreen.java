@@ -59,20 +59,23 @@ public final class BuyMenuScreen extends Screen {
 	}
 
 	/** What this player bought since they (re)spawned (the server keeps the real list; this marks tiles and enables refunds). */
-	private static final java.util.List<String> BOUGHT = new java.util.ArrayList<>();
+	private static volatile java.util.List<String> BOUGHT = java.util.List.of();
+
+	/** The server's list of what can still be refunded (sent after every purchase, refund and respawn). */
+	public static void refundable(java.util.List<String> items) {
+		BOUGHT = java.util.List.copyOf(items);
+	}
 
 	public static void watchSpawn(Minecraft mc) {
 		if (mc.player != lastPlayer) {
 			lastPlayer = mc.player;
 			spawnedAt = System.nanoTime();
-			BOUGHT.clear();
 		}
 	}
 
 	/** Refund all (CS2's sellbackall): everything bought since spawning. */
 	public static void refundAll() {
 		ConsoleCommands.refund("all");
-		BOUGHT.clear();
 	}
 
 	public static void open(Minecraft mc) {
@@ -182,8 +185,12 @@ public final class BuyMenuScreen extends Screen {
 					double slotKeyRight = rc[0] + 5 * u + font.width(String.valueOf(r + 1)) * 18 * u / 9 + 6 * u;
 					textFit(g, s.name, rc[2] - 10 * u, rc[1] + 4 * u + 7 * u, 14 * u, textCol, rc[2] - 10 * u - slotKeyRight);
 					icon(g, s.icon, (rc[0] + rc[2]) / 2.0, (rc[1] + rc[3]) / 2.0, (rc[3] - rc[1]) * 0.45, can ? 0xFFFFFFFF : 0xFF404040);
-					if (s.buy != null && BOUGHT.contains(s.buy)) // bought: CS2's undo mark (right-click refunds)
-						icon(g, "undo", rc[0] + 14 * u, rc[3] - 14 * u, 16 * u, 0xFFEABE54);
+					if (no == null && s.buy != null && BOUGHT.contains(s.buy)) { // bought: CS2's undo button (click it, or right-click the tile)
+						int[] ur = undoRect(rc);
+						boolean overUndo = mx >= ur[0] && mx < ur[2] && my >= ur[1] && my < ur[3];
+						if (overUndo) g.fill(ur[0], ur[1], ur[2], ur[3], 0x60FFFFFF);
+						icon(g, "undo", (ur[0] + ur[2]) / 2.0, (ur[1] + ur[3]) / 2.0, 16 * u, 0xFFFFFFFF);
+					}
 					int price = price(s.priceOf);
 					text(g, s.buy == null ? "Not in strafeMC" : price > 0 ? "$" + price : "", rc[2] - 10 * u, rc[3] - 4 * u - 7 * u, 14 * u, textCol, 1);
 				}
@@ -203,7 +210,7 @@ public final class BuyMenuScreen extends Screen {
 		// CS2's Refund All, when there's something to refund
 		int[] ra = refundAllRect();
 		boolean overRa = mx >= ra[0] && mx < ra[2] && my >= ra[1] && my < ra[3];
-		if (!BOUGHT.isEmpty()) {
+		if (!BOUGHT.isEmpty() && no == null) {
 			g.fill(ra[0], ra[1], ra[2], ra[3], overRa ? TILE_HOVER : TILE);
 			icon(g, "undo", ra[0] + 16 * u, (ra[1] + ra[3]) / 2.0, 18 * u, 0xFFFFFFFF);
 			text(g, "Refund All", (ra[0] + ra[2]) / 2.0 + 10 * u, (ra[1] + ra[3]) / 2.0, 20 * u, 0xFFFFFFFF, 0);
@@ -302,12 +309,17 @@ public final class BuyMenuScreen extends Screen {
 			return;
 		}
 		ConsoleCommands.buy(s.buy);
-		BOUGHT.add(s.buy);
+	}
+
+	/** The undo button on a bought tile: its bottom left corner. */
+	private int[] undoRect(int[] rc) {
+		double u = px();
+		return new int[] {rc[0] + (int) Math.round(4 * u), rc[3] - (int) Math.round(26 * u), rc[0] + (int) Math.round(26 * u), rc[3] - (int) Math.round(4 * u)};
 	}
 
 	/** Right-click on a bought tile: CS2's refund. */
 	private void refund(Slot s) {
-		if (s == null || s.buy == null || !BOUGHT.remove(s.buy)) return;
+		if (s == null || s.buy == null || !BOUGHT.contains(s.buy)) return;
 		ConsoleCommands.refund(s.buy);
 	}
 
@@ -333,6 +345,19 @@ public final class BuyMenuScreen extends Screen {
 					int[] rc = slotRect(c, r);
 					if (e.x() >= rc[0] && e.x() < rc[2] && e.y() >= rc[1] && e.y() < rc[3] && cols[c][r] != null) {
 						refund(cols[c][r]);
+						return true;
+					}
+				}
+		}
+		if (e.button() == 0) { // the undo button on a bought tile refunds it
+			Slot[][] cols = columns();
+			for (int c = 0; c < cols.length; c++)
+				for (int r = 0; r < 5; r++) {
+					Slot s = cols[c][r];
+					if (s == null || s.buy == null || !BOUGHT.contains(s.buy)) continue;
+					int[] ur = undoRect(slotRect(c, r));
+					if (e.x() >= ur[0] && e.x() < ur[2] && e.y() >= ur[1] && e.y() < ur[3]) {
+						refund(s);
 						return true;
 					}
 				}

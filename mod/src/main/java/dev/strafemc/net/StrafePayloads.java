@@ -140,6 +140,18 @@ public final class StrafePayloads {
 	}
 
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
+	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
+	public record Refundable(java.util.List<String> items) implements CustomPacketPayload {
+		public static final Type<Refundable> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "refundable"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Refundable> CODEC = StreamCodec.composite(
+				ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(64)), Refundable::items, Refundable::new);
+
+		@Override
+		public Type<Refundable> type() {
+			return TYPE;
+		}
+	}
+
 	public record TeamChoice(boolean t) implements CustomPacketPayload {
 		public static final Type<TeamChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "team"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, TeamChoice> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, TeamChoice::t, TeamChoice::new);

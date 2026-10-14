@@ -73,6 +73,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.weapon.GrenadeZones.clear());
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Throw.TYPE, dev.strafemc.net.StrafePayloads.Throw.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE, dev.strafemc.net.StrafePayloads.TeamChoice.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Refundable.TYPE, dev.strafemc.net.StrafePayloads.Refundable.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, dev.strafemc.net.StrafePayloads.KillNotice.CODEC);
