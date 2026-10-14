@@ -14,7 +14,8 @@ public final class ProjectionCheck {
 
 	public static void main(String[] a) throws Exception {
 		dev.strafemc.config.StrafeConfig.load();
-		var e = dev.strafemc.weapon.WeaponTable.get("weapon_knife_karambit");
+		String cls = a.length > 0 ? a[0] : "weapon_knife_karambit", kit = a.length > 1 ? a[1] : "am_marble_fade";
+		var e = dev.strafemc.weapon.WeaponTable.get(cls);
 		Glb glb = Glb.read(AssetCache.exportGlb(e.model(), true));
 		VmModel m = VmModel.load(glb, VmModel.AUTO_MESH);
 		var pm = WeaponSkinCache.paintable(e.model(), m.parts);
@@ -24,9 +25,10 @@ public final class ProjectionCheck {
 		var ci = GloveSkinBaker.Params.parse(java.nio.file.Files.readAllLines(AssetCache.dataBlock(
 				java.util.regex.Pattern.compile("\"composite_inputs\"[\\s\\S]*?m_value = \"([^\"]+)\"").matcher(java.nio.file.Files.readString(AssetCache.dataBlock(pm.material() + "_c"))).results().findFirst().get().group(1) + "_c")));
 		BufferedImage masks = GloveSkinCache.load(ci.textures.get("g_tMasks"));
-		BufferedImage pat = GloveSkinCache.load("materials/models/weapons/customization/paints/anodized_multi/smoke2_psd_cdf5ba83.vtex");
-		var bounds = WeaponSkinCache.rollBounds("am_marble_fade");
-		double scale = 1.6, wl = ci.f("g_flWeaponLength1", 32);
+		BufferedImage pat = GloveSkinCache.load(WeaponSkinCache.paintParams(kit).textures.get("g_tPattern"));
+		var bounds = WeaponSkinCache.rollBounds(kit);
+		var kp = WeaponSkinCache.paintParams(kit);
+		double scale = kp.f("g_flPatternTexCoordScale", 1.6), wl = ci.f("g_flWeaponLength1", 32);
 		// painted texels' positions
 		java.util.List<float[]> pts = new java.util.ArrayList<>();
 		int n = pos.size();
@@ -39,7 +41,7 @@ public final class ProjectionCheck {
 				pts.add(new float[] {pos.pos()[o], pos.pos()[o + 1], pos.pos()[o + 2]});
 			}
 		System.out.println("painted texels " + pts.size() + " bounds min " + java.util.Arrays.toString(pos.min()) + " max " + java.util.Arrays.toString(pos.max()) + " wl " + wl);
-		String[] axes = {"yz"};
+		String[] axes = {"xy", "yx", "xz", "zx", "yz", "zy"};
 		for (String ax : axes)
 			for (int flipU = 0; flipU < 2; flipU++)
 				for (int flipV = 0; flipV < 2; flipV++)
@@ -72,7 +74,7 @@ public final class ProjectionCheck {
 							mean += r;
 							if (g == 412) r412 = r;
 						}
-						System.out.printf("%s flip%d%d norm%d mean %.1f 412@%d top %d %d %d %d %d%n", ax, flipU, flipV, norm, mean / GEMS.length, r412, idx[0], idx[1], idx[2], idx[3], idx[4]);
+						System.out.printf("V %s%d%d%d %d%n", ax, flipU, flipV, norm, r412);
 					}
 	}
 

@@ -21,6 +21,11 @@ public final class KnifeBakeCheck {
 				seed = Integer.parseInt(a[i].substring(2));
 				continue;
 			}
+			if (a[i].startsWith("proj=")) {
+				System.setProperty("strafemc.proj", a[i].substring(5));
+				tag = "_" + a[i].substring(5);
+				continue;
+			}
 			if (a[i].startsWith("sign=")) { // offset direction for comparisons
 				System.setProperty("strafemc.offSign", a[i].substring(5));
 				tag = "_sign" + a[i].substring(5);

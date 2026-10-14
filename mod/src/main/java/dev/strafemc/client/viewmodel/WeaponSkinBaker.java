@@ -126,11 +126,10 @@ public final class WeaponSkinBaker {
 					int px = Math.min(positions.size - 1, (int) (u * positions.size)), py = Math.min(positions.size - 1, (int) (v * positions.size));
 					int o = Positions.STRIDE * (py * positions.size + px);
 					if (!Float.isNaN(positions.pos[o])) {
-						// the object-space position (glb metres -> inches) over the weapon length, on the model's y / z axes: with this
-						// the known Karambit Marble Fade Fire and Ice seeds (412, 359, 602, 393, 649) rank least yellow of all 1001
-						double inches = in.weaponLength * 0.0254;
-						pu = positions.pos[o + 1] / inches;
-						pv = positions.pos[o + 2] / inches;
+						// centred on the weapon, its longest axis across and the next one up (0.54.0's projection: the user confirmed
+						// Talon Marble Fade 412 as Fire and Ice with it; the Karambit doesn't match yet - FLAGGED, open)
+						pu = (positions.pos[o + ax] - (positions.min[ax] + positions.max[ax]) / 2) / span + 0.5;
+						pv = 0.5 - (positions.pos[o + ay] - (positions.min[ay] + positions.max[ay]) / 2) / span;
 					}
 				}
 				double ru = xf0[0] * pu + xf0[1] * pv + xf0[2], rv = xf1[0] * pu + xf1[1] * pv + xf1[2];
