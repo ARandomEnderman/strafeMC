@@ -67,7 +67,11 @@ public class SkinWrapItem extends Item {
 
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (player instanceof ServerPlayer sp) Loadout.open(sp);
+		if (player instanceof ServerPlayer sp) {
+			// a knife wrap has one slot: put it on (swapping like armor); gun wraps fit several, so the loadout opens
+			if (knife && !player.isShiftKeyDown()) Loadout.equipKnifeWrap(sp, player.getItemInHand(hand));
+			else Loadout.open(sp);
+		}
 		return InteractionResult.SUCCESS;
 	}
 
@@ -82,6 +86,6 @@ public class SkinWrapItem extends Item {
 			out.accept(Component.literal("§7Fits: " + String.join(", ", guns)));
 		}
 		if (w.pattern()) out.accept(Component.literal("§7Pattern: " + pattern(stack)));
-		out.accept(Component.literal("§7Right click: open your loadout"));
+		out.accept(Component.literal(knife ? "§7Right click: put on (sneak: open your loadout)" : "§7Right click: open your loadout"));
 	}
 }

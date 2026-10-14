@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -99,11 +100,32 @@ public final class Loadout {
 
 	/** Right-clicked gloves: wear them (they go into the gloves slot, the ones worn before come back). */
 	public static void wearGloves(ServerPlayer p, ItemStack held) {
-		ItemStack old = get(p, "gloves");
-		set(p, "gloves", held.copyWithCount(1));
+		equip(p, "gloves", held);
+		p.sendSystemMessage(Component.literal("Now wearing: ").append(get(p, "gloves").getHoverName()));
+	}
+
+	/** Right-clicked knife wrap: into the knife slot (its only slot), swapping like armor. */
+	public static void equipKnifeWrap(ServerPlayer p, ItemStack held) {
+		equip(p, "knife", held);
+		p.sendSystemMessage(Component.literal("Knife wrap: ").append(get(p, "knife").getHoverName()));
+	}
+
+	/**
+	 * Puts one of the held item into a loadout slot, swapping like armor: the item that was there goes into your hand
+	 * (or the inventory when more are held).
+	 */
+	private static void equip(ServerPlayer p, String slot, ItemStack held) {
+		ItemStack old = get(p, slot);
+		set(p, slot, held.copyWithCount(1));
+		if (held.getCount() == 1 && !old.isEmpty()) {
+			for (InteractionHand h : InteractionHand.values())
+				if (p.getItemInHand(h) == held) {
+					p.setItemInHand(h, old);
+					return;
+				}
+		}
 		held.shrink(1);
 		if (!old.isEmpty() && !p.getInventory().add(old)) p.drop(old, false);
-		p.sendSystemMessage(Component.literal("Now wearing: ").append(get(p, "gloves").getHoverName()));
 	}
 
 	/** Sneak + right-click with gloves: take off the worn ones (back to your side's default gloves). */
@@ -159,14 +181,17 @@ public final class Loadout {
 			super(MENU, id);
 			this.owner = owner;
 			List<Def> d = defs();
+			boolean[] filled = {false};
 			SimpleContainer c = new SimpleContainer(d.size()) {
 				@Override
 				public void setChanged() { // every change goes straight into the player's (synced) loadout
 					super.setChanged();
-					if (owner != null) for (int i = 0; i < d.size(); i++) set(owner, d.get(i).id, getItem(i));
+					// not while it's being filled from the loadout: half-filled, it would save empty slots over the rest
+					if (owner != null && filled[0]) for (int i = 0; i < d.size(); i++) set(owner, d.get(i).id, getItem(i));
 				}
 			};
 			if (owner != null) for (int i = 0; i < d.size(); i++) c.setItem(i, get(owner, d.get(i).id).copy());
+			filled[0] = true;
 			loadout = c;
 			for (int i = 0; i < d.size(); i++) {
 				Def def = d.get(i);
