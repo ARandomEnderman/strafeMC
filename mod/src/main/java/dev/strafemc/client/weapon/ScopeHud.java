@@ -18,6 +18,8 @@ public final class ScopeHud {
 	private static final Identifier BLUR = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/scope/line_blur.png");
 	/** Blur width in screen heights per unit of inaccuracy. */
 	private static final double BLUR_PER_INACCURACY = 0.5;
+	/** The lens dirt at a quarter of its strength (FLAGGED: by eye). */
+	private static final int LENS_TINT = 0x40FFFFFF;
 
 	private ScopeHud() {}
 
@@ -37,7 +39,8 @@ public final class ScopeHud {
 			int x0 = (w - h) / 2;
 			boolean tex = dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/circle.png");
 			if (tex) { // the lens tint under the round mask, so the mask's edge stays black
-				if (dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/lens.png")) g.blit(RenderPipelines.GUI_TEXTURED, LENS, x0, 0, 0, 0, h, h, h, h);
+				if (dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/lens.png")) // faint: CS2's lens is barely there
+					g.blit(RenderPipelines.GUI_TEXTURED, LENS, x0, 0, 0, 0, h, h, h, h, h, h, LENS_TINT);
 				g.blit(RenderPipelines.GUI_TEXTURED, CIRCLE, x0, 0, 0, 0, h, h, h, h);
 			}
 			g.fill(0, 0, x0, h, 0xFF000000); // the sides past the round view
