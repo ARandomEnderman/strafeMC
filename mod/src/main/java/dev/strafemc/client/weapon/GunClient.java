@@ -597,6 +597,10 @@ public final class GunClient {
 		Minecraft mc = Minecraft.getInstance();
 		LocalPlayer p = mc.player;
 		if (p == null || !(p.getMainHandItem().getItem() instanceof GunItem g)) return;
+		if (g.weaponClass.equals(dev.strafemc.weapon.ZeusRecharge.CLS)) { // the Zeus can't be reloaded: it recharges by itself
+			if (byKey) cancelInspect();
+			return;
+		}
 		// CS: R during an inspect cancels it when there's nothing to reload (full magazine, knife)
 		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
 		if (byKey && (g instanceof dev.strafemc.weapon.KnifeItem || w == null || g.clip(p.getMainHandItem()) >= w.clip())) {

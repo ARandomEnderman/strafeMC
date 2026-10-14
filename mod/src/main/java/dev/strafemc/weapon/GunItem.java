@@ -49,6 +49,22 @@ public class GunItem extends Item {
 		return st == null ? 0 : st.clip();
 	}
 
+	/** A recharging Zeus shows how far along it is. */
+	@Override
+	public boolean isBarVisible(ItemStack s) {
+		return s.has(WeaponItems.RECHARGE);
+	}
+
+	@Override
+	public int getBarWidth(ItemStack s) {
+		return Math.round(13 * ZeusRecharge.progress(s, ZeusRecharge.clientGameTime.getAsLong()));
+	}
+
+	@Override
+	public int getBarColor(ItemStack s) {
+		return 0x5AC8FA;
+	}
+
 	@Override
 	public boolean canDestroyBlock(ItemStack stack, BlockState state, Level level, BlockPos pos, LivingEntity user) {
 		return false; // left click fires; it never breaks blocks

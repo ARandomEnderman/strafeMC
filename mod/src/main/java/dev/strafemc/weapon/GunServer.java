@@ -264,6 +264,7 @@ public final class GunServer {
 		st.nextFire = shotAt + sec(w.cycleTime());
 		broadcast(p, w.shootSound());
 		if (inf != 1) held.set(WeaponItems.CLIP, clip - 1);
+		if (inf != 1 && g.weaponClass.equals(ZeusRecharge.CLS)) ZeusRecharge.fired(p, held); // CS2's Zeus recharges instead of reloading
 
 		double units = StrafeConfig.unitsPerBlock;
 		Vec3 eye = p.getEyePosition();
@@ -615,7 +616,7 @@ public final class GunServer {
 
 	private static void reload(ServerPlayer p, boolean keyHeld) {
 		ItemStack held = p.getMainHandItem();
-		if (!(held.getItem() instanceof GunItem g)) return;
+		if (!(held.getItem() instanceof GunItem g) || g.weaponClass.equals(ZeusRecharge.CLS)) return; // the Zeus recharges by itself
 		WeaponStats w = g.stats();
 		if (w == null) return;
 		State st = state(p);

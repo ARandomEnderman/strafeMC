@@ -341,6 +341,12 @@ public final class Viewmodel {
 		Loaded l = loaded;
 		if (l == null) return;
 		VmClip c = l.clips.get(anim);
+		if (c == null) { // another name for a loaded clip (the T knife's inspect is lookat01 = lookat01_default): same file
+			String path = dev.strafemc.weapon.GunServer.clipPath(l.cls, anim);
+			if (path != null)
+				for (var e : l.clips.entrySet())
+					if (path.equals(dev.strafemc.weapon.GunServer.clipPath(l.cls, e.getKey()))) c = e.getValue();
+		}
 		if (c == null) return;
 		if (clip != null && clip != c || clip == c && !anim.equals("idle")) {
 			float d = clip == null ? 0 : blendTime(clip.name, anim, l.cls.contains("knife"));
