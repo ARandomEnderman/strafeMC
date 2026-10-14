@@ -56,7 +56,8 @@ public final class WeaponSkinBaker {
 		for (int i = 0; i < 4; i++) col[i] = p.v("g_vColor" + i, 0.5, 0.5, 0.5);
 		double bright = p.f("g_flColorBrightness", 1);
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
-		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 ? in.uvScale : 1);
+		// the weapon's own size scale (composite inputs' g_flUvScale1) applies to every style unless the kit opts out
+		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : in.uvScale);
 		double rot = Math.toRadians(p.f("g_flPatternTexCoordRotation", 0));
 		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0);
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
