@@ -58,9 +58,9 @@ public final class WeaponSkinBaker {
 		for (int i = 0; i < 4; i++) col[i] = p.v("g_vColor" + i, 0.5, 0.5, 0.5);
 		double bright = p.f("g_flColorBrightness", 1);
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
-		// pattern size, fitted to CS2's own preview renders: the weapon's size scale (composite inputs' g_flUvScale1) for the
-		// UV-space hydrographic and patina styles; spray paint denser than its raw scale; the rest as they are (FLAGGED)
-		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1)
+		// pattern size: the weapon's size scale (composite inputs' g_flUvScale1) for hydrographic, patina and anodized multicolour
+		// (Tiger Tooth / Freehand checked in game by the user); spray paint denser than its raw scale; the rest as they are (FLAGGED)
+		double scale = p.f("g_flPatternTexCoordScale", 1) * (ignoreSize ? 1 : style == 1 || style == 7 || style == 4 ? in.uvScale : style == 2 ? SPRAY_DENSITY : 1)
 				* Double.parseDouble(System.getProperty("strafemc.patternFactor", "1"));
 		double rot = Math.toRadians(p.f("g_flPatternTexCoordRotation", 0));
 		double[] off = p.v("g_vPatternTexCoordOffset", 0, 0);

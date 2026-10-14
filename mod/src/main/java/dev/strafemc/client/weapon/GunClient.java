@@ -119,6 +119,15 @@ public final class GunClient {
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("redeploy", ""));
 	}
 
+	/**
+	 * Where the view (and so every shot) starts: the camera's eye, the feet plus getEyeHeight() (CS2's view offset under
+	 * Source movement). Entity.getEyePosition() reads Minecraft's stored pose eye height (1.62) instead, 0.04 blocks
+	 * above the camera, which put every bullet a little over the crosshair.
+	 */
+	static Vec3 eye(net.minecraft.world.entity.player.Player p) {
+		return new Vec3(p.getX(), p.getY() + p.getEyeHeight(), p.getZ());
+	}
+
 	public static boolean holdingGun(LocalPlayer p) {
 		return p != null && p.getMainHandItem().getItem() instanceof GunItem;
 	}
@@ -497,7 +506,7 @@ public final class GunClient {
 				}
 				lightRag(g, now);
 				if (now - chargedSince >= sec(PREVIEW_AFTER)) { // the path this throw would take, as the server will fly it
-					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, p.getEyePosition(), p.getYRot(), p.getXRot(), throwStrength,
+					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, eye(p), p.getYRot(), p.getXRot(), throwStrength,
 							dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p), 750);
 					GrenadeClient.preview(dev.strafemc.weapon.GrenadeFlight.simulate(p.level(), p, l, dev.strafemc.weapon.GrenadeFlight.gravity(), 4, g.type));
 				} else GrenadeClient.preview(null);
@@ -605,7 +614,7 @@ public final class GunClient {
 		schedule(k, anim, now); // the clip carries the swish / hit / catch sounds
 		if (hit.block() != null) {
 			CsSounds.playOn("Weapon_Knife.HitWall", p, 1.0, false);
-			dev.strafemc.client.impact.BulletHoles.onImpact(GunServer.impactMessage(p.level(), hit.block(), p.getEyePosition(), IMPACT_RNG.nextInt(), true));
+			dev.strafemc.client.impact.BulletHoles.onImpact(GunServer.impactMessage(p.level(), hit.block(), eye(p), IMPACT_RNG.nextInt(), true));
 		}
 		if (ClientPlayNetworking.canSend(StrafePayloads.Knife.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Knife(heavy, dev.strafemc.client.LagClock.viewTick(), hit.entity() != null ? hit.entity().getId() : -1));
@@ -646,7 +655,7 @@ public final class GunClient {
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
 					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0),
-						(float) (p.getEyeY() - p.getY())));
+						(float) p.getEyeHeight()));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
 			sounds.clear();
@@ -656,7 +665,7 @@ public final class GunClient {
 			var cam = Minecraft.getInstance().gameRenderer.getMainCamera();
 			double[] vo = viewOffset();
 			StrafeMc.LOG.info("[strafemc] shotdbg client: camY={} eyeY={} camPitch={} xRot={} viewOff={} punch={} inacc={} dirPitch={}",
-					String.format("%.4f", cam.position().y), String.format("%.4f", p.getEyeY()), String.format("%.3f", cam.xRot()),
+					String.format("%.4f", cam.position().y), String.format("%.4f", eye(p).y), String.format("%.3f", cam.xRot()),
 					String.format("%.3f", p.getXRot()), String.format("%.3f", vo[0]), String.format("%.3f", aimPunch.angle[0]), String.format("%.5f", penalty),
 					String.format("%.3f", Math.toDegrees(-Math.asin(d.y))));
 		}
@@ -727,7 +736,7 @@ public final class GunClient {
 		int freq = w.tracerFrequency(); // a [normal, silenced] pair in CS2's data (the M4A1-S: 3, 0)
 		if (tracer == null || freq <= 0 || ((int) recoilIndex) % freq != 0) return;
 		Minecraft mc = Minecraft.getInstance();
-		Vec3 eye = p.getEyePosition();
+		Vec3 eye = eye(p);
 		Vec3 end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var hit = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
@@ -748,7 +757,7 @@ public final class GunClient {
 
 	/** The entity this shot hits on this screen (what the player saw), or -1: the server checks it against its history. */
 	private static int claim(LocalPlayer p, WeaponStats w, Vec3 dir) {
-		Vec3 eye = p.getEyePosition(), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
+		Vec3 eye = eye(p), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var block = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
 		if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = block.getLocation();
@@ -759,7 +768,7 @@ public final class GunClient {
 
 	/** The shooter's own bullet impact, shown immediately (as CS predicts it) instead of after the server round trip. */
 	private static void predictImpact(LocalPlayer p, WeaponStats w, Vec3 dir, int shot) {
-		Vec3 eye = p.getEyePosition(), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
+		Vec3 eye = eye(p), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var hit = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
 		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) return;
