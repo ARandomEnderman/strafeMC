@@ -86,18 +86,10 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		int top = topPos;
 		g.fill(px, top, px + pw, top + imageHeight, PANEL);
 		g.text(font, d.label().toUpperCase(), px + 8, top + 8, ACCENT, false);
-		if (d.kind() == Loadout.Kind.GLOVES) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104); // the worn gloves in 3D
-		else {
-			// the wrap if there is one, else the gun itself
-			ItemStack shown = !s.isEmpty() ? s : d.weapon() != null && dev.strafemc.weapon.WeaponItems.GUNS.containsKey(d.weapon())
-					? new ItemStack(dev.strafemc.weapon.WeaponItems.GUNS.get(d.weapon())) : ItemStack.EMPTY;
-			var pose = g.pose();
-			pose.pushMatrix();
-			pose.translate(px + pw / 2f - 32, top + 34);
-			pose.scale(4, 4);
-			if (!shown.isEmpty()) g.item(shown, 0, 0);
-			pose.popMatrix();
-		}
+		// 3D: the worn gloves; the knife you'd use (in the knife wrap); the gun (in its wrap)
+		if (d.kind() == Loadout.Kind.GLOVES) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, null);
+		else if (d.kind() == Loadout.Kind.KNIFE) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, previewKnife());
+		else if (d.weapon() != null) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, d.weapon());
 		int y = top + 110;
 		if (s.isEmpty()) {
 			g.text(font, d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves" : d.kind() == Loadout.Kind.AGENT ? "Agents aren't in strafeMC yet"
@@ -113,6 +105,17 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			String on = w.knife() ? "On every knife" : wrap == null ? "" : "On every " + d.label();
 			g.text(font, on, px + 8, y + 4, 0xFFB0B0B0, false);
 		} else if (s.getItem() instanceof GloveItem) g.text(font, "Factory New", px + 8, y + 4, 0xFFB0B0B0, false);
+	}
+
+	/** The knife the preview shows: the first in the hotbar (left to right), else in the inventory, else the Karambit. */
+	private String previewKnife() {
+		var p = minecraft.player;
+		if (p != null) {
+			var inv = p.getInventory();
+			for (int i = 0; i < inv.getContainerSize(); i++) // 0-8 are the hotbar
+				if (inv.getItem(i).getItem() instanceof dev.strafemc.weapon.KnifeItem k) return k.weaponClass;
+		}
+		return "weapon_knife_karambit";
 	}
 
 	@Override

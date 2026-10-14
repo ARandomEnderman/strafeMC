@@ -111,7 +111,7 @@ public final class ConsoleCommands {
 			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
 			action("strafemc_movement", on ? "1" : "0", false);
 		});
-		local("strafemc_pattern", "Set the pattern template (0-1000) of the skin wrap in your hand (cheat: sv_cheats 1, operators, creative).", a -> {
+		local("strafemc_pattern", "Set the pattern template (0-1000): of the wrap or gloves in your hand, or of the wrap on the gun / knife in your hand (cheat: sv_cheats 1, operators, creative).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_pattern <0-1000>");
 				return;

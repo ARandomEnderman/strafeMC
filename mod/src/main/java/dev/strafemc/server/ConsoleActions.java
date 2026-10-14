@@ -45,15 +45,34 @@ public final class ConsoleActions {
 			}
 			case "strafemc_pattern" -> { // a skin wrap's pattern template: a cheat (sv_cheats 1, operator, creative); cases will roll it
 				var held = p.getMainHandItem();
-				if (!cheat || !p.getAbilities().instabuild) p.sendSystemMessage(Component.literal("Setting patterns needs sv_cheats 1, operator and creative."));
-				else if (!(held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem)) p.sendSystemMessage(Component.literal("Hold a skin wrap."));
-				else try {
-					int n = Math.max(0, Math.min(1000, Integer.parseInt(arg.trim())));
-					held.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
-					p.sendSystemMessage(Component.literal("Pattern template: " + n));
+				int n;
+				try {
+					n = Math.max(0, Math.min(1000, Integer.parseInt(arg.trim())));
 				} catch (NumberFormatException e) {
 					p.sendSystemMessage(Component.literal("strafemc_pattern <0-1000>"));
+					break;
 				}
+				if (!cheat || !p.getAbilities().instabuild) {
+					p.sendSystemMessage(Component.literal("Setting patterns needs sv_cheats 1, operator and creative."));
+					break;
+				}
+				// the held wrap or glove item itself; a held knife or gun: the wrap in its loadout slot
+				String slot = held.getItem() instanceof dev.strafemc.weapon.KnifeItem ? "knife"
+						: held.getItem() instanceof dev.strafemc.weapon.GunItem g && !(g instanceof dev.strafemc.weapon.GrenadeItem)
+						&& !(g instanceof dev.strafemc.weapon.HealthshotItem) ? g.weaponClass : null;
+				if (held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem || held.getItem() instanceof dev.strafemc.weapon.GloveItem) {
+					held.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
+					p.sendSystemMessage(Component.literal("Pattern template: " + n));
+				} else if (slot != null) {
+					var wrap = dev.strafemc.weapon.Loadout.get(p, slot);
+					if (wrap.isEmpty()) p.sendSystemMessage(Component.literal("No wrap on it in your loadout."));
+					else {
+						wrap = wrap.copy();
+						wrap.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
+						dev.strafemc.weapon.Loadout.set(p, slot, wrap);
+						p.sendSystemMessage(Component.literal("Pattern template: " + n));
+					}
+				} else p.sendSystemMessage(Component.literal("Hold a skin wrap, gloves, or a gun / knife with a wrap in your loadout."));
 			}
 			case "strafemc_knockback" -> {
 				if (!op) {

@@ -519,13 +519,42 @@ public final class Viewmodel {
 		if (c == null) return false;
 		Matrix4f[] pose = c.pose(0);
 		Matrix4f[][] skin = skins(arms, c, pose, null);
-		Matrix4f toView = toView();
+		return drawFitted(arms, skin, toView(), null, ps, buffers, width, height, yaw);
+	}
+
+	/**
+	 * A weapon for the loadout preview, in the finish of the wrap in its loadout slot (knives: the knife wrap): its idle
+	 * pose, turned side-on, fitted into width x height and turned by yaw. False until it's loaded (it starts loading).
+	 */
+	public boolean previewWeapon(String cls, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers, float width, float height, float yaw) {
+		if (broken || cls == null) return false;
+		Loaded l = cache.get(cls);
+		if (l == null) {
+			if (WEAPONS.containsKey(cls) && loading.add(cls)) loadAsync(cls);
+			return false;
+		}
+		VmClip c = l.clips.get("idle");
+		if (c == null) return false;
+		Matrix4f[] pose = c.pose(0);
+		Matrix4f wpn = mount(c, pose);
+		Matrix4f[][] skin = skins(l.gun, c, pose, wpn);
+		Integer weaponNode = c.node("weapon");
+		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
+		// side-on, muzzle to the right
+		Matrix4f side = new Matrix4f().rotateY((float) (Math.PI / 2)).mul(toView());
+		return drawFitted(gun(l), skin, side, rigid, ps, buffers, width, height, yaw);
+	}
+
+	/** Draws a posed model fitted into width x height (GUI pixels), centred, turned by yaw degrees. */
+	private boolean drawFitted(VmModel model, Matrix4f[][] skin, Matrix4f toView, Matrix4f rigid, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers,
+							   float width, float height, float yaw) {
 		java.util.List<float[][]> skinned = new java.util.ArrayList<>();
 		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
-		for (VmModel.Part p : arms.parts) {
-			Matrix4f[] s = p.skin >= 0 && p.skin < skin.length ? skin[p.skin] : new Matrix4f[0];
+		for (VmModel.Part p : model.parts) {
+			Matrix4f[] s = p.skin >= 0 && p.skin < skin.length ? skin[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
 			float[][] sk = skinVertices(p, s, toView);
 			skinned.add(sk);
+			if (p.alphaMode.equals("BLEND")) continue;
 			for (int i = 0; i + 2 < sk[0].length; i += 3) {
 				minX = Math.min(minX, sk[0][i]); maxX = Math.max(maxX, sk[0][i]);
 				minY = Math.min(minY, sk[0][i + 1]); maxY = Math.max(maxY, sk[0][i + 1]);
@@ -539,8 +568,8 @@ public final class Viewmodel {
 		ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yaw));
 		ps.translate(-(minX + maxX) / 2, -(minY + maxY) / 2, -(minZ + maxZ) / 2);
 		PoseStack.Pose last = ps.last();
-		for (int n = 0; n < arms.parts.size(); n++) {
-			VmModel.Part p = arms.parts.get(n);
+		for (int n = 0; n < model.parts.size(); n++) {
+			VmModel.Part p = model.parts.get(n);
 			if (p.alphaMode.equals("BLEND")) continue;
 			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;

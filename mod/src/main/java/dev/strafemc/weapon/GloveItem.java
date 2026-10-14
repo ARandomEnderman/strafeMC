@@ -86,5 +86,7 @@ public class GloveItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		out.accept(Component.literal("§7Factory New"));
+		Integer pattern = stack.get(WeaponItems.PATTERN);
+		if (pattern != null) out.accept(Component.literal("§7Pattern template: " + pattern));
 	}
 }
