@@ -87,7 +87,8 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 			if (tex == null) continue;
 			float[] pos = m.pos()[pi], nrm = m.nrm()[pi];
 			// (entityCutout draws both sides: the molotov's rag is one-sided)
-			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (pose, vc) -> {
+			// opaque textures carry metalness in alpha: drawn with the viewmodel's lit type, cutout only for real masks
+			out.submitCustomGeometry(ps, p.alphaMode.equals("MASK") ? RenderTypes.entityCutout(tex) : VmRender.opaque(tex), (pose, vc) -> {
 				int[] idx = p.idx;
 				for (int i = 0; i + 2 < idx.length; i += 3)
 					for (int c : new int[] {idx[i], idx[i + 1], idx[i + 2], idx[i + 2]}) // entity render types draw quads

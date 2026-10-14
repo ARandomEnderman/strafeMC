@@ -542,7 +542,8 @@ public final class Viewmodel {
 			if (p.alphaMode.equals("BLEND")) continue;
 			Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
 			if (tex == null) continue;
-			var vc = buffers.getBuffer(RenderTypes.entityCutout(tex));
+			// opaque textures carry metalness in alpha: the lit viewmodel type, cutout only for real masks
+			var vc = buffers.getBuffer(p.alphaMode.equals("MASK") ? RenderTypes.entityCutout(tex) : VmRender.opaque(tex));
 			float[] sp = skinned.get(n)[0], sn = skinned.get(n)[1];
 			int[] idx = p.idx;
 			for (int i = 0; i + 2 < idx.length; i += 3) {
@@ -755,7 +756,8 @@ public final class Viewmodel {
 			// mirrored into the left hand (cl_righthand 0): the triangles turn round, so swap their winding or culling
 			// keeps the insides
 			boolean mirrored = toView.determinant3x3() < 0;
-			out.submitCustomGeometry(ps, RenderTypes.entityCutout(tex), (ignored, vc) -> {
+			boolean lit = !p.alphaMode.equals("MASK"); // opaque parts: our per-pixel lighting (metalness in the texture's alpha)
+			out.submitCustomGeometry(ps, lit ? VmRender.opaque(tex) : RenderTypes.entityCutout(tex), (ignored, vc) -> {
 				if (broken) return;
 				PoseStack.Pose pose = new PoseStack.Pose();
 				pose.pose().set(RenderSystem.getModelViewMatrix()).invert().mul(cam);
@@ -779,7 +781,7 @@ public final class Viewmodel {
 
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] sp, float[] sn, VmModel.Part p, int i, int light) {
 		float[] uv = p.uv;
-		int col = p.metal == null ? -1 : shade(p.metal[i], sn[i * 3 + 1]);
+		int col = p.metal == null || !p.alphaMode.equals("MASK") ? -1 : shade(p.metal[i], sn[i * 3 + 1]); // lit parts: the shader shines
 		vc.addVertex(pose, sp[i * 3], sp[i * 3 + 1], sp[i * 3 + 2]).setColor(col).setUv(uv[i * 2] + p.uOffset, uv[i * 2 + 1])
 				.setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, sn[i * 3], sn[i * 3 + 1], sn[i * 3 + 2]);
 	}
@@ -805,10 +807,18 @@ public final class Viewmodel {
 	private static NativeImage decode(Path p, boolean opaque) throws java.io.IOException {
 		try (InputStream in = Files.newInputStream(downscaledPath(p))) {
 			NativeImage img = NativeImage.read(in);
-			// CS2 color textures carry the paint/skin mask in alpha: for opaque materials it isn't transparency
-			if (opaque)
-				for (int y = 0; y < img.getHeight(); y++)
-					for (int x = 0; x < img.getWidth(); x++) img.setPixel(x, y, img.getPixel(x, y) | 0xFF000000);
+			// opaque materials: alpha isn't transparency; it carries CS2's metalness (the setup's / bake's metal mask) for
+			// the viewmodel shader (VmRender), 0 where there's none
+			if (opaque) {
+				Path mask = p.resolveSibling(p.getFileName().toString().replace(".png", ".vm1024m.png"));
+				BufferedImage m = Files.exists(mask) ? ImageIO.read(mask.toFile()) : null;
+				int w = img.getWidth(), h = img.getHeight();
+				for (int y = 0; y < h; y++)
+					for (int x = 0; x < w; x++) {
+						int a = m == null ? 0 : m.getRGB(x * m.getWidth() / w, y * m.getHeight() / h) & 255;
+						img.setPixel(x, y, img.getPixel(x, y) & 0x00FFFFFF | a << 24);
+					}
+			}
 			return img;
 		}
 	}
