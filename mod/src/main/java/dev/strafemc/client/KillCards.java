@@ -38,8 +38,8 @@ public final class KillCards {
 				if (StrafeConfig.killCardSeconds <= 0) CARDS.clear();
 				return;
 			}
-			// your own kills of players only (an assist, a mob or your own death doesn't count)
-			if (m.attackerId() == me && m.victimPlayer() && (m.flags() & KillFeed.SUICIDE) == 0) CARDS.add(new Card(pip(m), System.nanoTime()));
+			// your own kills of players and villagers only (an assist, another mob or your own death doesn't count)
+			if (m.attackerId() == me && (m.victimPlayer() || (m.flags() & KillFeed.VILLAGER) != 0) && (m.flags() & KillFeed.SUICIDE) == 0) CARDS.add(new Card(pip(m), System.nanoTime()));
 		}
 	}
 

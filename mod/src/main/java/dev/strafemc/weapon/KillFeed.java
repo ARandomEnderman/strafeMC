@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class KillFeed {
 	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32, FLASH_ASSIST = 64,
-			REVENGE = 128, DOMINATION = 256, SUICIDE = 512;
+			REVENGE = 128, DOMINATION = 256, SUICIDE = 512, VILLAGER = 1024;
 	/** CS:GO's assist: more than this much damage (FLAGGED: CS2 doesn't publish its own). */
 	static final double ASSIST_DAMAGE = 40;
 	/** CS:GO's domination: this many kills in a row on the same player (FLAGGED). */
@@ -70,6 +70,7 @@ public final class KillFeed {
 		LAST_HIT.remove(victim.getId());
 		if (attacker == null || !(victim.level() instanceof ServerLevel level)) return;
 		if (attacker == victim) flags |= SUICIDE;
+		if (victim instanceof net.minecraft.world.entity.npc.villager.Villager) flags |= VILLAGER; // counts for the kill cards like a player
 		// the assist: the most damage over CS's threshold besides the killer's, else whoever flashed the victim (still blind)
 		ServerPlayer assister = null;
 		double most = ASSIST_DAMAGE;
