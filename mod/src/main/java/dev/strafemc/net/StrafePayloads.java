@@ -143,7 +143,8 @@ public final class StrafePayloads {
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** Cases opened (1-5 at once): per drop its kit on an item, rarity ordinal (-1: rare special item), name, pattern (-1: none). */
 	public record CaseResult(String caseId, java.util.List<Drop> drops) implements CustomPacketPayload {
-		public record Drop(String kit, String item, int rarity, String name, int pattern) {}
+		/** pattern -1: none; wear -1: none (gloves). */
+		public record Drop(String kit, String item, int rarity, String name, int pattern, float wear) {}
 
 		public static final Type<CaseResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "case_result"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, CaseResult> CODEC = StreamCodec.of((b, v) -> {
@@ -155,12 +156,13 @@ public final class StrafePayloads {
 				b.writeVarInt(d.rarity() + 1);
 				b.writeUtf(d.name(), 128);
 				b.writeVarInt(d.pattern() + 1);
+				b.writeFloat(d.wear());
 			}
 		}, b -> {
 			String id = b.readUtf(64);
 			int n = Math.min(5, b.readVarInt());
 			java.util.List<Drop> drops = new java.util.ArrayList<>();
-			for (int k = 0; k < n; k++) drops.add(new Drop(b.readUtf(128), b.readUtf(64), b.readVarInt() - 1, b.readUtf(128), b.readVarInt() - 1));
+			for (int k = 0; k < n; k++) drops.add(new Drop(b.readUtf(128), b.readUtf(64), b.readVarInt() - 1, b.readUtf(128), b.readVarInt() - 1, b.readFloat()));
 			return new CaseResult(id, drops);
 		});
 

@@ -27,6 +27,8 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> BURST;
 	/** A skin wrap's pattern seed (CS2's pattern template), on wraps whose finish has a pattern: 0 for wraps given out as they are; cases will roll it. */
 	public static DataComponentType<Integer> PATTERN;
+	/** A wrap's wear (float), as its int bits (Float.floatToIntBits). Absent = Factory New, 0. */
+	public static DataComponentType<Integer> WEAR;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
@@ -49,6 +51,7 @@ public final class WeaponItems {
 		SILENCED = component("silenced");
 		BURST = component("burst");
 		PATTERN = component("pattern");
+		WEAR = component("wear");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

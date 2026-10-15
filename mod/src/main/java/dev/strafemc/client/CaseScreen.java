@@ -25,7 +25,12 @@ public final class CaseScreen extends Screen {
 
 	/** One case's reel and what it lands on. */
 	/** land: where across the winning tile the line stops (0..1), different every time, as in CS2. */
-	private record Spin(List<Tile> tiles, int landing, double delay, Tile result, int rarity, int pattern, double land) {}
+	private record Spin(List<Tile> tiles, int landing, double delay, Tile result, int rarity, int pattern, float wear, double land) {
+		/** Pattern and wear as the viewmodel bakes them. */
+		int finish() {
+			return dev.strafemc.weapon.Wear.finish(pattern, Math.max(0, wear));
+		}
+	}
 
 	private static final int TILE = 64, GOLD = 0xFFE4AE39;
 	private static final double SPIN_SECONDS = 6.5, STAGGER = 0.25;
@@ -217,7 +222,7 @@ public final class CaseScreen extends Screen {
 			Tile got = new Tile(Cases.stack(e, 0), color(d.rarity()), d.name(), e);
 			tiles.set(landing, got);
 			CaseImages.load(List.of(e));
-			list.add(new Spin(tiles, landing, k * STAGGER, got, d.rarity(), d.pattern(), 0.05 + rng.nextDouble() * 0.9));
+			list.add(new Spin(tiles, landing, k * STAGGER, got, d.rarity(), d.pattern(), d.wear(), 0.05 + rng.nextDouble() * 0.9));
 		}
 		spins = list;
 		spinStart = System.nanoTime();
@@ -332,8 +337,8 @@ public final class CaseScreen extends Screen {
 		// a gun or knife: its model in this finish, turned by dragging; gloves (and until the model's baked): CS2's picture
 		Cases.Entry e = s.result().entry();
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
-		if (!e.gloves() && vm.previewReady(e.item(), e.kit(), Math.max(0, s.pattern())))
-			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.pattern(), yaw, pitch, zoom);
+		if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
+			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.finish(), yaw, pitch, zoom);
 		else {
 			var pic = CaseImages.get(e);
 			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, py, 0, 0, cw, ch, cw, ch);
@@ -345,6 +350,7 @@ public final class CaseScreen extends Screen {
 		g.text(font, s.result().name(), -font.width(s.result().name()) / 2, 0, s.result().color(), true);
 		pose.popMatrix();
 		String grade = s.rarity() < 0 ? "★ Rare Special Item" : SkinWraps.Rarity.values()[s.rarity()].weaponName;
+		if (s.wear() >= 0) grade += "  |  " + dev.strafemc.weapon.Wear.exterior(s.wear()) + " " + String.format(java.util.Locale.ROOT, "%.8f", s.wear());
 		if (s.pattern() >= 0) grade += "  |  Pattern template " + s.pattern();
 		g.text(font, grade, width / 2 - font.width(grade) / 2, py + ch + 34, 0xFFB0B0B0, true);
 		if (spins.size() > 1) {

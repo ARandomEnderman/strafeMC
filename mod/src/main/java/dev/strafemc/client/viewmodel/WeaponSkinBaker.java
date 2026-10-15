@@ -108,6 +108,15 @@ public final class WeaponSkinBaker {
 		java.util.Arrays.fill(rough, Float.NaN);
 		double paintRough = p.f("g_flPaintRoughness", 0.6);
 		double albedoScale = p.f("strafemc_albedo_scale", 1); // 1 for every kit but Black Pearl (WeaponSkinCache)
+		// wear (csgo_customweapon, decoded): the wear texture times the cavity map joins the edges where paint breaks off,
+		// all of it x (6 x wear + 1), the break's soft band widened by g_fWearSoftness; grunge (gun_grunge) darkens the
+		// paint by 0.25 (1 - cavity)^4 + 0.75 wear, the paint's colour is pulled toward CS2's albedo levels by the wear,
+		// and the grunge's alpha roughens it by wear^2 / 2. Both textures read at the pattern's mesh UV through their own
+		// rolled placement
+		double wearAmt = p.f("g_flWearAmount", 0), soft = p.f("g_fWearSoftness", 0);
+		BufferedImage wearTex = load(tex, p, "g_tWear"), grungeTex = load(tex, p, "g_tGrunge");
+		double[] place = p.v("strafemc_wear_place", 1, 0, 0, 0, 1, 0, 0, 0);
+		double[][] wxf = placement(place[0], place[3], place[1], place[2]), gxf = placement(place[4], place[7], place[5], place[6]);
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
@@ -143,35 +152,49 @@ public final class WeaponSkinBaker {
 				int aoc = in.ao == null ? 0 : GloveSkinBaker.sample(in.ao, u, v);
 				double edge = (aoc >>> 24) / 255.0;
 				double a = in.ao == null ? 1 : 0.35 + 0.65 * ((aoc >> 8 & 255) / 255.0);
+				double cav = in.ao == null ? 0 : (aoc >> 16 & 255) / 255.0;
+				double[] wuv = positions != null ? positions.patternUv(u, v) : new double[] {u, v};
+				double wt = wearTex == null ? 0
+						: (GloveSkinBaker.sampleBilinear(wearTex, frac(wxf[0][0] * wuv[0] + wxf[0][1] * wuv[1] + wxf[0][2]),
+								frac(wxf[1][0] * wuv[0] + wxf[1][1] * wuv[1] + wxf[1][2])) >> 16 & 255) / 255.0;
+				int gc = grungeTex == null ? -1 : GloveSkinBaker.sampleBilinear(grungeTex, frac(gxf[0][0] * wuv[0] + gxf[0][1] * wuv[1] + gxf[0][2]),
+						frac(gxf[1][0] * wuv[0] + gxf[1][1] * wuv[1] + gxf[1][2]));
+				double gm = 0.25 * Math.pow(1 - cav, 4) + 0.75 * wearAmt;
+				double[] grime = lin(GloveSkinBaker.unpack(gc));
+				double grimeA = 1 + ((gc >>> 24) / 255.0 - 1) * gm;
+				double we = (edge + wt * cav) * (6 * wearAmt + 1); // where the paint breaks off (the edges at wear 0)
 				if (style <= 5) { // CS2's composite at factory new (wear 0), per style
 					double[] bl = lin(b), c;
 					double k;
 					switch (style) {
 						case 0 -> { // solid colours by the masks
 							c = chain(lc, mr, mg, mb);
-							k = 1 - smooth(0.58, 0.68, edge * chain(dur, mr, mg, mb));
+							double d0 = chain(dur, mr, mg, mb);
+							k = 1 - smooth(0.58 - soft * d0, 0.68 + soft * d0, we * d0);
 						}
 						case 1 -> { // hydrographic: the pattern's channels pick the colours, masks G / B colours 2 / 3
 							c = clamp(GloveSkinBaker.scale(maskColours(chain(lc, pt[0], pt[1], pt[2]), lc, mg, mb), bright));
 							double d = mask(chain(dur, pt[0], pt[1], pt[2]), dur, mg, mb);
-							k = 1 - smooth(0.58, 0.68, (edge + band) * Math.max(Math.min(1, mg + mb), smooth(0, 0.5, pa)) * d);
+							k = 1 - smooth(0.58 - soft * d, 0.68 + soft * d, (we + band) * Math.max(Math.min(1, mg + mb), smooth(0, 0.5, pa)) * d);
 						}
 						case 2 -> { // spray paint: the (projected) pattern's channels pick the colours
 							c = clamp(GloveSkinBaker.scale(chain(lc, pt[0], pt[1], pt[2]), bright));
-							k = 1 - smooth(0.58, 0.68, edge * chain(dur, pt[0], pt[1], pt[2]));
+							double d2 = chain(dur, pt[0], pt[1], pt[2]);
+							k = 1 - smooth(0.58 - soft * d2, 0.68 + soft * d2, we * d2);
 						}
 						case 3 -> { // anodized: colour 0 over mask R
 							c = clamp(GloveSkinBaker.scale(clamp(GloveSkinBaker.scale(GloveSkinBaker.lerp(bl, lc[0], mr), bright)), bright));
-							k = 1 - Math.max(1 - mr, smooth(0.58, 0.68, edge));
+							k = 1 - Math.max(1 - mr, smooth(0.58 - soft, 0.68 + soft, we));
 						}
 						default -> { // anodized multicolour (pattern gated by mask R) / airbrushed (projected)
 							double g = style == 4 ? mr : 1;
 							double[] pal = maskColours(chain(lc, pt[0] * g, pt[1] * g, pt[2] * g), lc, mg, mb);
 							c = clamp(GloveSkinBaker.scale(clamp(GloveSkinBaker.scale(GloveSkinBaker.lerp(bl, pal, mr), bright)), bright));
 							double d = mask(chain(dur, pt[0], pt[1], pt[2]), dur, mg, mb);
-							k = 1 - Math.max(1 - mr, smooth(0.58, 0.68, (edge + (style == 4 ? band : 0)) * d));
+							k = 1 - Math.max(1 - mr, smooth(0.58 - soft * d, 0.68 + soft * d, (we + (style == 4 ? band : 0)) * d));
 						}
 					}
+					c = worn(c, grime, gm, wearAmt, anodized ? METAL_PAINT_LEVELS : PAINT_LEVELS);
 					c = GloveSkinBaker.scale(c, albedoScale);
 					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k))));
 					paint[y * SIZE + x] = (float) (anodized ? 0 : k);
@@ -182,6 +205,7 @@ public final class WeaponSkinBaker {
 						double t = 1 - Math.min(1, pa * 2);
 						r += (t * t * 0.85 + 0.15 - paintRough) * (1 - Math.max(mg, mb));
 					}
+					r += (1 - grimeA) * wearAmt * wearAmt * 0.5;
 					rough[y * SIZE + x] = (float) Math.min(1, r);
 					cover[y * SIZE + x] = (float) k;
 					continue;
@@ -191,7 +215,7 @@ public final class WeaponSkinBaker {
 				switch (style) {
 					case 6 -> { // custom artwork: bare metal only at durable-less edges under the artwork's alpha
 						c = pt;
-						w = 1 - smooth(0.58, 0.68, (edge + band) * smooth(0, 0.5, pa));
+						w = 1 - smooth(0.58 - soft, 0.68 + soft, (we + band) * smooth(0, 0.5, pa));
 					}
 					case 7 -> c = new double[] {pt[0] * col[0][0], pt[1] * col[0][1], pt[2] * col[0][2]};
 					case 8 -> { // gunsmith: the artwork covers the paint mask fully (its alpha is not coverage: Slate, Searing Rage)
@@ -213,13 +237,14 @@ public final class WeaponSkinBaker {
 					c = new double[] {Math.max(0, l + (c[0] - l) * sat), Math.max(0, l + (c[1] - l) * sat), Math.max(0, l + (c[2] - l) * sat)};
 				}
 				c = GloveSkinBaker.scale(c, bright);
+				c = srgb(worn(lin(c), grime, gm, wearAmt, metalStyle ? METAL_PAINT_LEVELS : PAINT_LEVELS)); // FLAGGED: this path is sRGB, worn in linear
 				c = GloveSkinBaker.scale(c, a);
 				double k = w * alpha;
 				out.setRGB(x, y, GloveSkinBaker.rgb(GloveSkinBaker.lerp(b, c, k)));
 				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
 				// patina (Case Hardened) is the polished steel itself: it keeps the weapon's own (glossy) roughness
 				if (style != 7) {
-					rough[y * SIZE + x] = (float) paintRough;
+					rough[y * SIZE + x] = (float) Math.min(1, paintRough + (1 - grimeA) * wearAmt * wearAmt * 0.5);
 					cover[y * SIZE + x] = (float) (w * alpha);
 				}
 			}
@@ -288,6 +313,43 @@ public final class WeaponSkinBaker {
 		double ru = address(xf0[0] * p + xf0[1] * q + xf0[2], sampU), rv = address(xf1[0] * p + xf1[1] * q + xf1[2], sampV);
 		int c = GloveSkinBaker.sampleBilinear(pattern, ru, rv);
 		return new double[] {c >> 16 & 255, c >> 8 & 255, c & 255, c >>> 24};
+	}
+
+	/**
+	 * CS2's albedo levels for worn paint (g_vPaintAlbedoLevels / g_vMetallicPaintAlbedoLevels, their compiled
+	 * expressions decoded: (a, -log2(1 - b), 2 - c) of (0.045, 0.6, 1) and (0.08, 0.6, 1)).
+	 */
+	private static final double[] PAINT_LEVELS = {0.045, 1.3219281, 1}, METAL_PAINT_LEVELS = {0.08, 1.3219281, 1};
+
+	/**
+	 * Worn paint (linear colour): darkened by the grunge, then pulled toward its levels by the wear (csgo_customweapon:
+	 * n = normalize(grimed), target = mix(min(L.x, luma(paint)), L.z, saturate(max(grimed)^L.y)), n x target / max(n)).
+	 */
+	private static double[] worn(double[] c, double[] grime, double gm, double wear, double[] levels) {
+		double[] g = {c[0] * (1 + (grime[0] - 1) * gm), c[1] * (1 + (grime[1] - 1) * gm), c[2] * (1 + (grime[2] - 1) * gm)};
+		if (wear <= 0) return g;
+		double luma = 0.2125 * c[0] + 0.7154 * c[1] + 0.0721 * c[2];
+		double[] n = {Math.max(3e-4, g[0]), Math.max(3e-4, g[1]), Math.max(3e-4, g[2])};
+		double len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+		for (int i = 0; i < 3; i++) n[i] /= len;
+		double nmax = Math.max(n[0], Math.max(n[1], n[2])), gmax = Math.max(g[0], Math.max(g[1], g[2]));
+		double t = Math.max(0, Math.min(1, Math.pow(Math.max(0, gmax), levels[1])));
+		double target = Math.min(levels[0], luma) + (levels[2] - Math.min(levels[0], luma)) * t;
+		double[] out = new double[3];
+		for (int i = 0; i < 3; i++) out[i] = g[i] + (n[i] * target / nmax - g[i]) * wear;
+		return out;
+	}
+
+	/**
+	 * A wear / grunge texture's placement (scale, rotation in degrees, offset) as two rows of a UV transform, built the
+	 * way the pattern's is. FLAGGED: CS2's g_vWearTexCoordXform expressions weren't decoded; the pattern's is assumed.
+	 */
+	private static double[][] placement(double scale, double rotDeg, double offX, double offY) {
+		if (scale == 0) scale = 1;
+		double rot = Math.toRadians(rotDeg), inv = 0.5 / scale, cn = Math.cos(-rot), sn = Math.sin(-rot);
+		double ex = inv * cn - inv * sn, ey = ex * sn + inv * cn, cr = Math.cos(rot), sr = Math.sin(rot);
+		return new double[][] {{scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5},
+				{scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5}};
 	}
 
 	private static double smooth(double e0, double e1, double x) {

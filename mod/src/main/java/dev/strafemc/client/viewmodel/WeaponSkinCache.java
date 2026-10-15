@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v30/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v31/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -141,6 +141,31 @@ public final class WeaponSkinCache {
 	 * bounds (legacy kits: weapons/paints/legacy/<kit>.vcompmat; newer ones: their composite in the cache), or null.
 	 */
 	static dev.strafemc.weapon.PatternRoll.Bounds rollBounds(String kit) {
+		String text = compositeText(kit);
+		if (text == null) return null;
+		double[] rot = bound(text, "g_flPatternTexCoordRotation", "X"), ox = bound(text, "g_vPatternTexCoordOffset", "X"),
+				oy = bound(text, "g_vPatternTexCoordOffset", "Y");
+		if (rot == null && ox == null && oy == null) return null;
+		return new dev.strafemc.weapon.PatternRoll.Bounds(ox, oy, rot); // null: not rolled (no draw)
+	}
+
+	/** The grunge_wear values the kit's composite rolls (PatternRoll.WearBounds order), or null without them. */
+	static dev.strafemc.weapon.PatternRoll.WearBounds wearBounds(String kit) {
+		String text = compositeText(kit);
+		if (text == null || !text.contains("g_flWearTexCoordScale")) return null;
+		String[][] vars = {{"g_flWearTexCoordScale", "X"}, {"g_vWearTexCoordOffset", "X"}, {"g_vWearTexCoordOffset", "Y"},
+				{"g_flWearTexCoordRotation", "X"}, {"g_flGrungeTexCoordScale", "X"}, {"g_vGrungeTexCoordOffset", "X"},
+				{"g_vGrungeTexCoordOffset", "Y"}, {"g_flGrungeTexCoordRotation", "X"}};
+		double[][] out = new double[vars.length][];
+		for (int i = 0; i < vars.length; i++) {
+			double[] b = bound(text, vars[i][0], vars[i][1]);
+			out[i] = b != null ? b : i == 0 || i == 4 ? new double[] {1, 1} : new double[] {0, 0};
+		}
+		return new dev.strafemc.weapon.PatternRoll.WearBounds(out);
+	}
+
+	/** The kit's composite (legacy kits: weapons/paints/legacy/<kit>.vcompmat; newer ones: theirs in the cache), or null. */
+	private static String compositeText(String kit) {
 		String text = null;
 		try {
 			text = Files.readString(AssetCache.dataBlock("weapons/paints/legacy/" + kit + ".vcompmat_c"));
@@ -154,11 +179,7 @@ public final class WeaponSkinCache {
 				return null;
 			}
 		}
-		if (text == null) return null;
-		double[] rot = bound(text, "g_flPatternTexCoordRotation", "X"), ox = bound(text, "g_vPatternTexCoordOffset", "X"),
-				oy = bound(text, "g_vPatternTexCoordOffset", "Y");
-		if (rot == null && ox == null && oy == null) return null;
-		return new dev.strafemc.weapon.PatternRoll.Bounds(ox, oy, rot); // null: not rolled (no draw)
+		return text;
 	}
 
 	/** A loose variable's {min, max} for one component (X / Y), or null. */
@@ -171,7 +192,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v30/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v31/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -186,6 +207,19 @@ public final class WeaponSkinCache {
 		if (!m.find()) return null;
 		var ci = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(m.group(1) + "_c")));
 		var paint = paintParams(kit);
+		// pattern: the finish number carries the wrap's pattern seed and its wear (Wear.finish)
+		int finish = pattern;
+		pattern = dev.strafemc.weapon.Wear.seed(finish);
+		double wear = dev.strafemc.weapon.Wear.wear(finish);
+		// FLAGGED: how CS2 turns the item's float into the shader's wear amount wasn't found; float^2 matches CS2's own
+		// medium / heavy econ renders (paint lost ~14% / ~47%) if those are Field-Tested / Well-Worn floats
+		paint.values.put("g_flWearAmount", new double[] {wear * wear});
+		// the wear and grunge textures' placement: the same seed's stream, after the pattern's draws (CS2's roll order)
+		var wb = wearBounds(kit);
+		double[] wv = wb != null ? dev.strafemc.weapon.PatternRoll.rollWear(pattern, wb) : new double[] {1, 0, 0, 0, 1, 0, 0, 0};
+		paint.values.put("strafemc_wear_place", wv);
+		paint.textures.putIfAbsent("g_tWear", "materials/models/weapons/customization/shared/paint_wear_psd_19141e79.vtex");
+		paint.textures.putIfAbsent("g_tGrunge", "materials/models/weapons/customization/shared/gun_grunge_psd_66b72907.vtex");
 		// the wrap's pattern template, rolled like CS2 within the kit's bounds, places the pattern
 		var bounds = rollBounds(kit);
 		if (bounds != null) {

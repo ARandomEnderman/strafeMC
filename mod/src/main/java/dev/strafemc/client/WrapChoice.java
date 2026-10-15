@@ -22,9 +22,9 @@ public final class WrapChoice {
 		return SkinWraps.kitFor(SkinWrapItem.skin(s), cls);
 	}
 
-	/** The worn knife wrap's pattern seed. */
+	/** The worn knife wrap's finish (pattern seed and wear, Wear.finish). */
 	public static int knifePattern() {
-		return SkinWrapItem.pattern(knifeWrap());
+		return SkinWrapItem.finish(knifeWrap());
 	}
 
 	private static ItemStack gunWrap(String cls) {
@@ -40,6 +40,6 @@ public final class WrapChoice {
 	}
 
 	public static int gunPattern(String cls) {
-		return SkinWrapItem.pattern(gunWrap(cls));
+		return SkinWrapItem.finish(gunWrap(cls));
 	}
 }

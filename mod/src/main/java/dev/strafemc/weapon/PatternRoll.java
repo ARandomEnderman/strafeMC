@@ -24,6 +24,22 @@ public final class PatternRoll {
 		return new Placement(x, y, rot);
 	}
 
+	/**
+	 * The composite's grunge_wear variables, in the order its roll lists them after the pattern's three: wear scale,
+	 * wear offset x / y, wear rotation, grunge scale, grunge offset x / y, grunge rotation. Each {min, max}, or {v, v}
+	 * when the kit doesn't roll it.
+	 */
+	public record WearBounds(double[][] vars) {}
+
+	/** The same stream as roll(seed, b), continued: the 8 grunge_wear values (WearBounds order). */
+	public static double[] rollWear(int seed, WearBounds w) {
+		Stream r = new Stream(seed);
+		for (int i = 0; i < 3; i++) r.randomFloat(0, 0); // the pattern's draws come first
+		double[] out = new double[w.vars().length];
+		for (int i = 0; i < out.length; i++) out[i] = r.randomFloat(w.vars()[i][0], w.vars()[i][1]);
+		return out;
+	}
+
 	/** CUniformRandomStream: ran1 with a 32-entry shuffle table. */
 	static final class Stream {
 		private static final int IA = 16807, IM = 2147483647, IQ = 127773, IR = 2836, NTAB = 32, NDIV = 1 + (IM - 1) / NTAB;

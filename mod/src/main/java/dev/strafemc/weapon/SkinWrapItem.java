@@ -47,6 +47,24 @@ public class SkinWrapItem extends Item {
 		return s;
 	}
 
+	/** A wrap with this wear (float). */
+	public static ItemStack stack(Item item, String wrap, int pattern, float wear) {
+		ItemStack s = stack(item, wrap, pattern);
+		if (wear > 0) s.set(WeaponItems.WEAR, Float.floatToIntBits(wear));
+		return s;
+	}
+
+	/** The wrap's wear (0: Factory New, also wraps from before wear existed). */
+	public static float wear(ItemStack stack) {
+		Integer w = stack.get(WeaponItems.WEAR);
+		return w == null ? 0 : Float.intBitsToFloat(w);
+	}
+
+	/** Pattern seed and wear as the one number the viewmodel bakes a finish by (Wear.finish). */
+	public static int finish(ItemStack stack) {
+		return Wear.finish(pattern(stack), wear(stack));
+	}
+
 	/** The wrap's pattern seed (0 if it has none). */
 	public static int pattern(ItemStack stack) {
 		Integer p = stack.get(WeaponItems.PATTERN);
@@ -97,6 +115,8 @@ public class SkinWrapItem extends Item {
 			for (String cls : w.kits().keySet()) guns.add(SkinWraps.WEAPON_NAMES.getOrDefault(cls, cls));
 			out.accept(Component.literal("§7Fits: " + String.join(", ", guns)));
 		}
+		float wear = wear(stack);
+		out.accept(Component.literal("§7Exterior: " + Wear.exterior(wear) + " (" + String.format(java.util.Locale.ROOT, "%.8f", wear) + ")"));
 		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));
 	}
 }

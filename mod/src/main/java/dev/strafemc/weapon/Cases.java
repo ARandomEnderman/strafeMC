@@ -140,7 +140,7 @@ public final class Cases {
 			List<Entry> pool = new ArrayList<>(c.special());
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
-				ItemStack s = stack(e, pattern);
+				ItemStack s = stack(e, pattern, Wear.roll(e.kit(), rng));
 				if (!s.isEmpty()) return new Drop(e, null, s);
 			}
 		}
@@ -151,7 +151,7 @@ public final class Cases {
 			List<Entry> pool = new ArrayList<>(list);
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
-				ItemStack s = stack(e, pattern);
+				ItemStack s = stack(e, pattern, Wear.roll(e.kit(), rng));
 				if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], s);
 			}
 		}
@@ -160,6 +160,11 @@ public final class Cases {
 
 	/** The item for an entry: the gun's wrap, the knife wrap of that finish, or the gloves; empty if we have none. */
 	public static ItemStack stack(Entry e, int pattern) {
+		return stack(e, pattern, 0);
+	}
+
+	/** The same with a wear (wraps; gloves stay Factory New for now). */
+	public static ItemStack stack(Entry e, int pattern, float wear) {
 		if (e.gloves()) {
 			var skin = GloveSkins.get(e.kit());
 			return skin == null ? ItemStack.EMPTY : GloveItem.stack(WeaponItems.GLOVES.get(skin.kind()), e.kit());
@@ -167,10 +172,10 @@ public final class Cases {
 		if (e.knife()) {
 			for (SkinWraps.Wrap w : SkinWraps.all())
 				if (w.knife() && (e.kit().equals(w.kits().get(e.item())) || w.kits().containsValue(e.kit())))
-					return SkinWrapItem.stack(WeaponItems.KNIFE_WRAP, w.id(), pattern);
+					return SkinWrapItem.stack(WeaponItems.KNIFE_WRAP, w.id(), pattern, wear);
 			return ItemStack.EMPTY; // a vanilla knife: no finish to wrap
 		}
 		SkinWraps.Wrap w = SkinWraps.ofKit(e.item(), e.kit());
-		return w == null ? ItemStack.EMPTY : SkinWrapItem.stack(WeaponItems.GUN_WRAP, w.id(), pattern);
+		return w == null ? ItemStack.EMPTY : SkinWrapItem.stack(WeaponItems.GUN_WRAP, w.id(), pattern, wear);
 	}
 }

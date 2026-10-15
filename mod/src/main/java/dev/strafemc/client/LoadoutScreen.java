@@ -123,7 +123,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		g.fill(px, top, px + pw, top + imageHeight, PANEL);
 		g.text(font, (wrap.knife() ? "KNIFE" : dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(weapon, weapon)).toUpperCase(), px + 8, top + 8, ACCENT, false);
 		float yaw = (float) Math.sin(System.nanoTime() / 1e9 * 0.6) * 25;
-		LoadoutPreview.drawTurned(g, px + 4, top + 20, px + pw - 4, top + 104, weapon, kit, SkinWrapItem.pattern(hoveredWrap), yaw, Float.NaN);
+		LoadoutPreview.drawTurned(g, px + 4, top + 20, px + pw - 4, top + 104, weapon, kit, SkinWrapItem.finish(hoveredWrap), yaw, Float.NaN);
 		int y = top + 110;
 		for (var line : font.split(hoveredWrap.getHoverName(), pw - 16)) {
 			g.text(font, line, px + 8, y, 0xFFFFFFFF, false);
