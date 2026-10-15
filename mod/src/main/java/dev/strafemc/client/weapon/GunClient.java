@@ -144,7 +144,9 @@ public final class GunClient {
 	public static double heldMaxSpeed(LocalPlayer p) {
 		if (p != null && p.getMainHandItem().getItem() instanceof GunItem g) {
 			// scoped: CS2's scoped max speed (the AWP walks at 100)
-			WeaponStats s = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, g.modeOf(p.getMainHandItem(), INSTANCE.zoom, false));
+			// the R8: CS2's two speeds are 180 while the hammer is being cocked (the primary's charge) and 220 otherwise
+			int mode = g.weaponClass.equals("weapon_revolver") ? (INSTANCE.revolverReadyAt != 0 ? 0 : 1) : g.modeOf(p.getMainHandItem(), INSTANCE.zoom, false);
+			WeaponStats s = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, mode);
 			if (s != null) return s.maxSpeed();
 		}
 		return Double.NaN;
