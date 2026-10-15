@@ -28,6 +28,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.StrafeOps::load);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.WorldCvars::load);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.StrafeSettings::load);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.world.SpawnPoints::load);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.server.WorldCvars.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.WorldCvars::tick);
@@ -44,6 +45,8 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
 			dev.strafemc.weapon.BuyMenu.spawned(newP);
+			// a random spawn block, if the world has any and they're on
+			if (!alive && dev.strafemc.server.StrafeSettings.spawnBlocks()) dev.strafemc.world.SpawnPoints.respawn(newP);
 			// CS2: you come back with full magazines (the guns you kept), a charged Zeus
 			if (!alive) {
 				var inv = newP.getInventory();

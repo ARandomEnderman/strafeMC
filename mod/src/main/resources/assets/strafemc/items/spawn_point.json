@@ -1,0 +1,6 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "strafemc:block/spawn_point"
+ }
+}

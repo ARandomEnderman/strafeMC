@@ -140,5 +140,6 @@
 	"item.strafemc.weapon_knife_ursus": "Ursus Knife",
 	"itemGroup.strafemc.guns": "strafeMC Guns",
 	"itemGroup.strafemc.knives": "strafeMC Knives",
-	"itemGroup.strafemc.utility": "strafeMC Utility & Blocks"
+	"itemGroup.strafemc.utility": "strafeMC Utility & Blocks",
+	"block.strafemc.spawn_point": "Spawn Point"
 }

@@ -33,6 +33,8 @@ public final class StrafeSettings {
 	private static volatile int buyTime = 0;
 	/** strafemc_loadout_keep: loadout items (gloves, wraps) stay with you when you die (default) or drop like the inventory. */
 	private static volatile boolean loadoutKeep = true;
+	/** strafemc_spawnblocks: players who die respawn on a random spawn block (when the world has any). */
+	private static volatile boolean spawnBlocks = true;
 	private static volatile int maxUnlagMs = 300;
 	private static Path file;
 
@@ -97,6 +99,15 @@ public final class StrafeSettings {
 		GameplaySync.resendAll();
 	}
 
+	public static boolean spawnBlocks() {
+		return spawnBlocks;
+	}
+
+	public static void setSpawnBlocks(boolean on) {
+		spawnBlocks = on;
+		save();
+	}
+
 	public static boolean loadoutKeep() {
 		return loadoutKeep;
 	}
@@ -155,6 +166,7 @@ public final class StrafeSettings {
 		buyMode = BUY_CREATIVE;
 		buyTime = 0;
 		loadoutKeep = true;
+		spawnBlocks = true;
 		playerChoice = false;
 		PERSONAL.clear();
 		try {
@@ -168,6 +180,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("buyMode")) buyMode = o.get("buyMode").getAsInt();
 				if (o != null && o.has("buyTime")) buyTime = o.get("buyTime").getAsInt();
 				if (o != null && o.has("loadoutKeep")) loadoutKeep = o.get("loadoutKeep").getAsBoolean();
+				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
@@ -188,6 +201,7 @@ public final class StrafeSettings {
 		o.addProperty("buyMode", buyMode);
 		o.addProperty("buyTime", buyTime);
 		o.addProperty("loadoutKeep", loadoutKeep);
+		o.addProperty("spawnBlocks", spawnBlocks);
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
 		JsonObject pers = new JsonObject();

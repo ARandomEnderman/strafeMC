@@ -30,7 +30,7 @@ public final class WeaponItems {
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
-	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, HEGRENADE;
+	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP;
@@ -38,7 +38,7 @@ public final class WeaponItems {
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
 			KNIVES = new java.util.LinkedHashMap<>();
-	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING;
+	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING, SPAWN_POINT;
 
 	private WeaponItems() {}
 
@@ -92,6 +92,13 @@ public final class WeaponItems {
 		ResourceKey<Item> lyingItem = ResourceKey.create(Registries.ITEM, id("surf_ramp_lying"));
 		SURF_RAMP_LYING_ITEM = Registry.register(BuiltInRegistries.ITEM, lyingItem,
 				new net.minecraft.world.item.BlockItem(SURF_RAMP_LYING, new Item.Properties().setId(lyingItem).useBlockDescriptionPrefix()));
+		ResourceKey<net.minecraft.world.level.block.Block> spawnKey = ResourceKey.create(Registries.BLOCK, id("spawn_point"));
+		SPAWN_POINT = Registry.register(BuiltInRegistries.BLOCK, spawnKey, new dev.strafemc.world.SpawnBlock(
+				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(spawnKey).strength(1.5f)
+						.sound(net.minecraft.world.level.block.SoundType.STONE)));
+		ResourceKey<Item> spawnItem = ResourceKey.create(Registries.ITEM, id("spawn_point"));
+		SPAWN_POINT_ITEM = Registry.register(BuiltInRegistries.ITEM, spawnItem,
+				new net.minecraft.world.item.BlockItem(SPAWN_POINT, new Item.Properties().setId(spawnItem).useBlockDescriptionPrefix()));
 		// guns (with their magazines), knives, utility and blocks: a tab each
 		tab("guns", () -> new ItemStack(AK47), e -> {
 			for (var g : GUNS.entrySet()) {
@@ -108,6 +115,7 @@ public final class WeaponItems {
 			e.accept(SURF_RAMP_ITEM);
 			e.accept(SURF_SLOPE_ITEM);
 			e.accept(SURF_RAMP_LYING_ITEM);
+			e.accept(SPAWN_POINT_ITEM);
 		});
 		// a tab each for gloves, knife wraps and gun wraps (agents get theirs when they exist)
 		tab("gloves", () -> GloveItem.stack(GLOVES.get(GloveItem.Kind.SPORT), GloveSkins.of(GloveItem.Kind.SPORT).get(0).kit()),

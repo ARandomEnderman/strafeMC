@@ -285,6 +285,8 @@ public final class ConsoleCommands {
 				a -> action("strafemc_buymenu", a.length > 0 ? a[0] : "", false));
 		local("strafemc_buytime", "Seconds after (re)spawning that buying stays open, like CS2's mp_buytime (CS2: 20); 0 = no limit (default). Operators.",
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
+		local("strafemc_spawnblocks", "Players who die respawn on a random spawn block (1, default) or at the world spawn (0). Operators.",
+				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		local("strafemc_loadout_keep", "Loadout items (gloves, skin wraps) stay with you when you die (1, default) or drop like your inventory (0). Operators.",
 				a -> action("strafemc_loadout_keep", bool(a, !dev.strafemc.client.ClientGameplay.loadoutKeep()) ? "1" : "0", false));
 		local("loadout", "Open your loadout (gloves and skin wraps; key U).", a -> dev.strafemc.client.LoadoutKey.open());

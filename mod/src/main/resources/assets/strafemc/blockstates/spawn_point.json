@@ -1,0 +1,7 @@
+{
+ "variants": {
+  "": {
+   "model": "strafemc:block/spawn_point"
+  }
+ }
+}
