@@ -304,7 +304,7 @@ public final class GunClient {
 		ItemStack held = p.getMainHandItem();
 		if (!(held.getItem() instanceof GunItem g)) return "";
 		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
-		return w != null && w.q().burst() && g.burst(held) ? "  §eBURST" : "";
+		return ""; // CS2 shows burst on the ammo panel (AmmoHud's fire mode icon), not here
 	}
 
 	/**

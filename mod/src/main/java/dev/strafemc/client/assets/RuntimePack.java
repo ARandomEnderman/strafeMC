@@ -98,6 +98,8 @@ public final class RuntimePack {
 					tex.resolve("gui/hud/ammo_reserve_magazine.png"), Placeholders.Icon.MAG, 64);
 			safe(() -> svg("panorama/images/hud/ammo_fullauto.vsvg_c", "panorama/images/hud/ammo_fullauto.svg", tex.resolve("gui/hud/ammo_fullauto.png"), 64),
 					tex.resolve("gui/hud/ammo_fullauto.png"), Placeholders.Icon.FULLAUTO, 64);
+			safe(() -> svg("panorama/images/hud/ammo_burst.vsvg_c", "panorama/images/hud/ammo_burst.svg", tex.resolve("gui/hud/ammo_burst.png"), 64),
+					tex.resolve("gui/hud/ammo_burst.png"), Placeholders.Icon.FULLAUTO, 64);
 			safe(() -> svg("panorama/images/hud/ammo_reserve_generic_bullet.vsvg_c", "panorama/images/hud/ammo_reserve_generic_bullet.svg",
 					tex.resolve("gui/hud/ammo_bullet.png"), 64), tex.resolve("gui/hud/ammo_bullet.png"), Placeholders.Icon.BULLET, 64);
 			StrafeMc.LOG.info("[strafemc] runtime resource pack ready at {}", DIR);

@@ -11,6 +11,8 @@ import net.minecraft.resources.Identifier;
 /** CS-style ammo readout (bottom right) while holding a CS gun: rounds in the magazine | magazines left, with CS2's HUD icons. */
 public final class AmmoHud {
 	private static final Identifier FULLAUTO = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/hud/ammo_fullauto.png");
+	private static final Identifier BURST = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/hud/ammo_burst.png");
+	private static final Identifier BULLET = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/hud/ammo_bullet.png");
 	private static final Identifier MAGAZINE = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/hud/ammo_reserve_magazine.png");
 
 	private AmmoHud() {}
@@ -47,7 +49,9 @@ public final class AmmoHud {
 			pose.scale(2f, 2f);
 			g.text(font, big, 0, 0, lowColor, true);
 			pose.popMatrix();
-			if (w.fullAuto()) g.blit(RenderPipelines.GUI_TEXTURED, FULLAUTO, bx - 16, y + 2, 0, 0, 12, 12, 12, 12);
+			// CS2's fire mode icon beside the rounds: three bullets in burst mode, the full-auto icon, else one bullet
+			Identifier mode = w.q().burst() && gun.burst(mc.player.getMainHandItem()) ? BURST : w.fullAuto() ? FULLAUTO : BULLET;
+			g.blit(RenderPipelines.GUI_TEXTURED, mode, bx - 16, y + 2, 0, 0, 12, 12, 12, 12);
 			if (GunClient.INSTANCE.reloading()) g.text(font, "RELOADING", sx - 60, y - 10, 0xFFFFC864, true);
 			double prog = GunClient.INSTANCE.reloadProgress();
 			if (prog >= 0 && dev.strafemc.client.Placeholders.active()) { // no reload animation without CS2 files: show the progress
