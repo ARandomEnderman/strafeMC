@@ -28,7 +28,7 @@
     "MouseHandlerZoomMixin",
     "RenderPipelinesAccessor",
     "RenderTypeInvoker",
-    "GameRendererHandMixin"
+    "GameRendererHandMixin", "GameRendererHurtTiltMixin"
   ],
   "injectors": {
     "defaultRequire": 1
