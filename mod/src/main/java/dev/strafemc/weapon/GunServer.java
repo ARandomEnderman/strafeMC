@@ -478,6 +478,7 @@ public final class GunServer {
 		int walls = 0;
 		EntityHitResult hit = null;
 		dev.strafemc.server.LagHistory.Hit rewound = null;
+		String partGroup = null;
 		for (int pen = 0; pen <= 4 && left > 0; pen++) {
 			Vec3 end = from.add(dir.scale(left));
 			HitResult block = p.level().clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
@@ -490,6 +491,19 @@ public final class GunServer {
 			if (rewound != null && (hit == null || rewound.at().distanceToSqr(segFrom) < hit.getLocation().distanceToSqr(segFrom)))
 				hit = new EntityHitResult(rewound.entity(), rewound.at());
 			else rewound = null;
+			// a humanoid is hit where the bullet meets its body parts (Hitboxes): through the empty corners of its box it's a miss
+			partGroup = null;
+			if (hit != null && rewound == null && hit.getEntity() instanceof LivingEntity le && Hitboxes.humanoid(le)) {
+				Hitboxes.Hit part = Hitboxes.trace(le.getBoundingBox(), Hitboxes.pose(le), segFrom, segEnd, 0);
+				if (part == null) hit = null;
+				else {
+					hit = new EntityHitResult(le, part.at());
+					partGroup = part.group();
+				}
+			} else if (rewound != null && rewound.pose() != null) {
+				Hitboxes.Hit part = Hitboxes.trace(rewound.box(), rewound.pose(), segFrom, segEnd, rewound.claimed() ? 0.05 : 0);
+				if (part != null) partGroup = part.group();
+			}
 			if (hit != null || !(block instanceof net.minecraft.world.phys.BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) break;
 			if (pen == 0 && predicted) impact(p, bh);
 			else impactAll(p, bh); // past a wallbang, or a later pellet: the shooter's own client didn't predict this one
@@ -515,7 +529,7 @@ public final class GunServer {
 			hurtOther(p, hit.getEntity(), (float) (dmg * StrafeConfig.hpScale));
 			return;
 		}
-		String group = rewound != null ? hitgroup(rewound.box(), rewound.eyeHeight(), at)
+		String group = partGroup != null ? partGroup : rewound != null ? hitgroup(rewound.box(), rewound.eyeHeight(), at)
 				: hitgroup(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at);
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
