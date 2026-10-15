@@ -16,30 +16,30 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * A CS2 weapon case: its contents by tier in CS2's rarity colours, then "Unlock Container": the server rolls, and the
- * reel spins and slows down onto what came out, as in CS2.
+ * A CS2 weapon case: its contents by tier in CS2's rarity colours, then "Unlock Container" (or 2x-5x at once): the
+ * server rolls, one reel per case spins and slows down onto what came out, and the drops are revealed, as in CS2.
  */
 public final class CaseScreen extends Screen {
 	/** One reel / contents tile: the item to show, its rarity colour and name. */
 	private record Tile(ItemStack stack, int color, String name, Cases.Entry entry) {}
 
+	/** One case's reel and what it lands on. */
+	private record Spin(List<Tile> tiles, int landing, double delay, Tile result, int rarity, int pattern) {}
+
 	private static final int TILE = 64, GOLD = 0xFFE4AE39;
-	private static final double SPIN_SECONDS = 6.5;
+	private static final double SPIN_SECONDS = 6.5, STAGGER = 0.25;
 	private static CaseScreen open;
 
 	private final Cases.Case c;
 	private final List<Tile> contents = new ArrayList<>();
-	private Button unlock;
-	/** The reel once the result is in, the index it lands on, when it started. */
-	private List<Tile> reel;
-	private int landing;
+	private final List<Button> unlocks = new ArrayList<>();
+	private List<Spin> spins;
 	private long spinStart;
 	private int lastTick = -1;
-	private String result, revealSound = "rare";
 	private boolean revealed, claimed;
-	private int resultColor, resultPattern = -1, resultRarity;
-	private Cases.Entry resultEntry;
-	private Button close;
+	private Button close, prev, next;
+	/** Which drop the reveal shows (several opened: arrows switch, as in CS2). */
+	private int shown;
 
 	private CaseScreen(Cases.Case c) {
 		super(Component.literal(c.name()));
@@ -49,22 +49,25 @@ public final class CaseScreen extends Screen {
 			if (list == null) continue;
 			for (Cases.Entry e : list) {
 				ItemStack s = Cases.stack(e, 0);
-				if (!s.isEmpty()) contents.add(new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[t].color, s.getHoverName().getString(), e));
+				if (!s.isEmpty()) contents.add(new Tile(s, color(t), s.getHoverName().getString(), e));
 			}
 		}
 	}
 
-	public static void open(String caseId) {
-		Cases.Case c = Cases.get(caseId);
-		if (c != null) { // every gun's picture in one converter run
-			List<Cases.Entry> all = new ArrayList<>();
-			for (var list : c.guns().values()) all.addAll(list);
-			CaseImages.load(all);
-		}
-		if (c != null) Minecraft.getInstance().setScreen(open = new CaseScreen(c));
+	private static int color(int rarity) {
+		return rarity < 0 ? GOLD : 0xFF000000 | SkinWraps.Rarity.values()[rarity].color;
 	}
 
-	/** The server's roll: build the reel ending on it and spin (the screen already closed: take the drop now). */
+	public static void open(String caseId) {
+		Cases.Case c = Cases.get(caseId);
+		if (c == null) return;
+		List<Cases.Entry> all = new ArrayList<>(); // every gun's picture in one converter run
+		for (var list : c.guns().values()) all.addAll(list);
+		CaseImages.load(all);
+		Minecraft.getInstance().setScreen(open = new CaseScreen(c));
+	}
+
+	/** The server's rolls: build the reels ending on them and spin (the screen already closed: take the drops now). */
 	public static void result(StrafePayloads.CaseResult r) {
 		if (open == null || Minecraft.getInstance().screen != open || !open.c.id().equals(r.caseId())) {
 			claim();
@@ -73,28 +76,69 @@ public final class CaseScreen extends Screen {
 		open.spin(r);
 	}
 
-	/** Tells the server to hand the drop over (the reel landed, or it was closed). */
+	/** Tells the server to hand the drops over (the reels landed, or the screen was closed). */
 	private static void claim() {
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("case_claim", ""));
 	}
 
 	@Override
 	protected void init() {
-		unlock = addRenderableWidget(Button.builder(Component.literal("Unlock Container"), b -> {
-			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("case_open", c.id()));
-			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_unlock_01", 1f);
-			b.active = false;
-		}).bounds(width / 2 - 75, height - 30, 150, 20).build());
-		if (reel != null) unlock.active = false;
+		unlocks.clear();
+		int[] counts = {1, 2, 3, 4, 5};
+		int bw = 46, total = 150 + 4 * (bw + 4), x = width / 2 - total / 2;
+		for (int n : counts) {
+			int w = n == 1 ? 150 : bw;
+			Button b = addRenderableWidget(Button.builder(Component.literal(n == 1 ? "Unlock Container" : n + "x"), btn -> unlock(n))
+					.bounds(x, height - 30, w, 20).build());
+			b.active = spins == null;
+			b.visible = !revealed;
+			unlocks.add(b);
+			x += w + 4;
+		}
 		close = addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(width / 2 - 75, height - 30, 150, 20).build());
 		close.visible = revealed;
-		unlock.visible = !revealed;
+		prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> show(-1)).bounds(width / 2 - 200, height / 2 - 40, 24, 40).build());
+		next = addRenderableWidget(Button.builder(Component.literal(">"), b -> show(1)).bounds(width / 2 + 176, height / 2 - 40, 24, 40).build());
+		arrows();
 	}
 
-	/** Esc (or Close) mid-spin: the drop is yours at once, as in CS2 when you skip the reel. */
+	private void show(int dir) {
+		if (spins == null || spins.isEmpty()) return;
+		shown = Math.floorMod(shown + dir, spins.size());
+	}
+
+	private void arrows() {
+		boolean many = revealed && spins != null && spins.size() > 1;
+		prev.visible = many;
+		next.visible = many;
+	}
+
+	/** Left / right arrow keys flip through the drops too. */
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+		if (revealed && spins != null && spins.size() > 1) {
+			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT) {
+				show(-1);
+				return true;
+			}
+			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT) {
+				show(1);
+				return true;
+			}
+		}
+		return super.keyPressed(e);
+	}
+
+	private void unlock(int n) {
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("case_open", c.id() + " " + n));
+		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_unlock_01", 1f);
+		for (Button b : unlocks) b.active = false;
+	}
+
+	/** Esc (or Close) mid-spin: the drops are yours at once, as in CS2 when you skip the reel. */
 	@Override
 	public void onClose() {
-		if (reel != null && !claimed) {
+		if (spins != null && !claimed) {
 			claimed = true;
 			claim();
 		}
@@ -104,23 +148,20 @@ public final class CaseScreen extends Screen {
 
 	private void spin(StrafePayloads.CaseResult r) {
 		Random rng = new Random();
-		List<Tile> tiles = new ArrayList<>();
-		// filler by the same odds the server rolls with, a gold "rare special" tile now and then
-		for (int i = 0; i < 60; i++) tiles.add(filler(rng));
-		landing = 52;
-		ItemStack got = Cases.stack(new Cases.Entry(r.kit(), r.item()), 0);
-		int color = r.rarity() < 0 ? GOLD : 0xFF000000 | SkinWraps.Rarity.values()[r.rarity()].color;
-		tiles.set(landing, new Tile(got, color, r.name(), new Cases.Entry(r.kit(), r.item())));
-		reel = tiles;
+		List<Spin> list = new ArrayList<>();
+		for (int k = 0; k < r.drops().size(); k++) {
+			var d = r.drops().get(k);
+			List<Tile> tiles = new ArrayList<>();
+			for (int i = 0; i < 60; i++) tiles.add(filler(rng));
+			int landing = 52;
+			Cases.Entry e = new Cases.Entry(d.kit(), d.item());
+			Tile got = new Tile(Cases.stack(e, 0), color(d.rarity()), d.name(), e);
+			tiles.set(landing, got);
+			CaseImages.load(List.of(e));
+			list.add(new Spin(tiles, landing, k * STAGGER, got, d.rarity(), d.pattern()));
+		}
+		spins = list;
 		spinStart = System.nanoTime();
-		result = r.name();
-		resultPattern = r.pattern();
-		resultRarity = r.rarity();
-		resultEntry = new Cases.Entry(r.kit(), r.item());
-		CaseImages.load(List.of(resultEntry));
-		revealSound = r.rarity() < 0 || r.rarity() >= SkinWraps.Rarity.ANCIENT.ordinal() ? "ancient"
-				: r.rarity() == SkinWraps.Rarity.LEGENDARY.ordinal() ? "legendary" : r.rarity() == SkinWraps.Rarity.MYTHICAL.ordinal() ? "mythical" : "rare";
-		resultColor = color;
 	}
 
 	/** A reel tile by the case's odds among its guns: never the gold rare special one (CS2 shows it only when it drops). */
@@ -133,7 +174,7 @@ public final class CaseScreen extends Screen {
 			if (list == null || list.isEmpty()) continue;
 			Cases.Entry e = list.get(rng.nextInt(list.size()));
 			ItemStack s = Cases.stack(e, 0);
-			return new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[k].color, s.getHoverName().getString(), e);
+			return new Tile(s, color(k), s.getHoverName().getString(), e);
 		}
 		return contents.isEmpty() ? new Tile(ItemStack.EMPTY, GOLD, "", null) : contents.get(rng.nextInt(contents.size()));
 	}
@@ -143,9 +184,9 @@ public final class CaseScreen extends Screen {
 		g.fill(0, 0, width, height, 0xE0101418);
 		var font = Minecraft.getInstance().font;
 		g.text(font, c.name(), width / 2 - font.width(c.name()) / 2, 12, 0xFFFFFFFF, true);
-		if (reel == null) contents(g, font);
+		if (spins == null) contents(g, font);
 		else if (revealed) preview(g, font);
-		else reel(g, font);
+		else reels(g, font);
 		super.extractRenderState(g, mx, my, delta);
 	}
 
@@ -169,10 +210,9 @@ public final class CaseScreen extends Screen {
 	private void tile(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, Tile t, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, 0xFF22272E);
 		g.fill(x, y + h - 3, x + w, y + h, t.color());
-		// CS2's picture of the gun in its skin (4:3), the item's own icon until it's loaded
+		// CS2's picture of the gun in its skin, 4:3 above the name; the item's own icon until it's loaded
 		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
 		if (pic != null) {
-			// CS2's pictures are 4:3: fit that shape into the space above the name
 			int ph = Math.min(h - 16, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
 			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 2, 0, 0, pw, ph, pw, ph);
 		} else if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
@@ -180,52 +220,71 @@ public final class CaseScreen extends Screen {
 		g.text(font, n, x + w / 2 - font.width(n) / 2, y + h - 13, 0xFFE0E0E0, false);
 	}
 
-	/** The reel, eased to a stop on the result; ticks as each tile passes the line. */
-	private void reel(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
-		double t = Math.min(1, (System.nanoTime() - spinStart) / 1e9 / SPIN_SECONDS);
-		double ease = 1 - Math.pow(1 - t, 4);
-		int step = TILE + 6, cy = height / 2 - TILE / 2;
-		double target = landing * step + step / 2.0 - 10; // stop a little off centre, like CS2
-		double off = ease * target;
-		int tick = (int) (off / step);
-		if (tick != lastTick && t < 1) {
-			lastTick = tick;
-			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/csgo_ui_crate_item_scroll", 0.6f);
+	/** The reels, stacked, each eased to a stop on its drop (a little apart); ticks as tiles pass the line. */
+	private void reels(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
+		int n = spins.size(), size = n <= 2 ? TILE : n <= 3 ? 56 : 48, step = size + 6;
+		int rowH = size + 10, top = Math.max(28, height / 2 - n * rowH / 2);
+		double elapsed = (System.nanoTime() - spinStart) / 1e9;
+		boolean all = true;
+		for (int r = 0; r < n; r++) {
+			Spin s = spins.get(r);
+			double t = Math.max(0, Math.min(1, (elapsed - s.delay()) / SPIN_SECONDS));
+			if (t < 1) all = false;
+			double off = (1 - Math.pow(1 - t, 4)) * (s.landing() * step + step / 2.0 - 10); // stops a little off centre, like CS2
+			if (r == 0) {
+				int tick = (int) (off / step);
+				if (tick != lastTick && t < 1) {
+					lastTick = tick;
+					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/csgo_ui_crate_item_scroll", 0.6f);
+				}
+			}
+			int cy = top + r * rowH;
+			for (int i = 0; i < s.tiles().size(); i++) {
+				int x = (int) (width / 2 + i * step - off);
+				if (x + size < 0 || x > width) continue;
+				tile(g, font, s.tiles().get(i), x, cy, size, size);
+			}
+			g.fill(width / 2 - 1, cy - 3, width / 2 + 1, cy + size + 3, 0xFFFFD040);
 		}
-		for (int i = 0; i < reel.size(); i++) {
-			int x = (int) (width / 2 + i * step - off);
-			if (x + TILE < 0 || x > width) continue;
-			tile(g, font, reel.get(i), x, cy, TILE, TILE);
-		}
-		g.fill(width / 2 - 1, cy - 6, width / 2 + 1, cy + TILE + 6, 0xFFFFD040);
-		if (t >= 1 && !revealed) { // landed: the drop is handed over, CS2's reveal sound for its rarity (gold: the Covert one, FLAGGED)
+		if (all && !revealed) { // every reel landed: the drops are handed over, CS2's reveal sound for the best one
 			revealed = true;
 			if (!claimed) {
 				claimed = true;
 				claim();
 			}
-			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_reveal_" + revealSound + "_01", 1f);
+			int best = 0;
+			for (Spin s : spins) best = Math.max(best, s.rarity() < 0 ? 99 : s.rarity());
+			String sound = best >= SkinWraps.Rarity.ANCIENT.ordinal() ? "ancient" : best == SkinWraps.Rarity.LEGENDARY.ordinal() ? "legendary"
+					: best == SkinWraps.Rarity.MYTHICAL.ordinal() ? "mythical" : "rare"; // gold: the Covert one (FLAGGED)
+			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_reveal_" + sound + "_01", 1f);
+			for (Button b : unlocks) b.visible = false;
 			close.visible = true;
-			unlock.visible = false;
+			shown = 0;
+			arrows();
 		}
 	}
 
-	/** The big reveal: CS2's picture of the drop, its name in its rarity colour, its grade and pattern template. */
+	/** The big reveal of one drop (arrows switch when several opened): CS2's picture, its name in its rarity colour, its grade and pattern template. */
 	private void preview(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
-		int pw = Math.min(width - 40, 320), ph = pw * 3 / 4, px = width / 2 - pw / 2, py = Math.max(30, height / 2 - ph / 2 - 30);
-		g.fill(px - 4, py - 4, px + pw + 4, py + ph + 4, 0xFF1A1F26);
-		g.fill(px - 4, py + ph + 1, px + pw + 4, py + ph + 4, resultColor);
-		var pic = resultEntry == null ? null : CaseImages.get(resultEntry);
-		if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, py, 0, 0, pw, ph, pw, ph);
+		Spin s = spins.get(Math.min(shown, spins.size() - 1));
+		int cw = Math.min(width - 120, 320), ch = cw * 3 / 4, px = width / 2 - cw / 2, py = Math.max(30, height / 2 - ch / 2 - 30);
+		g.fill(px - 4, py - 4, px + cw + 4, py + ch + 4, 0xFF1A1F26);
+		g.fill(px - 4, py + ch + 1, px + cw + 4, py + ch + 4, s.result().color());
+		var pic = CaseImages.get(s.result().entry());
+		if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, py, 0, 0, cw, ch, cw, ch);
 		var pose = g.pose();
 		pose.pushMatrix();
-		pose.translate(width / 2f, py + ph + 12);
+		pose.translate(width / 2f, py + ch + 12);
 		pose.scale(2f, 2f);
-		g.text(font, result, -font.width(result) / 2, 0, resultColor, true);
+		g.text(font, s.result().name(), -font.width(s.result().name()) / 2, 0, s.result().color(), true);
 		pose.popMatrix();
-		String grade = resultRarity < 0 ? "★ Rare Special Item" : SkinWraps.Rarity.values()[resultRarity].weaponName;
-		if (resultPattern >= 0) grade += "  |  Pattern template " + resultPattern;
-		g.text(font, grade, width / 2 - font.width(grade) / 2, py + ph + 34, 0xFFB0B0B0, true);
+		String grade = s.rarity() < 0 ? "★ Rare Special Item" : SkinWraps.Rarity.values()[s.rarity()].weaponName;
+		if (s.pattern() >= 0) grade += "  |  Pattern template " + s.pattern();
+		g.text(font, grade, width / 2 - font.width(grade) / 2, py + ch + 34, 0xFFB0B0B0, true);
+		if (spins.size() > 1) {
+			String page = (shown + 1) + " / " + spins.size();
+			g.text(font, page, width / 2 - font.width(page) / 2, py - 16, 0xFFFFFFFF, true);
+		}
 	}
 
 	@Override

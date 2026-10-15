@@ -43,6 +43,8 @@ public final class GunClient {
 	private ItemStack lastHeld = ItemStack.EMPTY;
 	private int lastSlot = -1;
 	private long deployUntil, nextFire, inspectUntil, lastNs;
+	/** strafeMC's inspect key (Options > Controls, F by default). */
+	private static net.minecraft.client.KeyMapping INSPECT;
 	/** Current reload in animation time (null = none): CS2 silent reload, shared logic with the server. */
 	private dev.strafemc.weapon.ReloadTimeline reload;
 	private double reloadLockout;
@@ -63,9 +65,15 @@ public final class GunClient {
 		RELOAD = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.reload", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, ConsoleKeys.CATEGORY));
 		BUY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.buymenu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, ConsoleKeys.CATEGORY));
 		// CS: F inspects. While a CS gun is held, Minecraft's swap-hands key (F by default) inspects instead.
+		// CS2's inspect (F by default) is a strafeMC key of its own; while a CS weapon is held, Minecraft's swap-hands on
+		// the same key is held back so it doesn't swap too
+		INSPECT = net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping(
+				"key.strafemc.inspect", com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_F,
+				dev.strafemc.client.console.ConsoleKeys.CATEGORY));
 		ClientTickEvents.START_CLIENT_TICK.register(mc -> {
-			if (mc.player == null || !(mc.player.getMainHandItem().getItem() instanceof GunItem)) return;
-			while (mc.options.keySwapOffhand.consumeClick()) INSTANCE.inspect();
+			boolean gun = mc.player != null && mc.player.getMainHandItem().getItem() instanceof GunItem;
+			if (gun && mc.options.keySwapOffhand.same(INSPECT)) while (mc.options.keySwapOffhand.consumeClick()) {}
+			while (INSPECT.consumeClick()) if (gun) INSTANCE.inspect();
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (RELOAD.consumeClick()) INSTANCE.reload(true);
@@ -182,7 +190,7 @@ public final class GunClient {
 		}
 		lastHeld = held;
 		// CS2: inspect held while the weapon comes out inspects it straight away (over the draw)
-		if (equipped && Minecraft.getInstance().options.keySwapOffhand.isDown()) inspect();
+		if (equipped && INSPECT.isDown()) inspect();
 		playDue(p, now);
 		inspectHold(now);
 		updateReload(p, now, dt);
@@ -990,7 +998,7 @@ public final class GunClient {
 	/** While the inspect key is held at the end of a rare inspect's loop part, jump back to its start (and replay its sounds). */
 	private void inspectHold(long now) {
 		if (inspectLoop == null || inspectUntil == 0 || now >= inspectUntil) return;
-		if (!Minecraft.getInstance().options.keySwapOffhand.isDown()) return;
+		if (!INSPECT.isDown()) return;
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
 		if (vm.time() < inspectLoop[1]) return;
 		double back = vm.time() - inspectLoop[0];

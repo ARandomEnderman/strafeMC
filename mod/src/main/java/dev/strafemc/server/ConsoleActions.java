@@ -90,35 +90,64 @@ public final class ConsoleActions {
 			case "redeploy" -> dev.strafemc.weapon.GunServer.redeploy(p);
 			case "burst" -> dev.strafemc.weapon.GunServer.toggleBurst(p);
 			case "zoom" -> dev.strafemc.weapon.GunServer.zoom(p, arg);
-			case "case_open" -> { // the held case: roll CS2's odds, use it up, hand out the drop, tell the client for its reel
+			case "case_open" -> { // 1-5 of the held case: each needs its own key, rolls CS2's odds; drops wait for the reel
+				String[] a = arg.trim().split(" ");
+				String caseId = a[0];
+				int n = 1;
+				try {
+					if (a.length > 1) n = Math.max(1, Math.min(5, Integer.parseInt(a[1])));
+				} catch (NumberFormatException ignored) {
+				}
 				var held = p.getMainHandItem();
-				if (!(held.getItem() instanceof dev.strafemc.weapon.CaseItem) || !arg.equals(dev.strafemc.weapon.CaseItem.caseId(held))) break;
-				var c = dev.strafemc.weapon.Cases.get(arg);
-				// its own key opens it (used up); creative needs none
-				int keySlot = -1;
+				if (!(held.getItem() instanceof dev.strafemc.weapon.CaseItem) || !caseId.equals(dev.strafemc.weapon.CaseItem.caseId(held))) break;
+				var c = dev.strafemc.weapon.Cases.get(caseId);
+				if (c == null) break;
 				var inv = p.getInventory();
-				String keyId = c == null ? null : c.key();
-				for (int i = 0; i < inv.getContainerSize() && keySlot < 0; i++)
-					if (inv.getItem(i).is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && keyId != null
-							&& keyId.equals(dev.strafemc.weapon.KeyItem.keyId(inv.getItem(i)))) keySlot = i;
-				if (keySlot < 0 && !p.getAbilities().instabuild) {
-					var k = dev.strafemc.weapon.Cases.key(keyId);
-					p.sendOverlayMessage(Component.literal("You need a " + (k != null ? k.name() : "key") + " to unlock this case."));
+				boolean creative = p.getAbilities().instabuild;
+				int cases = 0, keys = 0;
+				for (int i = 0; i < inv.getContainerSize(); i++) {
+					var s = inv.getItem(i);
+					if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) cases += s.getCount();
+					if (s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) keys += s.getCount();
+				}
+				if (!creative && (cases < n || keys < n)) {
+					var k = dev.strafemc.weapon.Cases.key(c.key());
+					p.sendOverlayMessage(Component.literal(cases < n ? "You need " + n + " of these cases." : "You need " + n + " " + (k != null ? k.name() : "key")
+							+ (n > 1 ? "s" : "") + " to unlock " + (n > 1 ? "them." : "this case.")));
 					break;
 				}
-				var drop = c == null ? null : dev.strafemc.weapon.Cases.roll(c, new java.util.Random());
-				if (drop == null) break;
-				if (!p.getAbilities().instabuild) {
-					held.shrink(1);
-					inv.getItem(keySlot).shrink(1);
+				var rng = new java.util.Random();
+				java.util.List<net.minecraft.world.item.ItemStack> stacks = new java.util.ArrayList<>();
+				java.util.List<Boolean> announce = new java.util.ArrayList<>();
+				java.util.List<dev.strafemc.net.StrafePayloads.CaseResult.Drop> sent = new java.util.ArrayList<>();
+				for (int k = 0; k < n; k++) {
+					var drop = dev.strafemc.weapon.Cases.roll(c, rng);
+					if (drop == null) continue;
+					stacks.add(drop.stack());
+					announce.add(drop.rarity() == null || drop.rarity().ordinal() >= dev.strafemc.weapon.SkinWraps.Rarity.ANCIENT.ordinal());
+					Integer pattern = drop.stack().get(dev.strafemc.weapon.WeaponItems.PATTERN);
+					sent.add(new dev.strafemc.net.StrafePayloads.CaseResult.Drop(drop.entry().kit(), drop.entry().item(),
+							drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString(), pattern == null ? -1 : pattern));
 				}
-				// the drop waits for the reel to land on it (case_claim), as in CS2
-				dev.strafemc.weapon.CaseOpening.hold(p, drop.stack(), drop.rarity() == null || drop.rarity().ordinal() >= dev.strafemc.weapon.SkinWraps.Rarity.ANCIENT.ordinal());
-				Integer pattern = drop.stack().get(dev.strafemc.weapon.WeaponItems.PATTERN);
+				if (stacks.isEmpty()) break;
+				if (!creative) { // n cases and n of their keys used up
+					int needCases = stacks.size(), needKeys = stacks.size();
+					for (int i = 0; i < inv.getContainerSize() && (needCases > 0 || needKeys > 0); i++) {
+						var s = inv.getItem(i);
+						if (needCases > 0 && s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) {
+							int t = Math.min(needCases, s.getCount());
+							s.shrink(t);
+							needCases -= t;
+						} else if (needKeys > 0 && s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) {
+							int t = Math.min(needKeys, s.getCount());
+							s.shrink(t);
+							needKeys -= t;
+						}
+					}
+				}
+				dev.strafemc.weapon.CaseOpening.hold(p, stacks, announce);
 				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))
-					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.CaseResult(arg, drop.entry().kit(),
-							drop.entry().item(), drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString(),
-							pattern == null ? -1 : pattern));
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.CaseResult(caseId, sent));
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);

@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class CaseOpening {
 	/** announce: Covert or a rare special item, told to everyone when it's handed over (as CS2 does). */
-	private record Pending(ItemStack stack, long dueMs, boolean announce) {}
+	private record Pending(java.util.List<ItemStack> stacks, long dueMs, java.util.List<Boolean> announce) {}
 
 	/** Longest reel plus slack: after this the drop is handed out without a claim. */
 	private static final long TIMEOUT_MS = 15_000;
@@ -24,21 +24,24 @@ public final class CaseOpening {
 	private CaseOpening() {}
 
 	/** Holds a drop for the player (a still-unclaimed earlier one is handed out first). */
-	public static void hold(ServerPlayer p, ItemStack stack, boolean announce) {
+	public static void hold(ServerPlayer p, java.util.List<ItemStack> stacks, java.util.List<Boolean> announce) {
 		claim(p);
-		PENDING.put(p.getUUID(), new Pending(stack.copy(), System.currentTimeMillis() + TIMEOUT_MS, announce));
+		PENDING.put(p.getUUID(), new Pending(stacks.stream().map(ItemStack::copy).toList(), System.currentTimeMillis() + TIMEOUT_MS, announce));
 	}
 
 	/** The reel landed (or was closed): the player gets their drop. */
 	public static void claim(ServerPlayer p) {
 		Pending d = PENDING.remove(p.getUUID());
 		if (d == null) return;
-		if (!p.getInventory().add(d.stack().copy())) p.drop(d.stack().copy(), false);
-		if (d.announce() && p.level().getServer() != null) // the big one: everyone hears about it
-			p.level().getServer().getPlayerList().broadcastSystemMessage(net.minecraft.network.chat.Component.literal("★ ").withColor(0xE4AE39)
-					.append(net.minecraft.network.chat.Component.literal(p.getScoreboardName()).withStyle(net.minecraft.ChatFormatting.BOLD))
-					.append(net.minecraft.network.chat.Component.literal(" has opened a container and found: "))
-					.append(d.stack().getHoverName().copy().withStyle(net.minecraft.ChatFormatting.BOLD)), false);
+		for (int i = 0; i < d.stacks().size(); i++) {
+			ItemStack s = d.stacks().get(i);
+			if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
+			if (d.announce().get(i) && p.level().getServer() != null) // the big one: everyone hears about it
+				p.level().getServer().getPlayerList().broadcastSystemMessage(net.minecraft.network.chat.Component.literal("★ ").withColor(0xE4AE39)
+						.append(net.minecraft.network.chat.Component.literal(p.getScoreboardName()).withStyle(net.minecraft.ChatFormatting.BOLD))
+						.append(net.minecraft.network.chat.Component.literal(" has opened a container and found: "))
+						.append(s.getHoverName().copy().withStyle(net.minecraft.ChatFormatting.BOLD)), false);
+		}
 	}
 
 	/** Every second: drops nobody claimed in time go out. */
