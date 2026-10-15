@@ -12,8 +12,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Minimal SVG path rasterizer for CS2's Panorama HUD icons (VRF exports .vsvg as plain SVG with path data).
- * Supports M/L/H/V/C/S/Q/T/Z (absolute and relative) and fill-rule; fills in white so the HUD can tint it.
+ * Minimal SVG rasterizer for CS2's Panorama HUD icons (VRF exports .vsvg as plain SVG).
+ * Paths (M/L/H/V/C/S/Q/T/Z), rects, polygons, circles, ellipses and lines with transforms, opacity and linear gradients.
  */
 public final class SvgIcon {
 	private static final Pattern VIEWBOX = Pattern.compile("viewBox=\"([-0-9.\\s]+)\"");
@@ -48,18 +48,193 @@ public final class SvgIcon {
 		t.translate((w - vw * scale) / 2, (size - vh * scale) / 2);
 		t.scale(scale, scale);
 		t.translate(-vx, -vy);
-		g.setColor(Color.WHITE);
-		Matcher pm = PATH.matcher(s);
-		while (pm.find()) {
-			String attrs = pm.group(1);
-			Matcher d = ATTR_D.matcher(attrs);
-			if (!d.find()) continue;
-			Path2D path = parse(d.group(1));
-			path.setWindingRule(attrs.contains("evenodd") ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO);
-			g.fill(t.createTransformedShape(path));
-		}
+		g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+		org.w3c.dom.Element root = parseXml(s);
+		java.util.Map<String, org.w3c.dom.Element> ids = new java.util.HashMap<>();
+		collectIds(root, ids);
+		draw(g, root, t, 1, "#FFFFFF", null, scale, ids);
 		g.dispose();
 		return img;
+	}
+
+	private static org.w3c.dom.Element parseXml(String s) throws Exception {
+		var f = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+		f.setNamespaceAware(false);
+		f.setValidating(false);
+		f.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false); // Illustrator's DOCTYPE: never fetched
+		f.setExpandEntityReferences(false);
+		return f.newDocumentBuilder().parse(new org.xml.sax.InputSource(new java.io.StringReader(s))).getDocumentElement();
+	}
+
+	private static void collectIds(org.w3c.dom.Element e, java.util.Map<String, org.w3c.dom.Element> ids) {
+		if (!e.getAttribute("id").isEmpty()) ids.put(e.getAttribute("id"), e);
+		for (org.w3c.dom.Node n = e.getFirstChild(); n != null; n = n.getNextSibling())
+			if (n instanceof org.w3c.dom.Element c) collectIds(c, ids);
+	}
+
+	/** An attribute, or the same property in the element's style="...". */
+	private static String prop(org.w3c.dom.Element e, String name) {
+		if (e.hasAttribute(name)) return e.getAttribute(name).trim();
+		for (String decl : e.getAttribute("style").split(";")) {
+			int c = decl.indexOf(':');
+			if (c > 0 && decl.substring(0, c).trim().equals(name)) return decl.substring(c + 1).trim();
+		}
+		return null;
+	}
+
+	private static double num(org.w3c.dom.Element e, String name, double def) {
+		String v = prop(e, name);
+		if (v == null || v.isEmpty()) return def;
+		try {
+			return Double.parseDouble(v.replace("px", ""));
+		} catch (NumberFormatException x) {
+			return def;
+		}
+	}
+
+	/**
+	 * Draws an element and its children: paths, rects, polygons / polylines, circles, ellipses and lines, with their
+	 * transforms, fill / stroke (inherited from groups; gradients by their stops), opacity and fill-rule. Symbols, defs,
+	 * masks and clip paths aren't drawn (only through a use, which these icons don't have).
+	 */
+	private static void draw(Graphics2D g, org.w3c.dom.Element e, AffineTransform parent, double opacity, String fill, String stroke, double scale,
+							 java.util.Map<String, org.w3c.dom.Element> ids) {
+		String tag = e.getTagName();
+		if (tag.equals("symbol") || tag.equals("defs") || tag.equals("mask") || tag.equals("clipPath") || tag.endsWith("Gradient")
+				|| tag.equals("style") || tag.equals("title")) return;
+		AffineTransform t = new AffineTransform(parent);
+		String tr = e.getAttribute("transform");
+		if (!tr.isEmpty()) t.concatenate(transform(tr));
+		opacity *= num(e, "opacity", 1);
+		String f = prop(e, "fill"), st = prop(e, "stroke");
+		if (f != null) fill = f;
+		if (st != null) stroke = st;
+		java.awt.Shape shape = switch (tag) {
+			case "path" -> {
+				Path2D p = parse(e.getAttribute("d"));
+				p.setWindingRule("evenodd".equals(prop(e, "fill-rule")) ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO);
+				yield p;
+			}
+			case "rect" -> {
+				double rx = num(e, "rx", num(e, "ry", 0)), ry = num(e, "ry", rx);
+				double x = num(e, "x", 0), y = num(e, "y", 0), w = num(e, "width", 0), h = num(e, "height", 0);
+				yield rx > 0 || ry > 0 ? new java.awt.geom.RoundRectangle2D.Double(x, y, w, h, rx * 2, ry * 2) : new java.awt.geom.Rectangle2D.Double(x, y, w, h);
+			}
+			case "polygon", "polyline" -> {
+				Matcher m = TOKEN.matcher(e.getAttribute("points"));
+				java.util.List<Double> v = new java.util.ArrayList<>();
+				while (m.find()) v.add(Double.parseDouble(m.group()));
+				Path2D.Double p = new Path2D.Double("evenodd".equals(prop(e, "fill-rule")) ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO);
+				for (int i = 0; i + 1 < v.size(); i += 2) {
+					if (i == 0) p.moveTo(v.get(i), v.get(i + 1));
+					else p.lineTo(v.get(i), v.get(i + 1));
+				}
+				if (tag.equals("polygon")) p.closePath();
+				yield p;
+			}
+			case "circle" -> {
+				double r = num(e, "r", 0);
+				yield new java.awt.geom.Ellipse2D.Double(num(e, "cx", 0) - r, num(e, "cy", 0) - r, 2 * r, 2 * r);
+			}
+			case "ellipse" -> {
+				double rx = num(e, "rx", 0), ry = num(e, "ry", 0);
+				yield new java.awt.geom.Ellipse2D.Double(num(e, "cx", 0) - rx, num(e, "cy", 0) - ry, 2 * rx, 2 * ry);
+			}
+			case "line" -> new java.awt.geom.Line2D.Double(num(e, "x1", 0), num(e, "y1", 0), num(e, "x2", 0), num(e, "y2", 0));
+			default -> null;
+		};
+		if (shape != null) {
+			java.awt.Shape s = t.createTransformedShape(shape);
+			java.awt.Paint fp = tag.equals("line") || tag.equals("polyline") && fill == null ? null : paint(fill, opacity * num(e, "fill-opacity", 1), t, ids);
+			if (fp != null) {
+				g.setPaint(fp);
+				g.fill(s);
+			}
+			java.awt.Paint sp = paint(stroke, opacity * num(e, "stroke-opacity", 1), t, ids);
+			if (sp != null) {
+				double sw = num(e, "stroke-width", 1) * scale * Math.sqrt(Math.abs(t.getDeterminant()) / (scale * scale));
+				String cap = prop(e, "stroke-linecap"), join = prop(e, "stroke-linejoin");
+				g.setStroke(new java.awt.BasicStroke((float) sw,
+						"round".equals(cap) ? java.awt.BasicStroke.CAP_ROUND : "square".equals(cap) ? java.awt.BasicStroke.CAP_SQUARE : java.awt.BasicStroke.CAP_BUTT,
+						"round".equals(join) ? java.awt.BasicStroke.JOIN_ROUND : "bevel".equals(join) ? java.awt.BasicStroke.JOIN_BEVEL : java.awt.BasicStroke.JOIN_MITER,
+						(float) Math.max(1, num(e, "stroke-miterlimit", 4))));
+				g.setPaint(sp);
+				g.draw(s);
+			}
+		}
+		for (org.w3c.dom.Node n = e.getFirstChild(); n != null; n = n.getNextSibling())
+			if (n instanceof org.w3c.dom.Element c) draw(g, c, t, opacity, fill, stroke, scale, ids);
+	}
+
+	/** A fill / stroke value as a paint: a colour, or a linear gradient by url(#id); null for none. */
+	private static java.awt.Paint paint(String v, double opacity, AffineTransform t, java.util.Map<String, org.w3c.dom.Element> ids) {
+		if (v == null) return null;
+		v = v.trim();
+		if (v.isEmpty() || v.equals("none")) return null;
+		if (v.startsWith("url(")) {
+			org.w3c.dom.Element gr = ids.get(v.replaceAll("^url\\(\\s*#|\\s*\\)$", ""));
+			if (gr == null || !gr.getTagName().equals("linearGradient")) return null;
+			java.util.List<Float> offs = new java.util.ArrayList<>();
+			java.util.List<Color> cols = new java.util.ArrayList<>();
+			for (org.w3c.dom.Node n = gr.getFirstChild(); n != null; n = n.getNextSibling())
+				if (n instanceof org.w3c.dom.Element s && s.getTagName().equals("stop")) {
+					float o = (float) Math.max(offs.isEmpty() ? 0 : offs.getLast() + 1e-4, Math.min(1, num(s, "offset", 0)));
+					if (o > 1) break;
+					Color c = colour(prop(s, "stop-color"), opacity * num(s, "stop-opacity", 1));
+					offs.add(o);
+					cols.add(c == null ? new Color(0, 0, 0, 0) : c);
+				}
+			if (cols.isEmpty()) return null;
+			if (cols.size() == 1) return cols.getFirst();
+			java.awt.geom.Point2D a = t.transform(new java.awt.geom.Point2D.Double(num(gr, "x1", 0), num(gr, "y1", 0)), null),
+					b = t.transform(new java.awt.geom.Point2D.Double(num(gr, "x2", 1), num(gr, "y2", 0)), null);
+			if (a.distance(b) < 1e-6) return cols.getLast();
+			float[] fo = new float[offs.size()];
+			for (int i = 0; i < fo.length; i++) fo[i] = offs.get(i);
+			return new java.awt.LinearGradientPaint(a, b, fo, cols.toArray(Color[]::new));
+		}
+		return colour(v, opacity);
+	}
+
+	/** #rgb / #rrggbb / black / white with an opacity; other named colours as white (these icons are white). */
+	private static Color colour(String v, double opacity) {
+		if (v == null) return null;
+		v = v.trim().toLowerCase(java.util.Locale.ROOT);
+		int a = (int) Math.round(255 * Math.max(0, Math.min(1, opacity)));
+		if (v.equals("none") || v.isEmpty()) return null;
+		int rgb = 0xFFFFFF;
+		if (v.equals("black")) rgb = 0;
+		else if (v.startsWith("#") && v.length() == 7) rgb = Integer.parseInt(v.substring(1), 16);
+		else if (v.startsWith("#") && v.length() == 4)
+			rgb = Integer.parseInt("" + v.charAt(1) + v.charAt(1) + v.charAt(2) + v.charAt(2) + v.charAt(3) + v.charAt(3), 16);
+		return new Color(rgb >> 16 & 255, rgb >> 8 & 255, rgb & 255, a);
+	}
+
+	/** SVG transform list: matrix, translate, scale, rotate, skewX, skewY. */
+	private static AffineTransform transform(String s) {
+		AffineTransform t = new AffineTransform();
+		Matcher m = Pattern.compile("(matrix|translate|scale|rotate|skewX|skewY)\\s*\\(([^)]*)\\)").matcher(s);
+		while (m.find()) {
+			Matcher nm = TOKEN.matcher(m.group(2));
+			java.util.List<Double> v = new java.util.ArrayList<>();
+			while (nm.find()) v.add(Double.parseDouble(nm.group()));
+			double a0 = v.isEmpty() ? 0 : v.get(0);
+			switch (m.group(1)) {
+				case "matrix" -> {
+					if (v.size() == 6) t.concatenate(new AffineTransform(v.get(0), v.get(1), v.get(2), v.get(3), v.get(4), v.get(5)));
+				}
+				case "translate" -> t.translate(a0, v.size() > 1 ? v.get(1) : 0);
+				case "scale" -> t.scale(a0, v.size() > 1 ? v.get(1) : a0);
+				case "rotate" -> {
+					if (v.size() >= 3) t.rotate(Math.toRadians(a0), v.get(1), v.get(2));
+					else t.rotate(Math.toRadians(a0));
+				}
+				case "skewX" -> t.shear(Math.tan(Math.toRadians(a0)), 0);
+				case "skewY" -> t.shear(0, Math.tan(Math.toRadians(a0)));
+				default -> {}
+			}
+		}
+		return t;
 	}
 
 	/**

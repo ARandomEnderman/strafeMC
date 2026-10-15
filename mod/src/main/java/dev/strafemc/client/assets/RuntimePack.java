@@ -178,15 +178,22 @@ public final class RuntimePack {
 		write(img, out);
 	}
 
+	/** Icons drawn before this (when only SVG paths were drawn: no rects, polygons or transforms) are drawn again. */
+	private static final long SVG_RENDERER = java.time.Instant.parse("2026-10-16T00:00:00Z").toEpochMilli();
+
+	private static boolean drawn(Path out) throws java.io.IOException {
+		return Files.exists(out) && Files.getLastModifiedTime(out).toMillis() >= SVG_RENDERER;
+	}
+
 	private static void svgH(String vpk, String exported, Path out, int height) throws Exception {
-		if (Files.exists(out)) return;
+		if (drawn(out)) return;
 		Path src = StrafeConfig.cacheDir().resolve(exported);
 		AssetCache.ensureDecompiled(vpk, src);
 		write(SvgIcon.rasterize(src, height, true), out);
 	}
 
 	private static void svg(String vpk, String exported, Path out, int size) throws Exception {
-		if (Files.exists(out)) return;
+		if (drawn(out)) return;
 		Path src = StrafeConfig.cacheDir().resolve(exported);
 		AssetCache.ensureDecompiled(vpk, src);
 		write(SvgIcon.rasterize(src, size), out);
