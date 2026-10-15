@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * CS2's killfeed (huddeathnotice): top right, newest at the bottom. From CS2's panorama style sheet: entries last
  * 5 s (x1.5 when you're in them) and fade out over 1 s; CT names #6f9ce6, T names #eabe54; your kills on near-black
  * with a 2 px #e10000 border, your death on #630606d2; 16 px names, 24 px icons, rows 3 px apart, 72 px from the
- * top; icons in CS2's order (blind, attacker, in-air, weapon, through smoke, wallbang, headshot, victim). Sizes are
+ * top; icons in CS2's order (huddeathnotice.xml: revenge, domination, blind, attacker, assist, in-air, weapon, noscope, through smoke, wallbang, headshot, suicide, victim). Sizes are
  * CS2's 1080p pixels, scaled with the window height. FLAGGED: the plain row background (CS2 uses a blur) and
  * Minecraft's font for CS2's Stratum.
  */
@@ -68,6 +68,8 @@ public final class DeathNotices {
 		double px = mc.getWindow().getHeight() / 1080.0 / mc.getWindow().getGuiScale(); // one CS2 1080p pixel in GUI units
 		int icon = Math.max(6, (int) Math.round(24 * px)), padX = (int) Math.round(10 * px), padTop = (int) Math.round(6 * px),
 				padBottom = (int) Math.round(3 * px), gap = Math.max(1, (int) Math.round(3 * px)), border = Math.max(1, (int) Math.round(2 * px));
+		// CS2's .DeathNoticeIcon margin: -2px 2px 0 2px; labels 2 px each side; #AttackerInAir margin-top -14px, margin-right -4px
+		int margin = (int) Math.round(2 * px), raise = (int) Math.round(2 * px), airUp = (int) Math.round(14 * px), airRight = (int) Math.round(-4 * px);
 		int rowH = icon + padTop + padBottom, y = (int) Math.round(72 * px), right = g.guiWidth() - (int) Math.round(10 * px);
 		var font = mc.font;
 		List<Notice> expired = new ArrayList<>();
@@ -95,7 +97,7 @@ public final class DeathNotices {
 				parts.add(m.assisterT() ? T : CT);
 			}
 			if ((m.flags() & KillFeed.IN_AIR) != 0) parts.add("@inairkill");
-			parts.add("@" + m.icon());
+			if ((m.flags() & KillFeed.SUICIDE) == 0) parts.add("@" + m.icon()); // CS2 hides the weapon on suicides
 			if ((m.flags() & KillFeed.NOSCOPE) != 0) parts.add("@noscope");
 			if ((m.flags() & KillFeed.THROUGH_SMOKE) != 0) parts.add("@smoke_kill");
 			if ((m.flags() & KillFeed.PENETRATE) != 0) parts.add("@penetrate");
@@ -106,9 +108,9 @@ public final class DeathNotices {
 			int width = padX * 2;
 			for (int i = 0; i < parts.size(); i++) {
 				Object o = parts.get(i);
-				if (o instanceof String s && s.startsWith("@")) width += iconWidth(s.substring(1), icon) + 2;
+				if (o instanceof String s && s.startsWith("@")) width += iconWidth(s.substring(1), icon) + margin + right(s, margin, airRight);
 				else if (o instanceof String s) {
-					width += font.width(s) + 2;
+					width += font.width(s) + margin * 2;
 					i++; // its colour
 				}
 			}
@@ -129,14 +131,18 @@ public final class DeathNotices {
 					String name = s.substring(1);
 					int w = iconWidth(name, icon);
 					int[] sz = SIZES.get(name);
+					cx += margin;
+					// icons sit 2 px high (margin-top -2px); the in-air wing 14 px, over the weapon's corner
+					int top = mid - icon / 2 - (name.equals("inairkill") ? airUp : raise);
 					if (sz != null && sz[0] > 0)
 						g.blit(RenderPipelines.GUI_TEXTURED, Identifier.fromNamespaceAndPath("strafemc", "textures/gui/deathnotice/" + name + ".png"), cx,
-								mid - icon / 2, 0, 0, w, icon, sz[0], sz[1], sz[0], sz[1], fade(0xFFFFFFFF, alpha));
-					cx += w + 2;
+								top, 0, 0, w, icon, sz[0], sz[1], sz[0], sz[1], fade(0xFFFFFFFF, alpha));
+					cx += w + right(s, margin, airRight);
 				} else if (o instanceof String s) {
 					int col = (Integer) parts.get(++i);
+					cx += margin;
 					g.text(font, s, cx + 1, mid - font.lineHeight / 2 + 1, fade(col, alpha), true);
-					cx += font.width(s) + 2;
+					cx += font.width(s) + margin;
 				}
 			}
 			y += rowH + gap;
@@ -144,6 +150,11 @@ public final class DeathNotices {
 		if (!expired.isEmpty()) synchronized (NOTICES) {
 			NOTICES.removeAll(expired);
 		}
+	}
+
+	/** An icon's right margin: CS2's 2 px, the in-air wing's -4 px. */
+	private static int right(String icon, int margin, int airRight) {
+		return icon.equals("@inairkill") ? airRight : margin;
 	}
 
 	private static int fade(int argb, float alpha) {

@@ -43,12 +43,13 @@ public final class GrenadeClient {
 
 	/**
 	 * HE grenades blow a hole in smoke that fills back in (CS2 keeps recent HE blasts per smoke on its client).
-	 * FLAGGED: radius and timing are ours: 150 units, clear for 0.5 s, refilled from the edge by 2 s.
+	 * FLAGGED: radius and timing are ours: 238 units (4x the volume of the first 150), clear for 1 s, refilled from the
+	 * edge by 3 s (user-tuned).
 	 */
 	private record Blast(Vec3 at, long time) {}
 
 	private static final List<Blast> BLASTS = new ArrayList<>();
-	private static final double BLAST_RADIUS = 150, BLAST_CLEAR = 0.5, BLAST_REFILLED = 2.0, BLAST_EDGE = 20;
+	private static final double BLAST_RADIUS = 238, BLAST_CLEAR = 1.0, BLAST_REFILLED = 3.0, BLAST_EDGE = 20;
 
 	/** How much of the smoke at p survives recent HE blasts (0 inside a fresh hole, 1 untouched). */
 	private static double blastKeep(Vec3 p, long now) {
