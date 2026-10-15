@@ -113,7 +113,7 @@ public final class CaseScreen extends Screen {
 			int w = n == 1 ? 150 : bw;
 			Button b = addRenderableWidget(Button.builder(Component.literal(n == 1 ? "Unlock Container" : n + "x"), btn -> unlock(n))
 					.bounds(x, height - 30, w, 20).build());
-			b.active = spins == null;
+			b.active = spins == null && n <= openable();
 			b.visible = !revealed;
 			unlocks.add(b);
 			x += w + 4;
@@ -160,9 +160,37 @@ public final class CaseScreen extends Screen {
 		return super.keyPressed(e);
 	}
 
+	/** How many of this case you can open at once: the fewer of your cases and their keys (creative: any). */
+	private int openable() {
+		var p = Minecraft.getInstance().player;
+		if (p == null) return 0;
+		if (p.getAbilities().instabuild) return 5;
+		int cases = 0, keys = 0;
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && c.id().equals(dev.strafemc.weapon.CaseItem.caseId(s))) cases += s.getCount();
+			if (s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) keys += s.getCount();
+		}
+		return Math.min(cases, keys);
+	}
+
+	/** Greys out the unlock buttons you don't have enough cases and keys for. */
+	@Override
+	public void tick() {
+		super.tick();
+		if (spins != null || unlocking) return;
+		int max = openable();
+		for (int i = 0; i < unlocks.size(); i++) unlocks.get(i).active = i + 1 <= max;
+	}
+
+	/** Sent to the server, waiting for its rolls. */
+	private boolean unlocking;
+
 	private void unlock(int n) {
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("case_open", c.id() + " " + n));
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_unlock_01", 1f);
+		unlocking = true;
 		for (Button b : unlocks) b.active = false;
 	}
 
