@@ -29,6 +29,12 @@ public final class CsSounds {
 		return play(event, e.getX(), e.getEyeY(), e.getZ(), gain, suppressed, null);
 	}
 
+	/** A CS2 sound file played at the listener (UI sounds: "sounds/ui/panorama/case_unlock_01"); converted on first use. */
+	public static void playFile(String vsndPath, float volume) {
+		if (!CsAudio.ready() || dev.strafemc.client.Placeholders.active()) return;
+		net.minecraft.client.Minecraft.getInstance().getSoundManager().play(CsSoundInstance.own(CsAudio.id(vsndPath), volume, 1f));
+	}
+
 	/** Own animation foley (draw/inspect clip sounds) still playing, so an interrupted animation can cut it. */
 	private static final java.util.List<CsSoundInstance> ANIM = new java.util.ArrayList<>();
 

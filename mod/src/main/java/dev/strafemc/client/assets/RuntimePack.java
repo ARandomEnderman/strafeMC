@@ -295,7 +295,28 @@ public final class RuntimePack {
 		}
 		Files.writeString(items.resolve("weapon_case.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
 				+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/chest\"}}}");
-		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}");
+		// each case's own key: CS2's key picture (econ/tools/...), picked by the key's custom model data string
+		Files.createDirectories(models.resolve("key"));
+		java.util.List<String> keyMissing = new java.util.ArrayList<>();
+		for (var k : dev.strafemc.weapon.Cases.keys())
+			if (!k.image().isEmpty() && !Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/" + k.image() + "_png.png")))
+				keyMissing.add("panorama/images/" + k.image() + "_png.vtex_c");
+		if (!keyMissing.isEmpty()) AssetCache.decompileAll(keyMissing);
+		StringBuilder keys = new StringBuilder();
+		for (var k : dev.strafemc.weapon.Cases.keys()) {
+			if (k.image().isEmpty()) continue;
+			String img = "panorama/images/" + k.image() + "_png";
+			try {
+				icon(img + ".vtex_c", img + ".png", tex.resolve("item/key/" + k.id() + ".png"), 128);
+			} catch (Exception e) {
+				continue;
+			}
+			Files.writeString(models.resolve("key/" + k.id() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/key/" + k.id() + "\"}}");
+			if (keys.length() > 0) keys.append(',');
+			keys.append("{\"when\":\"").append(k.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/key/").append(k.id()).append("\"}}");
+		}
+		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}}");
 	}
 
 	/** A CS2 texture as it is (no resizing). */

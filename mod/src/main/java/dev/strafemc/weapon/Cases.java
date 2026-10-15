@@ -31,7 +31,37 @@ public final class Cases {
 	}
 
 	/** image: CS2's inventory picture path (econ/weapon_cases/...). */
-	public record Case(String id, String name, String image, Map<SkinWraps.Rarity, List<Entry>> guns, List<Entry> special) {}
+	public record Case(String id, String name, String image, Map<SkinWraps.Rarity, List<Entry>> guns, List<Entry> special, String key) {}
+
+	/** A case's key (CS2 matches them by the tool restriction both carry): its English name and inventory picture. */
+	public record Key(String id, String name, String image) {}
+
+	private static final Map<String, Key> KEYS = loadKeys();
+
+	private static Map<String, Key> loadKeys() {
+		Map<String, Key> out = new LinkedHashMap<>();
+		var in = Cases.class.getResourceAsStream("/strafemc/keys.tsv");
+		if (in == null) return out;
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+			String line;
+			while ((line = r.readLine()) != null) {
+				if (line.isBlank() || line.startsWith("#")) continue;
+				String[] f = line.split("\t", -1);
+				if (f.length >= 3) out.put(f[0], new Key(f[0], f[1], f[2]));
+			}
+		} catch (Exception e) {
+			dev.strafemc.StrafeMc.LOG.error("[strafemc] case keys unreadable", e);
+		}
+		return Collections.unmodifiableMap(out);
+	}
+
+	public static Key key(String id) {
+		return id == null ? null : KEYS.get(id);
+	}
+
+	public static List<Key> keys() {
+		return new ArrayList<>(KEYS.values());
+	}
 
 	/** What a roll gave: the entry, its rarity (null: a rare special item) and the item handed out. */
 	public record Drop(Entry entry, SkinWraps.Rarity rarity, ItemStack stack) {}
@@ -65,7 +95,7 @@ public final class Cases {
 					Entry en = entry(e);
 					if (en != null) special.add(en);
 				}
-				out.put(f[0], new Case(f[0], f[1], f[2], guns, Collections.unmodifiableList(special)));
+				out.put(f[0], new Case(f[0], f[1], f[2], guns, Collections.unmodifiableList(special), f.length > 5 ? f[5] : ""));
 			}
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.error("[strafemc] cases unreadable", e);

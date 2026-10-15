@@ -94,13 +94,16 @@ public final class ConsoleActions {
 				var held = p.getMainHandItem();
 				if (!(held.getItem() instanceof dev.strafemc.weapon.CaseItem) || !arg.equals(dev.strafemc.weapon.CaseItem.caseId(held))) break;
 				var c = dev.strafemc.weapon.Cases.get(arg);
-				// a container key opens it (used up); creative needs none
+				// its own key opens it (used up); creative needs none
 				int keySlot = -1;
 				var inv = p.getInventory();
+				String keyId = c == null ? null : c.key();
 				for (int i = 0; i < inv.getContainerSize() && keySlot < 0; i++)
-					if (inv.getItem(i).is(dev.strafemc.weapon.WeaponItems.CASE_KEY)) keySlot = i;
+					if (inv.getItem(i).is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && keyId != null
+							&& keyId.equals(dev.strafemc.weapon.KeyItem.keyId(inv.getItem(i)))) keySlot = i;
 				if (keySlot < 0 && !p.getAbilities().instabuild) {
-					p.sendOverlayMessage(Component.literal("You need a Container Key to unlock this case."));
+					var k = dev.strafemc.weapon.Cases.key(keyId);
+					p.sendOverlayMessage(Component.literal("You need a " + (k != null ? k.name() : "key") + " to unlock this case."));
 					break;
 				}
 				var drop = c == null ? null : dev.strafemc.weapon.Cases.roll(c, new java.util.Random());

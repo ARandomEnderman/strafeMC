@@ -35,7 +35,8 @@ public final class CaseScreen extends Screen {
 	private int landing;
 	private long spinStart;
 	private int lastTick = -1;
-	private String result;
+	private String result, revealSound = "rare";
+	private boolean revealed;
 	private int resultColor;
 
 	private CaseScreen(Cases.Case c) {
@@ -71,6 +72,7 @@ public final class CaseScreen extends Screen {
 	protected void init() {
 		unlock = addRenderableWidget(Button.builder(Component.literal("Unlock Container"), b -> {
 			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("case_open", c.id()));
+			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_unlock_01", 1f);
 			b.active = false;
 		}).bounds(width / 2 - 75, height - 30, 150, 20).build());
 		if (reel != null) unlock.active = false;
@@ -88,14 +90,16 @@ public final class CaseScreen extends Screen {
 		reel = tiles;
 		spinStart = System.nanoTime();
 		result = r.name();
+		revealSound = r.rarity() < 0 || r.rarity() >= SkinWraps.Rarity.ANCIENT.ordinal() ? "ancient"
+				: r.rarity() == SkinWraps.Rarity.LEGENDARY.ordinal() ? "legendary" : r.rarity() == SkinWraps.Rarity.MYTHICAL.ordinal() ? "mythical" : "rare";
 		resultColor = color;
 	}
 
+	/** A reel tile by the case's odds among its guns: never the gold rare special one (CS2 shows it only when it drops). */
 	private Tile filler(Random rng) {
-		double x = rng.nextDouble();
+		double x = rng.nextDouble() * 0.9974;
 		SkinWraps.Rarity t = x < 0.7992 ? SkinWraps.Rarity.RARE : x < 0.959 ? SkinWraps.Rarity.MYTHICAL : x < 0.991 ? SkinWraps.Rarity.LEGENDARY
-				: x < 0.9974 ? SkinWraps.Rarity.ANCIENT : null;
-		if (t == null) return new Tile(ItemStack.EMPTY, GOLD, "★ Rare Special Item ★", null);
+				: SkinWraps.Rarity.ANCIENT;
 		for (int k = t.ordinal(); k >= 0; k--) {
 			var list = c.guns().get(SkinWraps.Rarity.values()[k]);
 			if (list == null || list.isEmpty()) continue;
@@ -156,8 +160,7 @@ public final class CaseScreen extends Screen {
 		int tick = (int) (off / step);
 		if (tick != lastTick && t < 1) {
 			lastTick = tick;
-			var p = Minecraft.getInstance().player;
-			if (p != null) p.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.3f, 1.8f);
+			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/csgo_ui_crate_item_scroll", 0.6f);
 		}
 		for (int i = 0; i < reel.size(); i++) {
 			int x = (int) (width / 2 + i * step - off);
@@ -166,6 +169,10 @@ public final class CaseScreen extends Screen {
 		}
 		g.fill(width / 2 - 1, cy - 6, width / 2 + 1, cy + TILE + 6, 0xFFFFD040);
 		if (t >= 1) {
+			if (!revealed) { // CS2's reveal sound for the drop's rarity (gold: the Covert one, FLAGGED)
+				revealed = true;
+				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/case_reveal_" + revealSound + "_01", 1f);
+			}
 			String s = "You got: " + result;
 			g.text(font, s, width / 2 - font.width(s) / 2, cy + TILE + 16, resultColor, true);
 		}

@@ -1,13 +1,1 @@
-{
- "type": "minecraft:crafting_shapeless",
- "category": "misc",
- "ingredients": [
-  "minecraft:gold_ingot",
-  "minecraft:tripwire_hook",
-  "minecraft:redstone"
- ],
- "result": {
-  "id": "strafemc:case_key",
-  "count": 1
- }
-}
+{"type":"strafemc:case_key"}

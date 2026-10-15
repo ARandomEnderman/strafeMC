@@ -68,7 +68,8 @@ public final class WeaponItems {
 		GUN_WRAP = item("skin_wrap", p -> new SkinWrapItem(p.stacksTo(1), false));
 		KNIFE_WRAP = item("knife_wrap", p -> new SkinWrapItem(p.stacksTo(1), true));
 		WEAPON_CASE = item("weapon_case", p -> new CaseItem(p.stacksTo(64)));
-		CASE_KEY = item("case_key", p -> new Item(p.stacksTo(64)));
+		CASE_KEY = item("case_key", p -> new KeyItem(p.stacksTo(64)));
+		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
@@ -125,8 +126,8 @@ public final class WeaponItems {
 		tab("knife_wraps", () -> SkinWrapItem.stack(KNIFE_WRAP, "knife:fade"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (w.knife()) e.accept(SkinWrapItem.stack(KNIFE_WRAP, w.id())); });
 		tab("cases", () -> CaseItem.stack(WEAPON_CASE, "crate_valve_1"), e -> {
-			e.accept(CASE_KEY);
 			for (Cases.Case c : Cases.all()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
+			for (Cases.Key k : Cases.keys()) e.accept(KeyItem.stack(CASE_KEY, k.id()));
 		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });
