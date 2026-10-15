@@ -1,0 +1,186 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_ak47"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_aug"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_awp"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_bizon"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_cz75a"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_deagle"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_elite"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_famas"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_fiveseven"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_g3sg1"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_galilar"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_glock"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_hkp2000"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_m249"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_m4a1"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_m4a1_silencer"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_mac10"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_mag7"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_mp5sd"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_mp7"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_mp9"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_negev"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_nova"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_p250"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_p90"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_revolver"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_sawedoff"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_scar20"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_sg556"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_ssg08"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_taser"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_tec9"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_ump45"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_usp_silencer"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_xm1014"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_hegrenade"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_flashbang"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_smokegrenade"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_molotov"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_incgrenade"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_decoy"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:item_kevlar"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:item_assaultsuit"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_healthshot"
+    }
+   ]
+  }
+ ]
+}
