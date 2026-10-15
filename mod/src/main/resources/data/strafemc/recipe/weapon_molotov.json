@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:glass_bottle",
+  "minecraft:string",
+  "minecraft:blaze_powder"
+ ],
+ "result": {
+  "id": "strafemc:weapon_molotov",
+  "count": 1
+ }
+}

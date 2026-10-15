@@ -1,0 +1,14 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:copper_ingot",
+  "minecraft:copper_ingot",
+  "minecraft:redstone_block",
+  "minecraft:iron_ingot"
+ ],
+ "result": {
+  "id": "strafemc:weapon_taser",
+  "count": 1
+ }
+}

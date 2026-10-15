@@ -1,0 +1,14 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:iron_ingot",
+  "minecraft:gunpowder",
+  "minecraft:gunpowder",
+  "minecraft:iron_nugget"
+ ],
+ "result": {
+  "id": "strafemc:weapon_hegrenade",
+  "count": 1
+ }
+}

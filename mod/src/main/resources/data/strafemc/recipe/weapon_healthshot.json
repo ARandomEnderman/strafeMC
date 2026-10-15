@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:glass_bottle",
+  "minecraft:glistering_melon_slice",
+  "minecraft:iron_nugget"
+ ],
+ "result": {
+  "id": "strafemc:weapon_healthshot",
+  "count": 1
+ }
+}

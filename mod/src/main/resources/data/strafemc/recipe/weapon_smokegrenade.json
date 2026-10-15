@@ -1,0 +1,14 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:iron_ingot",
+  "minecraft:gunpowder",
+  "minecraft:coal",
+  "minecraft:coal"
+ ],
+ "result": {
+  "id": "strafemc:weapon_smokegrenade",
+  "count": 1
+ }
+}

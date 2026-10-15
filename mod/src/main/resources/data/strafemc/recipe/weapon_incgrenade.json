@@ -1,0 +1,14 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:iron_ingot",
+  "minecraft:gunpowder",
+  "minecraft:blaze_powder",
+  "minecraft:blaze_powder"
+ ],
+ "result": {
+  "id": "strafemc:weapon_incgrenade",
+  "count": 1
+ }
+}

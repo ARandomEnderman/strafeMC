@@ -1,0 +1,12 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "strafemc:item_kevlar",
+  "minecraft:iron_helmet"
+ ],
+ "result": {
+  "id": "strafemc:item_assaultsuit",
+  "count": 1
+ }
+}

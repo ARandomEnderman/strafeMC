@@ -1,0 +1,18 @@
+{
+ "type": "minecraft:crafting_shaped",
+ "category": "equipment",
+ "pattern": [
+  "  X",
+  " X ",
+  "SD "
+ ],
+ "key": {
+  "X": "minecraft:diamond",
+  "S": "minecraft:stick",
+  "D": "minecraft:white_dye"
+ },
+ "result": {
+  "id": "strafemc:weapon_knife_canis",
+  "count": 1
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:iron_ingot",
+  "minecraft:gunpowder",
+  "minecraft:glowstone_dust",
+  "minecraft:glowstone_dust"
+ ],
+ "result": {
+  "id": "strafemc:weapon_flashbang",
+  "count": 1
+ }
+}

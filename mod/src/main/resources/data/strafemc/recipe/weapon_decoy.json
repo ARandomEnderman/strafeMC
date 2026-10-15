@@ -1,0 +1,13 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:iron_ingot",
+  "minecraft:gunpowder",
+  "minecraft:note_block"
+ ],
+ "result": {
+  "id": "strafemc:weapon_decoy",
+  "count": 1
+ }
+}
