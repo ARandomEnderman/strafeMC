@@ -38,8 +38,28 @@ import java.util.Random;
 public final class Bots {
 	public static final String TAG = "strafemc_bot";
 	private static final double SIGHT = 80, CHASE = 160; // blocks
-	private static final long REACTION_MS = 300, RESPAWN_MS = 3000, RELOAD_MS = 2500;
-	private static final float TURN_DEG = 22, SPEED = 0.12f;
+	private static final long RESPAWN_MS = 3000, RELOAD_MS = 2500;
+	private static final float SPEED = 0.12f;
+
+	/** Difficulty (bot_difficulty 1-10, 5 by default) as 0..1. */
+	private static double skill() {
+		return (StrafeSettings.botDifficulty() - 1) / 9.0;
+	}
+
+	// what the difficulty changes (FLAGGED: ours): reaction 700 -> 120 ms, turning 8 -> 35 deg a tick, spread x1.8 -> x0.4,
+	// headshot tries 5% -> 50% of bursts
+	private static long reactionMs() {
+		return Math.round(700 - 580 * skill());
+	}
+
+	private static float turnDeg() {
+		return (float) (8 + 27 * skill());
+	}
+
+	private static double spreadScale() {
+		return 1.8 - 1.4 * skill();
+	}
+
 	private static final double SPREAD_DEG = 0.9, MOVING_SPREAD_DEG = 2.5;
 
 	private static final class Bot {
@@ -181,12 +201,12 @@ public final class Bots {
 		if (seen != null) {
 			if (b.burstLeft <= 0 && now >= b.burstPause) { // a new burst: 3-6 shots, the head one time in four
 				b.burstLeft = 3 + RNG.nextInt(4);
-				b.aimHead = RNG.nextInt(4) == 0;
+				b.aimHead = RNG.nextDouble() < 0.05 + 0.45 * skill();
 			}
 			Vec3 aim = b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0);
 			boolean aimed = turn(e, aim.subtract(eye));
 			boolean firing = b.burstLeft > 0 && now >= b.burstPause;
-			if (firing && aimed && now - b.seenSince >= REACTION_MS && now >= b.nextShot && now >= b.reloadUntil) {
+			if (firing && aimed && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
 				shoot(b, level, w, eye, Vec3.directionFromRotation(e.getXRot(), e.getYRot()), now, e.getDeltaMovement().horizontalDistanceSqr() > 0.001);
 				if (--b.burstLeft <= 0) b.burstPause = now + 250 + RNG.nextInt(250);
 			}
@@ -232,7 +252,8 @@ public final class Bots {
 
 	private static boolean turnYaw(Mannequin e, float yaw, float pitch) {
 		float dy = Mth.wrapDegrees(yaw - e.getYRot()), dp = pitch - e.getXRot();
-		float ny = e.getYRot() + Mth.clamp(dy, -TURN_DEG, TURN_DEG), np = e.getXRot() + Mth.clamp(dp, -TURN_DEG, TURN_DEG);
+		float turn = turnDeg();
+		float ny = e.getYRot() + Mth.clamp(dy, -turn, turn), np = e.getXRot() + Mth.clamp(dp, -turn, turn);
 		e.setYRot(ny);
 		e.setXRot(np);
 		e.setYHeadRot(ny);
@@ -244,7 +265,7 @@ public final class Bots {
 		Mannequin e = b.e;
 		double units = StrafeConfig.unitsPerBlock;
 		// spread: a small random cone, wider on the move (FLAGGED: ours)
-		double spread = Math.toRadians((moving ? MOVING_SPREAD_DEG : SPREAD_DEG) * Math.abs(RNG.nextGaussian()));
+		double spread = Math.toRadians((moving ? MOVING_SPREAD_DEG : SPREAD_DEG) * spreadScale() * Math.abs(RNG.nextGaussian()));
 		double turnA = RNG.nextDouble() * Math.PI * 2;
 		Vec3 side = dir.cross(new Vec3(0, 1, 0));
 		if (side.lengthSqr() < 1e-6) side = new Vec3(1, 0, 0);

@@ -138,6 +138,10 @@ public final class ConsoleCommands {
 			if (a.length == 0) ConsoleLog.error("bot_quota <number>");
 			else action("bot_quota", a[0], false);
 		});
+		local("bot_difficulty", "How good bots are, 1 (easy) to 10 (hard), default 5. Operators.", a -> {
+			if (a.length == 0) ConsoleLog.error("bot_difficulty <1-10>");
+			else action("bot_difficulty", a[0], false);
+		});
 		local("strafemc_bot_ffa", "Bots fight everyone (1) or only the other team (0, default). Operators.",
 				a -> action("strafemc_bot_ffa", a.length > 0 ? (bool(a, false) ? "1" : "0") : "1", false));
 		local("strafemc_bot_skins", "strafemc_bot_skins random | <player names...>: whose skins new bots wear (default random real accounts). Operators.",

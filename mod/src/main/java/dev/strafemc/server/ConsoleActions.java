@@ -128,7 +128,7 @@ public final class ConsoleActions {
 						+ (StrafeSettings.WEAR_RARITIES.stream().anyMatch(k -> !StrafeSettings.wearFor(k)) ? ", off for "
 						+ String.join(", ", StrafeSettings.WEAR_RARITIES.stream().filter(k -> !StrafeSettings.wearFor(k)).toList()) : "")), false);
 			}
-			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
+			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "bot_difficulty", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change bots."));
 					break;
@@ -148,6 +148,15 @@ public final class ConsoleActions {
 							return;
 						}
 						msg = "bot_quota " + StrafeSettings.botQuota();
+					}
+					case "bot_difficulty" -> {
+						try {
+							StrafeSettings.setBotDifficulty(Integer.parseInt(arg.trim()));
+						} catch (NumberFormatException e) {
+							p.sendSystemMessage(Component.literal("bot_difficulty <1-10>"));
+							return;
+						}
+						msg = "bot_difficulty " + StrafeSettings.botDifficulty();
 					}
 					case "strafemc_bot_ffa" -> {
 						StrafeSettings.setBotFfa(!arg.trim().equals("0"));

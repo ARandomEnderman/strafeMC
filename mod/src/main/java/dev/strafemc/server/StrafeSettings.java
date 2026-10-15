@@ -40,6 +40,8 @@ public final class StrafeSettings {
 	/** Bots: how many (CS2's bot_quota; 0 by default), whether they fight everyone, whose skins they wear (empty: random). */
 	private static volatile int botQuota = 0;
 	private static volatile boolean botFfa = false;
+	/** Bot skill, 1 (easy) to 10 (hard); 5 by default. */
+	private static volatile int botDifficulty = 5;
 	private static volatile java.util.List<String> botSkins = java.util.List.of();
 	private static final java.util.Set<String> WEAR_OFF = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	public static final java.util.List<String> WEAR_RARITIES = java.util.List.of("gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer");
@@ -117,6 +119,15 @@ public final class StrafeSettings {
 
 	public static void setBotQuota(int n) {
 		botQuota = Math.max(0, Math.min(64, n));
+		save();
+	}
+
+	public static int botDifficulty() {
+		return botDifficulty;
+	}
+
+	public static void setBotDifficulty(int d) {
+		botDifficulty = Math.max(1, Math.min(10, d));
 		save();
 	}
 
@@ -243,6 +254,7 @@ public final class StrafeSettings {
 		WEAR_OFF.clear();
 		botQuota = 0;
 		botFfa = false;
+		botDifficulty = 5;
 		botSkins = java.util.List.of();
 		playerChoice = false;
 		PERSONAL.clear();
@@ -261,6 +273,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
 				if (o != null && o.has("botQuota")) botQuota = o.get("botQuota").getAsInt();
 				if (o != null && o.has("botFfa")) botFfa = o.get("botFfa").getAsBoolean();
+				if (o != null && o.has("botDifficulty")) botDifficulty = o.get("botDifficulty").getAsInt();
 				if (o != null && o.has("botSkins")) {
 					java.util.List<String> l = new java.util.ArrayList<>();
 					for (var e : o.getAsJsonArray("botSkins")) l.add(e.getAsString());
@@ -291,6 +304,7 @@ public final class StrafeSettings {
 		o.addProperty("wear", wear);
 		o.addProperty("botQuota", botQuota);
 		o.addProperty("botFfa", botFfa);
+		o.addProperty("botDifficulty", botDifficulty);
 		var skins = new com.google.gson.JsonArray();
 		botSkins.forEach(skins::add);
 		o.add("botSkins", skins);
