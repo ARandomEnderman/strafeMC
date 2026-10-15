@@ -16,6 +16,7 @@ in vec4 overlayColor;
 in vec2 texCoord0;
 in vec3 viewPos;
 in vec3 viewNormal;
+in float faceSign;
 
 out vec4 fragColor;
 
@@ -60,7 +61,7 @@ void main() {
     float alphaBits = tex.a * 255.0;
     float metal = step(127.5, alphaBits);
     float rough = clamp((alphaBits - metal * 128.0) / 127.0, 0.0, 1.0);
-    vec3 n = normalize(gl_FrontFacing ? viewNormal : -viewNormal);
+    vec3 n = normalize(gl_FrontFacing == (faceSign > 0.0) ? viewNormal : -viewNormal);
     vec3 v = normalize(-viewPos);
     float ndv = max(dot(n, v), 0.0);
     vec3 r = reflect(-v, n);

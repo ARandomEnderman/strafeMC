@@ -25,12 +25,14 @@ out vec4 overlayColor;
 out vec2 texCoord0;
 out vec3 viewPos;
 out vec3 viewNormal;
+out float faceSign;
 
 void main() {
     vec4 vp = ModelViewMat * vec4(Position, 1.0);
     gl_Position = ProjMat * vp;
     viewPos = vp.xyz;
     viewNormal = mat3(ModelViewMat) * Normal;
+    faceSign = 1.0; // the CPU path swaps winding itself when mirrored
     sphericalVertexDistance = fog_spherical_distance(Position);
     cylindricalVertexDistance = fog_cylindrical_distance(Position);
     vertexColor = Color;

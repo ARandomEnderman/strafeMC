@@ -30,6 +30,7 @@ out vec4 overlayColor;
 out vec2 texCoord0;
 out vec3 viewPos;
 out vec3 viewNormal;
+out float faceSign;
 
 void main() {
     mat4 m = Joint[int(SkinJoints.x)] * SkinWeights.x + Joint[int(SkinJoints.y)] * SkinWeights.y
@@ -39,6 +40,8 @@ void main() {
     gl_Position = ProjMat * vp;
     viewPos = vp.xyz;
     viewNormal = mat3(ModelViewMat) * normalize(mat3(m) * SkinNormal);
+    // mirrored into the left hand: the triangles turn round (drawn uncull'd), so the fragment shader's front face flips too
+    faceSign = determinant(mat3(m)) < 0.0 ? -1.0 : 1.0;
     sphericalVertexDistance = fog_spherical_distance(pos.xyz);
     cylindricalVertexDistance = fog_cylindrical_distance(pos.xyz);
     vertexColor = vec4(1.0, 1.0, 1.0, Params.z);
