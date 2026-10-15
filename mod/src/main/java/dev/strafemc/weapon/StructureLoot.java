@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * CS2 loot in Minecraft's structure chests: weapon cases, gear (guns, grenades, armor, the Medi-Shot) and, rarer, CS2 knives
+ * CS2 loot in Minecraft's structure chests: weapon cases, gear (grenades, armor, the Medi-Shot) and, rarer, CS2 knives
  * (data/strafemc/loot_table/chests/*). Chances are ours (FLAGGED).
  */
 public final class StructureLoot {
@@ -21,7 +21,7 @@ public final class StructureLoot {
 			"chests/stronghold_corridor", "chests/stronghold_crossing", "chests/woodland_mansion", "chests/ancient_city", "chests/buried_treasure",
 			"chests/shipwreck_treasure", "chests/pillager_outpost", "chests/ruined_portal", "chests/bastion_treasure", "chests/end_city_treasure",
 			"chests/trial_chambers/reward", "chests/nether_bridge", "chests/igloo_chest", "chests/underwater_ruin_big");
-	private static final Map<String, Float> CHANCE = Map.of("cases", 0.30f, "knives", 0.02f, "gear", 0.05f); // gear: a gun, grenade, armor or Medi-Shot. Knives come plain, wraps from cases only
+	private static final Map<String, Float> CHANCE = Map.of("cases", 0.30f, "knives", 0.02f, "gear", 0.05f); // gear: a grenade, armor or Medi-Shot (guns are crafted only). Knives come plain, wraps from cases only
 
 	private StructureLoot() {}
 
