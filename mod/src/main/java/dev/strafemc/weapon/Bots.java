@@ -37,7 +37,6 @@ import java.util.Random;
  */
 public final class Bots {
 	public static final String TAG = "strafemc_bot";
-	private static final double SIGHT = 80, CHASE = 160; // blocks
 	private static final long RESPAWN_MS = 3000, RELOAD_MS = 2500;
 	private static final float SPEED = 0.12f;
 
@@ -53,7 +52,27 @@ public final class Bots {
 	}
 
 	private static float turnDeg() {
-		return (float) (8 + 27 * skill());
+		return (float) (6 + 18 * skill());
+	}
+
+	/** How far it sees: 30 blocks at difficulty 1 to 70 at 10 (FLAGGED: ours). */
+	private static double sight() {
+		return 30 + 40 * skill();
+	}
+
+	/** Half its field of view: enemies further off where it looks go unseen unless heard (FLAGGED: ours). */
+	private static final double FOV_COS = Math.cos(Math.toRadians(65));
+	private static final double HEARING = 25;
+
+	/** A shot: bots within earshot know where the shooter is (even behind them). */
+	public static synchronized void noise(LivingEntity source) {
+		long now = System.currentTimeMillis();
+		for (Bot b : BOTS)
+			if (b.e != null && b.e.isAlive() && b.e.level() == source.level() && enemy(b, source) && b.e.distanceToSqr(source) < HEARING * HEARING) {
+				b.aware = source;
+				b.lastKnown = source.position();
+				b.awareUntil = now + 8000;
+			}
 	}
 
 	private static double spreadScale() {
@@ -78,6 +97,10 @@ public final class Bots {
 		double penalty, recoil, recoilYaw;
 		long lastShot;
 		Vec3 aimErr = Vec3.ZERO;
+		/** Someone it knows about without seeing them now (heard, shot by, last seen) and where: it goes there. */
+		LivingEntity aware;
+		Vec3 lastKnown;
+		long awareUntil;
 		/** Where it's walking: the path (feet blocks), how far along, where it leads, when it was worked out. */
 		List<net.minecraft.core.BlockPos> path = List.of();
 		int pathIdx;
@@ -199,19 +222,33 @@ public final class Bots {
 		if (w == null) return;
 		if (b.clip < 0) b.clip = w.clip();
 		Vec3 eye = e.getEyePosition();
-		// the target: the nearest enemy it can see; else the nearest anywhere, to walk to
-		LivingEntity seen = null, far = null;
-		double seenD = SIGHT * SIGHT, farD = CHASE * CHASE;
-		for (LivingEntity o : level.getEntitiesOfClass(LivingEntity.class, e.getBoundingBox().inflate(CHASE), o -> enemy(b, o))) {
+		// hit by someone: it knows where they are
+		if (e.getLastHurtByMob() != null && e.tickCount - e.getLastHurtByMobTimestamp() < 40 && enemy(b, e.getLastHurtByMob())) {
+			b.aware = e.getLastHurtByMob();
+			b.lastKnown = b.aware.position();
+			b.awareUntil = now + 8000;
+		}
+		// the target: the nearest enemy in sight (range by difficulty, within its field of view unless it knows about them)
+		LivingEntity seen = null;
+		double range = sight(), seenD = range * range;
+		Vec3 look = Vec3.directionFromRotation(e.getXRot(), e.getYRot());
+		for (LivingEntity o : level.getEntitiesOfClass(LivingEntity.class, e.getBoundingBox().inflate(range), o -> enemy(b, o))) {
 			double d = o.distanceToSqr(e);
-			if (d < farD) {
-				farD = d;
-				far = o;
-			}
-			if (d < seenD && visible(level, e, eye, o)) {
+			if (d >= seenD) continue;
+			boolean known = o == b.target || (o == b.aware && now < b.awareUntil);
+			if (!known && o.getEyePosition().subtract(eye).normalize().dot(look) < FOV_COS) continue;
+			if (visible(level, e, eye, o)) {
 				seenD = d;
 				seen = o;
 			}
+		}
+		if (seen != null) {
+			b.lastKnown = seen.position();
+			b.awareUntil = now + 8000;
+		}
+		if (now >= b.awareUntil) {
+			b.aware = null;
+			b.lastKnown = null;
 		}
 		if (seen != b.target) {
 			b.target = seen;
@@ -236,7 +273,8 @@ public final class Bots {
 				b.aimHead = RNG.nextDouble() < 0.05 + 0.45 * skill();
 			}
 			Vec3 aim = (b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0)).add(b.aimErr);
-			boolean aimed = turn(e, aim.subtract(eye));
+			// it has to notice first: no turning until its reaction time has passed
+			boolean aimed = now - b.seenSince >= reactionMs() && turn(e, aim.subtract(eye));
 			boolean firing = b.burstLeft > 0 && now >= b.burstPause;
 			if (firing && aimed && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
 				// the shot leaves along the view plus the spray's climb the bot didn't pull down
@@ -255,8 +293,9 @@ public final class Bots {
 					side = b.strafe;
 				}
 			}
-		} else if (far != null) { // walk to the nearest enemy, around what's in the way
-			walk(b, level, far.blockPosition(), now);
+		} else if (b.lastKnown != null) { // where it last saw or heard an enemy (no knowing where anyone is through walls)
+			walk(b, level, net.minecraft.core.BlockPos.containing(b.lastKnown), now);
+			if (b.move == null && e.position().distanceToSqr(b.lastKnown) < 4) b.awareUntil = 0; // got there: nobody
 			faceMove(e);
 		} else { // wander to random spots
 			if (now >= b.wanderUntil || b.pathGoal == null) {
@@ -363,6 +402,7 @@ public final class Bots {
 		EntityHitResult hit = ProjectileUtil.getEntityHitResult(e, eye, end, new AABB(eye, end).inflate(1.0),
 				o -> o != e && o.isPickable() && !o.isSpectator() && o instanceof LivingEntity, eye.distanceToSqr(end));
 		sound(level, e, GunServer.shootSound(w, 0));
+		noise(e); // other bots hear it too
 		if (hit != null && hit.getEntity() instanceof LivingEntity target) damage(b, level, w, eye, target, hit.getLocation());
 		else if (block instanceof net.minecraft.world.phys.BlockHitResult bh && bh.getType() == HitResult.Type.BLOCK) {
 			var msg = GunServer.impactMessage(level, bh, eye, RNG.nextInt());

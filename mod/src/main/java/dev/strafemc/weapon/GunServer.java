@@ -435,6 +435,7 @@ public final class GunServer {
 		if (shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.ShotCorrection.TYPE))
 			net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.ShotCorrection(shot.shot()));
 		broadcast(p, shootSound(w, shot.inaccuracy()));
+		Bots.noise(p); // bots nearby hear it
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] shotdbg server: eyeY={} clientEye={} pitch={} punch={} inacc={} corrected={} dirPitch={}", String.format("%.4f", eye.y),
 					String.format("%.4f", f.eye()), String.format("%.3f", f.pitch()), String.format("%.3f", shot.punchPitch()), String.format("%.5f", shot.inaccuracy()),
