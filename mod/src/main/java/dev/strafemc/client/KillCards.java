@@ -93,8 +93,9 @@ public final class KillCards {
 		lastNs = now;
 		// right over the XP level number (above the hotbar when there's no XP bar); the card's bottom edge is 17 / 126 of
 		// the art above its middle, which the fan turns about
+		// survival: above the hearts and food (and the armor row when there's armor); creative: above the hotbar
 		boolean xp = mc.gameMode != null && mc.gameMode.hasExperience();
-		float bottom = g.guiHeight() - (xp ? 36 : 24);
+		float bottom = g.guiHeight() - (!xp ? 24 : mc.player.getArmorValue() > 0 ? 60 : 50);
 		float cx = g.guiWidth() / 2f, cy = bottom + h * 17 / 126f;
 		int n = list.size(), shown = Math.min(n, 5);
 		var pose = g.pose();
