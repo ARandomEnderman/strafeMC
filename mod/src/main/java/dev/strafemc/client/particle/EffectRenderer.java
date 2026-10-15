@@ -33,6 +33,10 @@ public final class EffectRenderer {
 		final float animationRate, lengthScale, minLength, maxLength, lengthFadeIn, constrainRatio, forwardShift;
 		final String animationType;
 		final boolean animateInFps;
+		/** CS2's lighting of alpha-blended layers, as one gain (1: drawn as is); subtracted breakup textures' blend amounts. */
+		final Num selfIllum, diffuse;
+		final boolean lit;
+		final List<Num> erode = new ArrayList<>();
 		final Num radiusScale, alphaScale, overbright, headTaper, tailTaper, headAlpha, tailAlpha, minSize, maxSize;
 		final Vec colorScale, headColor, tailColor;
 		final int prevSource;
@@ -52,11 +56,13 @@ public final class EffectRenderer {
 			for (Map<String, Object> t : p.array("m_vecTexturesInput")) {
 				Pd tp = p.nested(t);
 				if (!tp.b("m_bEnabled", true)) continue;
+				if (tex != null && tp.str("m_nTextureBlendMode", "").equals("SPRITECARD_TEXTURE_BLEND_SUBTRACT"))
+					erode.add(tp.num("m_flTextureBlend", new Num.Literal(1)));
+				if (tex != null) continue;
 				tex = tp.str("m_hTexture", null);
 				// alpha-only channel (smoke: shape in A, colour from a second zoomed texture): use the shape with white RGB
 				// alpha-only channel (smoke: shape in A) / ..._RGBALPHA (brightness is the transparency: glows on opaque black)
 				tex = ParticleTextures.variant(tex, tp.str("m_nTextureChannels", ""));
-				if (tex != null) break;
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);
 			// heat shimmer: the texture is a normal map that bends the picture behind it, not something to draw (not done yet)
@@ -69,6 +75,11 @@ public final class EffectRenderer {
 			alphaScale = p.num("m_flAlphaScale", new Num.Literal(1));
 			overbright = p.num("m_flOverbrightFactor", new Num.Literal(1));
 			colorScale = p.vecInput("m_vecColorScale", Vec.literal(new Vector3f(1)));
+			selfIllum = p.num("m_flSelfIllumAmount", new Num.Literal(0));
+			diffuse = p.num("m_flDiffuseAmount", new Num.Literal(1));
+			// CS2 lights alpha-blended layers (diffuse x the sun + self-illumination); layers it darkens with a colour scale
+			// (the HE smoke: 64 / 255) count on that light, so drawn full-bright they came out near black
+			lit = !additive && p.has("m_vecColorScale") && darkLiteral(colorScale);
 			lengthScale = p.f("m_flLengthScale", 1);
 			minLength = p.f("m_flMinLength", 0);
 			maxLength = p.f("m_flMaxLength", 2000);
@@ -86,6 +97,43 @@ public final class EffectRenderer {
 			minSize = p.num("m_flMinSize", new Num.Literal(0));
 			maxSize = p.num("m_flMaxSize", new Num.Literal(sprites ? 5000 : 2000));
 		}
+	}
+
+	/** A constant colour scale below white (a non-constant one needs a particle: not counted). */
+	private static boolean darkLiteral(Vec v) {
+		try {
+			Vector3f c = v.next(null, null);
+			return Math.max(c.x(), Math.max(c.y(), c.z())) < 0.99f;
+		} catch (RuntimeException e) {
+			return false;
+		}
+	}
+
+	/**
+	 * FLAGGED: the sun's strength for lit layers (CS2's HDR light isn't in its files); 2 puts the HE smoke (colour scale
+	 * 0.25) at a mid grey.
+	 */
+	private static final float SUN = 2;
+
+	/**
+	 * Only the HE explosion's layers so far: other effects (impact dust, molotov splashes) were tuned by eye without
+	 * these, and some are meant to stay dark (impact_fx_hit_darken).
+	 */
+	private static boolean approximated(PSystem s) {
+		return s.name != null && s.name.contains("explosion_hegrenade");
+	}
+
+	/** A lit layer's colour gain: our per-particle stand-in for CS2's per-pixel lighting. */
+	private static float gain(PSystem s, Info in, Particle p) {
+		return in.lit && approximated(s) ? in.selfIllum.next(p, s.state) + in.diffuse.next(p, s.state) * SUN : 1;
+	}
+
+	/** FLAGGED: subtracting a breakup texture (average ~0.5) eats that much of the alpha on average; as a uniform fade. */
+	private static float erosion(PSystem s, Info in, Particle p) {
+		if (!approximated(s)) return 1;
+		float k = 1;
+		for (Num n : in.erode) k *= 1 - 0.5f * Math.max(0, Math.min(1, n.next(p, s.state)));
+		return k;
 	}
 
 	private static Info info(PSystem s, Map<String, Object> def) {
@@ -194,8 +242,8 @@ public final class EffectRenderer {
 		Vector3f ax = new Vector3f(right).mul(cos).add(new Vector3f(up).mul(sin)).mul(half);
 		Vector3f ay = new Vector3f(up).mul(cos).sub(new Vector3f(right).mul(sin)).mul(half);
 		float[] uv = frame(in, tex, p);
-		Vector3f col = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state));
-		float a = p.alpha * in.alphaScale.next(p, s.state);
+		Vector3f col = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
+		float a = p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		float[] q = new float[36];
 		corner(q, 0, new Vector3f(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
 		corner(q, 9, new Vector3f(c).add(ax).sub(ay), uv[2], uv[3], col, a);
@@ -228,8 +276,8 @@ public final class EffectRenderer {
 		Vector3f head = new Vector3f(center).sub(new Vector3f(dir).mul(lenR * 0.5f)), tail = new Vector3f(center).add(new Vector3f(dir).mul(lenR * 0.5f));
 		float hw = rR * in.headTaper.next(p, s.state), tw = rR * in.tailTaper.next(p, s.state);
 		float[] uv = frame(in, tex, p);
-		Vector3f tint = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state));
-		float a = p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state);
+		Vector3f tint = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
+		float a = p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		Vector3f hc = new Vector3f(tint).mul(in.headColor.next(p, s.state)), tc = new Vector3f(tint).mul(in.tailColor.next(p, s.state));
 		float ha = a * in.headAlpha.next(p, s.state), ta = a * in.tailAlpha.next(p, s.state);
 		float[] q = new float[36];
