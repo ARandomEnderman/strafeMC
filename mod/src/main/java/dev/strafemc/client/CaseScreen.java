@@ -116,6 +116,11 @@ public final class CaseScreen extends Screen {
 	/** Left / right arrow keys flip through the drops too. */
 	@Override
 	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+		// the inventory key (E) closes it like Esc (mid-spin: the drops are handed over at once)
+		if (Minecraft.getInstance().options.keyInventory.matches(e)) {
+			onClose();
+			return true;
+		}
 		if (revealed && spins != null && spins.size() > 1) {
 			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT) {
 				show(-1);
