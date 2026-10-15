@@ -67,15 +67,14 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 		list.addHeader(Component.translatable("strafemc.options.setup"));
 		list.addSmall(bool("strafemc.options.setup_ask", !StrafeConfig.setupNeverAsk, v -> StrafeConfig.setupNeverAsk = !v).createButton(options),
 				Button.builder(Component.translatable("strafemc.options.setup_open"), b -> SetupScreen.open(this)).build());
-		list.addSmall(Button.builder(Component.literal("Reset setup (test from scratch)"), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(
+		list.addSmall(Button.builder(Component.literal("Reset setup"), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(
 				yes -> {
 					if (yes) resetSetup();
 					minecraft.setScreen(this);
 				},
 				Component.literal("Reset the first-time setup?"),
-				Component.literal("Deletes everything the setup made (the converted CS2 files, about 10 GB, the generated resource pack and the "
-						+ "downloaded converter). Your CS2 install isn't touched and stays selected. Restart Minecraft "
-						+ "afterwards: the setup starts again like on a new PC.")))).build(), null);
+				Component.literal("This deletes everything strafeMC converted from Counter-Strike 2 (about 10 GB), its generated resources and its "
+						+ "copy of the converter. Your CS2 install isn't changed. Restart Minecraft afterwards to run the setup again.")))).build(), null);
 
 		list.addHeader(Component.translatable("strafemc.options.hosting"));
 		list.addSmall(bool("strafemc.options.hostserver", StrafeConfig.hostServer, v -> StrafeConfig.hostServer = v).createButton(options),
