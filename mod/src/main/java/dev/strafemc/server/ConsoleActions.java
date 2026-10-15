@@ -118,13 +118,13 @@ public final class ConsoleActions {
 				}
 				var rng = new java.util.Random();
 				java.util.List<net.minecraft.world.item.ItemStack> stacks = new java.util.ArrayList<>();
-				java.util.List<Boolean> announce = new java.util.ArrayList<>();
+				java.util.List<dev.strafemc.weapon.SkinWraps.Rarity> rarity = new java.util.ArrayList<>();
 				java.util.List<dev.strafemc.net.StrafePayloads.CaseResult.Drop> sent = new java.util.ArrayList<>();
 				for (int k = 0; k < n; k++) {
 					var drop = dev.strafemc.weapon.Cases.roll(c, rng);
 					if (drop == null) continue;
 					stacks.add(drop.stack());
-					announce.add(drop.rarity() == null || drop.rarity().ordinal() >= dev.strafemc.weapon.SkinWraps.Rarity.ANCIENT.ordinal());
+					rarity.add(drop.rarity());
 					Integer pattern = drop.stack().get(dev.strafemc.weapon.WeaponItems.PATTERN);
 					sent.add(new dev.strafemc.net.StrafePayloads.CaseResult.Drop(drop.entry().kit(), drop.entry().item(),
 							drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString(), pattern == null ? -1 : pattern));
@@ -145,7 +145,7 @@ public final class ConsoleActions {
 						}
 					}
 				}
-				dev.strafemc.weapon.CaseOpening.hold(p, stacks, announce);
+				dev.strafemc.weapon.CaseOpening.hold(p, stacks, rarity);
 				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.CaseResult(caseId, sent));
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for

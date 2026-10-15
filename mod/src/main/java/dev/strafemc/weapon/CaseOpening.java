@@ -14,8 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * player leaves, so nothing is ever lost.
  */
 public final class CaseOpening {
-	/** announce: Covert or a rare special item, announced bigger when it's handed over (every drop is announced). */
-	private record Pending(java.util.List<ItemStack> stacks, long dueMs, java.util.List<Boolean> announce) {}
+	/** rarity: each drop's (null: the rare special item); Classified and up are announced when handed over. */
+	private record Pending(java.util.List<ItemStack> stacks, long dueMs, java.util.List<SkinWraps.Rarity> rarity) {}
 
 	/** Longest reel plus slack: after this the drop is handed out without a claim. */
 	private static final long TIMEOUT_MS = 15_000;
@@ -24,9 +24,9 @@ public final class CaseOpening {
 	private CaseOpening() {}
 
 	/** Holds a drop for the player (a still-unclaimed earlier one is handed out first). */
-	public static void hold(ServerPlayer p, java.util.List<ItemStack> stacks, java.util.List<Boolean> announce) {
+	public static void hold(ServerPlayer p, java.util.List<ItemStack> stacks, java.util.List<SkinWraps.Rarity> rarity) {
 		claim(p);
-		PENDING.put(p.getUUID(), new Pending(stacks.stream().map(ItemStack::copy).toList(), System.currentTimeMillis() + TIMEOUT_MS, announce));
+		PENDING.put(p.getUUID(), new Pending(stacks.stream().map(ItemStack::copy).toList(), System.currentTimeMillis() + TIMEOUT_MS, rarity));
 	}
 
 	/** The reel landed (or was closed): the player gets their drop. */
@@ -37,8 +37,10 @@ public final class CaseOpening {
 			ItemStack s = d.stacks().get(i);
 			if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
 			if (p.level().getServer() == null) continue;
-			// every unboxing is told to everyone on the server, as in CS2; Covert and the rare special items stand out
-			boolean big = d.announce().get(i);
+			// Classified (pink) and up are told to everyone on the server; Covert and the rare special items stand out
+			SkinWraps.Rarity r = d.rarity().get(i);
+			if (r != null && r.ordinal() < SkinWraps.Rarity.LEGENDARY.ordinal()) continue;
+			boolean big = r == null || r.ordinal() >= SkinWraps.Rarity.ANCIENT.ordinal();
 			var name = net.minecraft.network.chat.Component.literal(p.getScoreboardName());
 			var item = s.getHoverName().copy();
 			var msg = big ? net.minecraft.network.chat.Component.literal("★ ").withColor(0xE4AE39) : net.minecraft.network.chat.Component.empty();
