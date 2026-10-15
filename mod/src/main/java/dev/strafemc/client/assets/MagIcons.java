@@ -179,6 +179,22 @@ final class MagIcons {
 		return out;
 	}
 
+	/** An icon with the empty magazine's red X (textures/item/mag_empty.png, from the jar) drawn over it, scaled to fit. */
+	static BufferedImage withMark(BufferedImage icon) throws Exception {
+		BufferedImage out = new BufferedImage(icon.getWidth(), icon.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		var g = out.createGraphics();
+		g.drawImage(icon, 0, 0, null);
+		try (var in = MagIcons.class.getResourceAsStream("/assets/strafemc/textures/item/mag_empty.png")) {
+			if (in != null) {
+				BufferedImage x = ImageIO.read(in);
+				g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+				g.drawImage(x, 0, 0, icon.getWidth(), icon.getHeight(), null);
+			}
+		}
+		g.dispose();
+		return out;
+	}
+
 	private static int shade(int c, double lit) {
 		return (int) Math.max(0, Math.min(255, c * lit));
 	}

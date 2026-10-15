@@ -336,8 +336,17 @@ public final class RuntimePack {
 			}
 			String icon = drawn ? "strafemc:item/mag/" + e.cls() + MagIcons.VERSION : "strafemc:item/mag_ak47";
 			Files.writeString(models.resolve(e.cls() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"" + icon + "\"}}");
-			Files.writeString(models.resolve(e.cls() + "_empty.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"" + icon
-					+ "\",\"layer1\":\"strafemc:item/mag_empty\"}}");
+			// the empty one: the red X drawn into its own picture (a second model layer can end up under the first)
+			Path iconPng = drawn ? tex.resolve("item/mag/" + e.cls() + MagIcons.VERSION + ".png") : tex.resolve("item/mag_ak47.png");
+			Path emptyPng = tex.resolve("item/mag/" + e.cls() + MagIcons.VERSION + "_empty.png");
+			String emptyIcon = icon;
+			try {
+				if (!Files.exists(emptyPng) && Files.exists(iconPng)) write(MagIcons.withMark(ImageIO.read(iconPng.toFile())), emptyPng);
+				if (Files.exists(emptyPng)) emptyIcon = "strafemc:item/mag/" + e.cls() + MagIcons.VERSION + "_empty";
+			} catch (Exception ex) {
+				StrafeMc.LOG.warn("[strafemc] empty magazine icon {}: {}", e.cls(), ex.toString());
+			}
+			Files.writeString(models.resolve(e.cls() + "_empty.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"" + emptyIcon + "\"}}");
 			Files.writeString(items.resolve(id + ".json"), "{\"model\":{\"type\":\"minecraft:condition\",\"property\":\"minecraft:custom_model_data\",\"index\":0,"
 					+ "\"on_true\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "_empty\"},"
 					+ "\"on_false\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "\"}}}");
