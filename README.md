@@ -95,7 +95,7 @@ This happens once, locally; nothing is uploaded and your CS2 install is never ch
 
 When you start Minecraft without a finished setup, strafeMC offers on the title screen:
 - **Set up automatically:** strafeMC finds CS2 (or you paste its folder), downloads the open-source converter
-  (ValveResourceFormat 20.0) from its official GitHub release, checks it against its published checksum, and converts
+  (ValveResourceFormat 20.1) from its official GitHub release, checks it against its published checksum, and converts
   everything. It shows exactly what it will do before it starts, and runs in the background while you play.
 - **Do it myself:** follow [docs/MANUAL_SETUP.md](docs/MANUAL_SETUP.md). (A standalone setup tool is planned.)
 - **Later** / **Don't ask again:** play with placeholders.

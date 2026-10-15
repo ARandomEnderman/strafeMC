@@ -21,9 +21,9 @@ import java.util.zip.ZipInputStream;
  * pinned version, checked against the SHA-256 GitHub publishes for it before anything is unpacked or run.
  */
 public final class ConverterDownload {
-	public static final String VERSION = "20.0";
+	public static final String VERSION = "20.1"; // 20.1: reads CS2 files since the 2026-10-15 update (KeyValues3 types 26 / 27)
 
-	/** OS/arch -> release file, its size and SHA-256 (from GitHub's release data for 20.0). */
+	/** OS/arch -> release file, its size and SHA-256 (from GitHub's release data for 20.1). */
 	public record Build(String file, long size, String sha256) {
 		public String url() {
 			return "https://github.com/ValveResourceFormat/ValveResourceFormat/releases/download/" + VERSION + "/" + file;
@@ -36,12 +36,32 @@ public final class ConverterDownload {
 	public static Build forThisComputer() {
 		String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT), arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
 		boolean arm = arch.contains("aarch64") || arch.contains("arm64");
-		if (os.contains("win")) return arm ? new Build("cli-windows-arm64.zip", 50169478, "df2a52372fee1ce8284abd2cd8a09f65e7259778290b5facfcfa07ef75f4ea1a")
-				: new Build("cli-windows-x64.zip", 52735867, "d32ab327b8bbb42a2528866afb03bb582bdb779d0005488da32b90292afd3ff5");
-		if (os.contains("mac")) return arm ? new Build("cli-macos-arm64.zip", 54097964, "fa3fc51ab8ed8c96899a64cf8977c2c4810342605868f37044e85a412ff4e0cd")
-				: new Build("cli-macos-x64.zip", 57035976, "9b430e8233fa498c34c00cf5cf4da48d854c8f255b1208557861802d9e16a19c");
-		if (arm) return new Build("cli-linux-arm64.zip", 48777281, "adcfeac823e25ebdaebe0b6c4b3132546afa3978d23fca37bb522da1fe5cb2e5");
-		return new Build("cli-linux-x64.zip", 53059004, "3e8af47cd6ce52e8068904f2aa1dda23c56a6b96a8310b25090f0711cda76a8a");
+		if (os.contains("win")) return arm ? new Build("cli-windows-arm64.zip", 50197095, "a5348023b3d881847c228ea5aad6f2d8eb65abb8cdeed7fa138ea6426ff9ee93")
+				: new Build("cli-windows-x64.zip", 52773073, "67aaf8a67a85ca60fd09ff343e62103a4cdf3a2d177fc656231d7d734c5b3aa3");
+		if (os.contains("mac")) return arm ? new Build("cli-macos-arm64.zip", 54131516, "3e3196a678a8f010c345b49bac67c63bc7af0ef02e4543bb7a80b7508c1eefc4")
+				: new Build("cli-macos-x64.zip", 57074008, "8dec0b851998f299d0acd5730ad62641c8d5d38155f409ed176864889fa3ac72");
+		if (arm) return new Build("cli-linux-arm64.zip", 48808492, "6fae01594f0c54c42a8aad2f3c2c8771b40a18195a907c5c686bcb5a94a67023");
+		return new Build("cli-linux-x64.zip", 53094205, "29d25a6d6b62377fc5386c3e5145b0a2180a401a50041afe9494b3f503deaef5");
+	}
+
+	/**
+	 * Whether a converter strafeMC downloaded itself is older than VERSION (asks it: --version), so the setup gets the
+	 * current one; a converter the player set up is never replaced.
+	 */
+	public static boolean outdated(Path exe, Path toolsDir) {
+		if (!exe.toAbsolutePath().startsWith(toolsDir.toAbsolutePath())) return false;
+		try {
+			Process p = new ProcessBuilder(exe.toString(), "--version").redirectErrorStream(true).start();
+			String out = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+			p.waitFor(20, java.util.concurrent.TimeUnit.SECONDS);
+			java.util.regex.Matcher m = java.util.regex.Pattern.compile("Version:\\s*(\\d+)\\.(\\d+)").matcher(out);
+			if (!m.find()) return true;
+			String[] want = VERSION.split("\\.");
+			int have = Integer.parseInt(m.group(1)) * 1000 + Integer.parseInt(m.group(2)), need = Integer.parseInt(want[0]) * 1000 + Integer.parseInt(want[1]);
+			return have < need;
+		} catch (Exception e) {
+			return true;
+		}
 	}
 
 	/** The converter's program file inside an unpacked build. */

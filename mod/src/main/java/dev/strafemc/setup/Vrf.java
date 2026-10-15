@@ -55,7 +55,37 @@ public final class Vrf {
 	 */
 	public void blocks(Collection<String> filters, String ext, String block, Path cache) throws IOException {
 		for (String chunk : chunks(filters)) {
+			try {
+				blocksChunk(chunk, ext, block, cache);
+			} catch (IOException e) {
+				if (!chunk.contains(",")) {
+					skip(chunk, e);
+					continue;
+				}
+				for (String one : chunk.split(",")) { // one file the converter can't read shouldn't stop the rest
+					try {
+						blocksChunk(one, ext, block, cache);
+					} catch (IOException e1) {
+						skip(one, e1);
+					}
+				}
+			}
+		}
+	}
+
+	/** Leaves out what the converter can't read (a newer CS2 than it knows): logged, the rest goes on. */
+	private void skip(String what, IOException e) {
+		System.err.println("[strafemc] setup skipped " + what + ": " + e.getMessage());
+		skipped.add(what);
+	}
+
+	/** What the converter couldn't read this run (empty: everything converted). */
+	public final List<String> skipped = new ArrayList<>();
+
+	private void blocksChunk(String chunk, String ext, String block, Path cache) throws IOException {
+		{
 			Path out = Files.createTempFile(logDir, "vrfblocks", ".txt");
+			boolean ok = false;
 			try {
 				List<String> args = new ArrayList<>(List.of("-i", vpk.toString(), "-f", chunk, "-b", block));
 				if (ext != null) args.addAll(List.of("-e", ext));
@@ -74,31 +104,54 @@ public final class Vrf {
 					Files.createDirectories(dst.getParent());
 					Files.writeString(dst, text.substring(start, end), StandardCharsets.UTF_8);
 				}
+				ok = true;
 			} finally {
-				Files.deleteIfExists(out);
+				if (ok) Files.deleteIfExists(out); // a failed run's output stays: the error message points at it
 			}
 		}
 	}
 
 	/** Decompiles matching files (sounds -> wav/mp3, textures -> png, scripts -> text) into outDir under their pak paths. */
 	public void decompile(Collection<String> filters, String ext, Path outDir) throws IOException {
-		for (String chunk : chunks(filters)) {
-			List<String> args = new ArrayList<>(List.of("-i", vpk.toString(), "-f", chunk, "-o", outDir.toString(), "-d", "--threads", "4"));
+		for (String chunk : chunks(filters)) resilient(chunk, c -> {
+			List<String> args = new ArrayList<>(List.of("-i", vpk.toString(), "-f", c, "-o", outDir.toString(), "-d", "--threads", "4"));
 			if (ext != null) args.addAll(List.of("-e", ext));
 			run(args, null);
+		});
+	}
+
+	private interface Run {
+		void run(String chunk) throws IOException;
+	}
+
+	/** A batch; if it fails, entry by entry, skipping the ones that fail. */
+	private void resilient(String chunk, Run r) {
+		try {
+			r.run(chunk);
+		} catch (IOException e) {
+			if (!chunk.contains(",")) {
+				skip(chunk, e);
+				return;
+			}
+			for (String one : chunk.split(","))
+				try {
+					r.run(one);
+				} catch (IOException e1) {
+					skip(one, e1);
+				}
 		}
 	}
 
 	/** Exports matching models / animation clips to .glb files in outDir (with materials: their textures next to them). */
 	public void glb(Collection<String> filters, String ext, Path outDir, boolean materials) throws IOException {
 		Files.createDirectories(outDir); // the converter treats a missing output folder as a file name
-		for (String chunk : chunks(filters)) {
-			List<String> args = new ArrayList<>(List.of("-i", vpk.toString(), "-f", chunk, "-o", outDir.toString(), "-d",
+		for (String chunk : chunks(filters)) resilient(chunk, c -> {
+			List<String> args = new ArrayList<>(List.of("-i", vpk.toString(), "-f", c, "-o", outDir.toString(), "-d",
 					"--gltf_export_format", "glb", "--gltf_export_animations", "--threads", "4"));
 			if (materials) args.add("--gltf_export_materials");
 			if (ext != null) args.addAll(List.of("-e", ext));
 			run(args, null);
-		}
+		});
 	}
 
 	/** Comma-joined filter lists short enough for one command line. */

@@ -160,7 +160,8 @@ public final class SetupScreen extends Screen {
 	}
 
 	private boolean converterReady() {
-		return !StrafeConfig.vrfPath.isBlank() && Files.isRegularFile(Path.of(StrafeConfig.vrfPath));
+		return !StrafeConfig.vrfPath.isBlank() && Files.isRegularFile(Path.of(StrafeConfig.vrfPath))
+				&& !ConverterDownload.outdated(Path.of(StrafeConfig.vrfPath), StrafeConfig.RUNTIME_DIR.resolve("tools").resolve("vrf")); // an old download: the current one
 	}
 
 	/** A native folder picker (it blocks, so it runs off the render thread); the pick goes through the same normalizing. */
