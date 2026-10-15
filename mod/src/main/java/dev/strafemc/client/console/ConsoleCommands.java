@@ -222,6 +222,8 @@ public final class ConsoleCommands {
 				v -> StrafeConfig.viewmodelOffsetY = v);
 		viewmodelSetting("viewmodel_offset_z", "Weapon position up (default -1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
+		viewmodelSetting("viewmodel_sway_scale", "How far the weapon lags behind when you turn (0-5, default 1, 0 = off).", 0, 5,
+				() -> StrafeConfig.viewmodelSwayScale, v -> StrafeConfig.viewmodelSwayScale = v);
 		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair
 			final int k = i;
 			String kind = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];

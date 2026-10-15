@@ -504,8 +504,12 @@ public final class Viewmodel {
 		float upb = (float) StrafeConfig.unitsPerBlock;
 		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
 				(float) -StrafeConfig.viewmodelOffsetY / upb);
-		Matrix4f toView = player != null ? offsets.mul(motion.offset(player)).mul(toView()) : offsets.mul(toView());
-		if (!StrafeConfig.rightHand) toView = new Matrix4f().scale(-1, 1, 1).mul(toView); // cl_righthand 0: mirrored into the left hand
+		Matrix4f sway = player != null ? motion.offset(player) : new Matrix4f();
+		// cl_righthand 0: mirrored into the left hand; bob and sway are the camera's, so they're mirrored back and still
+		// lag the same way as you turn
+		if (!StrafeConfig.rightHand) sway = new Matrix4f().scale(-1, 1, 1).mul(sway).scale(-1, 1, 1);
+		Matrix4f toView = offsets.mul(sway).mul(toView());
+		if (!StrafeConfig.rightHand) toView = new Matrix4f().scale(-1, 1, 1).mul(toView);
 		// The hand pose arrives as inverse(view rotation) * bobbing. Keep only the bobbing (pure camera space) and undo
 		// whatever model-view matrix is active when the features are drawn, so looking around never moves the viewmodel.
 		Matrix4f cam = new Matrix4f(HAND_VIEW).mul(ps.last().pose());

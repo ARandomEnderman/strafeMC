@@ -56,7 +56,7 @@ final class ViewmodelMotion {
 			if (d > LAG_MAX) s *= d / LAG_MAX;
 			lastFacing = lastFacing.add(diff.scale(Math.min(1, s * dt))).normalize();
 		}
-		Vec3 lag = diff.scale(-LAG_SCALE); // units, world space
+		Vec3 lag = diff.scale(-LAG_SCALE * dev.strafemc.config.StrafeConfig.viewmodelSwayScale); // units, world space
 		double pitch = p.getXRot(); // Minecraft and Source pitch: positive looks down
 
 		// camera-space translation (units): sway + pitch shift + bob

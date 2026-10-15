@@ -70,6 +70,8 @@ public final class StrafeConfig {
 	public static double zoomSensitivityRatio = 1.0;
 	/** CS2's viewmodel_offset_x / _y / _z (units: right, forward, up); defaults 1, 1, -1. Unlimited (CS2 clamps x -2..2.5, y and z -2..2). */
 	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
+	/** How far the weapon lags behind when turning (1 = default, 0 = none). Ours: CS2 has no such setting. */
+	public static double viewmodelSwayScale = 1;
 	/**
 	 * CS2's grenade throw crosshair (client cvars, CS2 defaults): cl_grenadecrosshair_<explosive|flash|smoke|fire|decoy>
 	 * on, cl_grenadecrosshairdelay_* 2 s (0..5), cl_grenadecrosshair_tickscaling 1.1 (0.5..2), cl_grenadecrosshair_ticklabels on.
@@ -140,6 +142,7 @@ public final class StrafeConfig {
 			zoomSensitivityRatio = Double.parseDouble(p.getProperty("zoomSensitivityRatio", String.valueOf(zoomSensitivityRatio)));
 			viewmodelFov = Math.max(60, Math.min(68, Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)))));
 			viewmodelOffsetX = Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)));
+			viewmodelSwayScale = Double.parseDouble(p.getProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale)));
 			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
 			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
@@ -190,6 +193,7 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelFov", String.valueOf(viewmodelFov));
 		p.setProperty("zoomSensitivityRatio", String.valueOf(zoomSensitivityRatio));
 		p.setProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX));
+		p.setProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale));
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
