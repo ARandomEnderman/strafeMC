@@ -125,7 +125,7 @@ public final class SkinWraps {
 
 	/** The gun wrap of one gun's skin: a paint kit on a weapon (cases give these), or null. */
 	public static Wrap ofKit(String weapon, String kit) {
-		for (Wrap w : ALL.values()) if (!w.hidden && !w.knife && kit.equals(w.kits.get(weapon))) return w;
+		for (Wrap w : ALL.values()) if (!w.hidden && !w.knife && kit.equalsIgnoreCase(w.kits.get(weapon))) return w;
 		return null;
 	}
 

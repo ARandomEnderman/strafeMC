@@ -121,7 +121,7 @@ gun:chrome_cannon	Chrome Cannon	weapon_awp=awp_tempered	pattern	weapon_awp=ancie
 gun:chromatic_aberration	Chromatic Aberration	weapon_awp=cu_awp_chroma_pink weapon_galilar=cu_galil_chroma_pink	pattern	weapon_awp=ancient weapon_galilar=legendary
 gun:oni_taiji	Oni Taiji	weapon_awp=cu_awp_hannya	pattern	weapon_awp=ancient
 gun:hyper_beast	Hyper Beast	weapon_awp=cu_awp_hyper_beast weapon_fiveseven=cu_fiveseven_hyperbeast weapon_m4a1_silencer=cu_m4a1_hyper_beast weapon_nova=cu_nova_hyperbeast	pattern	weapon_awp=ancient weapon_fiveseven=ancient weapon_m4a1_silencer=ancient weapon_nova=legendary
-gun:neo_noir	Neo-Noir	weapon_awp=cu_awp_neonoir weapon_glock=cu_glock_noir weapon_m4a1=cu_m4a4_neo_noir weapon_usp_silencer=cu_usps_noir	pattern	weapon_awp=ancient weapon_glock=ancient weapon_m4a1=ancient weapon_usp_silencer=ancient
+gun:neo_noir	Neo-Noir	weapon_awp=cu_awp_neonoir weapon_glock=cu_glock_noir weapon_m4a1=cu_m4a4_neo_noir weapon_ump45=ump45_neo_noir weapon_usp_silencer=cu_usps_noir	pattern	weapon_awp=ancient weapon_glock=ancient weapon_m4a1=ancient weapon_ump45=legendary weapon_usp_silencer=ancient
 gun:fever_dream	Fever Dream	weapon_awp=cu_awp_psychopath weapon_ssg08=cu_ssg08_fever_dream	pattern	weapon_awp=legendary weapon_ssg08=mythical
 gun:capillary	Capillary	weapon_awp=cu_awp_vein weapon_fiveseven=cu_fiveseven_vein weapon_mp9=cu_mp9_vein	pattern	weapon_awp=rare weapon_fiveseven=rare weapon_mp9=rare
 gun:atheris	Atheris	weapon_awp=cu_awp_viper	pattern	weapon_awp=mythical
@@ -1214,3 +1214,18 @@ gun:black_site	Black Site	weapon_xm1014=xm1014_black_site	pattern	weapon_xm1014=
 gun:run_run_run	Run Run Run	weapon_xm1014=xm1014_freight	pattern	weapon_xm1014=rare
 gun:irezumi	Irezumi	weapon_xm1014=xm1014_irezumi	pattern	weapon_xm1014=rare
 gun:mockingbird	Mockingbird	weapon_xm1014=xm1014_mockingbird	pattern	weapon_xm1014=rare
+gun:27	27	weapon_usp_silencer=usp_field_snake	pattern	weapon_usp_silencer=rare
+gun:calligraffiti	Calligraffiti	weapon_deagle=deagle_calligraff	pattern	weapon_deagle=rare
+gun:luxe_trim	Luxe Trim	weapon_aug=aug_puffer	pattern	weapon_aug=rare
+gun:hypnosis	Hypnosis	weapon_m249=m249_hypnosis	pattern	weapon_m249=rare
+gun:tango	Tango	weapon_revolver=r8_roses_and_guns	pattern	weapon_revolver=rare
+gun:trail_blazer	Trail Blazer	weapon_scar20=scar20_fury_topo	pattern	weapon_scar20=rare
+gun:turbine	Turbine	weapon_m4a1=m4a4_fusion	pattern	weapon_m4a1=mythical
+gun:hydro_strike	Hydro Strike	weapon_elite=dual_elite_hydro_strike	pattern	weapon_elite=mythical
+gun:saib_oni	Saibā Oni	weapon_mac10=mac10_ozaki	pattern	weapon_mac10=mythical
+gun:randy_rush	Randy Rush	weapon_p90=p90_randy_rush	pattern	weapon_p90=mythical
+gun:rapid_transit	Rapid Transit	weapon_ssg08=ssg08_transit_white	pattern	weapon_ssg08=mythical
+gun:the_outsiders	The Outsiders	weapon_ak47=ak47_t_bus	pattern	weapon_ak47=legendary
+gun:epicenter	Epicenter	weapon_p250=p250_impact	pattern	weapon_p250=legendary
+gun:gold_toof	Gold Toof	weapon_glock=glock_chomper	pattern	weapon_glock=ancient
+gun:vaporwave	Vaporwave	weapon_m4a1_silencer=m4a1s_vaporwave	pattern	weapon_m4a1_silencer=ancient
