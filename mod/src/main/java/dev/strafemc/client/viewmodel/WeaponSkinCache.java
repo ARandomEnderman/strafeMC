@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v31/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v32/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -201,7 +201,25 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v31/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v32/" + cls + "/" + kit + "_" + pattern + ".png");
+	}
+
+	/**
+	 * A kit's own final ambient occlusion: a plain grey, opaque map, so it only replaces the shading (G); the cavities (R)
+	 * and the edges where paint breaks off (A) stay the weapon's. Read as edges, its opaque alpha stripped the whole paint
+	 * at any wear (Tosai).
+	 */
+	private static BufferedImage finalOcclusion(BufferedImage weapon, BufferedImage own) {
+		if (own == null) return weapon;
+		int w = weapon != null ? weapon.getWidth() : own.getWidth(), h = weapon != null ? weapon.getHeight() : own.getHeight();
+		BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		for (int y = 0; y < h; y++)
+			for (int x = 0; x < w; x++) {
+				int g = own.getRGB(x * own.getWidth() / w, y * own.getHeight() / h) >> 8 & 255;
+				int c = weapon != null ? weapon.getRGB(x, y) : 0;
+				out.setRGB(x, y, c & 0xFFFF00FF | g << 8);
+			}
+		return out;
 	}
 
 	/**
@@ -249,8 +267,9 @@ public final class WeaponSkinCache {
 		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
 		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
 				? image(paint, "g_tPaintByNumberMasks") : image(ci, "g_tMasks");
-		BufferedImage ao = paint.f("g_bOverrideAmbientOcclusion", 0) != 0 && paint.textures.containsKey("g_tFinalAmbientOcclusion")
-				? image(paint, "g_tFinalAmbientOcclusion") : image(ci, "g_tAmbientOcclusion");
+		BufferedImage ao = image(ci, "g_tAmbientOcclusion");
+		if (paint.f("g_bOverrideAmbientOcclusion", 0) != 0 && paint.textures.containsKey("g_tFinalAmbientOcclusion"))
+			ao = finalOcclusion(ao, image(paint, "g_tFinalAmbientOcclusion"));
 		var inputs = new WeaponSkinBaker.Inputs(masks, ao, ci.f("g_flUvScale1", 1), ci.f("g_flWeaponLength1", 32), posMap(ci), image(ci, "g_tSurface"));
 		BufferedImage baseImg = ImageIO.read(Viewmodel.downscaledPath(base).toFile());
 		var positions = WeaponSkinBaker.positions(parts, WeaponSkinBaker.SIZE);
