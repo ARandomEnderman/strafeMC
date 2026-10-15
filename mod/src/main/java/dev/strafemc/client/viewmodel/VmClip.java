@@ -89,36 +89,51 @@ public final class VmClip {
 	}
 
 	/**
-	 * Crossfade (CS2 graph transitions): every node's local translation / rotation / scale blended from another clip
-	 * at its own time (bones matched by name) into this clip, w = this clip's weight (0..1). Rotations take the short way.
+	 * Every bone's local translation (3), rotation (4) and scale (3) by name at time t, crossfaded from a snapshot
+	 * (w = this clip's weight; from null or w >= 1: this clip alone). A snapshot of what's on screen is the start of the
+	 * next crossfade, so any chain of animations blends, however fast they follow each other.
 	 */
-	public Matrix4f[] pose(float t, VmClip from, float fromT, float w) {
+	public Map<String, float[]> snapshot(float t, Map<String, float[]> from, float w) {
+		Map<String, float[]> out = new HashMap<>();
+		for (int i = 0; i < names.length; i++) out.put(names[i], local(i, t, from, w));
+		if (from != null) // bones only the old pose has (another weapon's) keep their last place
+			for (var e : from.entrySet()) out.putIfAbsent(e.getKey(), e.getValue());
+		return out;
+	}
+
+	/** Crossfade (CS2 graph transitions) from a snapshot into this clip at t, w = this clip's weight (0..1). */
+	public Matrix4f[] pose(float t, Map<String, float[]> from, float w) {
 		if (from == null || w >= 1) return pose(t);
 		int n = names.length;
 		Matrix4f[] world = new Matrix4f[n];
-		for (int i = 0; i < n; i++) resolveBlend(i, t, from, fromT, w, world);
+		for (int i = 0; i < n; i++) resolveBlend(i, t, from, w, world);
 		return world;
 	}
 
-	private Matrix4f resolveBlend(int i, float t, VmClip from, float fromT, float w, Matrix4f[] world) {
-		if (world[i] != null) return world[i];
+	/** One bone's local T, R, S (10 floats) at t, blended from the snapshot's (rotations the short way). */
+	private float[] local(int i, float t, Map<String, float[]> from, float w) {
 		float[] T = sample(tT[i], t, restT[i]), R = sample(tR[i], t, restR[i]), S = sample(tS[i], t, restS[i]);
-		Integer j = from.index.get(names[i]);
-		if (j != null) {
-			float[] T0 = sample(from.tT[j], fromT, from.restT[j]), R0 = sample(from.tR[j], fromT, from.restR[j]), S0 = sample(from.tS[j], fromT, from.restS[j]);
-			float dot = R0[0] * R[0] + R0[1] * R[1] + R0[2] * R[2] + R0[3] * R[3];
+		float[] f = from == null || w >= 1 ? null : from.get(names[i]);
+		if (f != null) {
+			float dot = f[3] * R[0] + f[4] * R[1] + f[5] * R[2] + f[6] * R[3];
 			float sign = dot < 0 ? -1 : 1;
-			for (int k = 0; k < 3; k++) {
-				T[k] = T0[k] + (T[k] - T0[k]) * w;
-				S[k] = S0[k] + (S[k] - S0[k]) * w;
-			}
+			T = new float[] {f[0] + (T[0] - f[0]) * w, f[1] + (T[1] - f[1]) * w, f[2] + (T[2] - f[2]) * w};
+			S = new float[] {f[7] + (S[0] - f[7]) * w, f[8] + (S[1] - f[8]) * w, f[9] + (S[2] - f[9]) * w};
 			float[] r = new float[4];
-			for (int k = 0; k < 4; k++) r[k] = R0[k] + (sign * R[k] - R0[k]) * w;
+			for (int k = 0; k < 4; k++) r[k] = f[3 + k] + (sign * R[k] - f[3 + k]) * w;
+			float len = (float) Math.sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2] + r[3] * r[3]);
+			if (len > 1e-6f) for (int k = 0; k < 4; k++) r[k] /= len;
 			R = r;
 		}
-		Matrix4f local = new Matrix4f().translationRotateScale(new Vector3f(T[0], T[1], T[2]),
-				new Quaternionf(R[0], R[1], R[2], R[3]).normalize(), new Vector3f(S[0], S[1], S[2]));
-		Matrix4f m = parent[i] >= 0 ? new Matrix4f(resolveBlend(parent[i], t, from, fromT, w, world)).mul(local) : local;
+		return new float[] {T[0], T[1], T[2], R[0], R[1], R[2], R[3], S[0], S[1], S[2]};
+	}
+
+	private Matrix4f resolveBlend(int i, float t, Map<String, float[]> from, float w, Matrix4f[] world) {
+		if (world[i] != null) return world[i];
+		float[] l = local(i, t, from, w);
+		Matrix4f local = new Matrix4f().translationRotateScale(new Vector3f(l[0], l[1], l[2]), new Quaternionf(l[3], l[4], l[5], l[6]).normalize(),
+				new Vector3f(l[7], l[8], l[9]));
+		Matrix4f m = parent[i] >= 0 ? new Matrix4f(resolveBlend(parent[i], t, from, w, world)).mul(local) : local;
 		world[i] = m;
 		return m;
 	}

@@ -384,8 +384,9 @@ public final class Viewmodel {
 	}
 
 	/** The clip being blended out (CS2 transition), its time when the blend started and how long the blend lasts. */
-	private VmClip fromClip;
-	private float fromTime, blendDuration;
+	/** The pose on screen when the current clip started (bones' local T/R/S by name), blended out; null: none. */
+	private java.util.Map<String, float[]> fromPose;
+	private float blendDuration;
 	private long blendStart;
 
 	/**
@@ -422,9 +423,13 @@ public final class Viewmodel {
 		if (c == null) return;
 		if (clip != null && clip != c || clip == c && !anim.equals("idle")) {
 			float d = clip == null ? 0 : blendTime(clip.name, anim, l.cls.contains("knife"));
-			fromClip = d > 0 ? clip : null;
-			fromTime = d > 0 ? Math.min(clipTime(), clip.duration) : 0;
-			if (fromClip != null && fromClip.name.equals("idle") && fromClip.duration > 0) fromTime %= fromClip.duration;
+			if (d > 0) {
+				// freeze exactly what's on screen (mid-crossfade too), so every new clip blends from it
+				float t = Math.min(clipTime(), clip.duration);
+				if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
+				float w = blendDuration <= 0 ? 1 : (System.nanoTime() - blendStart) / 1e9f / blendDuration;
+				fromPose = clip.snapshot(t, fromPose != null && w < 1 ? fromPose : null, Math.max(0, Math.min(1, w)));
+			} else fromPose = null;
 			blendDuration = d;
 			blendStart = System.nanoTime();
 		}
@@ -437,7 +442,7 @@ public final class Viewmodel {
 	/** Weapon put away: the next render starts from its draw. */
 	public void stop() {
 		clip = null;
-		fromClip = null;
+		fromPose = null;
 	}
 
 	private float clipTime() {
@@ -478,9 +483,9 @@ public final class Viewmodel {
 		if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
 		Matrix4f[] pose;
 		float w = blendDuration <= 0 ? 1 : (System.nanoTime() - blendStart) / 1e9f / blendDuration;
-		if (fromClip != null && w < 1) pose = clip.pose(t, fromClip, fromTime, Math.max(0, w)); // the old clip held where it was
+		if (fromPose != null && w < 1) pose = clip.pose(t, fromPose, Math.max(0, w)); // from the pose frozen when this clip began
 		else {
-			fromClip = null;
+			fromPose = null;
 			pose = clip.pose(t);
 		}
 		Matrix4f wpn = mount(clip, pose);

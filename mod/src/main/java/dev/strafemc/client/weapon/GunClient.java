@@ -151,7 +151,9 @@ public final class GunClient {
 		releaseGrenade(p, now);
 		ItemStack held = p.getMainHandItem();
 		int slot = p.getInventory().getSelectedSlot();
+		boolean equipped = false;
 		if (slot != lastSlot || !ItemStack.isSameItem(held, lastHeld)) {
+			equipped = held.getItem() instanceof GunItem;
 			lastSlot = slot;
 			lastHeld = held;
 			grenadeState = GRENADE_IDLE;
@@ -179,6 +181,8 @@ public final class GunClient {
 			}
 		}
 		lastHeld = held;
+		// CS2: inspect held while the weapon comes out inspects it straight away (over the draw)
+		if (equipped && Minecraft.getInstance().options.keySwapOffhand.isDown()) inspect();
 		playDue(p, now);
 		inspectHold(now);
 		updateReload(p, now, dt);
@@ -664,8 +668,8 @@ public final class GunClient {
 		if (StrafeConfig.debug) { // camera vs shot: where the view looks and where the bullet goes
 			var cam = Minecraft.getInstance().gameRenderer.getMainCamera();
 			double[] vo = viewOffset();
-			StrafeMc.LOG.info("[strafemc] shotdbg client: camY={} eyeY={} camPitch={} xRot={} viewOff={} punch={} inacc={} dirPitch={}",
-					String.format("%.4f", cam.position().y), String.format("%.4f", eye(p).y), String.format("%.3f", cam.xRot()),
+			StrafeMc.LOG.info("[strafemc] shotdbg client: {} shot {} camY={} eyeY={} camPitch={} xRot={} viewOff={} punch={} inacc={} dirPitch={}",
+					p.getMainHandItem().getItem() instanceof GunItem gi ? gi.weaponClass : "?", recoilIndex, String.format("%.4f", cam.position().y), String.format("%.4f", eye(p).y), String.format("%.3f", cam.xRot()),
 					String.format("%.3f", p.getXRot()), String.format("%.3f", vo[0]), String.format("%.3f", aimPunch.angle[0]), String.format("%.5f", penalty),
 					String.format("%.3f", Math.toDegrees(-Math.asin(d.y))));
 		}
@@ -945,7 +949,9 @@ public final class GunClient {
 		LocalPlayer p = Minecraft.getInstance().player;
 		if (p == null || !(p.getMainHandItem().getItem() instanceof GunItem g)) return;
 		long now = System.nanoTime();
-		if (reloadLocked() || now < deployUntil || now < inspectUntil || now < Math.min(knifeNextLight, knifeNextHeavy)) return;
+		// CS2 lets an inspect take over the draw (firing still waits out the deploy); not during a reload, shell by shell
+		// included
+		if (reloadLocked() || shell != null || now < inspectUntil || now < Math.min(knifeNextLight, knifeNextHeavy)) return;
 		// which inspect (knives: lookat01 / rare lookat02) comes from the weapon's CS2 inspect graph weights
 		if (g instanceof dev.strafemc.weapon.GrenadeItem && grenadeState != GRENADE_IDLE) return;
 		var entry = dev.strafemc.weapon.WeaponTable.get(g.weaponClass); // guns and knives: their inspect graph from the weapon table
