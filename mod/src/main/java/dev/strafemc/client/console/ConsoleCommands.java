@@ -32,12 +32,12 @@ public final class ConsoleCommands {
 
 	static {
 		local("clear", "Clear the console.", a -> ConsoleLog.clear());
-		local("help", "List the Minecraft-side console commands.", a -> {
+		local("help", "List commands.", a -> {
 			ConsoleLog.info("Minecraft-side commands (everything else is sent to the CS2 server):");
 			LOCAL.values().forEach(l -> ConsoleLog.add("  " + l.name + " - " + l.help, ConsoleLog.GRAY));
 			ConsoleLog.add("  mp_autobunnyhopping - alias for sv_autobunnyhopping", ConsoleLog.GRAY);
 		});
-		local("noclip", "Toggle noclip (needs sv_cheats 1 and operator). Optional 0/1.", a -> {
+		local("noclip", "Fly through walls. Cheat.", a -> {
 			if (!cheats()) {
 				ConsoleLog.error("Can't use cheat command noclip in multiplayer, unless the server has sv_cheats set to 1.");
 				return;
@@ -50,30 +50,30 @@ public final class ConsoleCommands {
 			}
 			ClientPlayNetworking.send(new NoclipRequest(want));
 		});
-		local("cl_scrolljump", "Mouse wheel = +jump (1) or hotbar scroll (0).", a -> {
+		local("cl_scrolljump", "Scroll to jump (1) or scroll the hotbar (0).", a -> {
 			StrafeConfig.scrollJump = bool(a, !StrafeConfig.scrollJump);
 			saved("cl_scrolljump", StrafeConfig.scrollJump);
 		});
-		local("cl_showpos", "CS-style name/pos/ang/vel readout in the top-left corner.", a -> {
+		local("cl_showpos", "Show your position, angles and speed.", a -> {
 			StrafeConfig.showSpeed = bool(a, !StrafeConfig.showSpeed);
 			saved("cl_showpos", StrafeConfig.showSpeed);
 		});
-		local("cl_jumpstats", "KZ-style jump stats after each jump (distance, pre, max, strafes, sync).", a -> {
+		local("cl_jumpstats", "Show stats after each jump.", a -> {
 			StrafeConfig.jumpStats = bool(a, !StrafeConfig.jumpStats);
 			saved("cl_jumpstats", StrafeConfig.jumpStats);
 		});
-		local("cl_velgraph", "Speed graph above the hotbar (last 3 s).", a -> {
+		local("cl_velgraph", "Show a speed graph.", a -> {
 			StrafeConfig.velGraph = bool(a, !StrafeConfig.velGraph);
 			saved("cl_velgraph", StrafeConfig.velGraph);
 		});
-		local("strafemc_preset_save", "Save the current movement cvars as a named preset.", a -> {
+		local("strafemc_preset_save", "Save your movement settings as a preset.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("Usage: strafemc_preset_save <name>");
 				return;
 			}
 			ConsoleLog.add(Presets.save(a[0]) ? "saved preset " + a[0] : "could not save preset " + a[0], ConsoleLog.OK);
 		});
-		local("strafemc_preset_load", "Load a saved preset (or 'default' for the CS2 defaults).", a -> {
+		local("strafemc_preset_load", "Load a preset ('default' for CS2's).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("Usage: strafemc_preset_load <name>");
 				return;
@@ -81,103 +81,103 @@ public final class ConsoleCommands {
 			if (a[0].equalsIgnoreCase("default")) ConsoleCommands.execute("strafemc_reset_movement");
 			else ConsoleLog.add(Presets.load(a[0]) ? "loaded preset " + a[0] : "no preset named " + a[0], ConsoleLog.OK);
 		});
-		local("strafemc_preset_delete", "Delete a saved preset.", a -> {
+		local("strafemc_preset_delete", "Delete a preset.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("Usage: strafemc_preset_delete <name>");
 				return;
 			}
 			ConsoleLog.add(Presets.delete(a[0]) ? "deleted preset " + a[0] : "no preset named " + a[0], ConsoleLog.OK);
 		});
-		local("strafemc_presets", "List saved presets.", a -> {
+		local("strafemc_presets", "List presets.", a -> {
 			var all = Presets.names();
 			ConsoleLog.info(all.isEmpty() ? "no saved presets" : "presets: " + String.join(", ", all));
 		});
-		local("cl_showspeed", "Speed + CS2 live/cached state above the hotbar.", a -> {
+		local("cl_showspeed", "Show your speed.", a -> {
 			StrafeConfig.showSpeedMeter = bool(a, !StrafeConfig.showSpeedMeter);
 			saved("cl_showspeed", StrafeConfig.showSpeedMeter);
 		});
-		local("cl_doubletapfly", "Double-tap jump toggles creative flight while Source movement is on.", a -> {
+		local("cl_doubletapfly", "Double-tap jump to fly in creative.", a -> {
 			StrafeConfig.doubleTapFly = bool(a, !StrafeConfig.doubleTapFly);
 			saved("cl_doubletapfly", StrafeConfig.doubleTapFly);
 		});
-		local("strafemc_movement_choice", "1: every player turns Source movement on/off for themselves; 0: operators decide for everyone (operators).", a -> {
+		local("strafemc_movement_choice", "Let each player choose their movement (1) or not (0). Operators.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_movement_choice 1 (each player chooses) or 0 (operators decide)");
 				return;
 			}
 			action("strafemc_movement_choice", bool(a, false) ? "1" : "0", false);
 		});
-		local("strafemc_movement", "Source movement on (1) / vanilla movement (0): your own if the server lets players choose, else for the whole server (operators).", a -> {
+		local("strafemc_movement", "CS2 movement (1) or Minecraft movement (0).", a -> {
 			boolean on = bool(a, !dev.strafemc.client.ClientGameplay.sourceMovement());
 			action("strafemc_movement", on ? "1" : "0", false);
 		});
-		local("strafemc_pattern", "Set the pattern template (0-1000): of the wrap or gloves in your hand, or of the wrap on the gun / knife in your hand (cheat: sv_cheats 1, operators, creative).", a -> {
+		local("strafemc_pattern", "Set the pattern (0-1000) of the skin you're holding. Cheat.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_pattern <0-1000>");
 				return;
 			}
 			action("strafemc_pattern", a[0], true);
 		});
-		local("strafemc_float", "Set the float (0-1, or FN / MW / FT / WW / BS for one in that exterior) of the wrap in your hand or on the gun / knife in your hand, within the skin's own range (cheat: sv_cheats 1, operators, creative).", a -> {
+		local("strafemc_float", "Set the float (0-1, or FN / MW / FT / WW / BS) of the skin you're holding. Cheat.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_float <0-1 | FN | MW | FT | WW | BS>");
 				return;
 			}
 			action("strafemc_float", String.join(" ", a), true);
 		});
-		local("strafemc_wear", "Case drops get a float (1, default) or are all Factory New (0), for the whole server (operators).",
+		local("strafemc_wear", "Wear on case drops (1) or all Factory New (0). Operators.",
 				a -> action("strafemc_wear", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})
-			local("strafemc_wear_" + r, "Case drops of " + r + " grade get a float (1, default) or are Factory New (0), for the whole server (operators).",
+			local("strafemc_wear_" + r, "Wear on " + r + " drops (1) or Factory New (0). Operators.",
 					a -> action("strafemc_wear", r + " " + (a.length > 0 ? (bool(a, true) ? "1" : "0") : "1"), false));
 		for (String cv : dev.strafemc.client.weapon.Crosshair.DEFAULTS.keySet())
-			viewmodelSetting(cv, "CS2 crosshair setting (default " + dev.strafemc.client.weapon.Crosshair.DEFAULTS.get(cv) + ").", -1000, 1000,
+			viewmodelSetting(cv, "Crosshair setting.", -1000, 1000,
 					() -> dev.strafemc.client.weapon.Crosshair.get(cv), v -> StrafeConfig.crosshair.put(cv, v));
-		local("apply_crosshair_code", "Use a CS2 crosshair share code (CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx).", a -> {
+		local("apply_crosshair_code", "Use a CS2 crosshair code.", a -> {
 			if (a.length == 0 || !dev.strafemc.client.weapon.Crosshair.apply(a[0])) ConsoleLog.error("apply_crosshair_code CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx");
 		});
-		local("crosshair_editor", "Open the crosshair editor.", a -> Minecraft.getInstance().execute(() ->
-				Minecraft.getInstance().setScreen(new dev.strafemc.client.CrosshairScreen(Minecraft.getInstance().screen))));
-		local("bot_add", "Add a bot (the smaller team). Operators.", a -> action("bot_add", "", false));
+		local("crosshair_editor", "Edit your crosshair.", a -> Minecraft.getInstance().execute(() ->
+				Minecraft.getInstance().setScreen(dev.strafemc.client.StrafeSettingsScreen.at(Minecraft.getInstance().screen, "crosshair"))));
+		local("bot_add", "Add a bot. Operators.", a -> action("bot_add", "", false));
 		local("bot_add_t", "Add a T bot. Operators.", a -> action("bot_add_t", "", false));
 		local("bot_add_ct", "Add a CT bot. Operators.", a -> action("bot_add_ct", "", false));
-		local("bot_kick", "Kick every bot (bot_quota 0). Operators.", a -> action("bot_kick", "", false));
-		local("bot_quota", "How many bots the server keeps (default 0). Operators.", a -> {
+		local("bot_kick", "Remove all bots. Operators.", a -> action("bot_kick", "", false));
+		local("bot_quota", "Number of bots. Operators.", a -> {
 			if (a.length == 0) ConsoleLog.error("bot_quota <number>");
 			else action("bot_quota", a[0], false);
 		});
-		local("bot_difficulty", "How good bots are, 1 (easy) to 10 (hard), default 5. Operators.", a -> {
+		local("bot_difficulty", "Bot skill, 1-10. Operators.", a -> {
 			if (a.length == 0) ConsoleLog.error("bot_difficulty <1-10>");
 			else action("bot_difficulty", a[0], false);
 		});
-		local("strafemc_bot_ffa", "Bots fight everyone (1) or only the other team (0, default). Operators.",
+		local("strafemc_bot_ffa", "Bots fight everyone (1) or the other team (0). Operators.",
 				a -> action("strafemc_bot_ffa", a.length > 0 ? (bool(a, false) ? "1" : "0") : "1", false));
-		local("strafemc_bot_skins", "strafemc_bot_skins random | <player names...>: whose skins new bots wear (default random real accounts). Operators.",
+		local("strafemc_bot_skins", "Bot skins: random, or player names. Operators.",
 				a -> action("strafemc_bot_skins", a.length == 0 ? "random" : String.join(" ", a), false));
-		local("strafemc_knockback", "Gun/knife hits push targets back like Minecraft (1) or slow them like CS2 (0, default), for the whole server (operators).", a -> {
+		local("strafemc_knockback", "Hits knock back (1) or slow down like CS2 (0). Operators.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_knockback 1 (Minecraft knockback) or 0 (CS2 tagging)");
 				return;
 			}
 			action("strafemc_knockback", bool(a, false) ? "1" : "0", false);
 		});
-		local("strafemc_slabstep", "Step up slabs: half-block step height (1) or CS2's 18 units (0, default), for the whole server (operators).", a ->
+		local("strafemc_slabstep", "Step up slabs (1) or not (0). Operators.", a ->
 				action("strafemc_slabstep", bool(a, !dev.strafemc.client.ClientGameplay.slabStep()) ? "1" : "0", false));
-		local("strafemc_lagcomp", "Lag compensation for the whole server: shots are checked against what the shooter saw (1, default) or the present (0) (operators).", a -> {
+		local("strafemc_lagcomp", "Lag compensation on (1) or off (0). Operators.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_lagcomp 1 (on) or 0 (off)");
 				return;
 			}
 			action("strafemc_lagcomp", bool(a, true) ? "1" : "0", false);
 		});
-		local("strafemc_maxunlag", "How far back lag compensation may rewind, in milliseconds (default 300; CS2 uses 200) (operators).", a -> {
+		local("strafemc_maxunlag", "Max lag compensation in ms. Operators.", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_maxunlag <milliseconds>");
 				return;
 			}
 			action("strafemc_maxunlag", a[0], false);
 		});
-		local("strafemc_reset_movement", "Restore every movement cvar to the CS2 server's default.", a -> {
+		local("strafemc_reset_movement", "Reset movement settings to CS2's.", a -> {
 			Map<String, String> d = Cs2Bridge.INSTANCE.defaults();
 			if (d.isEmpty()) {
 				ConsoleLog.error("No CS2 default values available.");
@@ -214,16 +214,16 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add(Binds.unbind(a[0]) ? "unbound \"" + a[0].toLowerCase() + "\"" : "\"" + a[0] + "\" was not bound", ConsoleLog.OK);
 		});
-		local("unbindall", "Remove every bind.", a -> {
+		local("unbindall", "Remove all binds.", a -> {
 			Binds.unbindAll();
 			ConsoleLog.add("all binds removed", ConsoleLog.OK);
 		});
-		local("binds", "List your binds.", a -> {
+		local("binds", "List binds.", a -> {
 			var all = Binds.all();
 			if (all.isEmpty()) ConsoleLog.info("no binds");
 			all.forEach((k, v) -> ConsoleLog.add("  " + k + " = \"" + v + "\"", ConsoleLog.GRAY));
 		});
-		local("cl_movementvolume", "Volume of CS2 footstep/jump/landing sounds, 0-1 (CS2's relative levels are kept).", a -> {
+		local("cl_movementvolume", "Footstep volume, 0-1.", a -> {
 			if (a.length > 0) {
 				try {
 					StrafeConfig.movementVolume = Math.max(0, Math.min(1, Double.parseDouble(a[0])));
@@ -235,7 +235,7 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add("cl_movementvolume = " + StrafeConfig.movementVolume, ConsoleLog.OK);
 		});
-		local("cl_landvolume", "Extra volume scale for landing sounds, 0-1 (default 0.3).", a -> {
+		local("cl_landvolume", "Landing volume, 0-1.", a -> {
 			if (a.length > 0) {
 				try {
 					StrafeConfig.landVolume = Math.max(0, Math.min(1, Double.parseDouble(a[0])));
@@ -247,53 +247,53 @@ public final class ConsoleCommands {
 			}
 			ConsoleLog.add("cl_landvolume = " + StrafeConfig.landVolume, ConsoleLog.OK);
 		});
-		viewmodelSetting("zoom_sensitivity_ratio", "Mouse sensitivity while scoped, relative to the zoom (default 1).", 0.001, 100,
+		viewmodelSetting("zoom_sensitivity_ratio", "Scoped sensitivity.", 0.001, 100,
 				() -> StrafeConfig.zoomSensitivityRatio, v -> StrafeConfig.zoomSensitivityRatio = v);
-		viewmodelSetting("viewmodel_fov", "Field of view of the first-person weapon (60-68, default 60).", 60, 68, () -> StrafeConfig.viewmodelFov,
+		viewmodelSetting("viewmodel_fov", "Weapon field of view, 60-68.", 60, 68, () -> StrafeConfig.viewmodelFov,
 				v -> StrafeConfig.viewmodelFov = v);
 		// offsets unlimited on request (CS2 clamps them to -2..2.5 / -2..2)
-		viewmodelSetting("viewmodel_offset_x", "Weapon position to the right (default 1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetX,
+		viewmodelSetting("viewmodel_offset_x", "Weapon position: right.", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetX,
 				v -> StrafeConfig.viewmodelOffsetX = v);
-		viewmodelSetting("viewmodel_offset_y", "Weapon position forward (default 1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetY,
+		viewmodelSetting("viewmodel_offset_y", "Weapon position: forward.", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetY,
 				v -> StrafeConfig.viewmodelOffsetY = v);
-		viewmodelSetting("viewmodel_offset_z", "Weapon position up (default -1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
+		viewmodelSetting("viewmodel_offset_z", "Weapon position: up.", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
-		viewmodelSetting("strafemc_killcards_time", "Seconds each kill card above the hotbar stays (0 = until you die, default 0).", 0, 3600,
+		viewmodelSetting("strafemc_killcards_time", "Kill card time in seconds (0 = until death).", 0, 3600,
 				() -> StrafeConfig.killCardSeconds, v -> StrafeConfig.killCardSeconds = v);
-		viewmodelSetting("viewmodel_sway_scale", "How far the weapon lags behind when you turn (0-5, default 1, 0 = off).", 0, 5,
+		viewmodelSetting("viewmodel_sway_scale", "Weapon sway, 0-5.", 0, 5,
 				() -> StrafeConfig.viewmodelSwayScale, v -> StrafeConfig.viewmodelSwayScale = v);
 		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair
 			final int k = i;
 			String kind = dev.strafemc.client.weapon.GrenadeCrosshair.KINDS[i];
-			local("cl_grenadecrosshair_" + kind, "Is the grenade crosshair enabled (" + kind + ", default 1).", a -> {
+			local("cl_grenadecrosshair_" + kind, "Grenade crosshair (" + kind + ").", a -> {
 				StrafeConfig.grenadeCrosshair[k] = bool(a, !StrafeConfig.grenadeCrosshair[k]);
 				saved("cl_grenadecrosshair_" + kind, StrafeConfig.grenadeCrosshair[k]);
 			});
-			viewmodelSetting("cl_grenadecrosshairdelay_" + kind, "How long should the pin be pulled for before showing the grenade crosshair (0-5, default 2).",
+			viewmodelSetting("cl_grenadecrosshairdelay_" + kind, "Seconds before the grenade crosshair shows.",
 					0, 5, () -> StrafeConfig.grenadeCrosshairDelay[k], v -> StrafeConfig.grenadeCrosshairDelay[k] = v);
 		}
-		viewmodelSetting("cl_grenadecrosshair_tickscaling", "Scale applied to grenade throw crosshair ticks (0.5-2, default 1.1).", 0.5, 2,
+		viewmodelSetting("cl_grenadecrosshair_tickscaling", "Grenade crosshair tick size.", 0.5, 2,
 				() -> StrafeConfig.grenadeCrosshairTickScaling, v -> StrafeConfig.grenadeCrosshairTickScaling = v);
-		local("cl_grenadecrosshair_ticklabels", "Draw labels on grenade throw crosshair ticks (default 1).", a -> {
+		local("cl_grenadecrosshair_ticklabels", "Grenade crosshair tick labels.", a -> {
 			StrafeConfig.grenadeCrosshairTickLabels = bool(a, !StrafeConfig.grenadeCrosshairTickLabels);
 			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
 		});
-		local("cl_righthand", "Viewmodel in the right hand (1) or mirrored into the left (0).", a -> {
+		local("cl_righthand", "Right hand (1) or left hand (0).", a -> {
 			boolean was = StrafeConfig.rightHand;
 			StrafeConfig.rightHand = bool(a, !StrafeConfig.rightHand);
 			saved("cl_righthand", StrafeConfig.rightHand);
 			if (was != StrafeConfig.rightHand) dev.strafemc.client.weapon.GunClient.redeploy();
 		});
-		local("strafemc_gpu_skinning", "Skin the viewmodel on the GPU (1, fast) or on the CPU every frame (0).", a -> {
+		local("strafemc_gpu_skinning", "GPU weapon animation (1) or CPU (0).", a -> {
 			StrafeConfig.gpuSkinning = bool(a, !StrafeConfig.gpuSkinning);
 			saved("strafemc_gpu_skinning", StrafeConfig.gpuSkinning);
 		});
-		local("switchhands", "Swap the viewmodel to the other hand (bound to H by default).", a -> {
+		local("switchhands", "Switch hands.", a -> {
 			StrafeConfig.rightHand = !StrafeConfig.rightHand;
 			saved("cl_righthand", StrafeConfig.rightHand);
 			dev.strafemc.client.weapon.GunClient.redeploy();
 		});
-		local("strafemc_team", "Your CS side: ct or t (no value: switch). Footsteps and smoke colour; later your agent.", a -> {
+		local("strafemc_team", "Your side: ct or t.", a -> {
 			StrafeConfig.team = a.length > 0 ? (a[0].equalsIgnoreCase("t") ? "t" : "ct") : ("t".equals(StrafeConfig.team) ? "ct" : "t");
 			try {
 				StrafeConfig.save();
@@ -303,39 +303,39 @@ public final class ConsoleCommands {
 			sendTeam();
 			ConsoleLog.add("Team: " + StrafeConfig.team.toUpperCase(java.util.Locale.ROOT), ConsoleLog.OK);
 		});
-		local("strafemc_serverlog", "Show the raw CS2 server log in the console (1) or only replies to your commands (0).", a -> {
+		local("strafemc_serverlog", "Show the CS2 server log.", a -> {
 			StrafeConfig.showServerLog = bool(a, !StrafeConfig.showServerLog);
 			saved("strafemc_serverlog", StrafeConfig.showServerLog);
 		});
-		local("strafemc_startserver", "Start the local CS2 server (optional host extra, if set up).", a -> {
+		local("strafemc_startserver", "Start the CS2 server.", a -> {
 			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
 			else ServerLauncher.start();
 		});
-		local("strafemc_stopserver", "Ask the local CS2 server to quit.", a -> {
+		local("strafemc_stopserver", "Stop the CS2 server.", a -> {
 			if (RelayTransport.remote()) ConsoleLog.error("Only the host runs this server's CS2 server.");
 			else ServerLauncher.stop();
 		});
-		local("kill", "Kill yourself (CS kill).", a -> action("kill", "", false));
-		local("buy", "buy <item>: kevlar, assaultsuit, ak47, knife, hegrenade, flashbang, smokegrenade, molotov, incgrenade, decoy (who may buy: strafemc_buymenu).",
+		local("kill", "Kill yourself.", a -> action("kill", "", false));
+		local("buy", "Buy an item.",
 				a -> { if (a.length > 0) buy(a[0]); else ConsoleLog.error("buy <item>"); });
-		local("sellbackall", "Refund everything you bought since you (re)spawned, while you may still buy (CS2's Refund All).",
+		local("sellbackall", "Refund everything you bought.",
 				a -> dev.strafemc.client.BuyMenuScreen.refundAll());
-		local("refund", "refund <item>: undo buying it (since you spawned, while you may still buy).", a -> refund(a.length > 0 ? a[0] : "all"));
-		local("strafemc_buymenu", "Who may buy, for the whole server (operators): 0 nobody, 1 creative players (default), 2 everyone. No value: next.",
+		local("refund", "Refund an item.", a -> refund(a.length > 0 ? a[0] : "all"));
+		local("strafemc_buymenu", "Who can buy: 0 nobody, 1 creative, 2 everyone. Operators.",
 				a -> action("strafemc_buymenu", a.length > 0 ? a[0] : "", false));
-		local("strafemc_buytime", "Seconds after (re)spawning that buying stays open, like CS2's mp_buytime (CS2: 20); 0 = no limit (default). Operators.",
+		local("strafemc_buytime", "Buy time in seconds (0 = no limit). Operators.",
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
-		local("strafemc_spawnblocks", "Players who die respawn on a random spawn block (1, default) or at the world spawn (0). Operators.",
+		local("strafemc_spawnblocks", "Respawn on spawn blocks (1) or not (0). Operators.",
 				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
-		local("strafemc_loadout_keep", "Loadout items (gloves, skin wraps) stay with you when you die (1, default) or drop like your inventory (0). Operators.",
+		local("strafemc_loadout_keep", "Keep loadout on death (1) or drop it (0). Operators.",
 				a -> action("strafemc_loadout_keep", bool(a, !dev.strafemc.client.ClientGameplay.loadoutKeep()) ? "1" : "0", false));
-		local("loadout", "Open your loadout (gloves and skin wraps; key U).", a -> dev.strafemc.client.LoadoutKey.open());
-		local("sv_rethrow_last_grenade", "Throw your last grenade again from the same spot (needs sv_cheats 1). Spammable.",
+		local("loadout", "Open your loadout.", a -> dev.strafemc.client.LoadoutKey.open());
+		local("sv_rethrow_last_grenade", "Rethrow your last grenade. Cheat.",
 				a -> action("sv_rethrow_last_grenade", "", true));
-		local("explode", "Explode (CS explode).", a -> action("explode", "", false));
-		local("god", "Toggle godmode (needs sv_cheats 1 and operator).", a -> action("god", "", true));
-		local("healme", "healme [CS HP]: heal yourself (default: fully). Needs sv_cheats 1 and operator.", a -> action("healme", a.length > 0 ? a[0] : "", true));
-		local("getpos", "Print your position and view as a setpos/setang line (cl_showpos coordinates).", a -> {
+		local("explode", "Explode.", a -> action("explode", "", false));
+		local("god", "God mode. Cheat.", a -> action("god", "", true));
+		local("healme", "Heal yourself. Cheat.", a -> action("healme", a.length > 0 ? a[0] : "", true));
+		local("getpos", "Print your position.", a -> {
 			var p = Minecraft.getInstance().player;
 			if (p == null) return;
 			double u = StrafeConfig.unitsPerBlock, yaw = Math.toRadians(p.getYRot());
@@ -343,14 +343,14 @@ public final class ConsoleCommands {
 			ConsoleLog.add(String.format(java.util.Locale.ROOT, "setpos %.2f %.2f %.2f;setang %.2f %.2f 0", p.getX() * u, -p.getZ() * u, p.getY() * u,
 					p.getXRot(), csYaw), ConsoleLog.WHITE);
 		});
-		local("setpos", "setpos <x> <y> <z>: teleport (cl_showpos coordinates). Needs sv_cheats 1 and operator.", a -> {
+		local("setpos", "Teleport. Cheat.", a -> {
 			if (a.length < 3) {
 				ConsoleLog.error("usage: setpos <x> <y> <z>");
 				return;
 			}
 			action("setpos", a[0] + " " + a[1] + " " + a[2], true);
 		});
-		local("setang", "setang <pitch> <yaw> [roll]: set your view (CS angles). Needs sv_cheats 1.", a -> {
+		local("setang", "Set your view angles. Cheat.", a -> {
 			var p = Minecraft.getInstance().player;
 			if (p == null || a.length < 2) {
 				ConsoleLog.error("usage: setang <pitch> <yaw>");
@@ -368,17 +368,17 @@ public final class ConsoleCommands {
 				ConsoleLog.error("setang: numbers please");
 			}
 		});
-		local("hurtme", "hurtme <CS damage>: damage yourself (needs sv_cheats 1).", a -> action("hurtme", a.length > 0 ? a[0] : "10", true));
-		local("give", "give <weapon id or magazine id>, e.g. weapon_awp, mag_awp, weapon_knife_karambit (needs sv_cheats 1).", a -> action("give", a.length > 0 ? a[0] : "", true));
-		local("impulse", "impulse 101: all weapons + ammo (needs sv_cheats 1).", a -> action("impulse", a.length > 0 ? a[0] : "", true));
+		local("hurtme", "Damage yourself. Cheat.", a -> action("hurtme", a.length > 0 ? a[0] : "10", true));
+		local("give", "Give yourself an item. Cheat.", a -> action("give", a.length > 0 ? a[0] : "", true));
+		local("impulse", "impulse 101: all weapons and ammo. Cheat.", a -> action("impulse", a.length > 0 ? a[0] : "", true));
 		local("thirdperson", "Third-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
 		local("firstperson", "First-person camera.", a -> Minecraft.getInstance().options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON));
-		local("strafemc_fx_list", "List the layers of the last bullet impact effect (for strafemc_fx_hide).", a -> {
+		local("strafemc_fx_list", "List the last impact's effect layers.", a -> {
 			var layers = dev.strafemc.client.particle.Effects.lastImpactLayers();
 			if (layers.isEmpty()) ConsoleLog.add("No impact effect yet: shoot a block first.", ConsoleLog.WARN);
 			for (String l : layers) ConsoleLog.add(l, ConsoleLog.WHITE);
 		});
-		local("strafemc_fx_hide", "strafemc_fx_hide <layer name or part of it> | clear: hide particle layers to find a broken one.", a -> {
+		local("strafemc_fx_hide", "Hide an effect layer (or clear).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.add("hidden: " + dev.strafemc.client.particle.Effects.hiddenNames(), ConsoleLog.WHITE);
 				return;
@@ -386,7 +386,7 @@ public final class ConsoleCommands {
 			dev.strafemc.client.particle.Effects.hide(a[0]);
 			ConsoleLog.add("hidden: " + dev.strafemc.client.particle.Effects.hiddenNames(), ConsoleLog.OK);
 		});
-		local("strafemc_relearn", "Reload the CS2 command list used for autocomplete.", a -> NetconTransport.INSTANCE.learnCommands());
+		local("strafemc_relearn", "Reload the CS2 command list.", a -> NetconTransport.INSTANCE.learnCommands());
 	}
 
 	private ConsoleCommands() {}

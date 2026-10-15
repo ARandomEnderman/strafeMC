@@ -115,7 +115,7 @@ public final class ConsoleScreen extends Screen {
 		cvarToggle("sv_cheats", "sv_cheats", false);
 		toggle(() -> "Noclip: " + onOff(MovementController.INSTANCE.noclip()), () -> ConsoleCommands.execute("noclip"));
 		number("Timescale", "host_timescale");
-		toggle(() -> "Crosshair editor", () -> minecraft.setScreen(new dev.strafemc.client.CrosshairScreen(this)));
+		toggle(() -> "Crosshair editor", () -> minecraft.setScreen(dev.strafemc.client.StrafeSettingsScreen.at(this, "crosshair")));
 		toggle(() -> "Add bot", () -> ConsoleCommands.quiet("bot_add"));
 		toggle(() -> "Kick all bots", () -> ConsoleCommands.quiet("bot_kick"));
 		toggle(() -> "Reset all movement cvars", () -> ConsoleCommands.execute("strafemc_reset_movement"));
