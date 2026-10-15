@@ -52,6 +52,10 @@ public final class BulletHoles {
 
 	public static void onImpact(StrafePayloads.BulletImpact m) {
 		Minecraft mc = Minecraft.getInstance();
+		if (!mc.isSameThread()) { // the decal list belongs to the render thread
+			mc.execute(() -> onImpact(m));
+			return;
+		}
 		if (mc.level == null) return;
 		if (dev.strafemc.client.Placeholders.active()) { // no CS2 files: vanilla particles + a drawn stand-in hole
 			dev.strafemc.client.Placeholders.impact(m);
@@ -108,11 +112,21 @@ public final class BulletHoles {
 
 	/** The server corrected shot n: its predicted hole goes (the real impact arrives separately). */
 	public static void dropPredicted(int shot) {
+		Minecraft mc = Minecraft.getInstance();
+		if (!mc.isSameThread()) {
+			mc.execute(() -> dropPredicted(shot));
+			return;
+		}
 		Decal d = PREDICTED.remove(shot);
 		if (d != null) DECALS.remove(d);
 	}
 
 	public static void clear() {
+		Minecraft mc = Minecraft.getInstance();
+		if (!mc.isSameThread()) {
+			mc.execute(BulletHoles::clear);
+			return;
+		}
 		PREDICTED.clear();
 		DECALS.clear();
 	}
@@ -124,7 +138,7 @@ public final class BulletHoles {
 		PoseStack ps = ctx.poseStack();
 		double u = StrafeConfig.unitsPerBlock;
 		DECALS.removeIf(d -> mc.level.getBlockState(d.block) != d.state); // block broken or changed
-		for (Decal d : DECALS) {
+		for (Decal d : DECALS.toArray(new Decal[0])) { // a copy: nothing drawn here may change the list mid-loop
 			if (d.at.distanceToSqr(cam) > 96 * 96) continue;
 			DecalLibrary.Material m = DecalLibrary.material(d.material);
 			if (m == null) continue;
