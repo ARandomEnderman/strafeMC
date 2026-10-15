@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * modifiers. Kills of players go to everyone in the world, kills of mobs only to the killer (a farm would flood it).
  */
 public final class KillFeed {
-	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16;
+	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32;
 
 	/** When each player stops counting as blind (CS:GO's Blind: now + hold + fade / 2, FLAGGED). */
 	private static final Map<UUID, Long> BLIND_UNTIL = new ConcurrentHashMap<>();

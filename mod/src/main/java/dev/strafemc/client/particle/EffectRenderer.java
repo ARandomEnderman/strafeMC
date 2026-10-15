@@ -167,13 +167,24 @@ public final class EffectRenderer {
 		return new float[] {f.u0(), f.v0(), f.u1(), f.v1()};
 	}
 
+	/** World size of one screen pixel at a distance (vertical FOV from the options, window height). */
+	private static float pixelSize(float dist) {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		int h = Math.max(1, mc.getWindow().getHeight());
+		double fov = Math.toRadians(mc.options.fov().get());
+		return (float) (2 * dist * Math.tan(fov / 2) / h);
+	}
+
 	private static void sprite(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam, Vector3f right, Vector3f up,
 							   List<float[]> quads) {
 		float half = p.radius * in.radiusScale.next(p, s.state) * unit;
 		if (half <= 0) return;
 		Vector3f c = m.transformPosition(new Vector3f(p.position));
 		float dist = c.distance(cam);
-		half = Math.min(Math.max(half, in.minSize.next(p, s.state) * dist), in.maxSize.next(p, s.state) * dist);
+		// m_flMinSize / m_flMaxSize: the sprite's size limits in screen pixels (Source 2; default 5000 = no limit), e.g.
+		// the HE explosion's anamorphic flash streak at most 150 px across
+		float pxToWorld = pixelSize(dist);
+		half = Math.min(Math.max(half, in.minSize.next(p, s.state) * 0.5f * pxToWorld), in.maxSize.next(p, s.state) * 0.5f * pxToWorld);
 		float roll = p.rotation.z, cos = (float) Math.cos(roll), sin = (float) Math.sin(roll);
 		if (in.worldZ || in.cpNormal) { // flat in a plane: world XY, or the impact surface (CP0's local XY)
 			org.joml.Quaternionf q = in.cpNormal ? s.controlPoint(0).rotationOrIdentity() : new org.joml.Quaternionf();

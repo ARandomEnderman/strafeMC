@@ -86,6 +86,7 @@ public final class DeathNotices {
 			parts.add(m.attackerT() ? T : CT);
 			if ((m.flags() & KillFeed.IN_AIR) != 0) parts.add("@inairkill");
 			parts.add("@" + m.icon());
+			if ((m.flags() & KillFeed.NOSCOPE) != 0) parts.add("@noscope");
 			if ((m.flags() & KillFeed.THROUGH_SMOKE) != 0) parts.add("@smoke_kill");
 			if ((m.flags() & KillFeed.PENETRATE) != 0) parts.add("@penetrate");
 			if ((m.flags() & KillFeed.HEADSHOT) != 0) parts.add("@icon_headshot");

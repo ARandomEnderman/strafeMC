@@ -532,7 +532,9 @@ public final class GunServer {
 		hitSounds(p, target, group.equals("head"), armored, target.isDeadOrDying());
 		if (wasAlive && target.isDeadOrDying())
 			KillFeed.notice(p, target, w.cls().replace("weapon_", ""), KillFeed.attackerFlags(p) | (group.equals("head") ? KillFeed.HEADSHOT : 0)
-					| (walls > 0 ? KillFeed.PENETRATE : 0) | (GrenadeZones.throughSmoke(p.level(), eye, at) ? KillFeed.THROUGH_SMOKE : 0));
+					| (walls > 0 ? KillFeed.PENETRATE : 0) | (GrenadeZones.throughSmoke(p.level(), eye, at) ? KillFeed.THROUGH_SMOKE : 0)
+					// a scoped weapon fired without its scope
+					| (w.q().zoomLevels() > 0 && (f.flags() & dev.strafemc.net.StrafePayloads.Fire.ZOOM_MASK) == 0 ? KillFeed.NOSCOPE : 0));
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
