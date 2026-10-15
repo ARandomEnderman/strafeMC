@@ -38,6 +38,8 @@ final class MagIcons {
 
 	private static boolean render(WeaponTable.Entry e, Path out, boolean base) throws Exception {
 		if (Files.exists(out)) return true;
+		// only from what the setup converted: never the converter at start-up (a fresh install would sit there for minutes)
+		if (!Files.exists(dev.strafemc.config.StrafeConfig.cacheDir().resolve("setup.json"))) return false;
 		Glb glb = Glb.read(AssetCache.exportGlb(e.model(), true));
 		VmModel m = VmModel.load(glb, VmModel.AUTO_MESH);
 		java.util.List<float[]> tris = new java.util.ArrayList<>(); // x y z nx ny nz u v per corner, 3 corners

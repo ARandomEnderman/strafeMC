@@ -275,7 +275,6 @@ public final class RuntimePack {
 				if (w.knife() != knife) continue;
 				String f = dev.strafemc.setup.WrapIcons.fileName(w.id());
 				Path src = swatches.resolve(f + ".png"), dst = tex.resolve("item/wrap/" + f + ".png");
-				if (!Files.exists(src)) swatch(w, src); // a wrap added after the setup ran: made now
 				if (!Files.exists(src)) continue; // not converted yet: the plain picture
 				if (redo || !Files.exists(dst) || Files.getLastModifiedTime(src).compareTo(Files.getLastModifiedTime(dst)) > 0)
 					write(dev.strafemc.setup.WrapIcons.make(ImageIO.read(src.toFile()), template, knife), dst);
@@ -288,33 +287,6 @@ public final class RuntimePack {
 		}
 		Files.createDirectories(marker.getParent());
 		Files.writeString(marker, kind);
-	}
-
-	/**
-	 * A wrap's swatch made outside the setup (wraps added since): its kit's settings (WeaponSkinCache finds newer
-	 * composites in the pak) and its pattern, else its colour texture (a newer skin's albedo).
-	 */
-	private static void swatch(dev.strafemc.weapon.SkinWraps.Wrap w, Path out) {
-		try {
-			String kit = dev.strafemc.weapon.SkinWraps.iconKit(w);
-			if (kit == null) return;
-			var par = dev.strafemc.client.viewmodel.WeaponSkinCache.paintParams(kit);
-			String pat = par.textures.get("g_tPattern");
-			if (pat == null)
-				for (String t : par.textures.values()) {
-					String name = t.substring(t.lastIndexOf('/') + 1);
-					if (name.contains("albedo") || name.contains("_color") || name.contains("_diffuse")) {
-						pat = t;
-						par.values.put("F_PAINT_STYLE", new double[] {6});
-						break;
-					}
-				}
-			BufferedImage img = pat == null ? null : dev.strafemc.client.viewmodel.GloveSkinCache.load(pat);
-			if (img == null && !par.values.containsKey("g_vColor0")) return;
-			dev.strafemc.setup.WrapIcons.write(dev.strafemc.setup.WrapIcons.swatch(par, img), out);
-		} catch (Exception e) {
-			StrafeMc.LOG.warn("[strafemc] wrap picture {}: {}", w.id(), e.toString());
-		}
 	}
 
 	/**
