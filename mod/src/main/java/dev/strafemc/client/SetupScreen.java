@@ -26,7 +26,7 @@ public final class SetupScreen extends Screen {
 	public static final String STORE = "https://store.steampowered.com/app/730/";
 	public static final String GUIDE = "https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md";
 	/** Rough size of a full setup (all guns and knives, shrunk textures, effects, sounds); see setup.json for the real files. */
-	private static final String SIZE = "about 900 MB";
+	private static final String SIZE = "about 10 GB";
 
 	private enum Page { INTRO, CONFIRM, RUNNING, DONE, FAILED }
 

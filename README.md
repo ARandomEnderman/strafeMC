@@ -14,7 +14,7 @@ and impact effects.
 
 ## Status
 
-Early development (0.42). Builds are on the [Releases](https://github.com/ARandomEnderman/strafeMC/releases) page.
+Early development (0.64). Builds are on the [Releases](https://github.com/ARandomEnderman/strafeMC/releases) page.
 The first-time setup is built in: when you join a world, strafeMC offers to convert what it needs from your CS2 install.
 
 ## Features
@@ -27,8 +27,10 @@ The first-time setup is built in: when you join a world, strafeMC offers to conv
 - CS2 fall damage, and an optional half-block step height for slabs.
 
 **Weapons**
-- The AK-47, the Falchion knife and every grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real
-  first-person models, animations and sounds.
+- Every CS2 gun, knife and grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real first-person
+  models, animations and sounds; the viewmodel is skinned on the GPU, and animations blend into each other like CS2's.
+- Gun quirks: scopes with zoom levels, burst fire (FAMAS, Glock-18) with CS2's fire mode icon, the R8's two triggers,
+  silencers, shotguns reloading shell by shell, the Zeus x27's recharge.
 - Spray patterns, recoil, inaccuracy, deploy times, reloads (including silent reload) and inspects (rare inspects
   included; hold the key to keep them going).
 - Damage by hitgroup, headshots and range falloff; knife slashes, stabs and backstabs; wallbangs with CS2's
@@ -43,12 +45,20 @@ The first-time setup is built in: when you join a world, strafeMC offers to conv
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects that change with the block you hit.
 - Viewmodel bob and sway, CS2's viewmodel_fov and viewmodel_offset_x/y/z settings, and `switchhands` (H).
 
-**Gloves, buy menu, killfeed**
-- Every CS2 glove type in every finish, Factory New, on your first-person arms (right-click to wear). Finishes are
-  rebuilt on your PC from your own CS2 files; they're cosmetic and unrelated to your Steam inventory.
+**Skins, cases, gloves**
+- Every CS2 weapon finish as a skin wrap: put it in your loadout and that gun or knife wears it. Finishes are rebuilt
+  on your PC from your own CS2 files with CS2's own compositing: paint styles, masks, CS2's exact pattern templates
+  (0-1000, matching real items), roughness and pearlescence (Dopplers, Marble Fades, Case Hardened...). They're
+  cosmetic and unrelated to your Steam inventory.
+- All 42 CS2 weapon cases with their real contents and rarities: unlock one with a craftable Container Key and the reel
+  rolls CS2's published odds (knives and gloves included). Cases and CS2 knives turn up in structure chests.
+- Every CS2 glove type in every finish, Factory New, on your first-person arms (right-click to wear).
+- Skin wrap names in CS2's rarity colours; a loadout screen with 3D previews.
 - CS2's buy menu (<kbd>B</kbd>) in CS2's layout, with CS2's grenade limits; operators choose who may buy
   (`strafemc_buymenu`) and for how long after respawning (`strafemc_buytime`).
-- CS2's killfeed, and a T / CT choice in the console's quick menu (smoke colours, footsteps).
+- CS2's killfeed with its modifiers (headshot, wallbang, through smoke, blind, in air, noscope), and a T / CT choice
+  in the console's quick menu (smoke colours, footsteps).
+- Spawn Point blocks: players who die respawn on a random one (`strafemc_spawnblocks`).
 
 **Console and multiplayer**
 - An in-game developer console (default key: <kbd>`</kbd>) with autocomplete, binds, movement presets and speed / jump stats.
@@ -80,8 +90,8 @@ strafeMC converts models, sounds and data from your CS2 install into a `strafemc
 This happens once, locally; nothing is uploaded and your CS2 install is never changed.
 
 > [!NOTE]
-> **Disk space:** the setup converts every gun and knife at once (so updates rarely need more), about **900 MB**, and
-> takes **about 3 minutes**. Weapon textures are stored at reduced size to keep it small.
+> **Disk space:** the setup converts every gun, knife and weapon finish at once (so updates rarely need more), about
+> **10 GB**, and can take several minutes. Make sure the drive with your Minecraft profile has the room.
 
 When you start Minecraft without a finished setup, strafeMC offers on the title screen:
 - **Set up automatically:** strafeMC finds CS2 (or you paste its folder), downloads the open-source converter

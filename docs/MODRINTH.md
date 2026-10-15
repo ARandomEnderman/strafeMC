@@ -10,10 +10,10 @@ CS2 install.
 > ⚠️ **Requires your own copy of Counter-Strike 2** (free on Steam), installed on the same PC. strafeMC contains no
 > CS2 files: it converts what it needs from your installation, locally on your PC.
 
-> 💾 **First-time setup: about 900 MB and about 3 minutes.** When you join a world, strafeMC offers to convert what it
+> 💾 **First-time setup: about 10 GB, and it can take several minutes.** When you join a world, strafeMC offers to convert what it
 > needs from your CS2 install: automatically (it tells you exactly what it does first), or by hand with the
-> [setup guide](https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md). Every gun and knife is
-> converted at once, so updates rarely need more.
+> [setup guide](https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md). Every gun, knife
+> and weapon finish is converted at once, so updates rarely need more.
 
 ## Features
 
@@ -33,7 +33,8 @@ CS2 install.
 
 *Weapons are shown with models from the player's own CS2 install; strafeMC doesn't include them.*
 
-- The AK-47, the Falchion knife and every grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real first-person models, animations and sounds
+- Every CS2 gun, knife and grenade (HE, flashbang, smoke, molotov, incendiary, decoy), with the real first-person models, animations and sounds
+- Gun quirks: scopes, burst fire, the R8's two triggers, silencers, shell-by-shell shotgun reloads, the Zeus x27's recharge
 - Spray patterns, recoil, inaccuracy, reloads (including silent reload), inspects and rare inspects (hold to keep them going)
 - Damage by hitgroup, headshots, range falloff; knife slashes, stabs and backstabs; wallbangs through blocks with CS2's penetration rules per material
 - CS2 tagging (hits slow you instead of knocking you back), kevlar and helmets with CS armor rules, hit sounds and the dink
@@ -45,12 +46,20 @@ CS2 install.
 - Bullet holes, knife marks, muzzle flash, tracers and impact effects per block material
 - Viewmodel bob and sway, viewmodel_fov, viewmodel_offset_x/y/z and switching hands (`switchhands`, H by default)
 
-### Gloves and buy menu
+### Skins, cases and gloves
+- Every CS2 weapon finish as a skin wrap, rebuilt on your PC from your own CS2 files with CS2's own compositing:
+  CS2's exact pattern templates (0-1000, matching real items), Dopplers, Fades, Marble Fades, Case Hardened and more.
+  Cosmetic only, and nothing to do with your Steam inventory
+- All 42 CS2 weapon cases with their real contents and rarities: unlock one with a craftable Container Key and the reel
+  rolls CS2's published odds, knives and gloves included. Cases and CS2 knives turn up in structure chests
 - Every CS2 glove type in every finish, always Factory New, drawn on your first-person arms (right-click to wear).
   Finishes are rebuilt on your PC from your own CS2 files; they're cosmetic only and have nothing to do with your Steam inventory
+
+### Buy menu and killfeed
 - CS2's buy menu (B): gear, rifles and grenades in CS2's layout and loadout order, with CS2's grenade limits.
   Operators choose who can buy (nobody, creative players or everyone) and for how long after respawning
-- CS2's killfeed, with headshot, wallbang, through-smoke, blind and in-air icons
+- CS2's killfeed, with headshot, wallbang, through-smoke, blind, in-air and noscope icons
+- Spawn Point blocks: players who die respawn on a random one
 - Pick T or CT in the console's quick menu: smoke colours and footsteps follow your side
 
 ### Console and multiplayer
@@ -71,7 +80,7 @@ CS2 install.
 So you know exactly what to expect:
 - **Reads your CS2 files** (read-only) from the folder you set, and never changes your CS2 install.
 - **Uses the open-source ValveResourceFormat converter** (`Source2Viewer-CLI`) to convert CS2's models, textures,
-  sounds and animations into your Minecraft profile's `strafemc` folder (about 900 MB). With automatic setup, strafeMC
+  sounds and animations into your Minecraft profile's `strafemc` folder (about 10 GB). With automatic setup, strafeMC
   downloads it from its [official GitHub release](https://github.com/ValveResourceFormat/ValveResourceFormat/releases)
   only after you click "Set up automatically", and checks it against its published checksum before running it. You can
   also download it yourself and follow the setup guide.
