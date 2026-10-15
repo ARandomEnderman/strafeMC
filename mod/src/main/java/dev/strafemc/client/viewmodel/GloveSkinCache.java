@@ -44,7 +44,7 @@ public final class GloveSkinCache {
 	}
 
 	/** A CS2 texture (".vtex" path) as an image: converted by VRF, or read directly when VRF can't (8-bit ID maps). */
-	static BufferedImage load(String vtex) {
+	public static BufferedImage load(String vtex) {
 		try {
 			String base = vtex.substring(0, vtex.length() - ".vtex".length());
 			Path png = StrafeConfig.cacheDir().resolve(base + ".png");

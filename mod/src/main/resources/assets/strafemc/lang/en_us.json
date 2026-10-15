@@ -145,5 +145,6 @@
 	"item.strafemc.weapon_case": "Weapon Case",
 	"item.strafemc.case_key": "Container Key",
 	"itemGroup.strafemc.cases": "Cases",
-	"key.strafemc.inspect": "Inspect weapon"
+	"key.strafemc.inspect": "Inspect weapon",
+	"item.strafemc.gun_base": "Gun Base"
 }

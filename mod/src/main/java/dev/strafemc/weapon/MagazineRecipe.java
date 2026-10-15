@@ -13,8 +13,8 @@ import net.minecraft.world.level.Level;
 
 /**
  * Magazines (FLAGGED: our recipe, CS2 gives ammo with the gun): a gun + an iron nugget + gunpowder, in any order, makes
- * one full magazine for that gun (shell-by-shell shotguns: 8 shells) and the gun stays; a magazine + gunpowder fills
- * it up again. Not for the Zeus.
+ * one full magazine for that gun (shell-by-shell shotguns: 8 shells) and the gun stays; an empty magazine + gunpowder
+ * fills it up again. Not for the Zeus.
  */
 public class MagazineRecipe extends CustomRecipe {
 	public static final MagazineRecipe INSTANCE = new MagazineRecipe();
@@ -36,7 +36,7 @@ public class MagazineRecipe extends CustomRecipe {
 		if (other != 0 || powder != 1) return ItemStack.EMPTY;
 		String cls;
 		if (gun != null && mag == null && nugget == 1) cls = ((GunItem) gun.getItem()).weaponClass;
-		else if (mag != null && gun == null && nugget == 0 && !((MagazineItem) mag.getItem()).shells()) cls = ((MagazineItem) mag.getItem()).weaponClass;
+		else if (mag != null && gun == null && nugget == 0 && !((MagazineItem) mag.getItem()).shells() && ((MagazineItem) mag.getItem()).empty(mag)) cls = ((MagazineItem) mag.getItem()).weaponClass;
 		else return ItemStack.EMPTY;
 		var item = WeaponItems.MAGS.get(cls);
 		if (item == null || cls.equals("weapon_taser")) return ItemStack.EMPTY;

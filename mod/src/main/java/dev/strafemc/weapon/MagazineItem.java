@@ -1,12 +1,8 @@
 package dev.strafemc.weapon;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
 
-import java.util.function.Consumer;
 
 /**
  * One magazine for a CS2 gun. CS2 counts reserve ammo in magazines (m_bReserveAmmoAsClips), so each magazine is its
@@ -50,24 +46,8 @@ public class MagazineItem extends Item {
 		return r != null ? r : capacity();
 	}
 
-	@Override
-	public boolean isBarVisible(ItemStack s) {
-		return capacity() > 0 && rounds(s) < capacity();
-	}
-
-	@Override
-	public int getBarWidth(ItemStack s) {
-		int cap = capacity();
-		return cap <= 0 ? 0 : Math.round(13f * rounds(s) / cap);
-	}
-
-	@Override
-	public int getBarColor(ItemStack s) {
-		return 0xE0C060;
-	}
-
-	@Override
-	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("§7" + rounds(stack) + " / " + capacity() + " rounds"));
+	/** A magazine is full or empty (the empty one's red X shows it): no bar, no rounds line. */
+	public boolean empty(ItemStack s) {
+		return rounds(s) <= 0;
 	}
 }

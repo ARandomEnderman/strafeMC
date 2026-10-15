@@ -3,7 +3,7 @@
  "category": "equipment",
  "pattern": [
   "BII",
-  "GD ",
+  "GDX",
   "S  "
  ],
  "key": {
@@ -11,7 +11,8 @@
   "G": "minecraft:gunpowder",
   "S": "minecraft:stick",
   "B": "minecraft:iron_block",
-  "D": "minecraft:gray_dye"
+  "D": "minecraft:gray_dye",
+  "X": "strafemc:gun_base"
  },
  "result": {
   "id": "strafemc:weapon_sawedoff",

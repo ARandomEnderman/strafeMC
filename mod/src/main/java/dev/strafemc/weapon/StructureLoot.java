@@ -21,7 +21,7 @@ public final class StructureLoot {
 			"chests/stronghold_corridor", "chests/stronghold_crossing", "chests/woodland_mansion", "chests/ancient_city", "chests/buried_treasure",
 			"chests/shipwreck_treasure", "chests/pillager_outpost", "chests/ruined_portal", "chests/bastion_treasure", "chests/end_city_treasure",
 			"chests/trial_chambers/reward", "chests/nether_bridge", "chests/igloo_chest", "chests/underwater_ruin_big");
-	private static final Map<String, Float> CHANCE = Map.of("cases", 0.30f, "knives", 0.02f, "gear", 0.05f); // gear: a grenade, armor or Medi-Shot (guns are crafted only). Knives come plain, wraps from cases only
+	private static final Map<String, Float> CHANCE = Map.of("cases", 0.30f, "knives", 0.02f, "gear", 0.05f, "gun_base", 0.10f); // gear: a grenade, armor or Medi-Shot (guns are crafted only). Knives come plain, wraps from cases only
 
 	private StructureLoot() {}
 

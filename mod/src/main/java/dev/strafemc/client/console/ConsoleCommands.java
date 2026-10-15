@@ -118,6 +118,18 @@ public final class ConsoleCommands {
 			}
 			action("strafemc_pattern", a[0], true);
 		});
+		local("strafemc_float", "Set the float (0-1, or FN / MW / FT / WW / BS for one in that exterior) of the wrap in your hand or on the gun / knife in your hand, within the skin's own range (cheat: sv_cheats 1, operators, creative).", a -> {
+			if (a.length == 0) {
+				ConsoleLog.error("strafemc_float <0-1 | FN | MW | FT | WW | BS>");
+				return;
+			}
+			action("strafemc_float", String.join(" ", a), true);
+		});
+		local("strafemc_wear", "Case drops get a float (1, default) or are all Factory New (0), for the whole server (operators).",
+				a -> action("strafemc_wear", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
+		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})
+			local("strafemc_wear_" + r, "Case drops of " + r + " grade get a float (1, default) or are Factory New (0), for the whole server (operators).",
+					a -> action("strafemc_wear", r + " " + (a.length > 0 ? (bool(a, true) ? "1" : "0") : "1"), false));
 		local("strafemc_knockback", "Gun/knife hits push targets back like Minecraft (1) or slow them like CS2 (0, default), for the whole server (operators).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_knockback 1 (Minecraft knockback) or 0 (CS2 tagging)");

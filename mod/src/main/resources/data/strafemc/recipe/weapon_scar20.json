@@ -4,13 +4,14 @@
  "pattern": [
   "IIG",
   "GDI",
-  "S  "
+  "SX "
  ],
  "key": {
   "I": "minecraft:iron_ingot",
   "G": "minecraft:gunpowder",
   "S": "minecraft:stick",
-  "D": "minecraft:black_dye"
+  "D": "minecraft:black_dye",
+  "X": "strafemc:gun_base"
  },
  "result": {
   "id": "strafemc:weapon_scar20",

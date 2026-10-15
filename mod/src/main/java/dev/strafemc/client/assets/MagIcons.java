@@ -24,6 +24,17 @@ final class MagIcons {
 
 	/** The icon for a gun's magazine (written once), or false without the model. */
 	static boolean render(WeaponTable.Entry e, Path out) throws Exception {
+		return render(e, out, false);
+	}
+
+	/**
+	 * The gun base's icon: the gun without its magazine, lying on its side, in plain gunmetal.
+	 */
+	static boolean renderBase(WeaponTable.Entry e, Path out) throws Exception {
+		return render(e, out, true);
+	}
+
+	private static boolean render(WeaponTable.Entry e, Path out, boolean base) throws Exception {
 		if (Files.exists(out)) return true;
 		Glb glb = Glb.read(AssetCache.exportGlb(e.model(), true));
 		VmModel m = VmModel.load(glb, VmModel.AUTO_MESH);
@@ -37,7 +48,7 @@ final class MagIcons {
 			boolean any = false;
 			for (int i = 0; i + 2 < p.idx.length; i += 3) {
 				boolean in = true;
-				for (int c = 0; c < 3 && in; c++) in = mag.contains(dominant(p, p.idx[i + c]));
+				for (int c = 0; c < 3 && in; c++) in = mag.contains(dominant(p, p.idx[i + c])) != base; // the base: everything but the magazine
 				if (!in) continue;
 				float[] t = new float[24];
 				for (int c = 0; c < 3; c++) {
@@ -53,7 +64,7 @@ final class MagIcons {
 			if (any && tex == null && p.texture != null && Files.exists(p.texture)) tex = ImageIO.read(p.texture.toFile());
 		}
 		if (tris.isEmpty()) return false;
-		BufferedImage img = draw(tris, tex);
+		BufferedImage img = draw(tris, tex, base);
 		Files.createDirectories(out.getParent());
 		ImageIO.write(img, "png", out.toFile());
 		return true;
@@ -62,7 +73,7 @@ final class MagIcons {
 	/** The magazine bone and every joint under it. */
 	private static Set<Integer> magJoints(VmModel.Skin sk) {
 		Set<Integer> out = new HashSet<>();
-		for (String name : new String[] {"clip", "magazine", "ammobox", "shell"}) {
+		for (String name : new String[] {"clip", "magazine", "mag", "magazine_r", "ammobox", "shell", "shell1", "cylbullet1"}) {
 			for (int j = 0; j < sk.joints.length; j++) if (sk.joints[j].equalsIgnoreCase(name)) out.add(j);
 			if (!out.isEmpty()) break;
 		}
@@ -83,7 +94,7 @@ final class MagIcons {
 	}
 
 	/** Orthographic, from the magazine's flattest side, its longest extent upright; soft light, z-buffered. */
-	private static BufferedImage draw(java.util.List<float[]> tris, BufferedImage tex) {
+	private static BufferedImage draw(java.util.List<float[]> tris, BufferedImage tex, boolean lying) {
 		float[] lo = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE}, hi = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
 		for (float[] t : tris)
 			for (int c = 0; c < 3; c++)
@@ -97,6 +108,11 @@ final class MagIcons {
 			if (hi[k] - lo[k] > hi[up] - lo[up]) up = k;
 		}
 		int across = 3 - depth - up;
+		if (lying) { // longest extent across
+			int t = up;
+			up = across;
+			across = t;
+		}
 		float span = Math.max(hi[up] - lo[up], hi[across] - lo[across]) * 1.12f;
 		float cu = (hi[up] + lo[up]) / 2, ca = (hi[across] + lo[across]) / 2;
 		int n = SIZE * SS;
@@ -134,6 +150,10 @@ final class MagIcons {
 					double lit = 0.75 + 0.85 * Math.abs((nx * light[0] + ny * light[1] + nz * light[2]) / len);
 					int c = tex == null ? 0xFF6E6E6E : tex.getRGB(Math.floorMod((int) (u * tex.getWidth()), tex.getWidth()),
 							Math.floorMod((int) (v * tex.getHeight()), tex.getHeight()));
+					if (lying) { // plain gunmetal: the texture's light and dark only
+						int l = ((c >> 16 & 255) * 3 + (c >> 8 & 255) * 6 + (c & 255)) / 10;
+						c = (l * 9 / 10) << 16 | (l * 9 / 10) << 8 | l;
+					}
 					rgb[y * n + x] = 0xFF000000 | shade(c >> 16 & 255, lit) << 16 | shade(c >> 8 & 255, lit) << 8 | shade(c & 255, lit);
 				}
 		}

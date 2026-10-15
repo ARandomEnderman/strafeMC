@@ -62,6 +62,16 @@ public final class Wear {
 		return (float) (r[0] + t * (r[1] - r[0]));
 	}
 
+	/** An exterior's float band {from, to} by its short or full name (FN, MW, FT, WW, BS), or null. */
+	public static double[] band(String name) {
+		String n = name.trim().toUpperCase(java.util.Locale.ROOT).replace("-", " ");
+		String[] shortNames = {"FN", "MW", "FT", "WW", "BS"};
+		for (int i = 0; i < NAMES.length; i++)
+			if (n.equals(shortNames[i]) || n.equals(NAMES[i].toUpperCase(java.util.Locale.ROOT).replace("-", " ")))
+				return new double[] {i == 0 ? 0 : BOUNDS[i - 1], BOUNDS[i]};
+		return null;
+	}
+
 	public static String exterior(double wear) {
 		for (int i = 0; i < BOUNDS.length; i++) if (wear < BOUNDS[i]) return NAMES[i];
 		return NAMES[NAMES.length - 1];

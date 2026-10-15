@@ -11,9 +11,11 @@ public final class MagIconCheck {
 		Files.createDirectories(out);
 
 		for (int i = 1; i < a.length; i++) {
-			Path p = out.resolve(a[i] + ".png");
+			Path p = out.resolve(a[i].replace("base:", "") + ".png");
 			Files.deleteIfExists(p);
-			System.out.println(a[i] + " -> " + MagIcons.render(dev.strafemc.weapon.WeaponTable.get(a[i]), p));
+			boolean base = a[i].startsWith("base:");
+			var e = dev.strafemc.weapon.WeaponTable.get(base ? a[i].substring(5) : a[i]);
+			System.out.println(a[i] + " -> " + (base ? MagIcons.renderBase(e, out.resolve(a[i].substring(5) + "_base.png")) : MagIcons.render(e, p)));
 		}
 	}
 }

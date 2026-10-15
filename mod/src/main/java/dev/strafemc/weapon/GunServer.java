@@ -852,12 +852,11 @@ public final class GunServer {
 		if (slot < 0) return;
 		ItemStack mag = p.getInventory().getItem(slot);
 		int rounds = ((MagazineItem) mag.getItem()).rounds(mag);
-		int old = g.clip(gun);
 		mag.shrink(1);
-		// mag-by-mag: the magazine that was in the gun comes back with whatever rounds it still had (empty: red X, refill by crafting)
+		// mag-by-mag: the magazine that was in the gun comes back empty, its rounds wasted (red X; refill by crafting)
 		var oldItem = WeaponItems.MAGS.get(g.weaponClass);
 		if (oldItem != null) {
-			ItemStack back = MagazineItem.withRounds(new ItemStack(oldItem), old);
+			ItemStack back = MagazineItem.withRounds(new ItemStack(oldItem), 0);
 			if (!p.getInventory().add(back)) p.drop(back, false);
 		}
 		p.getInventory().setChanged();

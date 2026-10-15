@@ -4,13 +4,15 @@
  "pattern": [
   "IIG",
   "GDI",
-  "S  "
+  "SXB"
  ],
  "key": {
   "I": "minecraft:iron_ingot",
   "G": "minecraft:gunpowder",
   "S": "minecraft:stick",
-  "D": "minecraft:light_gray_dye"
+  "D": "minecraft:light_gray_dye",
+  "X": "strafemc:gun_base",
+  "B": "minecraft:iron_block"
  },
  "result": {
   "id": "strafemc:weapon_awp",

@@ -3,14 +3,15 @@
  "category": "equipment",
  "pattern": [
   "III",
-  "GD ",
+  "GDX",
   "S  "
  ],
  "key": {
   "I": "minecraft:iron_ingot",
   "G": "minecraft:gunpowder",
   "S": "minecraft:stick",
-  "D": "minecraft:white_dye"
+  "D": "minecraft:white_dye",
+  "X": "strafemc:gun_base"
  },
  "result": {
   "id": "strafemc:weapon_mac10",

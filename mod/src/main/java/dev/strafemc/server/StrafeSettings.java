@@ -35,6 +35,10 @@ public final class StrafeSettings {
 	private static volatile boolean loadoutKeep = true;
 	/** strafemc_spawnblocks: players who die respawn on a random spawn block (when the world has any). */
 	private static volatile boolean spawnBlocks = true;
+	/** Case drops roll a float (wear) at all, and per rarity (gold, covert, ... consumer: off ones drop Factory New, 0). */
+	private static volatile boolean wear = true;
+	private static final java.util.Set<String> WEAR_OFF = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	public static final java.util.List<String> WEAR_RARITIES = java.util.List.of("gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer");
 	private static volatile int maxUnlagMs = 300;
 	private static Path file;
 
@@ -103,6 +107,43 @@ public final class StrafeSettings {
 		return spawnBlocks;
 	}
 
+	public static boolean wear() {
+		return wear;
+	}
+
+	public static void setWear(boolean on) {
+		wear = on;
+		save();
+	}
+
+	/** Whether drops of this rarity (null: the rare special item, gold) get a float. */
+	public static boolean wearFor(dev.strafemc.weapon.SkinWraps.Rarity r) {
+		return wear && !WEAR_OFF.contains(rarityKey(r));
+	}
+
+	public static boolean wearFor(String key) {
+		return !WEAR_OFF.contains(key);
+	}
+
+	public static void setWearFor(String key, boolean on) {
+		if (on) WEAR_OFF.remove(key);
+		else WEAR_OFF.add(key);
+		save();
+	}
+
+	/** CS2's grade as the console names it: gold, covert, classified, restricted, milspec, industrial, consumer. */
+	public static String rarityKey(dev.strafemc.weapon.SkinWraps.Rarity r) {
+		if (r == null) return "gold";
+		return switch (r) {
+			case ANCIENT, IMMORTAL -> "covert";
+			case LEGENDARY -> "classified";
+			case MYTHICAL -> "restricted";
+			case RARE -> "milspec";
+			case UNCOMMON -> "industrial";
+			case COMMON -> "consumer";
+		};
+	}
+
 	public static void setSpawnBlocks(boolean on) {
 		spawnBlocks = on;
 		save();
@@ -167,6 +208,8 @@ public final class StrafeSettings {
 		buyTime = 0;
 		loadoutKeep = true;
 		spawnBlocks = true;
+		wear = true;
+		WEAR_OFF.clear();
 		playerChoice = false;
 		PERSONAL.clear();
 		try {
@@ -181,6 +224,8 @@ public final class StrafeSettings {
 				if (o != null && o.has("buyTime")) buyTime = o.get("buyTime").getAsInt();
 				if (o != null && o.has("loadoutKeep")) loadoutKeep = o.get("loadoutKeep").getAsBoolean();
 				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
+				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
+				if (o != null && o.has("wearOff")) for (var e : o.getAsJsonArray("wearOff")) WEAR_OFF.add(e.getAsString());
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
@@ -202,6 +247,10 @@ public final class StrafeSettings {
 		o.addProperty("buyTime", buyTime);
 		o.addProperty("loadoutKeep", loadoutKeep);
 		o.addProperty("spawnBlocks", spawnBlocks);
+		o.addProperty("wear", wear);
+		var off = new com.google.gson.JsonArray();
+		WEAR_OFF.forEach(off::add);
+		o.add("wearOff", off);
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
 		JsonObject pers = new JsonObject();

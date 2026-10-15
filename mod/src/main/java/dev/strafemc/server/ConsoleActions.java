@@ -74,6 +74,60 @@ public final class ConsoleActions {
 					}
 				} else p.sendSystemMessage(Component.literal("Hold a skin wrap, gloves, or a gun / knife with a wrap in your loadout."));
 			}
+			case "strafemc_float" -> { // a skin wrap's float: a cheat like the pattern; within the skin's own range
+				if (!cheat || !p.getAbilities().instabuild) {
+					p.sendSystemMessage(Component.literal("Setting floats needs sv_cheats 1, operator and creative."));
+					break;
+				}
+				var held = p.getMainHandItem();
+				String slot = held.getItem() instanceof dev.strafemc.weapon.KnifeItem ? "knife"
+						: held.getItem() instanceof dev.strafemc.weapon.GunItem g && !(g instanceof dev.strafemc.weapon.GrenadeItem)
+						&& !(g instanceof dev.strafemc.weapon.HealthshotItem) ? g.weaponClass : null;
+				ItemStack wrap = held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? held : slot != null ? dev.strafemc.weapon.Loadout.get(p, slot).copy() : ItemStack.EMPTY;
+				var w = wrap.isEmpty() ? null : dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(wrap));
+				if (w == null) {
+					p.sendSystemMessage(Component.literal(slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
+					break;
+				}
+				double[] range = dev.strafemc.weapon.Wear.range(dev.strafemc.weapon.SkinWraps.iconKit(w));
+				double f;
+				double[] band = dev.strafemc.weapon.Wear.band(arg);
+				if (band != null) {
+					double lo = Math.max(band[0], range[0]), hi = Math.min(band[1], range[1]);
+					if (lo > hi || lo >= band[1]) {
+						p.sendSystemMessage(Component.literal(w.name() + " doesn't come in " + arg.trim().toUpperCase() + String.format(java.util.Locale.ROOT, " (its floats: %.2f-%.2f).", range[0], range[1])));
+						break;
+					}
+					f = lo + p.getRandom().nextDouble() * (Math.min(hi, band[1] - 1e-6) - lo);
+				} else {
+					try {
+						f = Double.parseDouble(arg.trim());
+					} catch (NumberFormatException e) {
+						p.sendSystemMessage(Component.literal("strafemc_float <0-1 | FN | MW | FT | WW | BS>"));
+						break;
+					}
+					double clamped = Math.max(range[0], Math.min(range[1], f));
+					if (clamped != f) p.sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT, "%s only comes in %.2f-%.2f.", w.name(), range[0], range[1])));
+					f = clamped;
+				}
+				if (f > 0) wrap.set(dev.strafemc.weapon.WeaponItems.WEAR, Float.floatToIntBits((float) f));
+				else wrap.remove(dev.strafemc.weapon.WeaponItems.WEAR);
+				if (wrap != held) dev.strafemc.weapon.Loadout.set(p, slot, wrap);
+				p.sendSystemMessage(Component.literal(dev.strafemc.weapon.Wear.exterior(f) + String.format(java.util.Locale.ROOT, " (%.8f)", (float) f)));
+			}
+			case "strafemc_wear" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change wear on case drops."));
+					break;
+				}
+				String[] a = arg.trim().split(" ");
+				boolean on = a.length < 2 ? !a[0].equals("0") : !a[1].equals("0");
+				if (a.length >= 2 && StrafeSettings.WEAR_RARITIES.contains(a[0])) StrafeSettings.setWearFor(a[0], on);
+				else StrafeSettings.setWear(on);
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Wear on case drops: " + (StrafeSettings.wear() ? "on" : "off (all Factory New)")
+						+ (StrafeSettings.WEAR_RARITIES.stream().anyMatch(k -> !StrafeSettings.wearFor(k)) ? ", off for "
+						+ String.join(", ", StrafeSettings.WEAR_RARITIES.stream().filter(k -> !StrafeSettings.wearFor(k)).toList()) : "")), false);
+			}
 			case "strafemc_knockback" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change knockback for the server."));

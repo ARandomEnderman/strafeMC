@@ -82,7 +82,7 @@ public final class WeaponSkinCache {
 	 * A paint kit's material parameters: its paints/vmats material, or for newer kits (composites only) the composite's
 	 * loose variables over the style its template names (workshop/paintkits/templates/<style>_template.vmat).
 	 */
-	static GloveSkinBaker.Params paintParams(String kit) throws Exception {
+	public static GloveSkinBaker.Params paintParams(String kit) throws Exception {
 		var p = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(PAINTS + kit + ".vmat_c")));
 		if (!p.shader.isEmpty()) return p;
 		Path comp;

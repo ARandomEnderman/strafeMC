@@ -140,7 +140,7 @@ public final class Cases {
 			List<Entry> pool = new ArrayList<>(c.special());
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
-				ItemStack s = stack(e, pattern, Wear.roll(e.kit(), rng));
+				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor((SkinWraps.Rarity) null) ? Wear.roll(e.kit(), rng) : 0);
 				if (!s.isEmpty()) return new Drop(e, null, s);
 			}
 		}
@@ -151,7 +151,7 @@ public final class Cases {
 			List<Entry> pool = new ArrayList<>(list);
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
-				ItemStack s = stack(e, pattern, Wear.roll(e.kit(), rng));
+				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor(SkinWraps.Rarity.values()[t]) ? Wear.roll(e.kit(), rng) : 0);
 				if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], s);
 			}
 		}
