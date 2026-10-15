@@ -42,7 +42,20 @@ public class StrafeMc implements ModInitializer {
 		// buy time counts from joining or respawning (strafemc_buytime)
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.BuyMenu.spawned(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
-		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> dev.strafemc.weapon.BuyMenu.spawned(newP));
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
+			dev.strafemc.weapon.BuyMenu.spawned(newP);
+			// CS2: you come back with full magazines (the guns you kept), a charged Zeus
+			if (!alive) {
+				var inv = newP.getInventory();
+				for (int i = 0; i < inv.getContainerSize(); i++) {
+					var s = inv.getItem(i);
+					if (s.getItem() instanceof dev.strafemc.weapon.GunItem) {
+						s.remove(dev.strafemc.weapon.WeaponItems.CLIP);
+						s.remove(dev.strafemc.weapon.WeaponItems.RECHARGE);
+					}
+				}
+			}
+		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);

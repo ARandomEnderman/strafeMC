@@ -47,6 +47,14 @@ public final class MovementController {
 	private Vec3 lastVelWritten;
 	private String inactiveReason = "";
 	private long lastHudMs, lastLogMs;
+	private static String notice = "";
+	private static long noticeUntil;
+
+	/** Shows a short notice in place of the speed line (CS2's centre hints: fire mode switched...). */
+	public static void notice(String text) {
+		notice = text;
+		noticeUntil = System.currentTimeMillis() + 2000;
+	}
 	private int stepsSinceLog;
 	private double peakSpeed;
 
@@ -393,7 +401,12 @@ public final class MovementController {
 		long now = System.currentTimeMillis();
 		if (now - lastHudMs < 100) return;
 		lastHudMs = now;
-		String link = Cs2Bridge.INSTANCE.connected() ? "§aCS2" : "§6CS2 cached";
+		// a notice (fire mode switched...) takes the line for a moment; otherwise the speed, with the held gun's fire mode
+		if (now < noticeUntil) {
+			p.sendOverlayMessage(Component.literal(notice));
+			return;
+		}
+		String link = (Cs2Bridge.INSTANCE.connected() ? "§aCS2" : "§6CS2 cached") + dev.strafemc.client.weapon.GunClient.fireModeTag(p);
 		p.sendOverlayMessage(Component.literal(String.format(sim.onLadder || sim.noclip ? "§f%.0f §7u/s (3D)  %s%s" : "§f%.0f §7u/s  %s%s", sim.onLadder || sim.noclip ? Math.sqrt(sim.vx * sim.vx + sim.vy * sim.vy + sim.vz * sim.vz) : sim.horizontalSpeed(), link,
 				sim.ducked ? " §7duck" : "")));
 	}

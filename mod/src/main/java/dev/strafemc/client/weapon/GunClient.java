@@ -293,8 +293,18 @@ public final class GunClient {
 			String msg = on ? dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_BurstFire", "Switched to burst-fire mode")
 					: w.fullAuto() ? dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_FullAuto", "Switched to automatic")
 					: dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_Switch_To_SemiAuto", "Switched to semi-automatic");
-			p.sendOverlayMessage(net.minecraft.network.chat.Component.literal(msg));
+			dev.strafemc.client.movement.MovementController.notice(msg);
+			// CS2's switch click: Weapon.AutoSemiAutoSwitch into burst, _Auto out of it (pairing FLAGGED)
+			CsSounds.playOn(on ? "Weapon.AutoSemiAutoSwitch" : "Weapon.AutoSemiAutoSwitch_Auto", p, 1.0, false);
 		}
+	}
+
+	/** " BURST" after the speed line while the held FAMAS / Glock-18 is in burst mode, else empty. */
+	public static String fireModeTag(LocalPlayer p) {
+		ItemStack held = p.getMainHandItem();
+		if (!(held.getItem() instanceof GunItem g)) return "";
+		WeaponStats w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
+		return w != null && w.q().burst() && g.burst(held) ? "  §eBURST" : "";
 	}
 
 	/**
