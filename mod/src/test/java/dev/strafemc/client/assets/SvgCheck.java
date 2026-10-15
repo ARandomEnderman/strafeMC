@@ -15,7 +15,8 @@ public final class SvgCheck {
 			Path src = dev.strafemc.config.StrafeConfig.cacheDir().resolve(exported);
 			dev.strafemc.data.AssetCache.ensureDecompiled(vpk, src);
 			Path png = out.resolve(src.getFileName().toString().replace(".svg", ".png"));
-			javax.imageio.ImageIO.write(SvgIcon.rasterize(src, h, true), "png", png.toFile());
+			boolean add = Boolean.getBoolean("strafemc.additive") && !src.getFileName().toString().contains("pip") && !src.getFileName().toString().contains("mask");
+			javax.imageio.ImageIO.write(add ? SvgIcon.rasterizeAdditive(src, h) : SvgIcon.rasterize(src, h, true), "png", png.toFile());
 			System.out.println(vpk + " -> " + png);
 		}
 	}

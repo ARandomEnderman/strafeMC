@@ -99,10 +99,20 @@ public final class RuntimePack {
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32),
 					tex.resolve("item/mag_ak47.png"), Placeholders.Icon.MAG, 32);
 			// CS2's round kill cards (hudhealthammocenter): card, outline per kill, pips
+			// the card shapes (kill_1..5, extra) are drawn additively in CS2: their own colours, the mask's clip; the backing
+			// (kill_mask) and the pips are plain shapes, tinted when drawn
 			for (String k : new String[] {"kill_1", "kill_2", "kill_3", "kill_4", "kill_5", "kill_extra", "kill_mask", "kill_pip_default", "kill_pip_headshot",
-					"kill_pip_blast", "kill_pip_burn", "kill_pip_slash", "kill_pip_shock"})
-				safe(() -> svgH("panorama/images/hud/" + k + ".vsvg_c", "panorama/images/hud/" + k + ".svg", tex.resolve("gui/killcards/" + k + ".png"),
-						dev.strafemc.client.KillCards.ART_H), tex.resolve("gui/killcards/" + k + ".png"), Placeholders.Icon.BULLET, 32);
+					"kill_pip_blast", "kill_pip_burn", "kill_pip_slash", "kill_pip_shock"}) {
+				Path out = tex.resolve(dev.strafemc.client.KillCards.ART_DIR + k + ".png");
+				boolean additive = k.startsWith("kill_") && !k.startsWith("kill_pip") && !k.equals("kill_mask");
+				safe(() -> {
+					if (Files.exists(out)) return;
+					String vpk = "panorama/images/hud/" + k + ".vsvg_c", exported = "panorama/images/hud/" + k + ".svg";
+					Path src = StrafeConfig.cacheDir().resolve(exported);
+					AssetCache.ensureDecompiled(vpk, src);
+					write(additive ? SvgIcon.rasterizeAdditive(src, dev.strafemc.client.KillCards.ART_H) : SvgIcon.rasterize(src, dev.strafemc.client.KillCards.ART_H, true), out);
+				}, out, Placeholders.Icon.BULLET, 32);
+			}
 			try {
 				mags(tex);
 			} catch (Exception e) {

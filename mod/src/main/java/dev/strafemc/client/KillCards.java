@@ -19,12 +19,25 @@ import java.util.List;
  * (0) until you die.
  */
 public final class KillCards {
-	private record Card(String pip, long time) {}
+	private static final class Card {
+		final String pip;
+		final long time;
+		/** The angle it's drawn at, easing toward its place in the fan (CS2 animates the fan as cards are added). */
+		double angle = Double.NaN;
+
+		Card(String pip, long time) {
+			this.pip = pip;
+			this.time = time;
+		}
+	}
 
 	private static final List<Card> CARDS = new ArrayList<>();
 	/** Card art: rasterized from CS2's svgs (48 x 126 viewbox) into the runtime pack at this height. */
 	public static final int ART_H = 252, ART_W = 96;
-	private static final double SLIDE_S = 0.2;
+	public static final String ART_DIR = "gui/killcards2/";
+	/** A new card rises 42 px (CS2) into place and fades in; the fan eases to its new spread. */
+	private static final double SLIDE_S = 0.35, FAN_S = 0.2;
+	private static long lastNs;
 
 	private KillCards() {}
 
@@ -68,26 +81,36 @@ public final class KillCards {
 		List<Card> list;
 		synchronized (CARDS) {
 			if (StrafeConfig.killCardSeconds > 0) CARDS.removeIf(c -> (now - c.time) / 1e9 > StrafeConfig.killCardSeconds);
-			if (CARDS.isEmpty()) return;
+			if (CARDS.isEmpty()) {
+				lastNs = 0;
+				return;
+			}
 			list = new ArrayList<>(CARDS);
 		}
 		double px = mc.getWindow().getHeight() / 1080.0 / mc.getWindow().getGuiScale(); // one CS2 1080p pixel in GUI units
 		float h = (float) (152 * px), w = h * ART_W / ART_H; // CS2: card-svg-height 152px
-		// above the hotbar and the health / food rows
-		float cx = g.guiWidth() / 2f, cy = g.guiHeight() - 46 - h * 0.18f;
+		double dt = lastNs == 0 ? 0 : Math.min(0.1, (now - lastNs) / 1e9);
+		lastNs = now;
+		// above the hotbar, the health / food rows and the speed line (the card sits in the art's top third)
+		float cx = g.guiWidth() / 2f, cy = g.guiHeight() - 62 + h * 0.14f;
 		int n = list.size(), shown = Math.min(n, 5);
 		var pose = g.pose();
 		for (int i = 0; i < shown; i++) {
 			boolean extra = n > 5 && i == shown - 1;
 			Card c = extra ? list.get(n - 1) : list.get(i);
-			double angle = (i + 1 - (shown + 1) / 2.0) * 12; // CS2: -6 / +6 for two, -12 / 0 / +12 for three...
-			double slide = Math.max(0, 1 - (now - c.time) / 1e9 / SLIDE_S);
-			slide = slide * slide; // ease out
+			double target = (i + 1 - (shown + 1) / 2.0) * 12; // CS2: -6 / +6 for two, -12 / 0 / +12 for three...
+			if (Double.isNaN(c.angle)) c.angle = target;
+			c.angle += (target - c.angle) * Math.min(1, dt / FAN_S * 3); // eased over about FAN_S
+			double angle = c.angle;
+			double age = (now - c.time) / 1e9, slide = Math.max(0, 1 - age / SLIDE_S);
+			slide = slide * slide * slide; // ease out
+			double pop = age < SLIDE_S ? 1 + 0.12 * Math.sin(Math.PI * Math.min(1, age / SLIDE_S)) : 1; // a small bump as it lands
 			float dy = (float) ((Math.abs(angle) / 3 + 42 * slide) * px), dx = (float) (angle * 0.29 * px);
 			int alpha = (int) Math.round(255 * (1 - slide));
 			pose.pushMatrix();
 			pose.translate(cx + dx, cy + dy);
 			pose.rotate((float) Math.toRadians(angle));
+			pose.scale((float) pop, (float) pop);
 			int x0 = Math.round(-w / 2), y0 = Math.round(-h / 2), iw = Math.round(w), ih = Math.round(h);
 			card(g, "kill_mask", x0, y0, iw, ih, alpha << 24 | 0x101418, alpha * 0xB0 / 255);
 			card(g, extra ? "kill_extra" : "kill_" + (i + 1), x0, y0, iw, ih, alpha << 24 | 0xFFFFFF, alpha);
@@ -105,7 +128,7 @@ public final class KillCards {
 
 	private static void card(GuiGraphicsExtractor g, String name, int x, int y, int w, int h, int rgb, int alpha) {
 		if (alpha <= 0) return;
-		g.blit(RenderPipelines.GUI_TEXTURED, Identifier.fromNamespaceAndPath("strafemc", "textures/gui/killcards/" + name + ".png"), x, y, 0, 0, w, h, ART_W,
+		g.blit(RenderPipelines.GUI_TEXTURED, Identifier.fromNamespaceAndPath("strafemc", "textures/" + ART_DIR + name + ".png"), x, y, 0, 0, w, h, ART_W,
 				ART_H, ART_W, ART_H, (alpha << 24) | (rgb & 0xFFFFFF));
 	}
 }
