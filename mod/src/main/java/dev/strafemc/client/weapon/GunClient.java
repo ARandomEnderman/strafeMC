@@ -864,6 +864,12 @@ public final class GunClient {
 		}
 	}
 
+	/** Where the bullets go relative to the camera, MC degrees [pitch, yaw]: the full aim punch minus what the view shows. */
+	public double[] crosshairRecoil() {
+		double[] view = viewOffset();
+		return new double[] {aimPunch.angle[0] - view[0], -aimPunch.angle[1] - view[1]};
+	}
+
 	/** Camera offset in MC degrees [pitch, yaw]: aim punch x0.45 plus view punch (CS2 client view code). */
 	public double[] viewOffset() {
 		aimPunch.advance(System.nanoTime() / 1e9);

@@ -25,7 +25,7 @@ public final class ScopeHud {
 
 	public static void register() {
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, old -> (g, delta) -> {
-			if (!GunClient.INSTANCE.scopeOverlay()) old.extractRenderState(g, delta);
+			if (!GunClient.INSTANCE.scopeOverlay() && !Crosshair.render(g)) old.extractRenderState(g, delta); // CS2's crosshair with a CS weapon
 		});
 		HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "scope"), (g, delta) -> {
 			Minecraft mc = Minecraft.getInstance();

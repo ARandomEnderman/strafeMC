@@ -28,6 +28,9 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 				bool("strafemc.options.showspeed", StrafeConfig.showSpeed, v -> StrafeConfig.showSpeed = v),
 				bool("strafemc.options.doubletapfly", StrafeConfig.doubleTapFly, v -> StrafeConfig.doubleTapFly = v));
 
+		list.addSmall(Button.builder(Component.literal("Crosshair editor"), b -> minecraft.setScreen(new CrosshairScreen(this))).build(),
+				Button.builder(Component.literal("Loadout"), b -> LoadoutKey.open()).build());
+
 		list.addHeader(Component.translatable("strafemc.options.setup"));
 		list.addSmall(bool("strafemc.options.setup_ask", !StrafeConfig.setupNeverAsk, v -> StrafeConfig.setupNeverAsk = !v).createButton(options),
 				Button.builder(Component.translatable("strafemc.options.setup_open"), b -> SetupScreen.open(this)).build());

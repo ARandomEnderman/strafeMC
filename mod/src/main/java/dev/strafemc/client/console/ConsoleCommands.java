@@ -130,6 +130,14 @@ public final class ConsoleCommands {
 		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})
 			local("strafemc_wear_" + r, "Case drops of " + r + " grade get a float (1, default) or are Factory New (0), for the whole server (operators).",
 					a -> action("strafemc_wear", r + " " + (a.length > 0 ? (bool(a, true) ? "1" : "0") : "1"), false));
+		for (String cv : dev.strafemc.client.weapon.Crosshair.DEFAULTS.keySet())
+			viewmodelSetting(cv, "CS2 crosshair setting (default " + dev.strafemc.client.weapon.Crosshair.DEFAULTS.get(cv) + ").", -1000, 1000,
+					() -> dev.strafemc.client.weapon.Crosshair.get(cv), v -> StrafeConfig.crosshair.put(cv, v));
+		local("apply_crosshair_code", "Use a CS2 crosshair share code (CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx).", a -> {
+			if (a.length == 0 || !dev.strafemc.client.weapon.Crosshair.apply(a[0])) ConsoleLog.error("apply_crosshair_code CSGO-xxxxx-xxxxx-xxxxx-xxxxx-xxxxx");
+		});
+		local("crosshair_editor", "Open the crosshair editor.", a -> Minecraft.getInstance().execute(() ->
+				Minecraft.getInstance().setScreen(new dev.strafemc.client.CrosshairScreen(Minecraft.getInstance().screen))));
 		local("bot_add", "Add a bot (the smaller team). Operators.", a -> action("bot_add", "", false));
 		local("bot_add_t", "Add a T bot. Operators.", a -> action("bot_add_t", "", false));
 		local("bot_add_ct", "Add a CT bot. Operators.", a -> action("bot_add_ct", "", false));

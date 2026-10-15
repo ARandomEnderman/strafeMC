@@ -72,6 +72,8 @@ public final class StrafeConfig {
 	public static double viewmodelOffsetX = 1, viewmodelOffsetY = 1, viewmodelOffsetZ = -1;
 	/** How far the weapon lags behind when turning (1 = default, 0 = none). Ours: CS2 has no such setting. */
 	public static double viewmodelSwayScale = 1;
+	/** The crosshair's cl_crosshair* settings that differ from the defaults (Crosshair.DEFAULTS). */
+	public static final java.util.Map<String, Double> crosshair = new java.util.concurrent.ConcurrentHashMap<>();
 	/** How long each kill card above the hotbar stays (seconds); 0: until you die. */
 	public static double killCardSeconds = 0;
 	/**
@@ -146,6 +148,8 @@ public final class StrafeConfig {
 			viewmodelOffsetX = Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)));
 			viewmodelSwayScale = Double.parseDouble(p.getProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale)));
 			killCardSeconds = Double.parseDouble(p.getProperty("killCardSeconds", String.valueOf(killCardSeconds)));
+			for (String key : p.stringPropertyNames())
+				if (key.startsWith("crosshair.")) crosshair.put(key.substring(10), Double.parseDouble(p.getProperty(key)));
 			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
 			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
@@ -198,6 +202,7 @@ public final class StrafeConfig {
 		p.setProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX));
 		p.setProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale));
 		p.setProperty("killCardSeconds", String.valueOf(killCardSeconds));
+		crosshair.forEach((k, v) -> p.setProperty("crosshair." + k, String.valueOf(v)));
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
