@@ -80,9 +80,10 @@ public class SkinWrapItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		if (player instanceof ServerPlayer sp) {
-			// a knife wrap has one slot: put it on (swapping like armor); gun wraps fit several, so the loadout opens
-			if (knife && !player.isShiftKeyDown()) Loadout.equipKnifeWrap(sp, player.getItemInHand(hand));
-			else Loadout.open(sp);
+			// a wrap has one slot (the knife's, or its gun's): put it on, swapping like armor; sneaking opens the loadout
+			if (player.isShiftKeyDown()) Loadout.open(sp);
+			else if (knife) Loadout.equipKnifeWrap(sp, player.getItemInHand(hand));
+			else Loadout.equipGunWrap(sp, player.getItemInHand(hand));
 		}
 		return InteractionResult.SUCCESS;
 	}

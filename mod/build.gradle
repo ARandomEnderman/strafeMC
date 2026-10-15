@@ -4,8 +4,14 @@ plugins {
 
 base { archivesName = 'strafemc' }
 
+repositories {
+	maven { url = "https://maven.blamejared.com/" } // JEI's API (compile only: our plugin hides JEI on our screens)
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	compileOnly "mezz.jei:jei-26.1.2-common-api:29.47.0.109"
+	compileOnly "mezz.jei:jei-26.1.2-fabric-api:29.47.0.109"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// The profile has no Fabric API installed and only our jar may be added to it,

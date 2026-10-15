@@ -46,6 +46,7 @@ public final class GameplaySync {
 	}
 
 	public static void onLeave(ServerPlayer p) {
+		dev.strafemc.weapon.CaseOpening.claim(p); // an unclaimed case drop goes into the inventory before it's saved
 		PENDING.remove(p.getUUID());
 	}
 

@@ -142,7 +142,7 @@ public final class StrafePayloads {
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** A case opened: what it gave (kit on an item; rarity ordinal, -1 for a rare special item) and the item's name. */
-	public record CaseResult(String caseId, String kit, String item, int rarity, String name) implements CustomPacketPayload {
+	public record CaseResult(String caseId, String kit, String item, int rarity, String name, int pattern) implements CustomPacketPayload {
 		public static final Type<CaseResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "case_result"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, CaseResult> CODEC = StreamCodec.of((b, v) -> {
 			b.writeUtf(v.caseId(), 64);
@@ -150,7 +150,8 @@ public final class StrafePayloads {
 			b.writeUtf(v.item(), 64);
 			b.writeVarInt(v.rarity() + 1);
 			b.writeUtf(v.name(), 128);
-		}, b -> new CaseResult(b.readUtf(64), b.readUtf(128), b.readUtf(64), b.readVarInt() - 1, b.readUtf(128)));
+			b.writeVarInt(v.pattern() + 1);
+		}, b -> new CaseResult(b.readUtf(64), b.readUtf(128), b.readUtf(64), b.readVarInt() - 1, b.readUtf(128), b.readVarInt() - 1));
 
 		@Override
 		public Type<CaseResult> type() {

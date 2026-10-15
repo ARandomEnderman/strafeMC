@@ -112,11 +112,16 @@ public final class ConsoleActions {
 					held.shrink(1);
 					inv.getItem(keySlot).shrink(1);
 				}
-				if (!p.getInventory().add(drop.stack().copy())) p.drop(drop.stack().copy(), false);
+				// the drop waits for the reel to land on it (case_claim), as in CS2
+				dev.strafemc.weapon.CaseOpening.hold(p, drop.stack(), drop.rarity() == null || drop.rarity().ordinal() >= dev.strafemc.weapon.SkinWraps.Rarity.ANCIENT.ordinal());
+				Integer pattern = drop.stack().get(dev.strafemc.weapon.WeaponItems.PATTERN);
 				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.CaseResult(arg, drop.entry().kit(),
-							drop.entry().item(), drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString()));
+							drop.entry().item(), drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString(),
+							pattern == null ? -1 : pattern));
+				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
+			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change spawn blocks."));

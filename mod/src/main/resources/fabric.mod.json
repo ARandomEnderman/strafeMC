@@ -4,17 +4,29 @@
 	"version": "${version}",
 	"name": "strafeMC",
 	"description": "Unofficial fan mod: Counter-Strike 2 movement and real CS2 weapons in Minecraft, driven by a local CS2 dedicated server. Reads all assets from the user's own CS2 install at runtime; bundles none. Not affiliated with, endorsed by or sponsored by Valve Corporation. Counter-Strike and CS2 are trademarks of Valve Corporation.",
-	"authors": ["arandomenderman"],
+	"authors": [
+		"arandomenderman"
+	],
 	"license": "All-Rights-Reserved",
 	"icon": "assets/strafemc/icon.png",
 	"environment": "*",
 	"entrypoints": {
-		"main": ["dev.strafemc.StrafeMc"],
-		"client": ["dev.strafemc.client.StrafeMcClient"]
+		"main": [
+			"dev.strafemc.StrafeMc"
+		],
+		"client": [
+			"dev.strafemc.client.StrafeMcClient"
+		],
+		"jei_mod_plugin": [
+			"dev.strafemc.client.compat.JeiCompat"
+		]
 	},
 	"mixins": [
 		"strafemc.mixins.json",
-		{ "config": "strafemc.client.mixins.json", "environment": "client" }
+		{
+			"config": "strafemc.client.mixins.json",
+			"environment": "client"
+		}
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",

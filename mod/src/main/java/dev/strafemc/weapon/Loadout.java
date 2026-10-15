@@ -101,13 +101,29 @@ public final class Loadout {
 	/** Right-clicked gloves: wear them (they go into the gloves slot, the ones worn before come back). */
 	public static void wearGloves(ServerPlayer p, ItemStack held) {
 		equip(p, "gloves", held);
-		p.sendSystemMessage(Component.literal("Now wearing: ").append(get(p, "gloves").getHoverName()));
 	}
 
 	/** Right-clicked knife wrap: into the knife slot (its only slot), swapping like armor. */
 	public static void equipKnifeWrap(ServerPlayer p, ItemStack held) {
 		equip(p, "knife", held);
-		p.sendSystemMessage(Component.literal("Knife wrap: ").append(get(p, "knife").getHoverName()));
+	}
+
+	/**
+	 * Right-clicked gun wrap: it goes on its gun's slot, swapping like armor (a gun wrap is one gun's skin). A wrap from
+	 * before the split (several guns) goes on the gun in the other hand if it fits; otherwise the loadout opens.
+	 */
+	public static void equipGunWrap(ServerPlayer p, ItemStack held) {
+		SkinWraps.Wrap w = SkinWraps.get(SkinWrapItem.skin(held));
+		if (w == null) return;
+		String gun = w.kits().size() == 1 ? w.kits().keySet().iterator().next() : null;
+		if (gun == null)
+			for (InteractionHand h : InteractionHand.values())
+				if (p.getItemInHand(h).getItem() instanceof GunItem g && w.kits().containsKey(g.weaponClass)) gun = g.weaponClass;
+		if (gun == null) {
+			open(p);
+			return;
+		}
+		equip(p, gun, held);
 	}
 
 	/**
@@ -134,7 +150,6 @@ public final class Loadout {
 		if (old.isEmpty()) return;
 		set(p, "gloves", ItemStack.EMPTY);
 		if (!p.getInventory().add(old)) p.drop(old, false);
-		p.sendSystemMessage(Component.literal("Now wearing your side's default gloves"));
 	}
 
 	/** On death: drop the loadout unless the server keeps it (strafemc_loadout_keep) or keepInventory is on. */

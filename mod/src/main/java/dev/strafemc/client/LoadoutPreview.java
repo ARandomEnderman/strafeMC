@@ -39,6 +39,12 @@ public final class LoadoutPreview {
 			bufferSource.endBatch();
 		}
 
+		/** The picture's middle, not its bottom edge (vanilla's default, for entities standing on the ground). */
+		@Override
+		protected float getTranslateY(int height, int guiScale) {
+			return height / 2f;
+		}
+
 		@Override
 		protected String getTextureLabel() {
 			return "strafemc loadout preview";
