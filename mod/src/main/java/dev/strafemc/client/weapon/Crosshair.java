@@ -189,6 +189,42 @@ public final class Crosshair {
 		return true;
 	}
 
+	/** The current settings as a CS2 share code (the same layout apply reads; byte 0 is the sum of the rest). FLAGGED. */
+	public static String export() {
+		int[] b = new int[18];
+		b[1] = 1;
+		b[2] = (int) Math.round(get("cl_crosshairgap") * 10) & 255;
+		b[3] = (int) Math.round(get("cl_crosshair_outlinethickness") * 2) & 255;
+		b[4] = (int) get("cl_crosshaircolor_r") & 255;
+		b[5] = (int) get("cl_crosshaircolor_g") & 255;
+		b[6] = (int) get("cl_crosshaircolor_b") & 255;
+		b[7] = (int) get("cl_crosshairalpha") & 255;
+		b[8] = ((int) get("cl_crosshair_dynamic_splitdist") & 0x7f) | (get("cl_crosshair_recoil") != 0 ? 0x80 : 0);
+		b[9] = (int) Math.round(get("cl_crosshairgap") * 10) & 255; // the fixed gap (weapon gap off): the same
+		b[10] = ((int) get("cl_crosshaircolor") & 7) | (get("cl_crosshair_drawoutline") != 0 ? 8 : 0)
+				| ((int) Math.round(get("cl_crosshair_dynamic_splitalpha_innermod") * 10) & 0xf) << 4;
+		b[11] = ((int) Math.round(get("cl_crosshair_dynamic_splitalpha_outermod") * 10) & 0xf)
+				| ((int) Math.round(get("cl_crosshair_dynamic_maxdist_splitratio") * 10) & 0xf) << 4;
+		b[12] = (int) Math.round(get("cl_crosshairthickness") * 10) & 255;
+		b[13] = (((int) get("cl_crosshairstyle") & 7) << 1) | (get("cl_crosshairdot") != 0 ? 0x10 : 0) | (get("cl_crosshairusealpha") != 0 ? 0x40 : 0)
+				| (get("cl_crosshair_t") != 0 ? 0x80 : 0);
+		b[14] = (int) Math.round(get("cl_crosshairsize") * 10) & 255;
+		int sum = 0;
+		for (int i = 1; i < 18; i++) sum += b[i];
+		b[0] = sum & 255;
+		byte[] raw = new byte[19]; // a leading zero keeps it positive
+		for (int i = 0; i < 18; i++) raw[i + 1] = (byte) b[i];
+		BigInteger n = new BigInteger(raw), base = BigInteger.valueOf(57);
+		StringBuilder out = new StringBuilder("CSGO");
+		for (int i = 0; i < 25; i++) {
+			if (i % 5 == 0) out.append('-');
+			BigInteger[] qr = n.divideAndRemainder(base);
+			out.append(DICT.charAt(qr[1].intValue()));
+			n = qr[0];
+		}
+		return out.toString();
+	}
+
 	/** Saves the settings (a failed write only loses them on restart). */
 	public static void save() {
 		try {
