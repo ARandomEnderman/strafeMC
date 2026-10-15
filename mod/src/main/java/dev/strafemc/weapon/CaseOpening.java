@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * player leaves, so nothing is ever lost.
  */
 public final class CaseOpening {
-	/** announce: Covert or a rare special item, told to everyone when it's handed over (as CS2 does). */
+	/** announce: Covert or a rare special item, announced bigger when it's handed over (every drop is announced). */
 	private record Pending(java.util.List<ItemStack> stacks, long dueMs, java.util.List<Boolean> announce) {}
 
 	/** Longest reel plus slack: after this the drop is handed out without a claim. */
@@ -36,11 +36,16 @@ public final class CaseOpening {
 		for (int i = 0; i < d.stacks().size(); i++) {
 			ItemStack s = d.stacks().get(i);
 			if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
-			if (d.announce().get(i) && p.level().getServer() != null) // the big one: everyone hears about it
-				p.level().getServer().getPlayerList().broadcastSystemMessage(net.minecraft.network.chat.Component.literal("★ ").withColor(0xE4AE39)
-						.append(net.minecraft.network.chat.Component.literal(p.getScoreboardName()).withStyle(net.minecraft.ChatFormatting.BOLD))
-						.append(net.minecraft.network.chat.Component.literal(" has opened a container and found: "))
-						.append(s.getHoverName().copy().withStyle(net.minecraft.ChatFormatting.BOLD)), false);
+			if (p.level().getServer() == null) continue;
+			// every unboxing is told to everyone on the server, as in CS2; Covert and the rare special items stand out
+			boolean big = d.announce().get(i);
+			var name = net.minecraft.network.chat.Component.literal(p.getScoreboardName());
+			var item = s.getHoverName().copy();
+			var msg = big ? net.minecraft.network.chat.Component.literal("★ ").withColor(0xE4AE39) : net.minecraft.network.chat.Component.empty();
+			p.level().getServer().getPlayerList().broadcastSystemMessage(msg
+					.append(big ? name.withStyle(net.minecraft.ChatFormatting.BOLD) : name.withStyle(net.minecraft.ChatFormatting.WHITE))
+					.append(net.minecraft.network.chat.Component.literal(" has opened a container and found: ").withStyle(net.minecraft.ChatFormatting.WHITE))
+					.append(big ? item.withStyle(net.minecraft.ChatFormatting.BOLD) : item), false);
 		}
 	}
 
