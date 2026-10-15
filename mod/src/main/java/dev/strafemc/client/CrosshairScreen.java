@@ -21,27 +21,27 @@ public class CrosshairScreen extends Screen {
 	/** The settings in three columns: the crosshair's shape, its colour, how it moves. */
 	private static final String[] SECTIONS = {"Shape", "Colour", "Movement"};
 	private static final List<List<Setting>> COLUMNS = List.of(
-			List.of(new Setting("cl_crosshairstyle", "Style", 0, 5, 1, false),
-					new Setting("cl_crosshairsize", "Length", 0, 20, 0.5, false),
-					new Setting("cl_crosshairthickness", "Thickness", 0, 6, 0.1, false),
-					new Setting("cl_crosshairgap", "Gap", -10, 10, 0.5, false),
+			List.of(new Setting("cl_crosshairstyle", "Style", 0, 9, 1, false),
+					new Setting("cl_crosshair_length", "Length", 0, 60, 1, false),
+					new Setting("cl_crosshair_thickness", "Thickness", 0, 32, 1, false),
+					new Setting("cl_crosshair_gap", "Gap", -10, 64, 1, false),
 					new Setting("cl_crosshairdot", "Centre dot", 0, 1, 1, true),
 					new Setting("cl_crosshair_t", "T style", 0, 1, 1, true),
-					new Setting("cl_crosshair_drawoutline", "Outline", 0, 1, 1, true),
-					new Setting("cl_crosshair_outlinethickness", "Outline thickness", 0, 3, 0.5, false)),
-			List.of(new Setting("cl_crosshaircolor", "Colour", 0, 5, 1, false),
-					new Setting("cl_crosshaircolor_r", "Red", 0, 255, 1, false),
+					new Setting("cl_crosshair_drawoutline", "Outline", 0, 1, 1, true)),
+			List.of(new Setting("cl_crosshaircolor_r", "Red", 0, 255, 1, false),
 					new Setting("cl_crosshaircolor_g", "Green", 0, 255, 1, false),
 					new Setting("cl_crosshaircolor_b", "Blue", 0, 255, 1, false),
-					new Setting("cl_crosshairusealpha", "Transparency", 0, 1, 1, true),
-					new Setting("cl_crosshairalpha", "Alpha", 0, 255, 1, false)),
+					new Setting("cl_crosshaircolor_a", "Alpha", 0, 255, 1, false),
+					new Setting("cl_crosshairoutline_r", "Outline red", 0, 255, 1, false),
+					new Setting("cl_crosshairoutline_g", "Outline green", 0, 255, 1, false),
+					new Setting("cl_crosshairoutline_b", "Outline blue", 0, 255, 1, false),
+					new Setting("cl_crosshairoutline_a", "Outline alpha", 0, 255, 1, false)),
 			List.of(new Setting("cl_crosshair_recoil", "Follow recoil", 0, 1, 1, true),
-					new Setting("cl_crosshair_dynamic_splitdist", "Split distance", 0, 20, 1, false),
-					new Setting("cl_crosshair_dynamic_splitalpha_innermod", "Inner alpha", 0, 1, 0.1, false),
-					new Setting("cl_crosshair_dynamic_splitalpha_outermod", "Outer alpha", 0.3, 1, 0.1, false),
+					new Setting("cl_crosshair_dynamic_spread_limit", "Spread limit", 0, 255, 1, false),
+					new Setting("cl_crosshair_dynamic_splitdist", "Split distance", 0, 127, 1, false),
+					new Setting("cl_crosshair_dynamic_splitalpha_innermod", "Inner alpha", 0, 1, 0.05, false),
+					new Setting("cl_crosshair_dynamic_splitalpha_outermod", "Outer alpha", 0.3, 1, 0.05, false),
 					new Setting("cl_crosshair_dynamic_maxdist_splitratio", "Split ratio", 0, 1, 0.05, false)));
-	private static final String[] STYLES = {"Default", "Default static", "Classic", "Classic dynamic", "Classic static", "Legacy"};
-	private static final String[] COLOURS = {"Red", "Green", "Yellow", "Blue", "Cyan", "Custom"};
 	private int[] headerX = new int[3];
 	private int headerY;
 
@@ -141,8 +141,7 @@ public class CrosshairScreen extends Screen {
 		protected void updateMessage() {
 			double v = v();
 			String shown = s.step >= 1 ? String.valueOf((long) v) : String.format(java.util.Locale.ROOT, "%.2f", v);
-			if (s.cvar.equals("cl_crosshairstyle")) shown = STYLES[(int) Math.max(0, Math.min(5, v))];
-			if (s.cvar.equals("cl_crosshaircolor")) shown = COLOURS[(int) Math.max(0, Math.min(5, v))];
+			if (s.cvar.equals("cl_crosshairstyle")) shown = Crosshair.STYLES[(int) Math.max(0, Math.min(9, v))];
 			setMessage(Component.literal(s.label + ": " + shown));
 		}
 

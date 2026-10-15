@@ -6,9 +6,9 @@ public final class CrosshairCodeCheck {
 		// a throwaway settings folder: this saves, and must never touch the real strafemc.properties
 		System.setProperty("strafemc.runtime", java.nio.file.Files.createTempDirectory("strafemc-test").toString());
 		var c = dev.strafemc.config.StrafeConfig.crosshair;
-		c.put("cl_crosshairstyle", 4.0); c.put("cl_crosshairsize", 2.5); c.put("cl_crosshairthickness", 1.0); c.put("cl_crosshairgap", -2.0);
-		c.put("cl_crosshaircolor", 5.0); c.put("cl_crosshaircolor_r", 255.0); c.put("cl_crosshaircolor_g", 0.0); c.put("cl_crosshaircolor_b", 128.0);
-		c.put("cl_crosshairdot", 1.0); c.put("cl_crosshair_t", 1.0); c.put("cl_crosshair_recoil", 1.0); c.put("cl_crosshair_outlinethickness", 1.5);
+		c.put("cl_crosshairstyle", 4.0); c.put("cl_crosshair_length", 9.0); c.put("cl_crosshair_thickness", 2.0); c.put("cl_crosshair_gap", 2.0);
+		c.put("cl_crosshaircolor_r", 255.0); c.put("cl_crosshaircolor_g", 0.0); c.put("cl_crosshaircolor_b", 128.0);
+		c.put("cl_crosshairdot", 1.0); c.put("cl_crosshair_t", 1.0); c.put("cl_crosshair_recoil", 1.0); c.put("cl_crosshaircolor_a", 180.0);
 		java.util.Map<String, Double> before = new java.util.TreeMap<>();
 		for (String k : Crosshair.DEFAULTS.keySet()) before.put(k, Crosshair.get(k));
 		String code = Crosshair.export();
