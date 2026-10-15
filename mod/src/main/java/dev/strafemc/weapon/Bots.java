@@ -71,10 +71,18 @@ public final class Bots {
 		int clip = -1, burstLeft;
 		float strafe, wanderYaw;
 		boolean aimHead;
+		/** This tick's walking direction (horizontal, unit) and whether the next path step goes up a block. */
+		Vec3 move;
+		boolean climb;
 		/** CS2's fire penalty (inaccuracy added per shot, recovering), the spray's climb (degrees), the aim's error (blocks). */
 		double penalty, recoil, recoilYaw;
 		long lastShot;
 		Vec3 aimErr = Vec3.ZERO;
+		/** Where it's walking: the path (feet blocks), how far along, where it leads, when it was worked out. */
+		List<net.minecraft.core.BlockPos> path = List.of();
+		int pathIdx;
+		net.minecraft.core.BlockPos pathGoal;
+		long pathAt;
 
 		Bot(String name, boolean t) {
 			this.name = name;
@@ -236,9 +244,9 @@ public final class Bots {
 						e.getDeltaMovement().horizontalDistanceSqr() > 0.001);
 				if (--b.burstLeft <= 0) b.burstPause = now + 250 + RNG.nextInt(250);
 			}
-			// standing still while shooting (as CS players stop to shoot); between bursts, closing in or strafing
+			// standing still while shooting (as CS players stop to shoot); between bursts, closing in along a path or strafing
 			if (!firing) {
-				if (Math.sqrt(seenD) > 15) forward = 1;
+				if (Math.sqrt(seenD) > 15) walk(b, level, seen.blockPosition(), now);
 				else {
 					if (now >= b.strafeUntil) {
 						b.strafe = RNG.nextBoolean() ? 1 : -1;
@@ -247,21 +255,65 @@ public final class Bots {
 					side = b.strafe;
 				}
 			}
-		} else if (far != null) { // walk toward the nearest enemy
-			turn(e, far.getEyePosition().subtract(eye));
-			forward = 1;
-		} else { // wander
-			if (now >= b.wanderUntil) {
-				b.wanderYaw = e.getYRot() + RNG.nextFloat() * 180 - 90;
-				b.wanderUntil = now + 2000 + RNG.nextInt(3000);
+		} else if (far != null) { // walk to the nearest enemy, around what's in the way
+			walk(b, level, far.blockPosition(), now);
+			faceMove(e);
+		} else { // wander to random spots
+			if (now >= b.wanderUntil || b.pathGoal == null) {
+				b.pathGoal = e.blockPosition().offset(RNG.nextInt(25) - 12, 0, RNG.nextInt(25) - 12);
+				b.wanderUntil = now + 4000 + RNG.nextInt(4000);
+				b.pathAt = 0;
 			}
-			turnYaw(e, b.wanderYaw, 0);
-			forward = 0.6f;
+			walk(b, level, b.pathGoal, now);
+			faceMove(e);
 		}
 		e.setSpeed(SPEED);
+		if (b.move != null) { // the path's direction, as forward / sideways input for where the bot faces
+			double yaw = Math.toRadians(e.getYRot()), c = Math.cos(yaw), sn = Math.sin(yaw);
+			forward = (float) (-b.move.x * sn + b.move.z * c);
+			side = (float) (b.move.x * c + b.move.z * sn);
+		}
 		e.zza = forward;
 		e.xxa = side;
-		e.setJumping(e.horizontalCollision && e.onGround() && (forward != 0 || side != 0));
+		// a jump only where the path climbs (or when stuck against something low); the mannequin has no jump of its own
+		boolean climb = b.move != null && b.climb;
+		if (e.onGround() && (climb || (e.horizontalCollision && b.move != null))) {
+			Vec3 v = e.getDeltaMovement();
+			e.setDeltaMovement(v.x, 0.42, v.z);
+		}
+		b.move = null;
+		b.climb = false;
+	}
+
+	/** Walks along a path to goal (worked out again every second, or when the goal moved): sets this tick's direction. */
+	private static void walk(Bot b, ServerLevel level, net.minecraft.core.BlockPos goal, long now) {
+		Mannequin e = b.e;
+		if (b.path.isEmpty() || now - b.pathAt > 1000 || b.pathGoal == null || b.pathGoal.distManhattan(goal) > 2) {
+			b.path = BotPath.find(level, e.blockPosition(), goal);
+			b.pathIdx = 0;
+			b.pathGoal = goal;
+			b.pathAt = now;
+		}
+		// past the steps it has reached (within a third of a block across, on its level)
+		while (b.pathIdx < b.path.size()) {
+			var p = b.path.get(b.pathIdx);
+			double dx = p.getX() + 0.5 - e.getX(), dz = p.getZ() + 0.5 - e.getZ();
+			if (dx * dx + dz * dz < 0.12 && Math.abs(p.getY() - e.getY()) < 1.2) b.pathIdx++;
+			else break;
+		}
+		if (b.pathIdx >= b.path.size()) return;
+		var p = b.path.get(b.pathIdx);
+		Vec3 d = new Vec3(p.getX() + 0.5 - e.getX(), 0, p.getZ() + 0.5 - e.getZ());
+		if (d.lengthSqr() < 1e-4) return;
+		b.move = d.normalize();
+		b.climb = p.getY() > e.getBlockY() && d.lengthSqr() < 1.6 * 1.6;
+	}
+
+	/** Faces where it walks (no one to look at). */
+	private static void faceMove(Mannequin e) {
+		Bot b = null;
+		for (Bot o : BOTS) if (o.e == e) b = o;
+		if (b != null && b.move != null) turnYaw(e, (float) (Mth.atan2(b.move.z, b.move.x) * Mth.RAD_TO_DEG) - 90, 0);
 	}
 
 	private static boolean visible(ServerLevel level, Entity from, Vec3 eye, LivingEntity o) {
