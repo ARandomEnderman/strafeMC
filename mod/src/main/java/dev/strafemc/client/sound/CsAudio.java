@@ -34,6 +34,18 @@ public final class CsAudio {
 
 	private CsAudio() {}
 
+	/**
+	 * The sound engine restarted (Directional Audio, a device change): its buffers belonged to the old one, so they're
+	 * dropped and decoded again when next played, as Minecraft does with its own.
+	 */
+	public static void clear() {
+		for (var f : BUFFERS.values()) {
+			SoundBuffer b = f.getNow(null);
+			if (b != null) b.discardAlBuffer();
+		}
+		BUFFERS.clear();
+	}
+
 	public static boolean ready() {
 		return ready;
 	}

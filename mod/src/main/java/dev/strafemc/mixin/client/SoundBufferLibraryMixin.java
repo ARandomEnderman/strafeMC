@@ -18,4 +18,10 @@ public abstract class SoundBufferLibraryMixin {
 	private void strafemc$csAudio(Identifier path, CallbackInfoReturnable<CompletableFuture<SoundBuffer>> cir) {
 		if (CsAudio.NAMESPACE.equals(path.getNamespace())) cir.setReturnValue(CsAudio.buffer(path));
 	}
+
+	/** The engine is restarting: CS2 sounds go with Minecraft's own and are decoded again for the new one. */
+	@Inject(method = "clear", at = @At("HEAD"))
+	private void strafemc$clearCs(org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+		CsAudio.clear();
+	}
 }
