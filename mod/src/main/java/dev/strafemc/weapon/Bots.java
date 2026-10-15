@@ -60,7 +60,6 @@ public final class Bots {
 		return 1.8 - 1.4 * skill();
 	}
 
-	private static final double SPREAD_DEG = 0.9, MOVING_SPREAD_DEG = 2.5;
 
 	private static final class Bot {
 		/** Whose skin it wears, and the name it shows (the skin's owner, numbered when several bots share a skin). */
@@ -72,6 +71,10 @@ public final class Bots {
 		int clip = -1, burstLeft;
 		float strafe, wanderYaw;
 		boolean aimHead;
+		/** CS2's fire penalty (inaccuracy added per shot, recovering), the spray's climb (degrees), the aim's error (blocks). */
+		double penalty, recoil, recoilYaw;
+		long lastShot;
+		Vec3 aimErr = Vec3.ZERO;
 
 		Bot(String name, boolean t) {
 			this.name = name;
@@ -144,7 +147,7 @@ public final class Bots {
 	}
 
 	private static void spawn(MinecraftServer server, Bot b) {
-		var pick = dev.strafemc.world.SpawnPoints.pick();
+		var pick = StrafeSettings.spawnBlocks() ? dev.strafemc.world.SpawnPoints.pick() : null; // like players: spawn blocks when they're on
 		ServerLevel level = pick != null ? pick.level() : server.overworld();
 		Vec3 at;
 		if (pick != null) at = pick.pos();
@@ -163,6 +166,7 @@ public final class Bots {
 		CsTeam.set(m, b.t);
 		b.e = m; // before it's added: adding fires the load event, which removes bots that aren't ours
 		level.addFreshEntity(m);
+		dev.strafemc.StrafeMc.LOG.info("[strafemc] bot {} spawned {} at {}", b.label, pick != null ? "on a spawn block" : "at the world spawn", m.blockPosition().toShortString());
 		b.deadSince = 0;
 		b.target = null;
 		b.clip = -1;
@@ -205,6 +209,17 @@ public final class Bots {
 			b.target = seen;
 			b.seenSince = now;
 			b.burstLeft = 0;
+			// first sight: off by up to ~1.6 blocks at difficulty 1, ~0.2 at 10, corrected over time (FLAGGED: ours)
+			double err = 0.2 + 1.4 * (1 - skill());
+			b.aimErr = new Vec3(RNG.nextGaussian(), RNG.nextGaussian() * 0.6, RNG.nextGaussian()).normalize().scale(err * (0.5 + RNG.nextDouble()));
+		}
+		b.aimErr = b.aimErr.scale(1 - (0.02 + 0.08 * skill())); // tracking: the error shrinks every tick
+		// recoil and the fire penalty recover between shots (CS2: back to 10% over the stand recovery time)
+		double recover = Math.pow(0.1, 0.05 / Math.max(0.05, w.recoveryTimeStand()));
+		b.penalty *= recover;
+		if (now - b.lastShot > 150) {
+			b.recoil *= 0.8;
+			b.recoilYaw *= 0.8;
 		}
 		float forward = 0, side = 0;
 		if (seen != null) {
@@ -212,11 +227,13 @@ public final class Bots {
 				b.burstLeft = 3 + RNG.nextInt(4);
 				b.aimHead = RNG.nextDouble() < 0.05 + 0.45 * skill();
 			}
-			Vec3 aim = b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0);
+			Vec3 aim = (b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0)).add(b.aimErr);
 			boolean aimed = turn(e, aim.subtract(eye));
 			boolean firing = b.burstLeft > 0 && now >= b.burstPause;
 			if (firing && aimed && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
-				shoot(b, level, w, eye, Vec3.directionFromRotation(e.getXRot(), e.getYRot()), now, e.getDeltaMovement().horizontalDistanceSqr() > 0.001);
+				// the shot leaves along the view plus the spray's climb the bot didn't pull down
+				shoot(b, level, w, eye, Vec3.directionFromRotation((float) (e.getXRot() - b.recoil), (float) (e.getYRot() + b.recoilYaw)), now,
+						e.getDeltaMovement().horizontalDistanceSqr() > 0.001);
 				if (--b.burstLeft <= 0) b.burstPause = now + 250 + RNG.nextInt(250);
 			}
 			// standing still while shooting (as CS players stop to shoot); between bursts, closing in or strafing
@@ -273,14 +290,21 @@ public final class Bots {
 	private static void shoot(Bot b, ServerLevel level, WeaponStats w, Vec3 eye, Vec3 dir, long now, boolean moving) {
 		Mannequin e = b.e;
 		double units = StrafeConfig.unitsPerBlock;
-		// spread: a small random cone, wider on the move (FLAGGED: ours)
-		double spread = Math.toRadians((moving ? MOVING_SPREAD_DEG : SPREAD_DEG) * spreadScale() * Math.abs(RNG.nextGaussian()));
-		double turnA = RNG.nextDouble() * Math.PI * 2;
+		// CS2's spread: the inaccuracy (standing / moving, plus the fire penalty) and the weapon's spread, each a random
+		// distance in a random direction, as offsets across the view
+		double inacc = (moving ? w.inaccuracyMove() : w.inaccuracyStand()) + b.penalty;
+		inacc *= spreadScale(); // the difficulty's hand: x1.8 at 1 to x0.4 at 10 (FLAGGED: ours)
+		double a1 = RNG.nextDouble() * Math.PI * 2, r1 = RNG.nextDouble() * inacc, a2 = RNG.nextDouble() * Math.PI * 2, r2 = RNG.nextDouble() * w.spread();
 		Vec3 side = dir.cross(new Vec3(0, 1, 0));
 		if (side.lengthSqr() < 1e-6) side = new Vec3(1, 0, 0);
 		side = side.normalize();
 		Vec3 up = side.cross(dir).normalize();
-		dir = dir.add(side.scale(Math.cos(turnA) * Math.tan(spread))).add(up.scale(Math.sin(turnA) * Math.tan(spread))).normalize();
+		dir = dir.add(side.scale(Math.cos(a1) * r1 + Math.cos(a2) * r2)).add(up.scale(Math.sin(a1) * r1 + Math.sin(a2) * r2)).normalize();
+		b.penalty += w.inaccuracyFire();
+		// the spray climbs about a degree a shot (FLAGGED: CS2's per-gun patterns not used); better bots pull it down
+		b.recoil = Math.min(12, b.recoil + 0.9 * (1 - 0.75 * skill()));
+		b.recoilYaw += (RNG.nextDouble() - 0.5) * 0.6;
+		b.lastShot = now;
 		Vec3 end = eye.add(dir.scale(Math.min(w.range() / units, 160)));
 		HitResult block = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, e));
 		if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
