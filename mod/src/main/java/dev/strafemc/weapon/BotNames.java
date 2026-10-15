@@ -37,14 +37,19 @@ public final class BotNames {
 
 	private BotNames() {}
 
-	/** A name for a new bot. */
-	public static synchronized String next() {
-		List<String> chosen = StrafeSettings.botSkins();
-		if (!chosen.isEmpty()) return chosen.get(RNG.nextInt(chosen.size()));
-		if (FOUND.isEmpty()) load();
-		if (FOUND.size() < WANT) search();
-		if (FOUND.isEmpty()) return "Bot" + (100 + RNG.nextInt(900));
-		return FOUND.get(RNG.nextInt(FOUND.size()));
+	/** Whose skin a new bot wears: one no other bot has, while there are any left. */
+	public static synchronized String next(java.util.Set<String> used) {
+		List<String> pool = new ArrayList<>(StrafeSettings.botSkins());
+		if (pool.isEmpty()) {
+			if (FOUND.isEmpty()) load();
+			if (FOUND.size() < WANT) search();
+			pool.addAll(FOUND);
+		}
+		if (pool.isEmpty()) return "Bot" + (100 + RNG.nextInt(900));
+		List<String> free = new ArrayList<>(pool);
+		free.removeAll(used);
+		List<String> from = free.isEmpty() ? pool : free;
+		return from.get(RNG.nextInt(from.size()));
 	}
 
 	private static Path file() {

@@ -63,7 +63,8 @@ public final class Bots {
 	private static final double SPREAD_DEG = 0.9, MOVING_SPREAD_DEG = 2.5;
 
 	private static final class Bot {
-		final String name;
+		/** Whose skin it wears, and the name it shows (the skin's owner, numbered when several bots share a skin). */
+		final String name, label;
 		final boolean t;
 		Mannequin e;
 		long deadSince, seenSince, nextShot, reloadUntil, burstPause, strafeUntil, wanderUntil;
@@ -75,6 +76,8 @@ public final class Bots {
 		Bot(String name, boolean t) {
 			this.name = name;
 			this.t = t;
+			long same = BOTS.stream().filter(o -> o.name.equals(name)).count();
+			this.label = same == 0 ? name : name + " " + (same + 1);
 		}
 	}
 
@@ -82,6 +85,12 @@ public final class Bots {
 	private static final Random RNG = new Random();
 
 	private Bots() {}
+
+	private static java.util.Set<String> names() {
+		java.util.Set<String> s = new java.util.HashSet<>();
+		for (Bot b : BOTS) s.add(b.name);
+		return s;
+	}
 
 	public static boolean isBot(Entity e) {
 		return e instanceof Mannequin && e.entityTags().contains(TAG);
@@ -92,7 +101,7 @@ public final class Bots {
 		int quota = StrafeSettings.botQuota();
 		while (BOTS.size() < quota) {
 			long t = BOTS.stream().filter(b -> b.t).count();
-			BOTS.add(new Bot(BotNames.next(), t * 2 < BOTS.size() + 1 ? true : false));
+			BOTS.add(new Bot(BotNames.next(names()), t * 2 < BOTS.size() + 1));
 		}
 		while (BOTS.size() > quota) {
 			Bot b = BOTS.remove(BOTS.size() - 1);
@@ -117,7 +126,7 @@ public final class Bots {
 	public static synchronized void add(Boolean t) {
 		StrafeSettings.setBotQuota(StrafeSettings.botQuota() + 1);
 		long ts = BOTS.stream().filter(b -> b.t).count();
-		BOTS.add(new Bot(BotNames.next(), t != null ? t : ts * 2 < BOTS.size() + 1));
+		BOTS.add(new Bot(BotNames.next(names()), t != null ? t : ts * 2 < BOTS.size() + 1));
 	}
 
 	/** bot_kick: all of them, and the quota to 0. */
@@ -147,7 +156,7 @@ public final class Bots {
 		Mannequin m = new Mannequin(EntityType.MANNEQUIN, level);
 		m.setComponent(DataComponents.PROFILE, ResolvableProfile.createUnresolved(b.name));
 		((dev.strafemc.mixin.MannequinAccessor) m).strafemc$setHideDescription(true);
-		m.setCustomName(Component.literal("BOT " + b.name));
+		m.setCustomName(Component.literal("BOT " + b.label));
 		m.addTag(TAG);
 		m.snapTo(at.x, at.y, at.z, RNG.nextFloat() * 360, 0);
 		m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
