@@ -197,6 +197,8 @@ public final class GrenadeZones {
 				Vec3 motion = e.getDeltaMovement();
 				boolean marked = e.hurtMarked;
 				boolean wasAlive = e.isAlive();
+				if (f.owner != null && f.level.getServer().getPlayerList().getPlayer(f.owner) instanceof ServerPlayer burner)
+					KillFeed.damaged(burner, e, Math.min(f.dps * 0.25, e.getHealth() / StrafeConfig.hpScale));
 				e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (f.dps * 0.25 * StrafeConfig.hpScale));
 				if (wasAlive && e.isDeadOrDying() && f.owner != null && f.level.getServer().getPlayerList().getPlayer(f.owner) instanceof ServerPlayer killer)
 					KillFeed.notice(killer, e, "inferno", 0);

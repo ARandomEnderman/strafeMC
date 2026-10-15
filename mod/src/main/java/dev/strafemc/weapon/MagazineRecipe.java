@@ -12,8 +12,9 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * Magazines (FLAGGED: our recipe, CS2 gives ammo with the gun): a gun + an iron ingot + gunpowder, in any order, makes
- * one full magazine for that gun and the gun stays; a magazine + gunpowder fills it up again. Not for the Zeus.
+ * Magazines (FLAGGED: our recipe, CS2 gives ammo with the gun): a gun + an iron nugget + gunpowder, in any order, makes
+ * one full magazine for that gun (shell-by-shell shotguns: 8 shells) and the gun stays; a magazine + gunpowder fills
+ * it up again. Not for the Zeus.
  */
 public class MagazineRecipe extends CustomRecipe {
 	public static final MagazineRecipe INSTANCE = new MagazineRecipe();
@@ -23,22 +24,25 @@ public class MagazineRecipe extends CustomRecipe {
 	/** What the grid makes: a full magazine of the gun's (or of the refilled magazine's) class, or empty. */
 	private static ItemStack result(CraftingInput in) {
 		ItemStack gun = null, mag = null;
-		int iron = 0, powder = 0, other = 0;
+		int nugget = 0, powder = 0, other = 0;
 		for (ItemStack s : in.items()) {
 			if (s.isEmpty()) continue;
 			if (s.getItem() instanceof GunItem && !(s.getItem() instanceof KnifeItem) && gun == null) gun = s;
 			else if (s.getItem() instanceof MagazineItem && mag == null) mag = s;
-			else if (s.is(Items.IRON_INGOT)) iron++;
+			else if (s.is(Items.IRON_NUGGET)) nugget++;
 			else if (s.is(Items.GUNPOWDER)) powder++;
 			else other++;
 		}
 		if (other != 0 || powder != 1) return ItemStack.EMPTY;
 		String cls;
-		if (gun != null && mag == null && iron == 1) cls = ((GunItem) gun.getItem()).weaponClass;
-		else if (mag != null && gun == null && iron == 0) cls = ((MagazineItem) mag.getItem()).weaponClass;
+		if (gun != null && mag == null && nugget == 1) cls = ((GunItem) gun.getItem()).weaponClass;
+		else if (mag != null && gun == null && nugget == 0 && !((MagazineItem) mag.getItem()).shells()) cls = ((MagazineItem) mag.getItem()).weaponClass;
 		else return ItemStack.EMPTY;
 		var item = WeaponItems.MAGS.get(cls);
-		return item == null || cls.equals("weapon_taser") ? ItemStack.EMPTY : new ItemStack(item);
+		if (item == null || cls.equals("weapon_taser")) return ItemStack.EMPTY;
+		ItemStack out = MagazineItem.withRounds(new ItemStack(item), Integer.MAX_VALUE);
+		if (((MagazineItem) item).shells()) out.setCount(8); // shell-by-shell shotguns: 8 shells
+		return out;
 	}
 
 	@Override

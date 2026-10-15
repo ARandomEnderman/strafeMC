@@ -118,7 +118,7 @@ public final class StrafePayloads {
 
 	/** Server -> client: a death notice (killfeed): who killed whom with what, sides, and KillFeed's modifier flags. */
 	public record KillNotice(String attacker, boolean attackerT, int attackerId, String victim, boolean victimT, int victimId, boolean victimPlayer,
-							 String icon, int flags) implements CustomPacketPayload {
+							 String icon, int flags, String assister, boolean assisterT) implements CustomPacketPayload {
 		public static final Type<KillNotice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "kill_notice"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, KillNotice> CODEC = StreamCodec.of((b, v) -> {
 			b.writeUtf(v.attacker, 64);
@@ -130,8 +130,10 @@ public final class StrafePayloads {
 			b.writeBoolean(v.victimPlayer);
 			b.writeUtf(v.icon, 48);
 			b.writeVarInt(v.flags);
+			b.writeUtf(v.assister, 64);
+			b.writeBoolean(v.assisterT);
 		}, b -> new KillNotice(b.readUtf(64), b.readBoolean(), b.readVarInt(), b.readUtf(64), b.readBoolean(), b.readVarInt(), b.readBoolean(),
-				b.readUtf(48), b.readVarInt()));
+				b.readUtf(48), b.readVarInt(), b.readUtf(64), b.readBoolean()));
 
 		@Override
 		public Type<KillNotice> type() {

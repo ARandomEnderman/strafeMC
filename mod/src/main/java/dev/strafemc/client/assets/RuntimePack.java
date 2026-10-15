@@ -4,6 +4,7 @@ import dev.strafemc.StrafeMc;
 import dev.strafemc.client.Placeholders;
 import dev.strafemc.config.StrafeConfig;
 import dev.strafemc.data.AssetCache;
+import dev.strafemc.weapon.WeaponTable;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -83,6 +84,8 @@ public final class RuntimePack {
 			for (String w : dev.strafemc.client.DeathNotices.WEAPON_ICONS)
 				safe(() -> svgH("panorama/images/icons/equipment/" + w + ".vsvg_c", "panorama/images/icons/equipment/" + w + ".svg",
 						tex.resolve("gui/deathnotice/" + w + ".png"), 48), tex.resolve("gui/deathnotice/" + w + ".png"), Placeholders.Icon.BULLET, 32);
+			safe(() -> svgH("panorama/images/icons/equipment/flashbang_assist.vsvg_c", "panorama/images/icons/equipment/flashbang_assist.svg",
+					tex.resolve("gui/deathnotice/flashbang_assist.png"), 48), tex.resolve("gui/deathnotice/flashbang_assist.png"), Placeholders.Icon.BULLET, 32);
 			for (String m : dev.strafemc.client.DeathNotices.MODIFIER_ICONS)
 				safe(() -> svgH("panorama/images/hud/deathnotice/" + m + ".vsvg_c", "panorama/images/hud/deathnotice/" + m + ".svg",
 						tex.resolve("gui/deathnotice/" + m + ".png"), 48), tex.resolve("gui/deathnotice/" + m + ".png"), Placeholders.Icon.BULLET, 32);
@@ -95,6 +98,16 @@ public final class RuntimePack {
 			}
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("item/mag_ak47.png"), 32),
 					tex.resolve("item/mag_ak47.png"), Placeholders.Icon.MAG, 32);
+			// CS2's round kill cards (hudhealthammocenter): card, outline per kill, pips
+			for (String k : new String[] {"kill_1", "kill_2", "kill_3", "kill_4", "kill_5", "kill_extra", "kill_mask", "kill_pip_default", "kill_pip_headshot",
+					"kill_pip_blast", "kill_pip_burn", "kill_pip_slash", "kill_pip_shock"})
+				safe(() -> svgH("panorama/images/hud/" + k + ".vsvg_c", "panorama/images/hud/" + k + ".svg", tex.resolve("gui/killcards/" + k + ".png"),
+						dev.strafemc.client.KillCards.ART_H), tex.resolve("gui/killcards/" + k + ".png"), Placeholders.Icon.BULLET, 32);
+			try {
+				mags(tex);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] magazine icons: {}", e.toString());
+			}
 			safe(() -> svg("panorama/images/hud/ammo_reserve_magazine.vsvg_c", "panorama/images/hud/ammo_reserve_magazine.svg", tex.resolve("gui/hud/ammo_reserve_magazine.png"), 64),
 					tex.resolve("gui/hud/ammo_reserve_magazine.png"), Placeholders.Icon.MAG, 64);
 			safe(() -> svg("panorama/images/hud/ammo_fullauto.vsvg_c", "panorama/images/hud/ammo_fullauto.svg", tex.resolve("gui/hud/ammo_fullauto.png"), 64),
@@ -270,6 +283,34 @@ public final class RuntimePack {
 	 * Weapon cases: CS2's own case pictures (panorama econ/weapon_cases, converted in one run when missing), picked per
 	 * case by the item's custom model data string; the container key on Minecraft's trial key.
 	 */
+	/**
+	 * Each gun's magazine: its own icon drawn from the gun's model (MagIcons; the generic magazine icon until then), and
+	 * an empty one (custom model data flag 0) with the red X (textures/item/mag_empty.png) on top.
+	 */
+	private static void mags(Path tex) throws Exception {
+		Path models = DIR.resolve("assets/strafemc/models/item/mag"), items = DIR.resolve("assets/strafemc/items");
+		Files.createDirectories(models);
+		Files.createDirectories(items);
+		for (WeaponTable.Entry e : WeaponTable.guns()) {
+			if (e.cls().equals("weapon_taser")) continue;
+			String id = "mag_" + e.shortName();
+			boolean drawn;
+			try {
+				drawn = MagIcons.render(e, tex.resolve("item/mag/" + e.cls() + ".png"));
+			} catch (Exception ex) {
+				StrafeMc.LOG.warn("[strafemc] magazine icon {}: {}", e.cls(), ex.toString());
+				drawn = false;
+			}
+			String icon = drawn ? "strafemc:item/mag/" + e.cls() : "strafemc:item/mag_ak47";
+			Files.writeString(models.resolve(e.cls() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"" + icon + "\"}}");
+			Files.writeString(models.resolve(e.cls() + "_empty.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"" + icon
+					+ "\",\"layer1\":\"strafemc:item/mag_empty\"}}");
+			Files.writeString(items.resolve(id + ".json"), "{\"model\":{\"type\":\"minecraft:condition\",\"property\":\"minecraft:custom_model_data\",\"index\":0,"
+					+ "\"on_true\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "_empty\"},"
+					+ "\"on_false\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "\"}}}");
+		}
+	}
+
 	private static void cases(Path tex) throws Exception {
 		Path models = DIR.resolve("assets/strafemc/models/item"), items = DIR.resolve("assets/strafemc/items");
 		Files.createDirectories(models.resolve("case"));

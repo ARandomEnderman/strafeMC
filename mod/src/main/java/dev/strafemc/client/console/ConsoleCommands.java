@@ -222,6 +222,8 @@ public final class ConsoleCommands {
 				v -> StrafeConfig.viewmodelOffsetY = v);
 		viewmodelSetting("viewmodel_offset_z", "Weapon position up (default -1, no limit).", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
+		viewmodelSetting("strafemc_killcards_time", "Seconds each kill card above the hotbar stays (0 = until you die, default 0).", 0, 3600,
+				() -> StrafeConfig.killCardSeconds, v -> StrafeConfig.killCardSeconds = v);
 		viewmodelSetting("viewmodel_sway_scale", "How far the weapon lags behind when you turn (0-5, default 1, 0 = off).", 0, 5,
 				() -> StrafeConfig.viewmodelSwayScale, v -> StrafeConfig.viewmodelSwayScale = v);
 		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair

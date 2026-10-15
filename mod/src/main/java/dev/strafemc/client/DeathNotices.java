@@ -30,7 +30,8 @@ public final class DeathNotices {
 			java.util.stream.Stream.of("knife", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
 			java.util.stream.Stream.concat(dev.strafemc.weapon.WeaponTable.guns().stream(), dev.strafemc.weapon.WeaponTable.knives().stream())
 					.map(dev.strafemc.weapon.WeaponTable.Entry::shortName)).distinct().toArray(String[]::new);
-	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide"};
+	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide", "revenge",
+			"domination"};
 	private static final double LIFETIME = 5, LOCAL_MOD = 1.5, FADE = 1;
 	private static final int CT = 0xFF6F9CE6, T = 0xFFEABE54, MOB = 0xFFFFFFFF;
 
@@ -81,15 +82,25 @@ public final class DeathNotices {
 			float alpha = (float) (t <= life ? 1 : 1 - (t - life) / FADE);
 			// the row, built right to left: victim, modifiers, weapon, in-air, attacker, blind
 			List<Object> parts = new ArrayList<>(); // String (name, colour in the next Integer) or icon name
+			if ((m.flags() & KillFeed.REVENGE) != 0) parts.add("@revenge");
+			if ((m.flags() & KillFeed.DOMINATION) != 0) parts.add("@domination");
 			if ((m.flags() & KillFeed.ATTACKER_BLIND) != 0) parts.add("@blind_kill");
 			parts.add(m.attacker());
 			parts.add(m.attackerT() ? T : CT);
+			if (!m.assister().isEmpty()) { // CS2: "+", the flashbang for a flash assist, the assister
+				parts.add("+");
+				parts.add(0xFFFFFFFF);
+				if ((m.flags() & KillFeed.FLASH_ASSIST) != 0) parts.add("@flashbang_assist");
+				parts.add(m.assister());
+				parts.add(m.assisterT() ? T : CT);
+			}
 			if ((m.flags() & KillFeed.IN_AIR) != 0) parts.add("@inairkill");
 			parts.add("@" + m.icon());
 			if ((m.flags() & KillFeed.NOSCOPE) != 0) parts.add("@noscope");
 			if ((m.flags() & KillFeed.THROUGH_SMOKE) != 0) parts.add("@smoke_kill");
 			if ((m.flags() & KillFeed.PENETRATE) != 0) parts.add("@penetrate");
 			if ((m.flags() & KillFeed.HEADSHOT) != 0) parts.add("@icon_headshot");
+			if ((m.flags() & KillFeed.SUICIDE) != 0) parts.add("@icon_suicide");
 			parts.add(m.victim());
 			parts.add(!m.victimPlayer() ? MOB : m.victimT() ? T : CT);
 			int width = padX * 2;

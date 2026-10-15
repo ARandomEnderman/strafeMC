@@ -346,15 +346,13 @@ public final class GunServer {
 			var inv = p.getInventory();
 			ItemStack mag = inv.getItem(slot);
 			int rounds = ((MagazineItem) mag.getItem()).rounds(mag) - 1;
-			if (mag.getCount() > 1) { // one off a stack of full ones: the rest stay full
+			if (((MagazineItem) mag.getItem()).shells()) mag.shrink(1); // a shell: gone once it's in
+			else if (mag.getCount() > 1) { // one off a stack of full ones: the rest stay full
 				mag.shrink(1);
-				if (rounds > 0) {
-					ItemStack used = new ItemStack(mag.getItem());
-					used.set(WeaponItems.ROUNDS, rounds);
-					if (!inv.add(used)) p.drop(used, false);
-				}
-			} else if (rounds > 0) mag.set(WeaponItems.ROUNDS, rounds);
-			else mag.shrink(1);
+				// the one shells came out of stays, empty or not (crafting refills it)
+				ItemStack used = MagazineItem.withRounds(new ItemStack(mag.getItem()), rounds);
+				if (!inv.add(used)) p.drop(used, false);
+			} else MagazineItem.withRounds(mag, rounds);
 			inv.setChanged();
 		}
 		gun.set(WeaponItems.CLIP, clip + 1);
@@ -740,6 +738,7 @@ public final class GunServer {
 				? new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
 						.getOrThrow(net.minecraft.world.damagesource.DamageTypes.ARROW), p, p)
 				: p.damageSources().playerAttack(p);
+		KillFeed.damaged(p, target, Math.min(amount, target.getHealth()) / StrafeConfig.hpScale);
 		target.hurtServer(p.level(), src, amount);
 		if (dev.strafemc.server.StrafeSettings.mcKnockback()) return;
 		target.setDeltaMovement(motion);
@@ -853,9 +852,15 @@ public final class GunServer {
 		if (slot < 0) return;
 		ItemStack mag = p.getInventory().getItem(slot);
 		int rounds = ((MagazineItem) mag.getItem()).rounds(mag);
+		int old = g.clip(gun);
 		mag.shrink(1);
+		// mag-by-mag: the magazine that was in the gun comes back with whatever rounds it still had (empty: red X, refill by crafting)
+		var oldItem = WeaponItems.MAGS.get(g.weaponClass);
+		if (oldItem != null) {
+			ItemStack back = MagazineItem.withRounds(new ItemStack(oldItem), old);
+			if (!p.getInventory().add(back)) p.drop(back, false);
+		}
 		p.getInventory().setChanged();
-		// mag-by-mag: the magazine that was in the gun is dropped with whatever rounds it still had
 		gun.set(WeaponItems.CLIP, rounds);
 	}
 
