@@ -254,6 +254,11 @@ public final class Viewmodel {
 		String kit = knife ? dev.strafemc.client.WrapChoice.knifeKit(l.cls) : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		if (kit == null) return l.gun;
 		int pattern = knife ? dev.strafemc.client.WrapChoice.knifePattern() : dev.strafemc.client.WrapChoice.gunPattern(l.cls);
+		return gun(l, kit, pattern);
+	}
+
+	/** The weapon in a given finish (baked once, the plain weapon until then). */
+	private VmModel gun(Loaded l, String kit, int pattern) {
 		String key = l.cls + "#" + kit + "#" + pattern;
 		VmModel m = finishes.get(key);
 		if (m != null) return m;
@@ -536,6 +541,28 @@ public final class Viewmodel {
 	 * pose, turned side-on, fitted into width x height and turned by yaw. False until it's loaded (it starts loading).
 	 */
 	public boolean previewWeapon(String cls, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers, float width, float height, float yaw) {
+		return previewWeapon(cls, null, 0, ps, buffers, width, height, yaw, Float.NaN);
+	}
+
+	/** Whether a weapon (in this finish) is loaded and baked, so its preview shows it as it is. */
+	public boolean previewReady(String cls, String kit, int pattern) {
+		Loaded l = cache.get(cls);
+		if (l == null) {
+			if (WEAPONS.containsKey(cls) && loading.add(cls)) loadAsync(cls);
+			return false;
+		}
+		if (kit == null) return true;
+		boolean ready = finishes.containsKey(l.cls + "#" + kit + "#" + pattern);
+		if (!ready) gun(l, kit, pattern); // starts the bake
+		return ready;
+	}
+
+	/**
+	 * A weapon in a given finish (kit null: its loadout wrap's) for a preview: side-on, turned by yaw and, when pitch is
+	 * a number, tilted by it and fitted for any angle (a case's reveal you turn with the mouse).
+	 */
+	public boolean previewWeapon(String cls, String kit, int pattern, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers, float width,
+								 float height, float yaw, float pitch) {
 		if (broken || cls == null) return false;
 		Loaded l = cache.get(cls);
 		if (l == null) {
@@ -551,12 +578,17 @@ public final class Viewmodel {
 		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
 		// side-on, muzzle to the right
 		Matrix4f side = new Matrix4f().rotateY((float) (Math.PI / 2)).mul(toView());
-		return drawFitted(gun(l), skin, side, rigid, ps, buffers, width, height, yaw);
+		return drawFitted(kit == null ? gun(l) : gun(l, kit, pattern), skin, side, rigid, ps, buffers, width, height, yaw, pitch);
 	}
 
 	/** Draws a posed model fitted into width x height (GUI pixels), centred, turned by yaw degrees. */
 	private boolean drawFitted(VmModel model, Matrix4f[][] skin, Matrix4f toView, Matrix4f rigid, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers,
 							   float width, float height, float yaw) {
+		return drawFitted(model, skin, toView, rigid, ps, buffers, width, height, yaw, Float.NaN);
+	}
+
+	private boolean drawFitted(VmModel model, Matrix4f[][] skin, Matrix4f toView, Matrix4f rigid, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers,
+							   float width, float height, float yaw, float pitch) {
 		java.util.List<float[][]> skinned = new java.util.ArrayList<>();
 		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
 		for (VmModel.Part p : model.parts) {
@@ -576,6 +608,12 @@ public final class Viewmodel {
 		float k = 0.85f * Math.min(width / Math.max(1e-3f, Math.max(maxX - minX, wide)), height / Math.max(1e-3f, maxY - minY));
 		ps.pushPose();
 		ps.scale(k, -k, k); // camera space (y up) into the picture (y down)
+		if (!Float.isNaN(pitch)) { // turned freely: fit its diagonal, so no angle crops it
+			float dx = maxX - minX, dy = maxY - minY, dz = maxZ - minZ;
+			float fit = 0.9f * Math.min(width, height) / Math.max(1e-3f, (float) Math.sqrt(dx * dx + dy * dy + dz * dz)) / k;
+			ps.scale(fit, fit, fit);
+			ps.mulPose(com.mojang.math.Axis.XP.rotationDegrees(pitch));
+		}
 		ps.mulPose(com.mojang.math.Axis.YP.rotationDegrees(yaw));
 		ps.translate(-(minX + maxX) / 2, -(minY + maxY) / 2, -(minZ + maxZ) / 2);
 		PoseStack.Pose last = ps.last();
