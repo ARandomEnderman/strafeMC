@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * CS2's killfeed (huddeathnotice): top right, newest at the bottom. From CS2's panorama style sheet: entries last
  * 5 s (x1.5 when you're in them) and fade out over 1 s; CT names #6f9ce6, T names #eabe54; your kills on near-black
  * with a 2 px #e10000 border, your death on #630606d2; 16 px names, 24 px icons, rows 3 px apart, 72 px from the
- * top; icons in CS2's order (huddeathnotice.xml: revenge, domination, blind, attacker, assist, in-air, weapon, noscope, through smoke, wallbang, headshot, suicide, victim). Sizes are
+ * top; icons in CS2's order (huddeathnotice.xml: blind, attacker, assist, in-air, weapon, noscope, through smoke, wallbang, headshot, suicide, victim). Sizes are
  * CS2's 1080p pixels, scaled with the window height. FLAGGED: the plain row background (CS2 uses a blur) and
  * Minecraft's font for CS2's Stratum.
  */
@@ -30,8 +30,7 @@ public final class DeathNotices {
 			java.util.stream.Stream.of("knife", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
 			java.util.stream.Stream.concat(dev.strafemc.weapon.WeaponTable.guns().stream(), dev.strafemc.weapon.WeaponTable.knives().stream())
 					.map(dev.strafemc.weapon.WeaponTable.Entry::shortName)).distinct().toArray(String[]::new);
-	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide", "revenge",
-			"domination"};
+	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide"};
 	private static final double LIFETIME = 5, LOCAL_MOD = 1.5, FADE = 1;
 	private static final int CT = 0xFF6F9CE6, T = 0xFFEABE54, MOB = 0xFFFFFFFF;
 
@@ -84,8 +83,6 @@ public final class DeathNotices {
 			float alpha = (float) (t <= life ? 1 : 1 - (t - life) / FADE);
 			// the row, built right to left: victim, modifiers, weapon, in-air, attacker, blind
 			List<Object> parts = new ArrayList<>(); // String (name, colour in the next Integer) or icon name
-			if ((m.flags() & KillFeed.REVENGE) != 0) parts.add("@revenge");
-			if ((m.flags() & KillFeed.DOMINATION) != 0) parts.add("@domination");
 			if ((m.flags() & KillFeed.ATTACKER_BLIND) != 0) parts.add("@blind_kill");
 			parts.add(m.attacker());
 			parts.add(m.attackerT() ? T : CT);

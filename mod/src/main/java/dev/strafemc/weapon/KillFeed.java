@@ -16,19 +16,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class KillFeed {
 	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32, FLASH_ASSIST = 64,
-			REVENGE = 128, DOMINATION = 256, SUICIDE = 512, VILLAGER = 1024;
+			SUICIDE = 512, VILLAGER = 1024;
 	/** CS:GO's assist: more than this much damage (FLAGGED: CS2 doesn't publish its own). */
 	static final double ASSIST_DAMAGE = 40;
-	/** CS:GO's domination: this many kills in a row on the same player (FLAGGED). */
-	static final int DOMINATION_KILLS = 4;
 
 	/** CS damage each attacker has done to each target (by entity id), with when it was last hit. */
 	private static final Map<Integer, Map<UUID, Double>> DAMAGE = new ConcurrentHashMap<>();
 	private static final Map<Integer, Long> LAST_HIT = new ConcurrentHashMap<>();
 	/** Who flashed each player last. */
 	private static final Map<UUID, UUID> FLASHED_BY = new ConcurrentHashMap<>();
-	/** Kills in a row: "killer>victim" -> count (reset when the victim kills the killer). */
-	private static final Map<String, Integer> STREAK = new ConcurrentHashMap<>();
 
 	/** When each player stops counting as blind (CS:GO's Blind: now + hold + fade / 2, FLAGGED). */
 	private static final Map<UUID, Long> BLIND_UNTIL = new ConcurrentHashMap<>();
@@ -39,11 +35,6 @@ public final class KillFeed {
 		long until = System.currentTimeMillis() + (long) ((hold + fade / 2) * 1000);
 		BLIND_UNTIL.merge(p.getUUID(), until, Math::max);
 		if (by != null) FLASHED_BY.put(p.getUUID(), by.getUUID());
-	}
-
-	/** Who someone is across lives: a player's account, a bot's name (each respawn is a new mannequin). */
-	private static String who(LivingEntity e) {
-		return Bots.isBot(e) && e.getCustomName() != null ? "bot:" + e.getCustomName().getString() : e.getUUID().toString();
 	}
 
 	/** CS damage done to a target, counted for assists. */
@@ -90,13 +81,6 @@ public final class KillFeed {
 				&& !fb.equals(vp.getUUID()) && level.getServer().getPlayerList().getPlayer(fb) instanceof ServerPlayer flasher) {
 			assister = flasher;
 			flags |= FLASH_ASSIST;
-		}
-		// dominations and revenge between players
-		if (victimPlayer && attacker != victim) {
-			String mine = who(attacker) + ">" + who(victim), theirs = who(victim) + ">" + who(attacker);
-			if (STREAK.getOrDefault(theirs, 0) >= DOMINATION_KILLS) flags |= REVENGE;
-			STREAK.remove(theirs);
-			if (STREAK.merge(mine, 1, Integer::sum) >= DOMINATION_KILLS && (flags & REVENGE) == 0) flags |= DOMINATION;
 		}
 		var msg = new StrafePayloads.KillNotice(attacker instanceof ServerPlayer ap ? ap.getScoreboardName() : attacker.getName().getString(), CsTeam.isT(attacker),
 				attacker.getId(), victim.getName().getString(), CsTeam.isT(victim), victim.getId(), victimPlayer, icon, flags,
