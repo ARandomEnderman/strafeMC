@@ -58,6 +58,15 @@ public class SkinWrapItem extends Item {
 		return d == null ? null : d.getString(0);
 	}
 
+	/** A patterned wrap without a pattern yet (from a chest): it gets a random one (0-1000) once it's someone's. */
+	@Override
+	public void inventoryTick(ItemStack stack, net.minecraft.server.level.ServerLevel level, net.minecraft.world.entity.Entity entity,
+							  net.minecraft.world.entity.EquipmentSlot slot) {
+		if (stack.has(WeaponItems.PATTERN)) return;
+		SkinWraps.Wrap w = SkinWraps.get(skin(stack));
+		if (w != null && w.pattern()) stack.set(WeaponItems.PATTERN, level.getRandom().nextInt(1001));
+	}
+
 	@Override
 	public Component getName(ItemStack stack) {
 		SkinWraps.Wrap w = SkinWraps.get(skin(stack));

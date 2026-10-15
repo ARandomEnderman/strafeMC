@@ -60,6 +60,7 @@ public final class RuntimePack {
 			}
 			gloveSkins(tex);
 			wraps(tex);
+			safe(() -> cases(tex), tex.resolve("item/case_key.png"), Placeholders.Icon.MAG, 16);
 			// equipment icons for the buy menu and the killfeed: every missing one converted in a single run
 			java.util.List<String> svgs = new java.util.ArrayList<>();
 			for (String w : java.util.stream.Stream.concat(java.util.Arrays.stream(dev.strafemc.client.BuyMenuScreen.ICONS),
@@ -263,6 +264,38 @@ public final class RuntimePack {
 		}
 		Files.createDirectories(marker.getParent());
 		Files.writeString(marker, kind);
+	}
+
+	/**
+	 * Weapon cases: CS2's own case pictures (panorama econ/weapon_cases, converted in one run when missing), picked per
+	 * case by the item's custom model data string; the container key on Minecraft's trial key.
+	 */
+	private static void cases(Path tex) throws Exception {
+		Path models = DIR.resolve("assets/strafemc/models/item"), items = DIR.resolve("assets/strafemc/items");
+		Files.createDirectories(models.resolve("case"));
+		Files.createDirectories(items);
+		java.util.List<String> missing = new java.util.ArrayList<>();
+		for (var c : dev.strafemc.weapon.Cases.all()) {
+			String vpk = "panorama/images/" + c.image() + "_png.vtex_c";
+			if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/" + c.image() + "_png.png"))) missing.add(vpk);
+		}
+		if (!missing.isEmpty()) AssetCache.decompileAll(missing);
+		StringBuilder cases = new StringBuilder();
+		for (var c : dev.strafemc.weapon.Cases.all()) {
+			String img = "panorama/images/" + c.image() + "_png";
+			Path out = tex.resolve("item/case/" + c.id() + ".png");
+			try {
+				icon(img + ".vtex_c", img + ".png", out, 128);
+			} catch (Exception e) {
+				continue;
+			}
+			Files.writeString(models.resolve("case/" + c.id() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/case/" + c.id() + "\"}}");
+			if (cases.length() > 0) cases.append(',');
+			cases.append("{\"when\":\"").append(c.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/case/").append(c.id()).append("\"}}");
+		}
+		Files.writeString(items.resolve("weapon_case.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+				+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/chest\"}}}");
+		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}");
 	}
 
 	/** A CS2 texture as it is (no resizing). */

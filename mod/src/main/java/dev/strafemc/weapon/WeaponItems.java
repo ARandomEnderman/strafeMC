@@ -33,7 +33,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -67,6 +67,8 @@ public final class WeaponItems {
 		for (GloveItem.Kind k : GloveItem.Kind.values()) GLOVES.put(k, item(k.id, p -> new GloveItem(p.stacksTo(1), k)));
 		GUN_WRAP = item("skin_wrap", p -> new SkinWrapItem(p.stacksTo(1), false));
 		KNIFE_WRAP = item("knife_wrap", p -> new SkinWrapItem(p.stacksTo(1), true));
+		WEAPON_CASE = item("weapon_case", p -> new CaseItem(p.stacksTo(64)));
+		CASE_KEY = item("case_key", p -> new Item(p.stacksTo(64)));
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
@@ -122,7 +124,11 @@ public final class WeaponItems {
 				e -> { for (GloveSkins.Skin s : GloveSkins.ALL) e.accept(GloveItem.stack(GLOVES.get(s.kind()), s.kit())); });
 		tab("knife_wraps", () -> SkinWrapItem.stack(KNIFE_WRAP, "knife:fade"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (w.knife()) e.accept(SkinWrapItem.stack(KNIFE_WRAP, w.id())); });
-		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov"),
+		tab("cases", () -> CaseItem.stack(WEAPON_CASE, "crate_valve_1"), e -> {
+			e.accept(CASE_KEY);
+			for (Cases.Case c : Cases.all()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
+		});
+		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });
 	}
 

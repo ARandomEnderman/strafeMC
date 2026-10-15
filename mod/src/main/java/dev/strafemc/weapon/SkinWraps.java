@@ -20,7 +20,7 @@ public final class SkinWraps {
 	 * pattern: the finish has a pattern (not a solid colour or plain anodizing), so a pattern seed changes how it looks.
 	 * rarities: CS2's rarity of the skin on each weapon (its collection's loot list; knives ancient).
 	 */
-	public record Wrap(String id, String name, boolean knife, Map<String, String> kits, boolean pattern, Map<String, Rarity> rarities) {
+	public record Wrap(String id, String name, boolean knife, Map<String, String> kits, boolean pattern, Map<String, Rarity> rarities, boolean hidden) {
 		/** The wrap's rarity: the highest it has on any weapon, or null if CS2 doesn't list one. */
 		public Rarity rarity() {
 			Rarity best = null;
@@ -51,7 +51,6 @@ public final class SkinWraps {
 		}
 	}
 
-	private static final Map<String, Wrap> ALL = load();
 
 	/** CS2's weapon names (for tooltips). */
 	public static final Map<String, String> WEAPON_NAMES = Map.ofEntries(Map.entry("weapon_ak47", "AK-47"), Map.entry("weapon_aug", "AUG"),
@@ -66,6 +65,9 @@ public final class SkinWraps {
 			Map.entry("weapon_sg556", "SG 553"), Map.entry("weapon_ssg08", "SSG 08"), Map.entry("weapon_tec9", "Tec-9"),
 			Map.entry("weapon_ump45", "UMP-45"), Map.entry("weapon_usp_silencer", "USP-S"), Map.entry("weapon_xm1014", "XM1014"),
 			Map.entry("weapon_taser", "Zeus x27"));
+
+	/** After WEAPON_NAMES: the split gun wraps are named after their gun. */
+	private static final Map<String, Wrap> ALL = load();
 
 	private SkinWraps() {}
 
@@ -91,8 +93,18 @@ public final class SkinWraps {
 						Rarity rarity = eq > 0 ? Rarity.of(pair.substring(eq + 1)) : null;
 						if (rarity != null) rarities.put(pair.substring(0, eq), rarity);
 					}
-				out.put(f[0], new Wrap(f[0], f[1], f[0].startsWith("knife:"), Collections.unmodifiableMap(kits), f.length > 3 && f[3].equals("pattern"),
-						Collections.unmodifiableMap(rarities)));
+				boolean knife = f[0].startsWith("knife:"), pattern = f.length > 3 && f[3].equals("pattern");
+				// a gun wrap is one gun's skin ("gun:asiimov.ak47", "AK-47 | Asiimov"), as CS2 items are: the line's
+				// several-gun wrap stays only so wraps made before the split still work (hidden from tabs and cases)
+				out.put(f[0], new Wrap(f[0], f[1], knife, Collections.unmodifiableMap(kits), pattern, Collections.unmodifiableMap(rarities), !knife));
+				if (!knife)
+					for (var e : kits.entrySet()) {
+						String id = f[0] + "." + e.getKey().replace("weapon_", "");
+						Map<String, Rarity> one = new LinkedHashMap<>();
+						if (rarities.containsKey(e.getKey())) one.put(e.getKey(), rarities.get(e.getKey()));
+						out.put(id, new Wrap(id, WEAPON_NAMES.getOrDefault(e.getKey(), e.getKey()) + " | " + f[1], false, Map.of(e.getKey(), e.getValue()), pattern,
+								Collections.unmodifiableMap(one), false));
+					}
 			}
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.error("[strafemc] skin wraps unreadable", e);
@@ -104,8 +116,17 @@ public final class SkinWraps {
 		return id == null ? null : ALL.get(id);
 	}
 
+	/** Every wrap made today (gun wraps one per gun); the several-gun ones from before the split only by id. */
 	public static List<Wrap> all() {
-		return new ArrayList<>(ALL.values());
+		List<Wrap> out = new ArrayList<>();
+		for (Wrap w : ALL.values()) if (!w.hidden) out.add(w);
+		return out;
+	}
+
+	/** The gun wrap of one gun's skin: a paint kit on a weapon (cases give these), or null. */
+	public static Wrap ofKit(String weapon, String kit) {
+		for (Wrap w : ALL.values()) if (!w.hidden && !w.knife && kit.equals(w.kits.get(weapon))) return w;
+		return null;
 	}
 
 	/** A gun wrap that CS2 has on this gun. */

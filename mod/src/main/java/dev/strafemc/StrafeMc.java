@@ -29,6 +29,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.WorldCvars::load);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.server.StrafeSettings::load);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.world.SpawnPoints::load);
+		dev.strafemc.weapon.StructureLoot.register();
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.server.WorldCvars.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.WorldCvars::tick);
@@ -93,6 +94,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, dev.strafemc.net.StrafePayloads.KillNotice.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.CaseResult.TYPE, dev.strafemc.net.StrafePayloads.CaseResult.CODEC);
 		// a player's CS2 footsteps / jump / landing, passed on to the players near them (not back to them)
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, (msg, ctx) -> {
 			var p = ctx.player();

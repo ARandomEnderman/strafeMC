@@ -132,6 +132,8 @@ public class StrafeMcClient implements ClientModInitializer {
 					else dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(), 1.0, msg.suppressed(), null);
 				});
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, (msg, ctx) -> DeathNotices.receive(msg));
+		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.CaseResult.TYPE, (msg, ctx) -> CaseScreen.result(msg));
+		dev.strafemc.weapon.CaseItem.clientOpen = CaseScreen::open;
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> DeathNotices.clear());
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "deathnotices"),
 				(g, delta) -> DeathNotices.render(g));

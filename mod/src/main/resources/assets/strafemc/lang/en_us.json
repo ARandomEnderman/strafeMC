@@ -141,5 +141,8 @@
 	"itemGroup.strafemc.guns": "strafeMC Guns",
 	"itemGroup.strafemc.knives": "strafeMC Knives",
 	"itemGroup.strafemc.utility": "strafeMC Utility & Blocks",
-	"block.strafemc.spawn_point": "Spawn Point"
+	"block.strafemc.spawn_point": "Spawn Point",
+	"item.strafemc.weapon_case": "Weapon Case",
+	"item.strafemc.case_key": "Container Key",
+	"itemGroup.strafemc.cases": "Cases"
 }

@@ -1,0 +1,535 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:fade"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_phase_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_phase_3"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_phase_4"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_ruby"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_sapphire"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:doppler_black_pearl"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:gamma_doppler"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:gamma_doppler_phase_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:gamma_doppler_phase_3"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:gamma_doppler_phase_4"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:gamma_doppler_emerald"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:marble_fade"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:freehand"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:slaughter"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:tiger_tooth"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:blue_steel"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:damascus_steel"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:stained"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:case_hardened"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:rust_coat"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:lore"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:black_laminate"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:autotronic"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:forest_ddpat"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:boreal_forest"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:bright_water"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:crimson_web"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:night"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:ultraviolet"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:scorched"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:safari_mesh"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:urban_masked"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:knife_wrap",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "knife:night_stripe"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

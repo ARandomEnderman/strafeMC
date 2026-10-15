@@ -1,0 +1,90 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_bayonet"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_butterfly"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_canis"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_cord"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_css"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_falchion"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_flip"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_gut"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_gypsy_jackknife"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_karambit"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_kukri"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_m9_bayonet"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_outdoor"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_push"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_skeleton"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_stiletto"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_survival_bowie"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_tactical"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_ursus"
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_knife_widowmaker"
+    }
+   ]
+  }
+ ]
+}

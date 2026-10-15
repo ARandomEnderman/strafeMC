@@ -90,6 +90,30 @@ public final class ConsoleActions {
 			case "redeploy" -> dev.strafemc.weapon.GunServer.redeploy(p);
 			case "burst" -> dev.strafemc.weapon.GunServer.toggleBurst(p);
 			case "zoom" -> dev.strafemc.weapon.GunServer.zoom(p, arg);
+			case "case_open" -> { // the held case: roll CS2's odds, use it up, hand out the drop, tell the client for its reel
+				var held = p.getMainHandItem();
+				if (!(held.getItem() instanceof dev.strafemc.weapon.CaseItem) || !arg.equals(dev.strafemc.weapon.CaseItem.caseId(held))) break;
+				var c = dev.strafemc.weapon.Cases.get(arg);
+				// a container key opens it (used up); creative needs none
+				int keySlot = -1;
+				var inv = p.getInventory();
+				for (int i = 0; i < inv.getContainerSize() && keySlot < 0; i++)
+					if (inv.getItem(i).is(dev.strafemc.weapon.WeaponItems.CASE_KEY)) keySlot = i;
+				if (keySlot < 0 && !p.getAbilities().instabuild) {
+					p.sendOverlayMessage(Component.literal("You need a Container Key to unlock this case."));
+					break;
+				}
+				var drop = c == null ? null : dev.strafemc.weapon.Cases.roll(c, new java.util.Random());
+				if (drop == null) break;
+				if (!p.getAbilities().instabuild) {
+					held.shrink(1);
+					inv.getItem(keySlot).shrink(1);
+				}
+				if (!p.getInventory().add(drop.stack().copy())) p.drop(drop.stack().copy(), false);
+				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.CaseResult(arg, drop.entry().kit(),
+							drop.entry().item(), drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString()));
+			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change spawn blocks."));

@@ -1,0 +1,640 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_valve_1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_esports_2013"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_valve_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_operation_ii"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_esports_2013_winter"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_valve_3"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_3"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_4"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_esports_2014_summer"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_operation_vanguard"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_6"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_7"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_8"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_9"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_10"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_11"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_12"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_13"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_gamma_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_15"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_16"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_17"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_18"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_19"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_20"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_21"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_22"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_23"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_24"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_25"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_26"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_27"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_28"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_29"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_30"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_31"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_32"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_33"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_34"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_community_35"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
