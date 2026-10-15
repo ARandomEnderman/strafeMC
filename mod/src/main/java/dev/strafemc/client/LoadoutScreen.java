@@ -20,6 +20,8 @@ import net.minecraft.world.item.ItemStack;
 public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_EMPTY = 0x80202020, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
 	private int previewSlot = 0; // the gloves until the mouse picks another
+	/** A wrap in the inventory under the mouse (previewed unequipped), or empty. */
+	private ItemStack hoveredWrap = ItemStack.EMPTY;
 
 	public LoadoutScreen(Loadout.Menu menu, Inventory inv, Component title) {
 		super(menu, inv, title, Loadout.Menu.WIDTH, Loadout.Menu.HEIGHT);
@@ -72,7 +74,6 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			g.fill(leftPos + s.x - 1, topPos + s.y - 1, leftPos + s.x + 17, topPos + s.y + 17, SLOT);
 		}
 		preview(g);
-		g.text(font, "Drag gloves and skin wraps into a slot, or shift-click them. Every gun of that type wears the wrap.", 8, height - 12, 0xFF808080, false);
 	}
 
 	/** Right of the panel: the slot under the mouse (or last looked at), big. */
@@ -80,6 +81,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		int px = leftPos + imageWidth + 10, pw = width - px - 10;
 		if (pw < 150) return;
 		var defs = Loadout.defs();
+		if (!hoveredWrap.isEmpty() && hoverWrap(g, px, pw)) return;
 		if (previewSlot >= defs.size()) return;
 		Loadout.Def d = defs.get(previewSlot);
 		ItemStack s = menu.getSlot(previewSlot).getItem();
@@ -107,6 +109,30 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		} else if (s.getItem() instanceof GloveItem) g.text(font, "Factory New", px + 8, y + 4, 0xFFB0B0B0, false);
 	}
 
+	/**
+	 * A wrap under the mouse in the inventory: previewed on its gun (or the knife) without equipping it. False when it
+	 * has nothing to show on.
+	 */
+	private boolean hoverWrap(GuiGraphicsExtractor g, int px, int pw) {
+		SkinWraps.Wrap wrap = SkinWraps.get(SkinWrapItem.skin(hoveredWrap));
+		if (wrap == null) return false;
+		String weapon = wrap.knife() ? previewKnife() : wrap.kits().isEmpty() ? null : wrap.kits().keySet().iterator().next();
+		String kit = weapon == null ? null : SkinWraps.kitFor(wrap.id(), weapon);
+		if (kit == null) return false;
+		int top = topPos;
+		g.fill(px, top, px + pw, top + imageHeight, PANEL);
+		g.text(font, (wrap.knife() ? "KNIFE" : dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(weapon, weapon)).toUpperCase(), px + 8, top + 8, ACCENT, false);
+		float yaw = (float) Math.sin(System.nanoTime() / 1e9 * 0.6) * 25;
+		LoadoutPreview.drawTurned(g, px + 4, top + 20, px + pw - 4, top + 104, weapon, kit, SkinWrapItem.pattern(hoveredWrap), yaw, Float.NaN);
+		int y = top + 110;
+		for (var line : font.split(hoveredWrap.getHoverName(), pw - 16)) {
+			g.text(font, line, px + 8, y, 0xFFFFFFFF, false);
+			y += 10;
+		}
+		g.text(font, "Not equipped", px + 8, y + 4, 0xFFB0B0B0, false);
+		return true;
+	}
+
 	/** The knife the preview shows: the first in the hotbar (left to right), else in the inventory, else the Karambit. */
 	private String previewKnife() {
 		var p = minecraft.player;
@@ -132,8 +158,19 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			int x = i < 3 ? leftPos + Loadout.Menu.TILES_X + i * (Loadout.Menu.TILE_W + 8) : leftPos + Loadout.Menu.slotX(i) - 1;
 			int y = i < 3 ? topPos + Loadout.Menu.TILES_Y : topPos + Loadout.Menu.slotY(i) - 1;
 			int w = i < 3 ? Loadout.Menu.TILE_W : 18, h = i < 3 ? Loadout.Menu.TILE_H : 18;
-			if (mx >= x && mx < x + w && my >= y && my < y + h) previewSlot = i;
+			if (mx >= x && mx < x + w && my >= y && my < y + h) {
+				previewSlot = i;
+				hoveredWrap = ItemStack.EMPTY;
+			}
 		}
+		// a wrap in the inventory under the mouse previews instead, while it's hovered
+		ItemStack inv = ItemStack.EMPTY;
+		for (int i = defs.size(); i < menu.slots.size(); i++) {
+			Slot sl = menu.slots.get(i);
+			if (mx >= leftPos + sl.x - 1 && mx < leftPos + sl.x + 17 && my >= topPos + sl.y - 1 && my < topPos + sl.y + 17 && sl.getItem().getItem() instanceof SkinWrapItem)
+				inv = sl.getItem();
+		}
+		hoveredWrap = inv;
 		super.extractRenderState(g, mx, my, delta);
 		extractTooltip(g, mx, my);
 	}

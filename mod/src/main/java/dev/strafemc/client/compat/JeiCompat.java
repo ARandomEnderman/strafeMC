@@ -15,7 +15,13 @@ public final class JeiCompat implements IModPlugin {
 
 	@Override
 	public void registerGuiHandlers(IGuiHandlerRegistration r) {
-		r.addGuiScreenHandler(dev.strafemc.client.LoadoutScreen.class, screen -> null);
+		// the loadout is an inventory screen: JEI only keeps out of areas marked as taken, so the whole screen is
+		r.addGuiContainerHandler(dev.strafemc.client.LoadoutScreen.class, new mezz.jei.api.gui.handlers.IGuiContainerHandler<dev.strafemc.client.LoadoutScreen>() {
+			@Override
+			public java.util.List<net.minecraft.client.renderer.Rect2i> getGuiExtraAreas(dev.strafemc.client.LoadoutScreen screen) {
+				return java.util.List.of(new net.minecraft.client.renderer.Rect2i(0, 0, screen.width, screen.height));
+			}
+		});
 		r.addGuiScreenHandler(dev.strafemc.client.CaseScreen.class, screen -> null);
 	}
 }

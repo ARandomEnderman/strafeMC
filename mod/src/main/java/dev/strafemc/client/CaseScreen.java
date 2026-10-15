@@ -41,16 +41,26 @@ public final class CaseScreen extends Screen {
 	/** Which drop the reveal shows (several opened: arrows switch, as in CS2). */
 	private int shown;
 	/** The reveal's 3D model, turned by dragging with the mouse. */
-	private float yaw = -20, pitch = 10;
+	private float yaw = -20, pitch = 10, zoom = 1;
 
 	@Override
 	public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent e, double dx, double dy) {
 		if (revealed) {
-			yaw += (float) dx * 1.2f;
-			pitch = Math.max(-80, Math.min(80, pitch + (float) dy * 1.2f));
+			yaw -= (float) dx * 1.2f;
+			pitch = Math.max(-80, Math.min(80, pitch - (float) dy * 1.2f));
 			return true;
 		}
 		return super.mouseDragged(e, dx, dy);
+	}
+
+	/** Scrolling zooms the reveal's model in and out. */
+	@Override
+	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+		if (revealed) {
+			zoom = (float) Math.max(0.6, Math.min(4, zoom * Math.pow(1.15, sy)));
+			return true;
+		}
+		return super.mouseScrolled(mx, my, sx, sy);
 	}
 
 	private CaseScreen(Cases.Case c) {
@@ -119,6 +129,7 @@ public final class CaseScreen extends Screen {
 		shown = Math.floorMod(shown + dir, spins.size());
 		yaw = -20;
 		pitch = 10;
+		zoom = 1;
 	}
 
 	private void arrows() {
@@ -293,7 +304,7 @@ public final class CaseScreen extends Screen {
 		Cases.Entry e = s.result().entry();
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
 		if (!e.gloves() && vm.previewReady(e.item(), e.kit(), Math.max(0, s.pattern())))
-			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.pattern(), yaw, pitch);
+			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.pattern(), yaw, pitch, zoom);
 		else {
 			var pic = CaseImages.get(e);
 			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, py, 0, 0, cw, ch, cw, ch);
