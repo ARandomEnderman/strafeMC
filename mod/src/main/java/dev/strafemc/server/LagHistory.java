@@ -23,12 +23,10 @@ import java.util.Set;
  */
 public final class LagHistory {
 	/** A box and eye height (crouching changes it) at the end of a server tick. */
-	/** pose: a humanoid's stance for its body-part hitboxes (Hitboxes), null for other entities. */
-	public record Snap(int tick, AABB box, double eyeHeight, dev.strafemc.weapon.Hitboxes.Pose pose) {}
+	public record Snap(int tick, AABB box, double eyeHeight) {}
 
 	/** One box found along a rewound ray. */
-	/** claimed: the shooter's own claim (checked with slack). */
-	public record Hit(Entity entity, Vec3 at, AABB box, double eyeHeight, float tick, dev.strafemc.weapon.Hitboxes.Pose pose, boolean claimed) {}
+	public record Hit(Entity entity, Vec3 at, AABB box, double eyeHeight, float tick) {}
 
 	private static final int KEEP_TICKS = 40;
 	/** Entities this far from any player aren't recorded (no one can be shooting at them). */
@@ -47,8 +45,7 @@ public final class LagHistory {
 					if (!seen.add(e.getId())) continue;
 					AABB b = e.getBoundingBox();
 					ArrayDeque<Snap> q = HISTORY.computeIfAbsent(e.getId(), k -> new ArrayDeque<>());
-					LivingEntity le = (LivingEntity) e;
-					q.addLast(new Snap(t, b, e.getEyeY() - b.minY, dev.strafemc.weapon.Hitboxes.humanoid(le) ? dev.strafemc.weapon.Hitboxes.pose(le) : null));
+					q.addLast(new Snap(t, b, e.getEyeY() - b.minY));
 					while (q.size() > KEEP_TICKS) q.removeFirst();
 				}
 		for (Iterator<Map.Entry<Integer, ArrayDeque<Snap>>> it = HISTORY.entrySet().iterator(); it.hasNext(); ) {
@@ -70,8 +67,7 @@ public final class LagHistory {
 			if (s.tick() >= tick) {
 				if (prev == null || s.tick() == tick) return s.tick() - tick <= 1 ? s : null;
 				double a = (tick - prev.tick()) / (double) (s.tick() - prev.tick());
-				return new Snap(s.tick(), lerp(prev.box(), s.box(), a), prev.eyeHeight() + (s.eyeHeight() - prev.eyeHeight()) * a,
-						prev.pose() != null && s.pose() != null ? prev.pose().lerp(s.pose(), a) : s.pose());
+				return new Snap(s.tick(), lerp(prev.box(), s.box(), a), prev.eyeHeight() + (s.eyeHeight() - prev.eyeHeight()) * a);
 			}
 			prev = s;
 		}
@@ -88,16 +84,11 @@ public final class LagHistory {
 			if (s == null) continue;
 			Optional<Vec3> p = s.box().clip(eye, end);
 			if (p.isEmpty()) continue;
-			if (s.pose() != null) { // a humanoid: only its body parts count
-				var part = dev.strafemc.weapon.Hitboxes.trace(s.box(), s.pose(), eye, end, 0);
-				if (part == null) continue;
-				p = Optional.of(part.at());
-			}
 			double d = p.get().distanceToSqr(eye);
 			if (d >= bestD) continue;
 			Entity e = level.getEntity(id);
 			if (e == null || !e.isAlive() || e.isSpectator()) continue;
-			best = new Hit(e, p.get(), s.box(), s.eyeHeight(), tick, s.pose(), false);
+			best = new Hit(e, p.get(), s.box(), s.eyeHeight(), tick);
 			bestD = d;
 		}
 		return best;
@@ -117,12 +108,7 @@ public final class LagHistory {
 			if (s == null) continue;
 			Optional<Vec3> p = s.box().inflate(slack).clip(eye, end);
 			if (p.isEmpty()) continue;
-			if (s.pose() != null) { // a humanoid: its body parts, with the same slack
-				var part = dev.strafemc.weapon.Hitboxes.trace(s.box(), s.pose(), eye, end, slack);
-				if (part == null) continue;
-				p = Optional.of(part.at());
-			}
-			if (best == null || p.get().distanceToSqr(eye) < best.at().distanceToSqr(eye)) best = new Hit(e, p.get(), s.box(), s.eyeHeight(), t, s.pose(), true);
+			if (best == null || p.get().distanceToSqr(eye) < best.at().distanceToSqr(eye)) best = new Hit(e, p.get(), s.box(), s.eyeHeight(), t);
 		}
 		return best;
 	}
