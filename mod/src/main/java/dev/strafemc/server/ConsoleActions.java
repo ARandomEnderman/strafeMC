@@ -128,6 +128,39 @@ public final class ConsoleActions {
 						+ (StrafeSettings.WEAR_RARITIES.stream().anyMatch(k -> !StrafeSettings.wearFor(k)) ? ", off for "
 						+ String.join(", ", StrafeSettings.WEAR_RARITIES.stream().filter(k -> !StrafeSettings.wearFor(k)).toList()) : "")), false);
 			}
+			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change bots."));
+					break;
+				}
+				var server = p.level().getServer();
+				String msg;
+				switch (cmd) {
+					case "bot_add" -> { dev.strafemc.weapon.Bots.add(null); msg = "Bot added (" + StrafeSettings.botQuota() + ")"; }
+					case "bot_add_t" -> { dev.strafemc.weapon.Bots.add(true); msg = "T bot added (" + StrafeSettings.botQuota() + ")"; }
+					case "bot_add_ct" -> { dev.strafemc.weapon.Bots.add(false); msg = "CT bot added (" + StrafeSettings.botQuota() + ")"; }
+					case "bot_kick" -> { dev.strafemc.weapon.Bots.kickAll(); msg = "Bots kicked"; }
+					case "bot_quota" -> {
+						try {
+							StrafeSettings.setBotQuota(Integer.parseInt(arg.trim()));
+						} catch (NumberFormatException e) {
+							p.sendSystemMessage(Component.literal("bot_quota <number>"));
+							return;
+						}
+						msg = "bot_quota " + StrafeSettings.botQuota();
+					}
+					case "strafemc_bot_ffa" -> {
+						StrafeSettings.setBotFfa(!arg.trim().equals("0"));
+						msg = StrafeSettings.botFfa() ? "Bots fight everyone" : "Bots fight the other team";
+					}
+					default -> { // strafemc_bot_skins random | <names...>
+						String a = arg.trim();
+						StrafeSettings.setBotSkins(a.isEmpty() || a.equalsIgnoreCase("random") ? java.util.List.of() : java.util.List.of(a.split("[\\s,]+")));
+						msg = StrafeSettings.botSkins().isEmpty() ? "Bots wear random players' skins (new bots)" : "Bots wear " + String.join(", ", StrafeSettings.botSkins()) + "'s skins (new bots)";
+					}
+				}
+				server.getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
+			}
 			case "strafemc_knockback" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change knockback for the server."));

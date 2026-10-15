@@ -130,6 +130,18 @@ public final class ConsoleCommands {
 		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})
 			local("strafemc_wear_" + r, "Case drops of " + r + " grade get a float (1, default) or are Factory New (0), for the whole server (operators).",
 					a -> action("strafemc_wear", r + " " + (a.length > 0 ? (bool(a, true) ? "1" : "0") : "1"), false));
+		local("bot_add", "Add a bot (the smaller team). Operators.", a -> action("bot_add", "", false));
+		local("bot_add_t", "Add a T bot. Operators.", a -> action("bot_add_t", "", false));
+		local("bot_add_ct", "Add a CT bot. Operators.", a -> action("bot_add_ct", "", false));
+		local("bot_kick", "Kick every bot (bot_quota 0). Operators.", a -> action("bot_kick", "", false));
+		local("bot_quota", "How many bots the server keeps (default 0). Operators.", a -> {
+			if (a.length == 0) ConsoleLog.error("bot_quota <number>");
+			else action("bot_quota", a[0], false);
+		});
+		local("strafemc_bot_ffa", "Bots fight everyone (1) or only the other team (0, default). Operators.",
+				a -> action("strafemc_bot_ffa", a.length > 0 ? (bool(a, false) ? "1" : "0") : "1", false));
+		local("strafemc_bot_skins", "strafemc_bot_skins random | <player names...>: whose skins new bots wear (default random real accounts). Operators.",
+				a -> action("strafemc_bot_skins", a.length == 0 ? "random" : String.join(" ", a), false));
 		local("strafemc_knockback", "Gun/knife hits push targets back like Minecraft (1) or slow them like CS2 (0, default), for the whole server (operators).", a -> {
 			if (a.length == 0) {
 				ConsoleLog.error("strafemc_knockback 1 (Minecraft knockback) or 0 (CS2 tagging)");

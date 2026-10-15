@@ -69,7 +69,16 @@ public final class SpawnPoints {
 	 * block gone) are dropped on the way.
 	 */
 	public static synchronized boolean respawn(ServerPlayer p) {
-		if (server == null || POINTS.isEmpty()) return false;
+		Pick at = pick();
+		return at != null && p.teleportTo(at.level(), at.pos().x, at.pos().y, at.pos().z, Set.of(), p.getYRot(), p.getXRot(), true);
+	}
+
+	/** A spawn block's top. */
+	public record Pick(ServerLevel level, net.minecraft.world.phys.Vec3 pos) {}
+
+	/** On top of a random spawn block, or null if there's none (stale entries dropped on the way). */
+	public static synchronized Pick pick() {
+		if (server == null || POINTS.isEmpty()) return null;
 		List<String> all = new ArrayList<>(POINTS);
 		java.util.Collections.shuffle(all);
 		for (String k : all) {
@@ -85,8 +94,8 @@ public final class SpawnPoints {
 				save();
 				continue;
 			}
-			return p.teleportTo(level, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, Set.of(), p.getYRot(), p.getXRot(), true);
+			return new Pick(level, new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5));
 		}
-		return false;
+		return null;
 	}
 }

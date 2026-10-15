@@ -91,8 +91,11 @@ public final class KillCards {
 		float h = (float) (152 * px), w = h * ART_W / ART_H; // CS2: card-svg-height 152px
 		double dt = lastNs == 0 ? 0 : Math.min(0.1, (now - lastNs) / 1e9);
 		lastNs = now;
-		// above the hotbar, the health / food rows and the speed line (the card sits in the art's top third)
-		float cx = g.guiWidth() / 2f, cy = g.guiHeight() - 62 + h * 0.14f;
+		// right over the XP level number (above the hotbar when there's no XP bar); the card's bottom edge is 17 / 126 of
+		// the art above its middle, which the fan turns about
+		boolean xp = mc.gameMode != null && mc.gameMode.hasExperience();
+		float bottom = g.guiHeight() - (xp ? 36 : 24);
+		float cx = g.guiWidth() / 2f, cy = bottom + h * 17 / 126f;
 		int n = list.size(), shown = Math.min(n, 5);
 		var pose = g.pose();
 		for (int i = 0; i < shown; i++) {

@@ -63,6 +63,8 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.server.GameplaySync.onLeave(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.CaseOpening::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Bots::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> dev.strafemc.weapon.Bots.onLoad(e));
 		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.Action.TYPE, dev.strafemc.net.StrafePayloads.Action.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Action.TYPE,
 				(msg, ctx) -> { // rethrow is meant to be spammed (bound to the wheel): its own, higher limit

@@ -65,12 +65,13 @@ public final class KillFeed {
 	}
 
 	/** Announces a kill (call only for a victim that was alive before the hit and is dead now). */
-	static void notice(ServerPlayer attacker, LivingEntity victim, String icon, int flags) {
+	static void notice(LivingEntity attacker, LivingEntity victim, String icon, int flags) {
 		Map<UUID, Double> dealt = DAMAGE.remove(victim.getId());
 		LAST_HIT.remove(victim.getId());
 		if (attacker == null || !(victim.level() instanceof ServerLevel level)) return;
 		if (attacker == victim) flags |= SUICIDE;
 		if (victim instanceof net.minecraft.world.entity.npc.villager.Villager) flags |= VILLAGER; // counts for the kill cards like a player
+		boolean victimPlayer = victim instanceof ServerPlayer || Bots.isBot(victim); // bots are players in the killfeed
 		// the assist: the most damage over CS's threshold besides the killer's, else whoever flashed the victim (still blind)
 		ServerPlayer assister = null;
 		double most = ASSIST_DAMAGE;
@@ -86,17 +87,17 @@ public final class KillFeed {
 			flags |= FLASH_ASSIST;
 		}
 		// dominations and revenge between players
-		if (victim instanceof ServerPlayer vp && attacker != victim) {
-			String mine = attacker.getUUID() + ">" + vp.getUUID(), theirs = vp.getUUID() + ">" + attacker.getUUID();
+		if (victimPlayer && attacker != victim) {
+			String mine = attacker.getUUID() + ">" + victim.getUUID(), theirs = victim.getUUID() + ">" + attacker.getUUID();
 			if (STREAK.getOrDefault(theirs, 0) >= DOMINATION_KILLS) flags |= REVENGE;
 			STREAK.remove(theirs);
 			if (STREAK.merge(mine, 1, Integer::sum) >= DOMINATION_KILLS && (flags & REVENGE) == 0) flags |= DOMINATION;
 		}
-		var msg = new StrafePayloads.KillNotice(attacker.getScoreboardName(), CsTeam.isT(attacker), attacker.getId(), victim.getName().getString(),
-				victim instanceof ServerPlayer vp && CsTeam.isT(vp), victim.getId(), victim instanceof ServerPlayer, icon, flags,
+		var msg = new StrafePayloads.KillNotice(attacker instanceof ServerPlayer ap ? ap.getScoreboardName() : attacker.getName().getString(), CsTeam.isT(attacker),
+				attacker.getId(), victim.getName().getString(), CsTeam.isT(victim), victim.getId(), victimPlayer, icon, flags,
 				assister == null ? "" : assister.getScoreboardName(), assister != null && CsTeam.isT(assister));
-		if (victim instanceof ServerPlayer) {
+		if (victimPlayer || !(attacker instanceof ServerPlayer)) {
 			for (ServerPlayer o : level.players()) if (ServerPlayNetworking.canSend(o, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(o, msg);
-		} else if (ServerPlayNetworking.canSend(attacker, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(attacker, msg);
+		} else if (attacker instanceof ServerPlayer ap && ServerPlayNetworking.canSend(ap, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(ap, msg);
 	}
 }

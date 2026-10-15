@@ -5,7 +5,8 @@
   "minecraft:copper_ingot",
   "minecraft:copper_ingot",
   "minecraft:redstone_block",
-  "minecraft:iron_ingot"
+  "minecraft:iron_ingot",
+  "minecraft:lightning_rod"
  ],
  "result": {
   "id": "strafemc:weapon_taser",

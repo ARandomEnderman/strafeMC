@@ -37,6 +37,10 @@ public final class StrafeSettings {
 	private static volatile boolean spawnBlocks = true;
 	/** Case drops roll a float (wear) at all, and per rarity (gold, covert, ... consumer: off ones drop Factory New, 0). */
 	private static volatile boolean wear = true;
+	/** Bots: how many (CS2's bot_quota; 0 by default), whether they fight everyone, whose skins they wear (empty: random). */
+	private static volatile int botQuota = 0;
+	private static volatile boolean botFfa = false;
+	private static volatile java.util.List<String> botSkins = java.util.List.of();
 	private static final java.util.Set<String> WEAR_OFF = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	public static final java.util.List<String> WEAR_RARITIES = java.util.List.of("gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer");
 	private static volatile int maxUnlagMs = 300;
@@ -105,6 +109,33 @@ public final class StrafeSettings {
 
 	public static boolean spawnBlocks() {
 		return spawnBlocks;
+	}
+
+	public static int botQuota() {
+		return botQuota;
+	}
+
+	public static void setBotQuota(int n) {
+		botQuota = Math.max(0, Math.min(64, n));
+		save();
+	}
+
+	public static boolean botFfa() {
+		return botFfa;
+	}
+
+	public static void setBotFfa(boolean on) {
+		botFfa = on;
+		save();
+	}
+
+	public static java.util.List<String> botSkins() {
+		return botSkins;
+	}
+
+	public static void setBotSkins(java.util.List<String> names) {
+		botSkins = java.util.List.copyOf(names);
+		save();
 	}
 
 	public static boolean wear() {
@@ -210,6 +241,9 @@ public final class StrafeSettings {
 		spawnBlocks = true;
 		wear = true;
 		WEAR_OFF.clear();
+		botQuota = 0;
+		botFfa = false;
+		botSkins = java.util.List.of();
 		playerChoice = false;
 		PERSONAL.clear();
 		try {
@@ -225,6 +259,13 @@ public final class StrafeSettings {
 				if (o != null && o.has("loadoutKeep")) loadoutKeep = o.get("loadoutKeep").getAsBoolean();
 				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
 				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
+				if (o != null && o.has("botQuota")) botQuota = o.get("botQuota").getAsInt();
+				if (o != null && o.has("botFfa")) botFfa = o.get("botFfa").getAsBoolean();
+				if (o != null && o.has("botSkins")) {
+					java.util.List<String> l = new java.util.ArrayList<>();
+					for (var e : o.getAsJsonArray("botSkins")) l.add(e.getAsString());
+					botSkins = java.util.List.copyOf(l);
+				}
 				if (o != null && o.has("wearOff")) for (var e : o.getAsJsonArray("wearOff")) WEAR_OFF.add(e.getAsString());
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
@@ -248,6 +289,11 @@ public final class StrafeSettings {
 		o.addProperty("loadoutKeep", loadoutKeep);
 		o.addProperty("spawnBlocks", spawnBlocks);
 		o.addProperty("wear", wear);
+		o.addProperty("botQuota", botQuota);
+		o.addProperty("botFfa", botFfa);
+		var skins = new com.google.gson.JsonArray();
+		botSkins.forEach(skins::add);
+		o.add("botSkins", skins);
 		var off = new com.google.gson.JsonArray();
 		WEAR_OFF.forEach(off::add);
 		o.add("wearOff", off);
