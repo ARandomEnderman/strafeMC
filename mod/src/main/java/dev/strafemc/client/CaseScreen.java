@@ -24,7 +24,8 @@ public final class CaseScreen extends Screen {
 	private record Tile(ItemStack stack, int color, String name, Cases.Entry entry) {}
 
 	/** One case's reel and what it lands on. */
-	private record Spin(List<Tile> tiles, int landing, double delay, Tile result, int rarity, int pattern) {}
+	/** land: where across the winning tile the line stops (0..1), different every time, as in CS2. */
+	private record Spin(List<Tile> tiles, int landing, double delay, Tile result, int rarity, int pattern, double land) {}
 
 	private static final int TILE = 64, GOLD = 0xFFE4AE39;
 	private static final double SPIN_SECONDS = 6.5, STAGGER = 0.25;
@@ -188,7 +189,7 @@ public final class CaseScreen extends Screen {
 			Tile got = new Tile(Cases.stack(e, 0), color(d.rarity()), d.name(), e);
 			tiles.set(landing, got);
 			CaseImages.load(List.of(e));
-			list.add(new Spin(tiles, landing, k * STAGGER, got, d.rarity(), d.pattern()));
+			list.add(new Spin(tiles, landing, k * STAGGER, got, d.rarity(), d.pattern(), 0.05 + rng.nextDouble() * 0.9));
 		}
 		spins = list;
 		spinStart = System.nanoTime();
@@ -260,7 +261,7 @@ public final class CaseScreen extends Screen {
 			Spin s = spins.get(r);
 			double t = Math.max(0, Math.min(1, (elapsed - s.delay()) / SPIN_SECONDS));
 			if (t < 1) all = false;
-			double off = (1 - Math.pow(1 - t, 4)) * (s.landing() * step + step / 2.0 - 10); // stops a little off centre, like CS2
+			double off = (1 - Math.pow(1 - t, 4)) * (s.landing() * step + s.land() * size); // stops anywhere on the tile, like CS2
 			if (r == 0) {
 				int tick = (int) (off / step);
 				if (tick != lastTick && t < 1) {
