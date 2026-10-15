@@ -423,7 +423,12 @@ public final class ConsoleScreen extends Screen {
 		g.text(font, "Console", wx + 6, wy + 4, 0xFFFFFFFF, false);
 		boolean remote = RelayTransport.remote();
 		boolean live = remote ? dev.strafemc.client.ClientGameplay.cs2Online() : NetconTransport.INSTANCE.connected();
-		int bots = remote ? -1 : Cs2Bridge.INSTANCE.bots();
+		// the world's strafeMC bots (mannequins named "BOT ..." in sight of this client)
+		int bots = 0;
+		var lvl = net.minecraft.client.Minecraft.getInstance().level;
+		if (lvl != null)
+			for (var en : lvl.entitiesForRendering())
+				if (en instanceof net.minecraft.world.entity.decoration.Mannequin && en.getCustomName() != null && en.getCustomName().getString().startsWith("BOT ")) bots++;
 		String status = live ? "§aCS2 server connected" + (bots >= 0 ? "§7 | " + bots + (bots == 1 ? " bot" : " bots") : "")
 				: "§cCS2 server offline";
 		g.text(font, status, wx + ww - 26 - font.width(status), wy + 4, 0xFFFFFFFF, false);

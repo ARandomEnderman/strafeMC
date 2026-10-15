@@ -152,8 +152,8 @@ public final class Bots {
 		m.snapTo(at.x, at.y, at.z, RNG.nextFloat() * 360, 0);
 		m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
 		CsTeam.set(m, b.t);
+		b.e = m; // before it's added: adding fires the load event, which removes bots that aren't ours
 		level.addFreshEntity(m);
-		b.e = m;
 		b.deadSince = 0;
 		b.target = null;
 		b.clip = -1;

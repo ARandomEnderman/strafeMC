@@ -113,7 +113,6 @@ public final class ConsoleActions {
 				if (f > 0) wrap.set(dev.strafemc.weapon.WeaponItems.WEAR, Float.floatToIntBits((float) f));
 				else wrap.remove(dev.strafemc.weapon.WeaponItems.WEAR);
 				if (wrap != held) dev.strafemc.weapon.Loadout.set(p, slot, wrap);
-				p.sendSystemMessage(Component.literal(dev.strafemc.weapon.Wear.exterior(f) + String.format(java.util.Locale.ROOT, " (%.8f)", (float) f)));
 			}
 			case "strafemc_wear" -> {
 				if (!op) {
@@ -124,9 +123,6 @@ public final class ConsoleActions {
 				boolean on = a.length < 2 ? !a[0].equals("0") : !a[1].equals("0");
 				if (a.length >= 2 && StrafeSettings.WEAR_RARITIES.contains(a[0])) StrafeSettings.setWearFor(a[0], on);
 				else StrafeSettings.setWear(on);
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Wear on case drops: " + (StrafeSettings.wear() ? "on" : "off (all Factory New)")
-						+ (StrafeSettings.WEAR_RARITIES.stream().anyMatch(k -> !StrafeSettings.wearFor(k)) ? ", off for "
-						+ String.join(", ", StrafeSettings.WEAR_RARITIES.stream().filter(k -> !StrafeSettings.wearFor(k)).toList()) : "")), false);
 			}
 			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "bot_difficulty", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
 				if (!op) {
@@ -168,7 +164,6 @@ public final class ConsoleActions {
 						msg = StrafeSettings.botSkins().isEmpty() ? "Bots wear random players' skins (new bots)" : "Bots wear " + String.join(", ", StrafeSettings.botSkins()) + "'s skins (new bots)";
 					}
 				}
-				server.getPlayerList().broadcastSystemMessage(Component.literal(msg), false);
 			}
 			case "strafemc_knockback" -> {
 				if (!op) {
@@ -254,8 +249,6 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setSpawnBlocks(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Respawn on spawn blocks: "
-						+ (StrafeSettings.spawnBlocks() ? "on" : "off")), false);
 			}
 			case "strafemc_loadout_keep" -> {
 				if (!op) {

@@ -23,6 +23,7 @@ public final class WorldCvars {
 	/** Values to apply once the CS2 server is reachable (null = already applied). */
 	private static Map<String, String> pending;
 	private static int tick, connectedTicks, verifyAt, tries;
+	private static boolean wasConnected;
 	/** The world's values just applied, re-checked once the server has settled. */
 	private static Map<String, String> applied;
 
@@ -30,6 +31,11 @@ public final class WorldCvars {
 
 	public static void load(MinecraftServer server) {
 		file = server.getWorldPath(LevelResource.ROOT).resolve("strafemc_cvars.json");
+		pending = read();
+	}
+
+	/** The world's saved values. */
+	private static Map<String, String> read() {
 		Map<String, String> saved = new TreeMap<>();
 		try {
 			if (Files.exists(file)) {
@@ -39,7 +45,7 @@ public final class WorldCvars {
 		} catch (Exception e) {
 			StrafeMc.LOG.error("[strafemc] could not read " + file, e);
 		}
-		pending = saved;
+		return saved;
 	}
 
 	/** Server tick: applies the world's cvars once CS2 is up; saves every minute. */
@@ -47,7 +53,12 @@ public final class WorldCvars {
 		if (file == null) return;
 		// wait until CS2 has been up for 5 s: a server still loading its map runs its game-mode config afterwards, which
 		// resets settings like sv_infinite_ammo; then check 5 s later and apply again what didn't stick (twice at most)
-		connectedTicks = Cs2Bridge.INSTANCE.connected() ? connectedTicks + 1 : 0;
+		boolean connected = Cs2Bridge.INSTANCE.connected();
+		// the CS2 server went away (restarted from the console, crashed): the next one starts from its defaults, so the
+		// world's saved values go to it again once it's up
+		if (wasConnected && !connected && pending == null) pending = read();
+		wasConnected = connected;
+		connectedTicks = connected ? connectedTicks + 1 : 0;
 		if (pending != null && connectedTicks >= 100 && !Cs2Bridge.INSTANCE.defaults().isEmpty()) {
 			applied = new TreeMap<>(pending);
 			apply();
@@ -77,13 +88,17 @@ public final class WorldCvars {
 			if (e.getValue().equals(now) || !Cs2Bridge.INSTANCE.settable(e.getKey())) continue;
 			if (ConsoleRelay.exec(e.getKey() + " \"" + e.getValue().replace("\"", "") + "\"")) changed++;
 		}
+		// no CS2 bots ever: strafeMC's bots live in Minecraft (the game mode's config would otherwise fill the server)
+		ConsoleRelay.exec("bot_quota_mode normal");
+		ConsoleRelay.exec("bot_quota 0");
+		ConsoleRelay.exec("bot_kick");
 		StrafeMc.LOG.info("[strafemc] world cvars applied: {} saved, {} changed on the CS2 server", pending.size(), changed);
 		pending = null;
 	}
 
 	/** Saves every cvar that differs from the CS2 server's defaults (nothing until this world's cvars were applied). */
 	public static void save() {
-		if (file == null || pending != null) return;
+		if (file == null || pending != null || !Cs2Bridge.INSTANCE.connected()) return; // not while CS2 is away (its defaults would overwrite them)
 		Map<String, String> defaults = Cs2Bridge.INSTANCE.defaults();
 		if (defaults.isEmpty()) return;
 		Map<String, String> out = new TreeMap<>();
@@ -103,5 +118,6 @@ public final class WorldCvars {
 		pending = null;
 		applied = null;
 		connectedTicks = 0;
+		wasConnected = false;
 	}
 }
