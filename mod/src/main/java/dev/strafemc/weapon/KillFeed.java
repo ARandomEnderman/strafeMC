@@ -41,6 +41,11 @@ public final class KillFeed {
 		if (by != null) FLASHED_BY.put(p.getUUID(), by.getUUID());
 	}
 
+	/** Who someone is across lives: a player's account, a bot's name (each respawn is a new mannequin). */
+	private static String who(LivingEntity e) {
+		return Bots.isBot(e) && e.getCustomName() != null ? "bot:" + e.getCustomName().getString() : e.getUUID().toString();
+	}
+
 	/** CS damage done to a target, counted for assists. */
 	static void damaged(ServerPlayer attacker, LivingEntity victim, double csDamage) {
 		if (attacker == null || attacker == victim || csDamage <= 0) return;
@@ -88,7 +93,7 @@ public final class KillFeed {
 		}
 		// dominations and revenge between players
 		if (victimPlayer && attacker != victim) {
-			String mine = attacker.getUUID() + ">" + victim.getUUID(), theirs = victim.getUUID() + ">" + attacker.getUUID();
+			String mine = who(attacker) + ">" + who(victim), theirs = who(victim) + ">" + who(attacker);
 			if (STREAK.getOrDefault(theirs, 0) >= DOMINATION_KILLS) flags |= REVENGE;
 			STREAK.remove(theirs);
 			if (STREAK.merge(mine, 1, Integer::sum) >= DOMINATION_KILLS && (flags & REVENGE) == 0) flags |= DOMINATION;
