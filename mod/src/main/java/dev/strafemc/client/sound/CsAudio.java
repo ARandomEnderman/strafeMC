@@ -87,7 +87,31 @@ public final class CsAudio {
 		if (p.startsWith("sounds/")) p = p.substring(7);
 		if (p.endsWith(".ogg")) p = p.substring(0, p.length() - 4);
 		String key = p;
-		return BUFFERS.computeIfAbsent(key, k -> CompletableFuture.supplyAsync(() -> decode(k)));
+		// "stereo/...": the same sound as two identical channels, for your own sounds (played past Directional Audio)
+		boolean stereo = key.startsWith("stereo/");
+		return BUFFERS.computeIfAbsent(key, k -> CompletableFuture.supplyAsync(() -> {
+			STEREO.set(stereo);
+			try {
+				return decode(stereo ? k.substring(7) : k);
+			} finally {
+				STEREO.set(false);
+			}
+		}));
+	}
+
+	private static final ThreadLocal<Boolean> STEREO = ThreadLocal.withInitial(() -> false);
+
+	/** 16-bit mono PCM as a buffer: as it is, or doubled into two channels when decoding a stereo variant. */
+	private static SoundBuffer buf(ByteBuffer mono, int rate) {
+		if (!STEREO.get()) return new SoundBuffer(mono, new AudioFormat(rate, 16, 1, true, false));
+		ByteBuffer st = ByteBuffer.allocateDirect(mono.remaining() * 2).order(ByteOrder.LITTLE_ENDIAN);
+		mono.order(ByteOrder.LITTLE_ENDIAN);
+		while (mono.remaining() >= 2) { // at the level a centred mono sound has in each ear (x0.707)
+			short v = (short) Math.round(mono.getShort() * 0.7071);
+			st.putShort(v).putShort(v);
+		}
+		st.flip();
+		return new SoundBuffer(st, new AudioFormat(rate, 16, 2, true, false));
 	}
 
 	private static SoundBuffer decode(String path) {
@@ -154,7 +178,7 @@ public final class CsAudio {
 			byte[] d = mono.toByteArray();
 			ByteBuffer out = ByteBuffer.allocateDirect(d.length).order(ByteOrder.LITTLE_ENDIAN);
 			out.put(d).flip();
-			return new SoundBuffer(out, new AudioFormat(rate, 16, 1, true, false));
+			return buf(out, rate);
 		}
 	}
 
@@ -162,6 +186,6 @@ public final class CsAudio {
 		ByteBuffer out = ByteBuffer.allocateDirect(mono.length * 2).order(ByteOrder.LITTLE_ENDIAN);
 		for (short v : mono) out.putShort(v);
 		out.flip();
-		return new SoundBuffer(out, new AudioFormat(rate, 16, 1, true, false));
+		return buf(out, rate);
 	}
 }

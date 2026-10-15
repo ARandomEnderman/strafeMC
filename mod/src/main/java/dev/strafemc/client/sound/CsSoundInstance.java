@@ -38,6 +38,9 @@ public final class CsSoundInstance extends AbstractSoundInstance implements net.
 
 	/** Listener-relative at the head: the local player's own weapon sounds (centred, never one-sided while moving). */
 	public static CsSoundInstance own(Identifier id, float volume, float pitch) {
+		// its stereo variant: with Directional Audio on, it goes straight to both ears (direct channels), unfiltered
+		if (id.getNamespace().equals(CsAudio.NAMESPACE) && !id.getPath().startsWith("stereo/"))
+			id = Identifier.fromNamespaceAndPath(id.getNamespace(), "stereo/" + id.getPath());
 		CsSoundInstance s = new CsSoundInstance(id, volume, pitch, 0, 0, 0, null, 0);
 		s.relative = true;
 		return s;
