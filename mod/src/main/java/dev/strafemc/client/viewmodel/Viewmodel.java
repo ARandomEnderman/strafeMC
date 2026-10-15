@@ -444,6 +444,12 @@ public final class Viewmodel {
 		rate = 1;
 	}
 
+	/**
+	 * The draw the next weapon comes out with (a knife's everyday or rare pullout, chosen on equip): its model may not be
+	 * loaded yet when it's chosen, so the first frame plays it from here.
+	 */
+	public volatile String nextDraw = "draw";
+
 	/** Weapon put away: the next render starts from its draw. */
 	public void stop() {
 		clip = null;
@@ -477,6 +483,7 @@ public final class Viewmodel {
 	public boolean render(String cls, PoseStack ps, SubmitNodeCollector out, int light) {
 		if (broken || !ready(cls)) return false;
 		Loaded l = loaded;
+		if (clip == null) play(nextDraw);
 		if (clip == null) play("draw");
 		float t = clipTime();
 		// clips that end in a held pose (a grenade's charged throw: single-frame poses) stay until the next animation

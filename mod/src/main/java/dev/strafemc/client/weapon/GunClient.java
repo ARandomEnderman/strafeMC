@@ -186,6 +186,9 @@ public final class GunClient {
 				WeaponStats ds = dev.strafemc.client.ClientGameplay.stats(g.weaponClass);
 				deployUntil = now + sec(ds != null ? ds.deployDuration() : 1.0); // no attacking while drawing
 				String draw = drawClip(g);
+				// the chosen draw is kept for the first frame too: the model may still be the last weapon's right now
+				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.nextDraw = draw;
+				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.stop();
 				dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play(draw);
 				schedule(g, draw, now);
 			}
