@@ -21,6 +21,39 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 		this.parent = parent;
 	}
 
+	/** Deletes what the setup made, in the background (it's large), and clears the paths it found. */
+	private static void resetSetup() {
+		StrafeConfig.vrfPath = ""; // the CS2 folder stays (it picks which install the setup and the CS2 server use)
+		StrafeConfig.setupNeverAsk = false;
+		try {
+			StrafeConfig.save();
+		} catch (Exception ignored) {
+		}
+		Thread t = new Thread(() -> {
+			for (java.nio.file.Path dir : new java.nio.file.Path[] {StrafeConfig.cacheDir(), dev.strafemc.client.assets.RuntimePack.DIR,
+					StrafeConfig.RUNTIME_DIR.resolve("tools")}) {
+				if (!java.nio.file.Files.exists(dir)) continue;
+				try (var walk = java.nio.file.Files.walk(dir)) {
+					walk.sorted(java.util.Comparator.reverseOrder()).forEach(f -> {
+						try {
+							java.nio.file.Files.deleteIfExists(f);
+						} catch (Exception ignored) { // in use until the restart: the setup overwrites it anyway
+						}
+					});
+				} catch (Exception e) {
+					dev.strafemc.StrafeMc.LOG.warn("[strafemc] setup reset: {}", e.toString());
+				}
+			}
+			dev.strafemc.StrafeMc.LOG.info("[strafemc] setup reset: done, restart Minecraft");
+			net.minecraft.client.Minecraft.getInstance().execute(() -> {
+				var p = net.minecraft.client.Minecraft.getInstance().player;
+				if (p != null) p.sendOverlayMessage(Component.literal("Setup reset. Restart Minecraft to run it again."));
+			});
+		}, "strafemc-setup-reset");
+		t.setDaemon(true);
+		t.start();
+	}
+
 	@Override
 	protected void addOptions() {
 		list.addSmall(
@@ -34,6 +67,15 @@ public final class StrafeSettingsScreen extends OptionsSubScreen {
 		list.addHeader(Component.translatable("strafemc.options.setup"));
 		list.addSmall(bool("strafemc.options.setup_ask", !StrafeConfig.setupNeverAsk, v -> StrafeConfig.setupNeverAsk = !v).createButton(options),
 				Button.builder(Component.translatable("strafemc.options.setup_open"), b -> SetupScreen.open(this)).build());
+		list.addSmall(Button.builder(Component.literal("Reset setup (test from scratch)"), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(
+				yes -> {
+					if (yes) resetSetup();
+					minecraft.setScreen(this);
+				},
+				Component.literal("Reset the first-time setup?"),
+				Component.literal("Deletes everything the setup made (the converted CS2 files, about 10 GB, the generated resource pack and the "
+						+ "downloaded converter). Your CS2 install isn't touched and stays selected. Restart Minecraft "
+						+ "afterwards: the setup starts again like on a new PC.")))).build(), null);
 
 		list.addHeader(Component.translatable("strafemc.options.hosting"));
 		list.addSmall(bool("strafemc.options.hostserver", StrafeConfig.hostServer, v -> StrafeConfig.hostServer = v).createButton(options),
