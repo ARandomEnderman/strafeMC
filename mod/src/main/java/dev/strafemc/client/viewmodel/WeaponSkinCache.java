@@ -120,7 +120,16 @@ public final class WeaponSkinCache {
 			} else if ((m = COLOR.matcher(body)).find())
 				p.values.put(name, new double[] {Integer.parseInt(m.group(1)) / 255.0, Integer.parseInt(m.group(2)) / 255.0, Integer.parseInt(m.group(3)) / 255.0});
 			else if ((m = BOOL.matcher(body)).find()) p.values.put(name, new double[] {m.group(1).equals("true") ? 1 : 0});
-			else if ((m = NUM.matcher(body)).find()) p.values.put(name, new double[] {Double.parseDouble(m.group(1))});
+			else if ((m = NUM.matcher(body)).find()) {
+				// vectors (FLOAT2-4): every component, not only x
+				java.util.List<Double> comps = new java.util.ArrayList<>(List.of(Double.parseDouble(m.group(1))));
+				for (String c : new String[] {"Y", "Z", "W"}) {
+					Matcher cm = Pattern.compile("m_flValueFloat" + c + " = (-?[0-9.eE+-]+)").matcher(body);
+					if (!cm.find()) break;
+					comps.add(Double.parseDouble(cm.group(1)));
+				}
+				p.values.put(name, comps.stream().mapToDouble(Double::doubleValue).toArray());
+			}
 		}
 		p.shader = "composite " + style;
 		p.values.put("strafemc_opaque_pattern", new double[] {1}); // their albedo replaces the colour; its alpha is not coverage

@@ -84,6 +84,20 @@ public final class WeaponSkinBaker {
 		double cr = Math.cos(rot), sr = Math.sin(rot);
 		double[] xf0 = {scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5};
 		double[] xf1 = {scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5};
+		// halftone spray paint (F_SPRAYPAINT_HALFTONE, csgo_customweapon decoded): each pattern channel is screened by the
+		// pattern's alpha (the dots) read again through its own turned transform (rotation + g_flHalftoneRotationOffsetA/B/C),
+		// after a cavity term (g_vHalftonePatternLevels: smoothstep(x, z, (2 cavity AO)^y), in or out of the cavities), then
+		// cut by g_vHalftoneThresholds
+		boolean halftone = style == 2 && p.f("F_SPRAYPAINT_HALFTONE", 0) != 0;
+		double[][][] htXf = new double[3][][];
+		if (halftone) {
+			String[] abc = {"A", "B", "C"};
+			for (int i = 0; i < 3; i++)
+				htXf[i] = patternXform(scale, rot + Math.toRadians(p.f("g_flHalftoneRotationOffset" + abc[i], 0)), offX, offY);
+		}
+		double[] htLevels = p.v("g_vHalftonePatternLevels", 0, 1, 1), htThr = p.v("g_vHalftoneThresholds", 0.3, 0.4);
+		boolean htInCavity = p.f("g_bHalftoneInCavity", 0) != 0;
+		double htCutoff = p.f("g_fHalftoneCavityCutoff", 1);
 		int sampU = (int) p.f("g_nPatternTextureHorizontalSampling", 0), sampV = (int) p.f("g_nPatternTextureVerticalSampling", 0);
 		boolean projected = style == 2 || style == 5, metalStyle = style == 3 || style == 4 || style == 5 || style == 7,
 				artwork = style == 6 || style == 8;
@@ -117,6 +131,15 @@ public final class WeaponSkinBaker {
 		BufferedImage wearTex = load(tex, p, "g_tWear"), grungeTex = load(tex, p, "g_tGrunge");
 		double[] place = p.v("strafemc_wear_place", 1, 0, 0, 0, 1, 0, 0, 0);
 		double[][] wxf = placement(place[0], place[3], place[1], place[2]), gxf = placement(place[4], place[7], place[5], place[6]);
+		// overlay (csgo_customweapon S_OVERLAY_TEXTURE, decoded): a second texture over the paint, at the pattern's
+		// coordinates or the mesh's, colour x brightness, alpha x strength, worn off by its own durability, blended by
+		// F_OVERLAY_BLEND_MODE (0 translucent / 4 layer: over it; 1 colour / 2 multiply: recoloured within CS2's albedo
+		// levels; 3 add) where F_OVERLAY_MASK allows
+		BufferedImage overlay = p.f("g_bUseOverlay", 0) != 0 ? load(tex, p, "g_tOverlay") : null;
+		int ovMode = (int) p.f("F_OVERLAY_BLEND_MODE", 0), ovMask = (int) p.f("F_OVERLAY_MASK", 0);
+		boolean ovPatternUv = p.f("g_bOverlayUsesPatternUVs", 0) != 0;
+		double ovBright = p.f("g_fOverlayBrightness", 1), ovStrength = p.f("g_fOverlayStrength", 1), ovDur = p.f("g_fOverlayDurability", 0),
+				ovMat = p.f("g_fOverlayMaterialStrength", 1), ovRough = p.f("g_fOverlayRoughness", 0.6), ovMetal = p.f("g_fOverlayMetalness", 0);
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double u = (x + 0.5) / SIZE, v = (y + 0.5) / SIZE;
@@ -147,6 +170,18 @@ public final class WeaponSkinBaker {
 					pc = pattern == null ? 0 : GloveSkinBaker.sampleBilinear(pattern, ru, rv);
 				}
 				double[] pt = GloveSkinBaker.unpack(pc);
+				if (halftone && (in.posMap() != null || positions != null)) {
+					int hao = in.ao == null ? 0xFFFFFFFF : GloveSkinBaker.sample(in.ao, u, v);
+					double hcav = (hao >> 16 & 255) / 255.0, hocc = (hao >> 8 & 255) / 255.0;
+					double hv = smooth(htLevels[0], htLevels.length > 2 ? htLevels[2] : 1,
+							Math.pow(Math.max(0, (htInCavity ? Math.min(hcav, htCutoff) : hcav) * hocc * 2), htLevels.length > 1 ? htLevels[1] : 1));
+					boolean desc = htThr[0] > (htThr.length > 1 ? htThr[1] : 0.4);
+					double f = htInCavity == desc ? hv : 1 - hv;
+					for (int i = 0; i < 3; i++) {
+						double dots = (triplanar(in, positions, u, v, pattern, htXf[i][0], htXf[i][1], sampU, sampV, blend) >>> 24) / 255.0;
+						pt[i] = smooth(htThr[0], htThr.length > 1 ? htThr[1] : 0.4, pt[i] * f * dots);
+					}
+				}
 				double pa = (pc >>> 24) / 255.0, band = smooth(0.5, 0.6, pa) * smooth(1, 0.9, pa);
 				// ambient occlusion's alpha: bare metal at the edges (a knife's sharpened edge) where the paint isn't durable
 				int aoc = in.ao == null ? 0 : GloveSkinBaker.sample(in.ao, u, v);
@@ -163,6 +198,26 @@ public final class WeaponSkinBaker {
 				double[] grime = lin(GloveSkinBaker.unpack(gc));
 				double grimeA = 1 + ((gc >>> 24) / 255.0 - 1) * gm;
 				double we = (edge + wt * cav) * (6 * wearAmt + 1); // where the paint breaks off (the edges at wear 0)
+				double[] ov = null;
+				double ovA = 0;
+				if (overlay != null) {
+					double ou = ovPatternUv ? xf0[0] * pu + xf0[1] * pv + xf0[2] : wuv[0], ovv = ovPatternUv ? xf1[0] * pu + xf1[1] * pv + xf1[2] : wuv[1];
+					int oc = GloveSkinBaker.sampleBilinear(overlay, frac(ou), frac(ovv));
+					ov = GloveSkinBaker.scale(lin(GloveSkinBaker.unpack(oc)), ovBright);
+					// FLAGGED: mask modes read from the option list (0 none, 1 base, 2-4 R/G/B, 5 RGB, 6 paint, 7 pattern)
+					double ovm = switch (ovMask) {
+						case 1 -> 1 - Math.max(mr, Math.max(mg, mb));
+						case 2 -> mr;
+						case 3 -> mg;
+						case 4 -> mb;
+						case 5 -> Math.max(mr, Math.max(mg, mb));
+						case 6 -> w;
+						case 7 -> pa;
+						default -> 1;
+					};
+					double ovWear = smooth(0.56 - soft, 0.74 + soft, wt * cav * (6 * wearAmt + 1) * ovDur);
+					ovA = (oc >>> 24) / 255.0 * ovStrength * (1 - ovWear) * ovm;
+				}
 				if (style <= 5) { // CS2's composite at factory new (wear 0), per style
 					double[] bl = lin(b), c;
 					double k;
@@ -196,8 +251,10 @@ public final class WeaponSkinBaker {
 					}
 					c = worn(c, grime, gm, wearAmt, anodized ? METAL_PAINT_LEVELS : PAINT_LEVELS);
 					c = GloveSkinBaker.scale(c, albedoScale);
-					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k))));
-					paint[y * SIZE + x] = (float) (anodized ? 0 : k);
+					double[] fin = GloveSkinBaker.lerp(bl, GloveSkinBaker.scale(c, a), k);
+					if (ovA > 0) fin = overlayBlend(fin, ov, ovA, ovMode);
+					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(fin)));
+					paint[y * SIZE + x] = (float) ((anodized ? 0 : k) + ((1 - ovMetal) - (anodized ? 0 : k)) * ovA * ovMat);
 					// CS2's roughness output: anodized multicolour reads it from the pattern's alpha (below 0.5; the
 					// marbling), outside colour regions 2 / 3; everything else the kit's paint roughness
 					double r = paintRough;
@@ -206,8 +263,9 @@ public final class WeaponSkinBaker {
 						r += (t * t * 0.85 + 0.15 - paintRough) * (1 - Math.max(mg, mb));
 					}
 					r += (1 - grimeA) * wearAmt * wearAmt * 0.5;
+					r += (ovRough - r) * ovA * ovMat;
 					rough[y * SIZE + x] = (float) Math.min(1, r);
-					cover[y * SIZE + x] = (float) k;
+					cover[y * SIZE + x] = (float) Math.max(k, ovA * ovMat);
 					continue;
 				}
 				double[] c;
@@ -240,12 +298,15 @@ public final class WeaponSkinBaker {
 				c = srgb(worn(lin(c), grime, gm, wearAmt, metalStyle ? METAL_PAINT_LEVELS : PAINT_LEVELS)); // FLAGGED: this path is sRGB, worn in linear
 				c = GloveSkinBaker.scale(c, a);
 				double k = w * alpha;
-				out.setRGB(x, y, GloveSkinBaker.rgb(GloveSkinBaker.lerp(b, c, k)));
-				paint[y * SIZE + x] = (float) (metalStyle ? 0 : k);
+				double[] fin = GloveSkinBaker.lerp(b, c, k);
+				if (ovA > 0) fin = srgb(overlayBlend(lin(fin), ov, ovA, ovMode));
+				out.setRGB(x, y, GloveSkinBaker.rgb(fin));
+				paint[y * SIZE + x] = (float) ((metalStyle ? 0 : k) + ((1 - ovMetal) - (metalStyle ? 0 : k)) * ovA * ovMat);
 				// patina (Case Hardened) is the polished steel itself: it keeps the weapon's own (glossy) roughness
 				if (style != 7) {
-					rough[y * SIZE + x] = (float) Math.min(1, paintRough + (1 - grimeA) * wearAmt * wearAmt * 0.5);
-					cover[y * SIZE + x] = (float) (w * alpha);
+					double r = Math.min(1, paintRough + (1 - grimeA) * wearAmt * wearAmt * 0.5);
+					rough[y * SIZE + x] = (float) (r + (ovRough - r) * ovA * ovMat);
+					cover[y * SIZE + x] = (float) Math.max(w * alpha, ovA * ovMat);
 				}
 			}
 		return new Result(out, paint, rough, cover);
@@ -340,6 +401,44 @@ public final class WeaponSkinBaker {
 		return out;
 	}
 
+	/** CS2's g_vAlbedoLevels (its compiled expression decoded: (0.045, -log2(0.6), 2 - 1.15)), used by the overlay. */
+	private static final double[] ALBEDO_LEVELS = {0.045, 0.7369656, 0.85};
+
+	/** The overlay over a linear colour, by blend mode (csgo_customweapon's switch on F_OVERLAY_BLEND_MODE). */
+	private static double[] overlayBlend(double[] c, double[] ov, double a, int mode) {
+		double[] t;
+		switch (mode) {
+			case 1, 2 -> { // colour / multiply: the product's hue, brought back within the albedo levels
+				double[] prod = {c[0] * ov[0], c[1] * ov[1], c[2] * ov[2]};
+				t = levelled(mode == 1 ? c : prod, prod);
+			}
+			case 3 -> { // add (FLAGGED: CS2 rescales the sum by its levels; a plain sum here)
+				t = new double[] {Math.min(1, c[0] + ov[0]), Math.min(1, c[1] + ov[1]), Math.min(1, c[2] + ov[2])};
+			}
+			default -> t = ov; // translucent / layer
+		}
+		return GloveSkinBaker.lerp(c, t, Math.max(0, Math.min(1, a)));
+	}
+
+	/** csgo_customweapon's recolour: normalize(dir) x 1.06, scaled between the albedo levels by bright's brightness. */
+	private static double[] levelled(double[] bright, double[] dir) {
+		double[] L = ALBEDO_LEVELS;
+		double[] n = {Math.max(3e-4, dir[0]), Math.max(3e-4, dir[1]), Math.max(3e-4, dir[2])};
+		double len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+		for (int i = 0; i < 3; i++) n[i] = n[i] / len * 1.06;
+		double nl = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]), nLuma = 0.2125 * n[0] + 0.7154 * n[1] + 0.0721 * n[2];
+		double bmax = Math.max(dir[0], Math.max(dir[1], dir[2]));
+		double s = L[0] + (L[2] - L[0]) * Math.max(0, Math.min(1, Math.pow(Math.max(0, bmax), L[1])));
+		double bl = 0.2125 * Math.min(1, bright[0]) + 0.7154 * Math.min(1, bright[1]) + 0.0721 * Math.min(1, bright[2]);
+		double f = Math.sqrt(smooth(3e-4, L[0], bl));
+		double[] out = new double[3];
+		for (int i = 0; i < 3; i++) {
+			double v = Math.max(n[i] * L[0] * 1.732 / nl / Math.max(1e-6, nLuma), n[i] * s);
+			out[i] = L[0] + (v - L[0]) * f;
+		}
+		return out;
+	}
+
 	/**
 	 * A wear / grunge texture's placement (scale, rotation in degrees, offset) as two rows of a UV transform, built the
 	 * way the pattern's is. FLAGGED: CS2's g_vWearTexCoordXform expressions weren't decoded; the pattern's is assumed.
@@ -347,6 +446,14 @@ public final class WeaponSkinBaker {
 	private static double[][] placement(double scale, double rotDeg, double offX, double offY) {
 		if (scale == 0) scale = 1;
 		double rot = Math.toRadians(rotDeg), inv = 0.5 / scale, cn = Math.cos(-rot), sn = Math.sin(-rot);
+		double ex = inv * cn - inv * sn, ey = ex * sn + inv * cn, cr = Math.cos(rot), sr = Math.sin(rot);
+		return new double[][] {{scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5},
+				{scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5}};
+	}
+
+	/** The pattern transform's two rows for a scale, rotation (radians) and offset, built as bake() builds the pattern's. */
+	private static double[][] patternXform(double scale, double rot, double offX, double offY) {
+		double inv = 0.5 / scale, cn = Math.cos(-rot), sn = Math.sin(-rot);
 		double ex = inv * cn - inv * sn, ey = ex * sn + inv * cn, cr = Math.cos(rot), sr = Math.sin(rot);
 		return new double[][] {{scale * cr, -scale * sr, scale * cr * ex - scale * sr * ey + offX - 0.5},
 				{scale * sr, scale * cr, scale * sr * ex + scale * cr * ey + offY - 0.5}};
