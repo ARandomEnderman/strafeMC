@@ -42,6 +42,16 @@ public final class Crosshair {
 		DEFAULTS.put("crosshair", 1.0);
 	}
 
+	private static double legacy;
+	private static long lastNs;
+
+	/** The held gun's m_flSpread (0 without one). */
+	private static double heldSpread(Minecraft mc) {
+		if (!(mc.player.getMainHandItem().getItem() instanceof dev.strafemc.weapon.GunItem g)) return 0;
+		var w = dev.strafemc.client.ClientGameplay.stats(g.weaponClass, 0);
+		return w != null ? w.spread() : 0;
+	}
+
 	/** CS2's colour presets 0-4 (red, green, yellow, blue, cyan); 5 is cl_crosshaircolor_r/g/b. */
 	private static final int[][] PRESETS = {{250, 50, 50}, {50, 250, 50}, {250, 250, 50}, {50, 50, 250}, {50, 250, 250}};
 
@@ -76,13 +86,24 @@ public final class Crosshair {
 		double yres = h / 480.0;
 		int style = (int) get("cl_crosshairstyle");
 		boolean dynamic = style == 0 || style == 2 || style == 3 || style == 5;
-		int len = (int) Math.round(get("cl_crosshairsize") * yres);
-		int thick = Math.max(1, (int) Math.round(get("cl_crosshairthickness") * yres));
-		double gapPx = (4 + get("cl_crosshairgap")) * yres / 2;
+		// 0 / 1 "Default": CS2's own look (length, thickness and gap fixed; colour and alpha still yours)
+		boolean defaultLook = style == 0 || style == 1;
+		int len = (int) Math.round((defaultLook ? DEFAULTS.get("cl_crosshairsize") : get("cl_crosshairsize")) * yres);
+		int thick = Math.max(1, (int) Math.round((defaultLook ? DEFAULTS.get("cl_crosshairthickness") : get("cl_crosshairthickness")) * yres));
+		double gapPx = (4 + (defaultLook ? DEFAULTS.get("cl_crosshairgap") : get("cl_crosshairgap"))) * yres / 2;
 		// the gun's inaccuracy as pixels on screen (the spread cone at the current field of view)
 		double fov = Math.toRadians(mc.options.fov().get());
 		double pxPerTan = (h / 2.0) / Math.tan(fov / 2);
-		double spreadPx = dynamic && live ? GunClient.INSTANCE.inaccuracy() * pxPerTan : 0;
+		// the dynamic gap as CS:GO drew it: (inaccuracy + spread) x 320 / tan(half the 90 degree FOV), in 480-high units
+		// (FLAGGED: from memory of CS:GO's crosshair code); the editor's preview pulses a made-up spread to show it
+		double inacc = live ? GunClient.INSTANCE.inaccuracy() + heldSpread(mc) : 0.02 + 0.02 * Math.sin(System.nanoTime() / 1e9 * 2.5);
+		double spreadPx = dynamic ? inacc * 320 * yres : 0;
+		if (style == 5) { // Legacy: opens at once, closes smoothly
+			double dt = lastNs == 0 ? 0 : Math.min(0.1, (System.nanoTime() - lastNs) / 1e9);
+			lastNs = System.nanoTime();
+			legacy = spreadPx > legacy ? spreadPx : legacy + (spreadPx - legacy) * Math.min(1, dt * 6);
+			spreadPx = legacy;
+		}
 		// recoil: the crosshair shows where the bullets go (the full aim punch, not the camera's share)
 		if (live && get("cl_crosshair_recoil") != 0) {
 			double[] off = GunClient.INSTANCE.crosshairRecoil();
