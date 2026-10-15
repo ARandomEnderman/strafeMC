@@ -19,6 +19,8 @@ import java.util.Set;
  */
 final class MagIcons {
 	static final int SIZE = 64, SS = 4; // icon pixels, supersampling
+	/** Part of the icon file names: raised when the drawing changes, so cached icons are redrawn. */
+	static final String VERSION = "_v2";
 
 	private MagIcons() {}
 
@@ -73,8 +75,10 @@ final class MagIcons {
 	/** The magazine bone and every joint under it. */
 	private static Set<Integer> magJoints(VmModel.Skin sk) {
 		Set<Integer> out = new HashSet<>();
-		for (String name : new String[] {"clip", "magazine", "mag", "magazine_r", "ammobox", "shell", "shell1", "cylbullet1"}) {
-			for (int j = 0; j < sk.joints.length; j++) if (sk.joints[j].equalsIgnoreCase(name)) out.add(j);
+		// the R8 has no magazine: its speed loader (holder and handle)
+		for (String[] names : new String[][] {{"clip"}, {"magazine"}, {"mag"}, {"magazine_r"}, {"ammobox"}, {"shell"}, {"shell1"}, {"loader_holder", "loader_handle"}}) {
+			for (String name : names)
+				for (int j = 0; j < sk.joints.length; j++) if (sk.joints[j].equalsIgnoreCase(name)) out.add(j);
 			if (!out.isEmpty()) break;
 		}
 		if (out.isEmpty() || sk.parent == null) return out;
