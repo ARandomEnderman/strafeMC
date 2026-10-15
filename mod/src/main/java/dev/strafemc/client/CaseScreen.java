@@ -21,7 +21,7 @@ import java.util.Random;
  */
 public final class CaseScreen extends Screen {
 	/** One reel / contents tile: the item to show, its rarity colour and name. */
-	private record Tile(ItemStack stack, int color, String name) {}
+	private record Tile(ItemStack stack, int color, String name, Cases.Entry entry) {}
 
 	private static final int TILE = 64, GOLD = 0xFFE4AE39;
 	private static final double SPIN_SECONDS = 6.5;
@@ -46,13 +46,18 @@ public final class CaseScreen extends Screen {
 			if (list == null) continue;
 			for (Cases.Entry e : list) {
 				ItemStack s = Cases.stack(e, 0);
-				if (!s.isEmpty()) contents.add(new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[t].color, s.getHoverName().getString()));
+				if (!s.isEmpty()) contents.add(new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[t].color, s.getHoverName().getString(), e));
 			}
 		}
 	}
 
 	public static void open(String caseId) {
 		Cases.Case c = Cases.get(caseId);
+		if (c != null) { // every gun's picture in one converter run
+			List<Cases.Entry> all = new ArrayList<>();
+			for (var list : c.guns().values()) all.addAll(list);
+			CaseImages.load(all);
+		}
 		if (c != null) Minecraft.getInstance().setScreen(open = new CaseScreen(c));
 	}
 
@@ -79,7 +84,7 @@ public final class CaseScreen extends Screen {
 		landing = 52;
 		ItemStack got = Cases.stack(new Cases.Entry(r.kit(), r.item()), 0);
 		int color = r.rarity() < 0 ? GOLD : 0xFF000000 | SkinWraps.Rarity.values()[r.rarity()].color;
-		tiles.set(landing, new Tile(got, color, r.name()));
+		tiles.set(landing, new Tile(got, color, r.name(), new Cases.Entry(r.kit(), r.item())));
 		reel = tiles;
 		spinStart = System.nanoTime();
 		result = r.name();
@@ -90,15 +95,15 @@ public final class CaseScreen extends Screen {
 		double x = rng.nextDouble();
 		SkinWraps.Rarity t = x < 0.7992 ? SkinWraps.Rarity.RARE : x < 0.959 ? SkinWraps.Rarity.MYTHICAL : x < 0.991 ? SkinWraps.Rarity.LEGENDARY
 				: x < 0.9974 ? SkinWraps.Rarity.ANCIENT : null;
-		if (t == null) return new Tile(ItemStack.EMPTY, GOLD, "★ Rare Special Item ★");
+		if (t == null) return new Tile(ItemStack.EMPTY, GOLD, "★ Rare Special Item ★", null);
 		for (int k = t.ordinal(); k >= 0; k--) {
 			var list = c.guns().get(SkinWraps.Rarity.values()[k]);
 			if (list == null || list.isEmpty()) continue;
 			Cases.Entry e = list.get(rng.nextInt(list.size()));
 			ItemStack s = Cases.stack(e, 0);
-			return new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[k].color, s.getHoverName().getString());
+			return new Tile(s, 0xFF000000 | SkinWraps.Rarity.values()[k].color, s.getHoverName().getString(), e);
 		}
-		return contents.isEmpty() ? new Tile(ItemStack.EMPTY, GOLD, "") : contents.get(rng.nextInt(contents.size()));
+		return contents.isEmpty() ? new Tile(ItemStack.EMPTY, GOLD, "", null) : contents.get(rng.nextInt(contents.size()));
 	}
 
 	@Override
@@ -131,7 +136,12 @@ public final class CaseScreen extends Screen {
 	private void tile(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, Tile t, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, 0xFF22272E);
 		g.fill(x, y + h - 3, x + w, y + h, t.color());
-		if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
+		// CS2's picture of the gun in its skin (4:3), the item's own icon until it's loaded
+		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
+		if (pic != null) {
+			int pw = w - 4, ph = Math.min(h - 16, pw * 3 / 4), px = x + (w - pw) / 2;
+			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 2, 0, 0, pw, ph, pw, ph);
+		} else if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
 		String n = font.plainSubstrByWidth(t.name(), w - 4);
 		g.text(font, n, x + w / 2 - font.width(n) / 2, y + h - 13, 0xFFE0E0E0, false);
 	}
