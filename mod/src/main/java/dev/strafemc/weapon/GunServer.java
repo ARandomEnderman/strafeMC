@@ -341,31 +341,34 @@ public final class GunServer {
 		int clip = g.clip(gun);
 		if (w == null || clip >= w.clip()) return false;
 		if (infiniteAmmo() != 2) {
-			int slot = findMagazine(p, g);
-			if (slot < 0) return false;
-			var inv = p.getInventory();
-			ItemStack mag = inv.getItem(slot);
+			MagRef ref = findMagazine(p, g);
+			if (ref == null) return false;
+			ItemStack mag = ref.stack(), used = null;
 			int rounds = ((MagazineItem) mag.getItem()).rounds(mag) - 1;
 			if (((MagazineItem) mag.getItem()).shells()) mag.shrink(1); // a shell: gone once it's in
 			else if (mag.getCount() > 1) { // one off a stack of full ones: the rest stay full
 				mag.shrink(1);
 				// the one shells came out of stays, empty or not (crafting refills it)
-				ItemStack used = MagazineItem.withRounds(new ItemStack(mag.getItem()), rounds);
-				if (!inv.add(used)) p.drop(used, false);
+				used = MagazineItem.withRounds(new ItemStack(mag.getItem()), rounds);
 			} else MagazineItem.withRounds(mag, rounds);
-			inv.setChanged();
+			ref.done().run();
+			if (used != null) giveBack(p, used);
+			p.getInventory().setChanged();
 		}
 		gun.set(WeaponItems.CLIP, clip + 1);
 		return true;
 	}
 
-	/** Rounds in the inventory for this gun (all its magazines / shells). */
+	/** Rounds in the inventory for this gun (all its magazines / shells, mag pouches' too). */
 	static int roundsAvailable(ServerPlayer p, GunItem g) {
 		int n = 0;
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(s) * s.getCount();
+			else if (s.getItem() instanceof MagPouchItem && !MagPouchItem.open(p, s))
+				for (ItemStack t : MagPouchItem.contents(s))
+					if (t.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(t) * t.getCount();
 		}
 		return n;
 	}
@@ -817,7 +820,7 @@ public final class GunServer {
 		State st = state(p);
 		long now = System.nanoTime();
 		if (st.reload != null || now < st.deployUntil || g.clip(held) >= w.clip()) return;
-		if (infiniteAmmo() != 2 && findMagazine(p, g) < 0) return;
+		if (infiniteAmmo() != 2 && findMagazine(p, g) == null) return;
 		int loaded = g.clip(held);
 		AnimClip clip = AnimClip.load(clipPath(w.cls(), reloadAnim(w.cls(), loaded)));
 		double addAt = clip != null ? clip.timeOf("WPN_RELOAD_ADD_AMMO", w.reloadLockout() * 0.45) : w.reloadLockout() * 0.45;
@@ -849,23 +852,24 @@ public final class GunServer {
 			gun.set(WeaponItems.CLIP, w.clip());
 			return;
 		}
-		int slot = findMagazine(p, g);
-		if (slot < 0) return;
-		ItemStack mag = p.getInventory().getItem(slot);
+		MagRef ref = findMagazine(p, g);
+		if (ref == null) return;
+		ItemStack mag = ref.stack();
 		int rounds = ((MagazineItem) mag.getItem()).rounds(mag);
 		mag.shrink(1);
+		ref.done().run();
 		// mag-by-mag: the magazine that was in the gun comes back empty, its rounds wasted (red X; refill by crafting)
 		var oldItem = WeaponItems.MAGS.get(g.weaponClass);
-		if (oldItem != null) {
-			ItemStack back = MagazineItem.withRounds(new ItemStack(oldItem), 0);
-			if (!p.getInventory().add(back)) p.drop(back, false);
-		}
+		if (oldItem != null) giveBack(p, MagazineItem.withRounds(new ItemStack(oldItem), 0));
 		p.getInventory().setChanged();
 		gun.set(WeaponItems.CLIP, rounds);
 	}
 
-	/** Fullest matching magazine in the inventory, or -1. */
-	private static int findMagazine(ServerPlayer p, GunItem g) {
+	/** A magazine to load from, and what saves the change (a pouch's contents are a copy until written back). */
+	private record MagRef(ItemStack stack, Runnable done) {}
+
+	/** Fullest matching magazine in the inventory, else in a mag pouch there; null if none has rounds. */
+	private static MagRef findMagazine(ServerPlayer p, GunItem g) {
 		int best = -1, bestRounds = 0;
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
@@ -878,7 +882,29 @@ public final class GunServer {
 				}
 			}
 		}
-		return best;
+		if (best >= 0) return new MagRef(inv.getItem(best), () -> {});
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack pouch = inv.getItem(i);
+			if (!(pouch.getItem() instanceof MagPouchItem) || MagPouchItem.open(p, pouch)) continue;
+			var list = MagPouchItem.contents(pouch);
+			int bj = -1;
+			for (int j = 0; j < list.size(); j++)
+				if (list.get(j).getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass)) {
+					int r = m.rounds(list.get(j));
+					if (r > bestRounds) {
+						bestRounds = r;
+						bj = j;
+					}
+				}
+			if (bj >= 0) return new MagRef(list.get(bj), () -> MagPouchItem.store(pouch, list));
+		}
+		return null;
+	}
+
+	/** A magazine coming out of the gun: into a mag pouch, else the inventory, else dropped. */
+	private static void giveBack(ServerPlayer p, ItemStack mag) {
+		if (MagPouchItem.stow(p, mag)) return;
+		if (!p.getInventory().add(mag)) p.drop(mag, false);
 	}
 
 	public static void forget(UUID id) {

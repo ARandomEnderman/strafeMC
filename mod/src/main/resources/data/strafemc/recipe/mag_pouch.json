@@ -1,0 +1,12 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "equipment",
+ "ingredients": [
+  "minecraft:bundle",
+  "minecraft:iron_ingot"
+ ],
+ "result": {
+  "id": "strafemc:mag_pouch",
+  "count": 1
+ }
+}

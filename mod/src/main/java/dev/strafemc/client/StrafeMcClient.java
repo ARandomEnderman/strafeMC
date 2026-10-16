@@ -79,6 +79,7 @@ public class StrafeMcClient implements ClientModInitializer {
 			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
 		});
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);
+		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.MagPouchItem.MENU, net.minecraft.client.gui.screens.inventory.ContainerScreen::new);
 		LoadoutKey.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Refundable.TYPE,
 				(msg, ctx) -> BuyMenuScreen.refundable(msg.items()));

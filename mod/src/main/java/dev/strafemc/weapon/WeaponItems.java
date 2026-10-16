@@ -35,7 +35,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -74,6 +74,8 @@ public final class WeaponItems {
 		// a gun's receiver: found in structure chests, needed to craft every gun but the light pistols (FLAGGED: ours)
 		GUN_BASE = item("gun_base", p -> new Item(p.stacksTo(16)));
 		CASE_KEY = item("case_key", p -> new KeyItem(p.stacksTo(64)));
+		MAG_POUCH = item("mag_pouch", MagPouchItem::new);
+		MagPouchItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> grenadeKey = ResourceKey.create(Registries.ENTITY_TYPE, id("grenade"));
@@ -111,6 +113,7 @@ public final class WeaponItems {
 		// guns (with their magazines), knives, utility and blocks: a tab each
 		tab("guns", () -> new ItemStack(AK47), e -> {
 			e.accept(GUN_BASE);
+			e.accept(MAG_POUCH);
 			for (var g : GUNS.entrySet()) {
 				e.accept(g.getValue());
 				if (WeaponStats.of(g.getKey()) == null || WeaponStats.of(g.getKey()).clip() > 1) e.accept(MAGS.get(g.getKey()));

@@ -946,12 +946,10 @@ public final class GunClient {
 	private dev.strafemc.weapon.ShellReload shell;
 	private double shellLastT;
 
-	/** Rounds in the inventory for this gun (all its magazines / shells). */
+	/** Rounds in the inventory for this gun (all its magazines / shells, mag pouches' too). */
 	private static int roundsAvailable(LocalPlayer p, GunItem g) {
 		int n = 0;
-		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) {
-			ItemStack s = inv.getItem(i);
+		for (ItemStack s : dev.strafemc.weapon.MagPouchItem.carried(p.getInventory())) {
 			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(s) * s.getCount();
 		}
 		return n;
@@ -1082,9 +1080,7 @@ public final class GunClient {
 	}
 
 	private static boolean hasMagazine(LocalPlayer p, GunItem g) {
-		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) {
-			ItemStack s = inv.getItem(i);
+		for (ItemStack s : dev.strafemc.weapon.MagPouchItem.carried(p.getInventory())) {
 			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass) && m.rounds(s) > 0) return true;
 		}
 		return false;
@@ -1092,9 +1088,7 @@ public final class GunClient {
 
 	public static int magazineCount(LocalPlayer p, GunItem g) {
 		int n = 0;
-		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) {
-			ItemStack s = inv.getItem(i);
+		for (ItemStack s : dev.strafemc.weapon.MagPouchItem.carried(p.getInventory())) {
 			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass) && m.rounds(s) > 0) n += s.getCount();
 		}
 		return n;
