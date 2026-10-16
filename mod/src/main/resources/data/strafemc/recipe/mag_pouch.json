@@ -3,7 +3,9 @@
  "category": "equipment",
  "ingredients": [
   "minecraft:bundle",
-  "minecraft:iron_ingot"
+  "minecraft:iron_block",
+  "minecraft:iron_block",
+  "minecraft:iron_block"
  ],
  "result": {
   "id": "strafemc:mag_pouch",
