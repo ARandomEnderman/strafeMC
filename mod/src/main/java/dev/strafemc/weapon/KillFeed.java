@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * CS2's death notices (server): a kill by a CS weapon is announced with the weapon's killfeed icon and CS2's kill
- * modifiers. Kills of players go to everyone in the world, kills of mobs only to the killer (a farm would flood it).
+ * modifiers, to everyone in the world: players' kills and mobs' alike.
  */
 public final class KillFeed {
 	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32, FLASH_ASSIST = 64,
@@ -86,8 +86,6 @@ public final class KillFeed {
 				attacker.getId(), victim.getName().getString(), CsTeam.isT(victim), victim.getId(), victimPlayer, icon, flags,
 				assister == null ? "" : assister.getScoreboardName(), assister != null && CsTeam.isT(assister));
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] killfeed: {} -> {} ({}, flags {})", msg.attacker(), msg.victim(), icon, flags);
-		if (victimPlayer || !(attacker instanceof ServerPlayer)) {
-			for (ServerPlayer o : level.players()) if (ServerPlayNetworking.canSend(o, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(o, msg);
-		} else if (attacker instanceof ServerPlayer ap && ServerPlayNetworking.canSend(ap, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(ap, msg);
+		for (ServerPlayer o : level.players()) if (ServerPlayNetworking.canSend(o, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(o, msg);
 	}
 }
