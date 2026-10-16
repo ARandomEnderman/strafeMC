@@ -340,6 +340,59 @@ public final class RuntimePack {
 					+ "\"on_true\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "_empty\"},"
 					+ "\"on_false\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "\"}}}");
 		}
+		// the mag pouch's empty-slot outlines, in the style of the armor slots': the AK-47's magazine, and gunpowder
+		// (read from the game's own texture)
+		try {
+			Path ak = tex.resolve("item/mag/weapon_ak47" + MagIcons.VERSION + ".png");
+			if (!Files.exists(ak)) ak = tex.resolve("item/mag_ak47.png");
+			if (Files.exists(ak)) write(slotIcon(ImageIO.read(ak.toFile())), tex.resolve("gui/sprites/container/slot/mag.png"));
+			try (var in = RuntimePack.class.getResourceAsStream("/assets/minecraft/textures/item/gunpowder.png")) {
+				if (in != null) write(slotIcon(ImageIO.read(in)), tex.resolve("gui/sprites/container/slot/gunpowder.png"));
+			}
+		} catch (Exception ex) {
+			StrafeMc.LOG.warn("[strafemc] mag pouch slot icons: {}", ex.toString());
+		}
+	}
+
+	/** An empty-slot outline like vanilla's: the picture's shape fitted into 16 px, its edge in flat #555555. */
+	static java.awt.image.BufferedImage slotIcon(java.awt.image.BufferedImage src) {
+		int x0 = src.getWidth(), y0 = src.getHeight(), x1 = -1, y1 = -1;
+		for (int y = 0; y < src.getHeight(); y++)
+			for (int x = 0; x < src.getWidth(); x++)
+				if ((src.getRGB(x, y) >>> 24) >= 128) {
+					x0 = Math.min(x0, x);
+					y0 = Math.min(y0, y);
+					x1 = Math.max(x1, x);
+					y1 = Math.max(y1, y);
+				}
+		java.awt.image.BufferedImage out = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		if (x1 < 0) return out;
+		int w = x1 - x0 + 1, h = y1 - y0 + 1, box = src.getWidth() <= 16 ? 16 : 14; // pixel art stays 1:1
+		double sc = Math.min(1.0 * box / w, 1.0 * box / h);
+		int ow = Math.max(1, (int) Math.round(w * sc)), oh = Math.max(1, (int) Math.round(h * sc)), ox = (16 - ow) / 2, oy = (16 - oh) / 2;
+		for (int y = 0; y < oh; y++)
+			for (int x = 0; x < ow; x++) { // the share of covered source pixels under each output pixel
+				int sx0 = x0 + (int) (x / sc), sx1 = Math.max(sx0 + 1, x0 + (int) ((x + 1) / sc));
+				int sy0 = y0 + (int) (y / sc), sy1 = Math.max(sy0 + 1, y0 + (int) ((y + 1) / sc));
+				int on = 0, all = 0;
+				for (int sy = sy0; sy < Math.min(sy1, y1 + 1); sy++)
+					for (int sx = sx0; sx < Math.min(sx1, x1 + 1); sx++) {
+						all++;
+						if ((src.getRGB(sx, sy) >>> 24) >= 128) on++;
+					}
+				if (all > 0 && on * 2 >= all) out.setRGB(ox + x, oy + y, 0xFF555555);
+			}
+		// only the shape's edge: vanilla's slot icons are line drawings
+		java.awt.image.BufferedImage line = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		for (int y = 0; y < 16; y++)
+			for (int x = 0; x < 16; x++)
+				if (filled(out, x, y) && !(filled(out, x - 1, y) && filled(out, x + 1, y) && filled(out, x, y - 1) && filled(out, x, y + 1)))
+					line.setRGB(x, y, 0xFF555555);
+		return line;
+	}
+
+	private static boolean filled(java.awt.image.BufferedImage im, int x, int y) {
+		return x >= 0 && y >= 0 && x < im.getWidth() && y < im.getHeight() && (im.getRGB(x, y) >>> 24) > 0;
 	}
 
 	private static void cases(Path tex) throws Exception {

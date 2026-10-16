@@ -191,6 +191,12 @@ public class MagPouchItem extends Item {
 					public boolean mayPlace(ItemStack st) {
 						return getContainerSlot() == POWDER_SLOT ? st.is(net.minecraft.world.item.Items.GUNPOWDER) : st.getItem() instanceof MagazineItem;
 					}
+
+					/** The empty slot's outline, like the armor slots' (sprites drawn at start-up by RuntimePack). */
+					@Override
+					public net.minecraft.resources.Identifier getNoItemIcon() {
+						return WeaponItems.id(getContainerSlot() == POWDER_SLOT ? "container/slot/gunpowder" : "container/slot/mag");
+					}
 				};
 				else if (s.container == inv && s.getContainerSlot() == locked) r = new Slot(inv, locked, s.x, s.y) {
 					@Override
