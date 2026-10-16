@@ -27,7 +27,8 @@ import java.util.function.DoubleSupplier;
  */
 public final class StrafeSettingsScreen extends Screen {
 	private static final String[] TABS = {"Game", "Viewmodel", "Crosshair", "Audio", "Binds", "Setup & Hosting"};
-	private static final int BG = 0xF0121416, BAR = 0xFF0B0C0D, LINE = 0x30FFFFFF, MUTED = 0xFF9AA29E, ACCENT = 0xFFE0C060, TEXT = 0xFFFFFFFF;
+	static final int BG = 0xF0121416;
+	private static final int BAR = 0xFF0B0C0D, LINE = 0x30FFFFFF, MUTED = 0xFF9AA29E, ACCENT = 0xFFE0C060, TEXT = 0xFFFFFFFF;
 	private static final int BAR_H = 30, ROW_H = 24, CTRL_W = 200;
 	private static int lastTab;
 

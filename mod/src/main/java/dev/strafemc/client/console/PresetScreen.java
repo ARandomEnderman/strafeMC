@@ -59,6 +59,12 @@ public final class PresetScreen extends Screen {
 		return true;
 	}
 
+	/** The settings menu's dark backdrop instead of the blurred panorama / world: text stays readable. */
+	@Override
+	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float partial) {
+		g.fill(0, 0, width, height, dev.strafemc.client.StrafeSettingsScreen.BG);
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float partial) {
 		super.extractRenderState(g, mx, my, partial);
