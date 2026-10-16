@@ -15,7 +15,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 
@@ -24,7 +28,7 @@ import java.util.List;
 
 /**
  * JEI (when installed): its item list stays off our own screens (the loadout, a weapon case), like CS2's menus; and
- * the case key recipe, a custom one JEI can't read, is shown once per case.
+ * our custom recipes JEI can't read (case keys, magazines) are shown as fixed examples.
  */
 @JeiPlugin
 public final class JeiCompat implements IModPlugin {
@@ -33,33 +37,47 @@ public final class JeiCompat implements IModPlugin {
 		return Identifier.fromNamespaceAndPath("strafemc", "jei");
 	}
 
-	/** One case's key recipe, for JEI only: the case, a gold nugget and redstone make its key. */
-	static final class CaseKeyDisplay extends dev.strafemc.weapon.CaseKeyRecipe {
-		final ItemStack caseStack, key;
+	/**
+	 * A fixed example of one of our custom (shapeless) recipes, for JEI only: the case key per case, the magazine per
+	 * gun and its refill. The real recipes read the grid; JEI can't show those.
+	 */
+	static final class Example extends CustomRecipe {
+		final List<ItemStack> inputs;
+		final ItemStack output;
 
-		CaseKeyDisplay(ItemStack caseStack, ItemStack key) {
-			this.caseStack = caseStack;
-			this.key = key;
+		Example(List<ItemStack> inputs, ItemStack output) {
+			this.inputs = inputs;
+			this.output = output;
 		}
 
-		List<List<ItemStack>> inputs() {
-			return List.of(List.of(caseStack), List.of(new ItemStack(Items.GOLD_NUGGET)), List.of(new ItemStack(Items.REDSTONE)));
+		@Override
+		public boolean matches(CraftingInput in, Level level) {
+			return false; // display only
+		}
+
+		@Override
+		public ItemStack assemble(CraftingInput in) {
+			return ItemStack.EMPTY;
+		}
+
+		@Override
+		public RecipeSerializer<? extends CustomRecipe> getSerializer() {
+			return dev.strafemc.weapon.MagazineRecipe.SERIALIZER;
 		}
 	}
 
 	@Override
 	public void registerVanillaCategoryExtensions(IVanillaCategoryExtensionRegistration r) {
-		r.getCraftingCategory().addExtension(CaseKeyDisplay.class, new ICraftingCategoryExtension<CaseKeyDisplay>() {
+		r.getCraftingCategory().addExtension(Example.class, new ICraftingCategoryExtension<Example>() {
 			@Override
-			public List<SlotDisplay> getIngredients(RecipeHolder<CaseKeyDisplay> h) {
-				return List.of(new SlotDisplay.ItemSlotDisplay(h.value().caseStack.getItem()), new SlotDisplay.ItemSlotDisplay(Items.GOLD_NUGGET),
-						new SlotDisplay.ItemSlotDisplay(Items.REDSTONE));
+			public List<SlotDisplay> getIngredients(RecipeHolder<Example> h) {
+				return h.value().inputs.stream().<SlotDisplay>map(s -> new SlotDisplay.ItemSlotDisplay(s.getItem())).toList();
 			}
 
 			@Override
-			public void setRecipe(RecipeHolder<CaseKeyDisplay> h, IRecipeLayoutBuilder b, ICraftingGridHelper grid, IFocusGroup focuses) {
-				grid.createAndSetInputs(b, h.value().inputs(), 0, 0); // shapeless
-				grid.createAndSetOutputs(b, List.of(h.value().key));
+			public void setRecipe(RecipeHolder<Example> h, IRecipeLayoutBuilder b, ICraftingGridHelper grid, IFocusGroup focuses) {
+				grid.createAndSetInputs(b, h.value().inputs.stream().map(List::of).toList(), 0, 0); // shapeless
+				grid.createAndSetOutputs(b, List.of(h.value().output));
 				b.setShapeless();
 			}
 		});
@@ -68,14 +86,30 @@ public final class JeiCompat implements IModPlugin {
 	@Override
 	public void registerRecipes(IRecipeRegistration r) {
 		List<RecipeHolder<CraftingRecipe>> out = new ArrayList<>();
+		// case keys: the case + a gold nugget + redstone (the case stays)
 		for (var c : dev.strafemc.weapon.Cases.all()) {
 			if (dev.strafemc.weapon.Cases.key(c.key()) == null) continue;
 			ItemStack cs = dev.strafemc.weapon.CaseItem.stack(dev.strafemc.weapon.WeaponItems.WEAPON_CASE, c.id());
 			ItemStack key = dev.strafemc.weapon.KeyItem.stack(dev.strafemc.weapon.WeaponItems.CASE_KEY, c.key());
-			out.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("strafemc", "jei/case_key/" + c.id())),
-					new CaseKeyDisplay(cs, key)));
+			out.add(example("case_key/" + c.id(), List.of(cs, new ItemStack(Items.GOLD_NUGGET), new ItemStack(Items.REDSTONE)), key));
+		}
+		// magazines: the gun + an iron nugget + gunpowder (the gun stays; shotguns loaded by the shell: 8 shells), and an
+		// empty magazine + gunpowder refills it
+		for (var e : dev.strafemc.weapon.WeaponItems.GUNS.entrySet()) {
+			String cls = e.getKey();
+			if (cls.equals("weapon_taser") || !(dev.strafemc.weapon.WeaponItems.MAGS.get(cls) instanceof dev.strafemc.weapon.MagazineItem mag)) continue;
+			ItemStack full = dev.strafemc.weapon.MagazineItem.withRounds(new ItemStack(mag), Integer.MAX_VALUE);
+			if (mag.shells()) full.setCount(8);
+			out.add(example("magazine/" + cls, List.of(new ItemStack(e.getValue()), new ItemStack(Items.IRON_NUGGET), new ItemStack(Items.GUNPOWDER)), full));
+			if (!mag.shells())
+				out.add(example("magazine_refill/" + cls, List.of(dev.strafemc.weapon.MagazineItem.withRounds(new ItemStack(mag), 0), new ItemStack(Items.GUNPOWDER)),
+						dev.strafemc.weapon.MagazineItem.withRounds(new ItemStack(mag), Integer.MAX_VALUE)));
 		}
 		r.addRecipes(RecipeTypes.CRAFTING, out);
+	}
+
+	private static RecipeHolder<CraftingRecipe> example(String path, List<ItemStack> inputs, ItemStack output) {
+		return new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("strafemc", "jei/" + path)), new Example(inputs, output));
 	}
 
 	@Override
