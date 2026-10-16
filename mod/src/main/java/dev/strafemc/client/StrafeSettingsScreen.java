@@ -106,9 +106,10 @@ public final class StrafeSettingsScreen extends Screen {
 		toggle("Speed meter", () -> StrafeConfig.showSpeedMeter, v -> StrafeConfig.showSpeedMeter = v);
 		toggle("Jump stats", () -> StrafeConfig.jumpStats, v -> StrafeConfig.jumpStats = v);
 		toggle("Velocity graph", () -> StrafeConfig.velGraph, v -> StrafeConfig.velGraph = v);
-		zeroSlider("Kill card time", "Until death", 0, 60, 1, () -> StrafeConfig.killCardSeconds, v -> StrafeConfig.killCardSeconds = v);
-		header("Items");
-		button("Loadout", "Open", LoadoutKey::open);
+		if (minecraft != null && minecraft.level != null) { // the loadout belongs to a world
+			header("Items");
+			button("Loadout", "Open", LoadoutKey::open);
+		}
 	}
 
 	private void viewmodel() {
@@ -235,17 +236,6 @@ public final class StrafeSettingsScreen extends Screen {
 			set.accept(v);
 			save();
 		}, null));
-	}
-
-	/** A slider whose 0 reads as a word ("Until death"). */
-	private void zeroSlider(String label, String zero, double min, double max, double step, DoubleSupplier get, DoubleConsumer set) {
-		Slider sl = new Slider(min, max, step, get, v -> {
-			set.accept(v);
-			save();
-		}, null);
-		sl.zero = zero;
-		sl.updateMessage();
-		row(label, sl);
 	}
 
 	private void xslider(String label, String cvar, double min, double max, double step) {

@@ -48,7 +48,7 @@ public final class KillCards {
 		int me = p.getId();
 		synchronized (CARDS) {
 			if (m.victimId() == me) {
-				if (StrafeConfig.killCardSeconds <= 0) CARDS.clear();
+				if (ClientGameplay.killCardTime() <= 0) CARDS.clear();
 				return;
 			}
 			// your own kills of players and villagers only (an assist, another mob or your own death doesn't count)
@@ -77,10 +77,10 @@ public final class KillCards {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.options.hideGui || mc.player == null) return;
 		long now = System.nanoTime();
-		if (StrafeConfig.killCardSeconds <= 0 && mc.player.isDeadOrDying()) clear(); // until you die
+		if (ClientGameplay.killCardTime() <= 0 && mc.player.isDeadOrDying()) clear(); // until you die
 		List<Card> list;
 		synchronized (CARDS) {
-			if (StrafeConfig.killCardSeconds > 0) CARDS.removeIf(c -> (now - c.time) / 1e9 > StrafeConfig.killCardSeconds);
+			if (ClientGameplay.killCardTime() > 0) CARDS.removeIf(c -> (now - c.time) / 1e9 > ClientGameplay.killCardTime());
 			if (CARDS.isEmpty()) {
 				lastNs = 0;
 				return;

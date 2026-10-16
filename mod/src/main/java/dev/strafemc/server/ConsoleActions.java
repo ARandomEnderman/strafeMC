@@ -275,6 +275,20 @@ public final class ConsoleActions {
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy menu: "
 						+ dev.strafemc.weapon.BuyMenu.modeName(StrafeSettings.buyMode()) + " (set by " + p.getScoreboardName() + ")"), false);
 			}
+			case "strafemc_killcards_time" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change the kill card time for the server."));
+					break;
+				}
+				try {
+					StrafeSettings.setKillCardTime((int) Math.round(Double.parseDouble(arg.trim())));
+				} catch (NumberFormatException e) {
+					p.sendSystemMessage(Component.literal("strafemc_killcards_time <seconds; 0 = until death>"));
+					break;
+				}
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Kill card time: "
+						+ (StrafeSettings.killCardTime() == 0 ? "until death" : StrafeSettings.killCardTime() + " s") + " (set by " + p.getScoreboardName() + ")"), false);
+			}
 			case "strafemc_buytime" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change the buy time for the server."));

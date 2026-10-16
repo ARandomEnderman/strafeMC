@@ -107,6 +107,7 @@ public final class GameplaySync {
 		root.put("slabStep", StrafeSettings.slabStep());
 		root.put("buyMode", StrafeSettings.buyMode());
 		root.put("buyTime", StrafeSettings.buyTime());
+		root.put("killCardTime", StrafeSettings.killCardTime());
 		root.put("loadoutKeep", StrafeSettings.loadoutKeep());
 		root.put("movementPersonal", StrafeSettings.personal());
 		String json = GSON.toJson(root);

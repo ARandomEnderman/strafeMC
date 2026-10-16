@@ -27,6 +27,8 @@ public final class ClientGameplay {
 	private static volatile boolean movementChoice, slabStep;
 	/** The server's buy menu rules (strafemc_buymenu, strafemc_buytime); creative only and no limit until it says. */
 	private static volatile int buyMode = 1, buyTime = 0;
+	/** The server's kill card time (strafemc_killcards_time): seconds, 0 until you die. */
+	private static volatile int killCardTime = 0;
 	private static volatile boolean loadoutKeep = true;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
@@ -51,6 +53,7 @@ public final class ClientGameplay {
 			slabStep = Boolean.TRUE.equals(root.get("slabStep"));
 			buyMode = root.get("buyMode") instanceof Number n ? n.intValue() : 1;
 			buyTime = root.get("buyTime") instanceof Number n ? n.intValue() : 0;
+			killCardTime = root.get("killCardTime") instanceof Number n ? n.intValue() : 0;
 			loadoutKeep = !Boolean.FALSE.equals(root.get("loadoutKeep"));
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
@@ -76,6 +79,7 @@ public final class ClientGameplay {
 		slabStep = false;
 		buyMode = 1;
 		buyTime = 0;
+		killCardTime = 0;
 		movementPersonal = java.util.Map.of();
 		STATS.clear();
 		RECOIL.clear();
@@ -163,6 +167,10 @@ public final class ClientGameplay {
 
 	public static boolean loadoutKeep() {
 		return loadoutKeep;
+	}
+
+	public static int killCardTime() {
+		return killCardTime;
 	}
 
 	public static int buyTime() {

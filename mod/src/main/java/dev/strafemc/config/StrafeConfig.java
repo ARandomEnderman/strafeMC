@@ -74,8 +74,6 @@ public final class StrafeConfig {
 	public static double viewmodelSwayScale = 1;
 	/** The crosshair's cl_crosshair* settings that differ from the defaults (Crosshair.DEFAULTS). */
 	public static final java.util.Map<String, Double> crosshair = new java.util.concurrent.ConcurrentHashMap<>();
-	/** How long each kill card above the hotbar stays (seconds); 0: until you die. */
-	public static double killCardSeconds = 0;
 	/**
 	 * CS2's grenade throw crosshair (client cvars, CS2 defaults): cl_grenadecrosshair_<explosive|flash|smoke|fire|decoy>
 	 * on, cl_grenadecrosshairdelay_* 2 s (0..5), cl_grenadecrosshair_tickscaling 1.1 (0.5..2), cl_grenadecrosshair_ticklabels on.
@@ -147,7 +145,6 @@ public final class StrafeConfig {
 			viewmodelFov = Math.max(60, Math.min(68, Double.parseDouble(p.getProperty("viewmodelFov", String.valueOf(viewmodelFov)))));
 			viewmodelOffsetX = Double.parseDouble(p.getProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX)));
 			viewmodelSwayScale = Double.parseDouble(p.getProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale)));
-			killCardSeconds = Double.parseDouble(p.getProperty("killCardSeconds", String.valueOf(killCardSeconds)));
 			for (String key : p.stringPropertyNames())
 				if (key.startsWith("crosshair.")) crosshair.put(key.substring(10), Double.parseDouble(p.getProperty(key)));
 			viewmodelOffsetY = Double.parseDouble(p.getProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY)));
@@ -201,7 +198,6 @@ public final class StrafeConfig {
 		p.setProperty("zoomSensitivityRatio", String.valueOf(zoomSensitivityRatio));
 		p.setProperty("viewmodelOffsetX", String.valueOf(viewmodelOffsetX));
 		p.setProperty("viewmodelSwayScale", String.valueOf(viewmodelSwayScale));
-		p.setProperty("killCardSeconds", String.valueOf(killCardSeconds));
 		crosshair.forEach((k, v) -> p.setProperty("crosshair." + k, String.valueOf(v)));
 		p.setProperty("viewmodelOffsetY", String.valueOf(viewmodelOffsetY));
 		p.setProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ));

@@ -107,6 +107,12 @@ public final class ConsoleScreen extends Screen {
 			for (int i = 0; i < presets.length; i++) if (presets[i] == cur) next = presets[(i + 1) % presets.length];
 			ConsoleCommands.execute("strafemc_buytime " + next);
 		});
+		toggle(() -> "Kill card time: " + (dev.strafemc.client.ClientGameplay.killCardTime() == 0 ? "until death" : dev.strafemc.client.ClientGameplay.killCardTime() + " s"), () -> {
+			int[] presets = {0, 3, 5, 10, 30};
+			int cur = dev.strafemc.client.ClientGameplay.killCardTime(), next = presets[0];
+			for (int i = 0; i < presets.length; i++) if (presets[i] == cur) next = presets[(i + 1) % presets.length];
+			ConsoleCommands.execute("strafemc_killcards_time " + next);
+		});
 		number("Max velocity", "sv_maxvelocity");
 		number("Accelerate", "sv_accelerate");
 		number("Friction", "sv_friction");

@@ -258,8 +258,6 @@ public final class ConsoleCommands {
 				v -> StrafeConfig.viewmodelOffsetY = v);
 		viewmodelSetting("viewmodel_offset_z", "Weapon position: up.", -1e6, 1e6, () -> StrafeConfig.viewmodelOffsetZ,
 				v -> StrafeConfig.viewmodelOffsetZ = v);
-		viewmodelSetting("strafemc_killcards_time", "Kill card time in seconds (0 = until death).", 0, 3600,
-				() -> StrafeConfig.killCardSeconds, v -> StrafeConfig.killCardSeconds = v);
 		viewmodelSetting("viewmodel_sway_scale", "Weapon sway, 0-5.", 0, 5,
 				() -> StrafeConfig.viewmodelSwayScale, v -> StrafeConfig.viewmodelSwayScale = v);
 		for (int i = 0; i < 5; i++) { // CS2's grenade throw crosshair
@@ -323,6 +321,8 @@ public final class ConsoleCommands {
 		local("refund", "Refund an item.", a -> refund(a.length > 0 ? a[0] : "all"));
 		local("strafemc_buymenu", "Who can buy: 0 nobody, 1 creative, 2 everyone. Operators.",
 				a -> action("strafemc_buymenu", a.length > 0 ? a[0] : "", false));
+		local("strafemc_killcards_time", "Kill card time in seconds (0 = until death). Operators.",
+				a -> { if (a.length > 0) action("strafemc_killcards_time", a[0], false); else ConsoleLog.info("strafemc_killcards_time = " + dev.strafemc.client.ClientGameplay.killCardTime()); });
 		local("strafemc_buytime", "Buy time in seconds (0 = no limit). Operators.",
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
 		local("strafemc_spawnblocks", "Respawn on spawn blocks (1) or not (0). Operators.",
