@@ -53,7 +53,7 @@ public final class StrafeConfig {
 	/** Mouse wheel triggers +jump (CS-style bind) instead of hotbar scrolling. */
 	public static boolean scrollJump = false; // the wheel scrolls the hotbar unless you turn scroll-jump on
 	/** Show horizontal speed (units/s) on the action bar, like cl_showpos. */
-	public static boolean showSpeed = true;
+	public static boolean showSpeed = false;
 	/** Double-tapping jump toggles creative flight while Source movement is active (off: bhop spam never starts flying). */
 	public static boolean doubleTapFly = false;
 	/** Volume of CS2 movement sounds (footsteps, jump, landing); CS2's own relative levels are kept. */
@@ -83,11 +83,11 @@ public final class StrafeConfig {
 	public static double grenadeCrosshairTickScaling = 1.1;
 	public static boolean grenadeCrosshairTickLabels = true;
 	/** KZ-style jump stats after each jump (cl_jumpstats). */
-	public static boolean jumpStats = true;
+	public static boolean jumpStats = false;
 	/** VRF glTF axes -> camera space for the viewmodel (clip/model space is y-up, z forward, x left -> camera x=-x, y=y, z=-z). */
 	public static String vmAxes = "-x,y,-z";
 	/** Speed + CS2 link state above the hotbar (cl_showspeed). showSpeed is cl_showpos. */
-	public static boolean showSpeedMeter = true;
+	public static boolean showSpeedMeter = false;
 	/** Speed graph above the hotbar (cl_velgraph). */
 	public static boolean velGraph = false;
 	/** Your CS side, "ct" or "t" (console quick menu, strafemc_team): footstep set and smoke colour, later your agent. */
