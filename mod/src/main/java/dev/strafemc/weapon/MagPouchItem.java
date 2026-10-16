@@ -141,8 +141,7 @@ public class MagPouchItem extends Item {
 			full.setCount(n);
 			powder.shrink(n);
 			s.shrink(n);
-			if (s.isEmpty()) list.set(j, full);
-			else filled.add(full);
+			filled.add(full); // onto the full ones already in the pouch, not left in the empty one's slot
 		}
 		for (ItemStack f : filled) {
 			insert(list, f);
