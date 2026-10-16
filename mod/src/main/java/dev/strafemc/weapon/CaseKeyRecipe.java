@@ -12,7 +12,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
 /**
- * A case's own key: the case + a gold ingot + a tripwire hook + redstone, in any order; the case stays (FLAGGED: our
+ * A case's own key: the case + a gold nugget + redstone, in any order; the case stays (FLAGGED: our
  * recipe, CS2 sells keys).
  */
 public class CaseKeyRecipe extends CustomRecipe {
@@ -23,16 +23,15 @@ public class CaseKeyRecipe extends CustomRecipe {
 	/** The case in the grid when the rest of the recipe is there exactly, else null. */
 	private static ItemStack caseIn(CraftingInput in) {
 		ItemStack found = null;
-		int gold = 0, hook = 0, redstone = 0, other = 0;
+		int gold = 0, redstone = 0, other = 0;
 		for (ItemStack s : in.items()) {
 			if (s.isEmpty()) continue;
 			if (s.getItem() instanceof CaseItem && found == null) found = s;
-			else if (s.is(Items.GOLD_INGOT)) gold++;
-			else if (s.is(Items.TRIPWIRE_HOOK)) hook++;
+			else if (s.is(Items.GOLD_NUGGET)) gold++;
 			else if (s.is(Items.REDSTONE)) redstone++;
 			else other++;
 		}
-		if (found == null || gold != 1 || hook != 1 || redstone != 1 || other != 0) return null;
+		if (found == null || gold != 1 || redstone != 1 || other != 0) return null;
 		Cases.Case c = Cases.get(CaseItem.caseId(found));
 		return c == null || Cases.key(c.key()) == null ? null : found;
 	}

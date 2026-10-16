@@ -33,7 +33,7 @@ public final class JeiCompat implements IModPlugin {
 		return Identifier.fromNamespaceAndPath("strafemc", "jei");
 	}
 
-	/** One case's key recipe, for JEI only: the case, a gold ingot, a tripwire hook and redstone make its key. */
+	/** One case's key recipe, for JEI only: the case, a gold nugget and redstone make its key. */
 	static final class CaseKeyDisplay extends dev.strafemc.weapon.CaseKeyRecipe {
 		final ItemStack caseStack, key;
 
@@ -43,8 +43,7 @@ public final class JeiCompat implements IModPlugin {
 		}
 
 		List<List<ItemStack>> inputs() {
-			return List.of(List.of(caseStack), List.of(new ItemStack(Items.GOLD_INGOT)), List.of(new ItemStack(Items.TRIPWIRE_HOOK)),
-					List.of(new ItemStack(Items.REDSTONE)));
+			return List.of(List.of(caseStack), List.of(new ItemStack(Items.GOLD_NUGGET)), List.of(new ItemStack(Items.REDSTONE)));
 		}
 	}
 
@@ -53,8 +52,8 @@ public final class JeiCompat implements IModPlugin {
 		r.getCraftingCategory().addExtension(CaseKeyDisplay.class, new ICraftingCategoryExtension<CaseKeyDisplay>() {
 			@Override
 			public List<SlotDisplay> getIngredients(RecipeHolder<CaseKeyDisplay> h) {
-				return List.of(new SlotDisplay.ItemSlotDisplay(h.value().caseStack.getItem()), new SlotDisplay.ItemSlotDisplay(Items.GOLD_INGOT),
-						new SlotDisplay.ItemSlotDisplay(Items.TRIPWIRE_HOOK), new SlotDisplay.ItemSlotDisplay(Items.REDSTONE));
+				return List.of(new SlotDisplay.ItemSlotDisplay(h.value().caseStack.getItem()), new SlotDisplay.ItemSlotDisplay(Items.GOLD_NUGGET),
+						new SlotDisplay.ItemSlotDisplay(Items.REDSTONE));
 			}
 
 			@Override
