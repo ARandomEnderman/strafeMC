@@ -23,10 +23,14 @@ import net.minecraft.world.level.Level;
 
 /**
  * A mag pouch: a shulker-box-like bag for magazines and shells only (full or empty), opened by right-clicking it in the
- * main hand. Reloading takes full magazines from it after the inventory's own and puts the emptied one back in it.
+ * main hand. Reloading takes full magazines from it after the inventory's own and puts the emptied one back in it. Its
+ * last slot holds gunpowder: a second after an empty magazine is in the pouch, it's refilled with one gunpowder (the
+ * crafting refill's cost).
  */
 public class MagPouchItem extends Item {
-	public static final int SIZE = 27;
+	public static final int SIZE = 27, POWDER_SLOT = SIZE - 1;
+	/** Ticks from an empty magazine being in the pouch to its refill (asked for: 1 s). */
+	private static final int REFILL_DELAY = 20;
 	public static MenuType<ChestMenu> MENU;
 
 	public MagPouchItem(Properties p) {
@@ -83,20 +87,69 @@ public class MagPouchItem extends Item {
 			ItemStack pouch = inv.getItem(i);
 			if (!(pouch.getItem() instanceof MagPouchItem) || open(p, pouch)) continue;
 			NonNullList<ItemStack> list = contents(pouch);
-			for (int j = 0; j < SIZE && !mag.isEmpty(); j++) {
-				ItemStack s = list.get(j);
-				if (s.isEmpty()) {
-					list.set(j, mag.copyAndClear());
-				} else if (ItemStack.isSameItemSameComponents(s, mag) && s.getCount() < s.getMaxStackSize()) {
-					int n = Math.min(mag.getCount(), s.getMaxStackSize() - s.getCount());
-					s.grow(n);
-					mag.shrink(n);
-				}
-			}
+			insert(list, mag);
 			store(pouch, list);
 			if (mag.isEmpty()) return true;
 		}
 		return false;
+	}
+
+	/** Into the magazine slots: onto matching stacks first, then empty slots; whatever doesn't fit stays in mag. */
+	private static void insert(NonNullList<ItemStack> list, ItemStack mag) {
+		for (int j = 0; j < POWDER_SLOT && !mag.isEmpty(); j++) {
+			ItemStack s = list.get(j);
+			if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, mag) && s.getCount() < s.getMaxStackSize()) {
+				int n = Math.min(mag.getCount(), s.getMaxStackSize() - s.getCount());
+				s.grow(n);
+				mag.shrink(n);
+			}
+		}
+		for (int j = 0; j < POWDER_SLOT && !mag.isEmpty(); j++)
+			if (list.get(j).isEmpty()) list.set(j, mag.copyAndClear());
+	}
+
+	private static boolean refillable(ItemStack s) {
+		return s.getItem() instanceof MagazineItem m && !m.shells() && m.empty(s);
+	}
+
+	/** The gunpowder refill: armed when an empty magazine and gunpowder are both in, done REFILL_DELAY ticks later. */
+	@Override
+	public void inventoryTick(ItemStack pouch, net.minecraft.server.level.ServerLevel level, net.minecraft.world.entity.Entity e,
+							  net.minecraft.world.entity.EquipmentSlot slot) {
+		if (!(e instanceof Player p) || open(p, pouch)) return;
+		NonNullList<ItemStack> list = contents(pouch);
+		ItemStack powder = list.get(POWDER_SLOT);
+		boolean empties = false;
+		for (int j = 0; j < POWDER_SLOT && !empties; j++) empties = refillable(list.get(j));
+		Integer at = pouch.get(WeaponItems.REFILL_AT);
+		int now = (int) level.getGameTime();
+		if (!empties || !powder.is(net.minecraft.world.item.Items.GUNPOWDER)) {
+			if (at != null) pouch.remove(WeaponItems.REFILL_AT);
+			return;
+		}
+		if (at == null || at > now + REFILL_DELAY) { // armed now (or a stale time from another world)
+			pouch.set(WeaponItems.REFILL_AT, now + REFILL_DELAY);
+			return;
+		}
+		if (now < at) return;
+		java.util.List<ItemStack> filled = new java.util.ArrayList<>();
+		for (int j = 0; j < POWDER_SLOT && !powder.isEmpty(); j++) {
+			ItemStack s = list.get(j);
+			if (!refillable(s)) continue;
+			int n = Math.min(s.getCount(), powder.getCount());
+			ItemStack full = MagazineItem.withRounds(new ItemStack(s.getItem()), ((MagazineItem) s.getItem()).capacity());
+			full.setCount(n);
+			powder.shrink(n);
+			s.shrink(n);
+			if (s.isEmpty()) list.set(j, full);
+			else filled.add(full);
+		}
+		for (ItemStack f : filled) {
+			insert(list, f);
+			if (!f.isEmpty() && !p.getInventory().add(f)) p.drop(f, false);
+		}
+		store(pouch, list);
+		pouch.remove(WeaponItems.REFILL_AT);
 	}
 
 	/** The pouch's slots, written back to the pouch item on every change (server side; the client's has no item). */
@@ -136,7 +189,7 @@ public class MagPouchItem extends Item {
 				if (s.container == bag) r = new Slot(bag, s.getContainerSlot(), s.x, s.y) {
 					@Override
 					public boolean mayPlace(ItemStack st) {
-						return st.getItem() instanceof MagazineItem;
+						return getContainerSlot() == POWDER_SLOT ? st.is(net.minecraft.world.item.Items.GUNPOWDER) : st.getItem() instanceof MagazineItem;
 					}
 				};
 				else if (s.container == inv && s.getContainerSlot() == locked) r = new Slot(inv, locked, s.x, s.y) {
