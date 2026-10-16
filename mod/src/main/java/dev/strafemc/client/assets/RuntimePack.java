@@ -340,15 +340,11 @@ public final class RuntimePack {
 					+ "\"on_true\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "_empty\"},"
 					+ "\"on_false\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/mag/" + e.cls() + "\"}}}");
 		}
-		// the mag pouch's empty-slot outlines, in the style of the armor slots': the AK-47's magazine, and gunpowder
-		// (read from the game's own texture)
+		// the mag pouch's empty magazine slot outline, in the style of the armor slots': the AK-47's magazine
 		try {
 			Path ak = tex.resolve("item/mag/weapon_ak47" + MagIcons.VERSION + ".png");
 			if (!Files.exists(ak)) ak = tex.resolve("item/mag_ak47.png");
 			if (Files.exists(ak)) write(slotIcon(ImageIO.read(ak.toFile())), tex.resolve("gui/sprites/container/slot/mag.png"));
-			try (var in = RuntimePack.class.getResourceAsStream("/assets/minecraft/textures/item/gunpowder.png")) {
-				if (in != null) write(slotIcon(ImageIO.read(in)), tex.resolve("gui/sprites/container/slot/gunpowder.png"));
-			}
 		} catch (Exception ex) {
 			StrafeMc.LOG.warn("[strafemc] mag pouch slot icons: {}", ex.toString());
 		}
