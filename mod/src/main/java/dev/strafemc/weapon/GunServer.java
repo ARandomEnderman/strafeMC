@@ -747,7 +747,12 @@ public final class GunServer {
 						.getOrThrow(net.minecraft.world.damagesource.DamageTypes.ARROW), p, p)
 				: p.damageSources().playerAttack(p);
 		KillFeed.damaged(p, target, Math.min(amount, target.getHealth()) / StrafeConfig.hpScale);
+		// a Zeus kill cooks: the mob burns for the hit, so its loot drops cooked meat (like a molotov kill); a survivor isn't left burning
+		boolean cook = cls.equals(ZeusRecharge.CLS) && !(target instanceof net.minecraft.world.entity.player.Player);
+		int fire = target.getRemainingFireTicks();
+		if (cook) target.setRemainingFireTicks(Math.max(fire, 1));
 		target.hurtServer(p.level(), src, amount);
+		if (cook && target.isAlive()) target.setRemainingFireTicks(fire);
 		if (dev.strafemc.server.StrafeSettings.mcKnockback()) return;
 		target.setDeltaMovement(motion);
 		target.hurtMarked = marked;
