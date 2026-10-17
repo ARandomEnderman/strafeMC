@@ -331,6 +331,8 @@ public final class ConsoleCommands {
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
 		local("strafemc_spawnblocks", "Respawn on spawn blocks (1) or not (0). Operators.",
 				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
+		local("strafemc_drops", "Care packages on (1) or off (0). Operators.",
+				a -> action("strafemc_drops", bool(a, !dev.strafemc.client.ClientGameplay.drops()) ? "1" : "0", false));
 		local("strafemc_loadout_keep", "Keep loadout on death (1) or drop it (0). Operators.",
 				a -> action("strafemc_loadout_keep", bool(a, !dev.strafemc.client.ClientGameplay.loadoutKeep()) ? "1" : "0", false));
 		local("loadout", "Open your loadout.", a -> dev.strafemc.client.LoadoutKey.open());

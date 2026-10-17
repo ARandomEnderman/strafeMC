@@ -39,7 +39,7 @@ public final class CarePackageScreen extends Screen {
 	/** Whether there's something to claim or redeem (the quick menu marks it). */
 	public static boolean claimable() {
 		CarePackage.State s = state();
-		return s.open() || s.queued() > 0;
+		return ClientGameplay.drops() && (s.open() || s.queued() > 0);
 	}
 
 	@Override

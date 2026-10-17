@@ -208,12 +208,14 @@ public final class ConsoleActions {
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
-			case "strafemc_drop" -> { // a care package without a new XP level: a cheat
-				if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
+			case "strafemc_drop" -> { // a care package without a new rank: a cheat
+				if (!StrafeSettings.drops()) p.sendSystemMessage(Component.literal("Care packages are off on this server."));
+				else if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
 				else dev.strafemc.weapon.CarePackage.queue(p, 1);
 			}
 			case "drop_everyone" -> { // a care package for every player online
-				if (!op) p.sendSystemMessage(Component.literal("Only operators can give everyone a care package."));
+				if (!StrafeSettings.drops()) p.sendSystemMessage(Component.literal("Care packages are off on this server."));
+				else if (!op) p.sendSystemMessage(Component.literal("Only operators can give everyone a care package."));
 				else for (var o : p.level().getServer().getPlayerList().getPlayers()) dev.strafemc.weapon.CarePackage.queue(o, 1);
 			}
 			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
@@ -288,6 +290,15 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setSpawnBlocks(!arg.equals("0"));
+			}
+			case "strafemc_drops" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can turn care packages on or off."));
+					break;
+				}
+				StrafeSettings.setDrops(!arg.equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Care packages: "
+						+ (StrafeSettings.drops() ? "on" : "off") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "strafemc_loadout_keep" -> {
 				if (!op) {

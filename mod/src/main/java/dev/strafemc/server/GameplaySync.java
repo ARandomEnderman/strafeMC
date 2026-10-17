@@ -109,6 +109,7 @@ public final class GameplaySync {
 		root.put("buyTime", StrafeSettings.buyTime());
 		root.put("killCardTime", StrafeSettings.killCardTime());
 		root.put("loadoutKeep", StrafeSettings.loadoutKeep());
+		root.put("drops", StrafeSettings.drops());
 		root.put("movementPersonal", StrafeSettings.personal());
 		String json = GSON.toJson(root);
 		if (dev.strafemc.config.StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] gameplay sync: {} weapons, {} chars", weapons.size(), json.length());

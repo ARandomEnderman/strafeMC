@@ -143,12 +143,13 @@ public final class CarePackage {
 		if (amount <= 0) return;
 		State s = get(p);
 		int xp = (int) Math.min(Integer.MAX_VALUE, (long) s.xp() + amount), ranks = ranksBy(xp) - ranksBy(s.xp());
-		State n = new State(s.items(), s.claimed(), s.balance(), s.queued() + ranks, xp);
+		boolean drops = dev.strafemc.server.StrafeSettings.drops(); // off on this server: ranks still go up, no packages
+		State n = new State(s.items(), s.claimed(), s.balance(), s.queued() + (drops ? ranks : 0), xp);
 		p.setAttached(DATA, n);
 		if (ranks > 0) {
-			String name = dev.strafemc.weapon.CarePackage.rankName(n.rank());
-			p.sendSystemMessage(Component.literal("Rank up! " + (name.isEmpty() ? "" : name + " ") + "(" + n.rank() + "). You've earned "
-					+ (ranks == 1 ? "a Care Package" : ranks + " Care Packages") + ": redeem it in the strafeMC menu.").withColor(0xEABE54));
+			String name = rankName(n.rank());
+			p.sendSystemMessage(Component.literal("Rank up! " + (name.isEmpty() ? "" : name + " ") + "(" + n.rank() + ")." + (drops ? " You've earned "
+					+ (ranks == 1 ? "a Care Package" : ranks + " Care Packages") + ": redeem it in the strafeMC menu." : "")).withColor(0xEABE54));
 		}
 	}
 
@@ -174,7 +175,7 @@ public final class CarePackage {
 	/** Opens the next queued package (replacing a fully claimed one): four fresh items and a full balance. */
 	public static void redeem(ServerPlayer p) {
 		State s = get(p);
-		if (s.queued() <= 0 || s.open()) return;
+		if (s.queued() <= 0 || s.open() || !dev.strafemc.server.StrafeSettings.drops()) return;
 		Random rng = new Random();
 		p.setAttached(DATA, new State(List.copyOf(roll(rng)), 0, BALANCE, s.queued() - 1, s.xp()));
 	}

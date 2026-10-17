@@ -35,6 +35,8 @@ public final class StrafeSettings {
 	private static volatile int killCardTime = 0;
 	/** strafemc_loadout_keep: loadout items (gloves, wraps) stay with you when you die (default) or drop like the inventory. */
 	private static volatile boolean loadoutKeep = true;
+	/** Care packages on this server (rank ups queue them, players redeem them). */
+	private static volatile boolean drops = true;
 	/** strafemc_spawnblocks: players who die respawn on a random spawn block (when the world has any). */
 	private static volatile boolean spawnBlocks = true;
 	/** Case drops roll a float (wear) at all, and per rarity (gold, covert, ... consumer: off ones drop Factory New, 0). */
@@ -197,6 +199,16 @@ public final class StrafeSettings {
 		return loadoutKeep;
 	}
 
+	public static boolean drops() {
+		return drops;
+	}
+
+	public static void setDrops(boolean on) {
+		drops = on;
+		save();
+		GameplaySync.resendAll();
+	}
+
 	public static void setLoadoutKeep(boolean on) {
 		loadoutKeep = on;
 		save();
@@ -262,6 +274,7 @@ public final class StrafeSettings {
 		buyTime = 0;
 		killCardTime = 0;
 		loadoutKeep = true;
+		drops = true;
 		spawnBlocks = true;
 		wear = true;
 		WEAR_OFF.clear();
@@ -283,6 +296,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("buyTime")) buyTime = o.get("buyTime").getAsInt();
 				if (o != null && o.has("killCardTime")) killCardTime = o.get("killCardTime").getAsInt();
 				if (o != null && o.has("loadoutKeep")) loadoutKeep = o.get("loadoutKeep").getAsBoolean();
+				if (o != null && o.has("drops")) drops = o.get("drops").getAsBoolean();
 				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
 				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
 				if (o != null && o.has("botQuota")) botQuota = o.get("botQuota").getAsInt();
@@ -315,6 +329,7 @@ public final class StrafeSettings {
 		o.addProperty("buyTime", buyTime);
 		o.addProperty("killCardTime", killCardTime);
 		o.addProperty("loadoutKeep", loadoutKeep);
+		o.addProperty("drops", drops);
 		o.addProperty("spawnBlocks", spawnBlocks);
 		o.addProperty("wear", wear);
 		o.addProperty("botQuota", botQuota);

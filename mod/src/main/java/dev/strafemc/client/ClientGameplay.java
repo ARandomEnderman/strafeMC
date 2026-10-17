@@ -29,7 +29,7 @@ public final class ClientGameplay {
 	private static volatile int buyMode = 1, buyTime = 0;
 	/** The server's kill card time (strafemc_killcards_time): seconds, 0 until you die. */
 	private static volatile int killCardTime = 0;
-	private static volatile boolean loadoutKeep = true;
+	private static volatile boolean loadoutKeep = true, drops = true;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
@@ -55,6 +55,7 @@ public final class ClientGameplay {
 			buyTime = root.get("buyTime") instanceof Number n ? n.intValue() : 0;
 			killCardTime = root.get("killCardTime") instanceof Number n ? n.intValue() : 0;
 			loadoutKeep = !Boolean.FALSE.equals(root.get("loadoutKeep"));
+			drops = !Boolean.FALSE.equals(root.get("drops"));
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
@@ -163,6 +164,11 @@ public final class ClientGameplay {
 	/** The server's "step up slabs" setting (strafemc_slabstep). */
 	public static int buyMode() {
 		return buyMode;
+	}
+
+	/** Care packages are on on this server. */
+	public static boolean drops() {
+		return drops;
 	}
 
 	public static boolean loadoutKeep() {
