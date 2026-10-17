@@ -7,22 +7,26 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 
-/** The strafeMC menu key (U by default): opens the quick menu (loadout, care package, buy menu, settings). */
+/** The loadout key (U by default) and the strafeMC menu key (the ISO "<" key by default: loadout, care package, achievements, settings). */
 public final class LoadoutKey {
-	private static KeyMapping KEY;
+	private static KeyMapping KEY, MENU;
 
 	private LoadoutKey() {}
 
 	public static void register() {
-		KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U,
+		KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.loadout", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U,
+				dev.strafemc.client.console.ConsoleKeys.CATEGORY));
+		// "<" on ISO keyboards (left of Z): GLFW's second non-US key on Windows
+		MENU = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_WORLD_2,
 				dev.strafemc.client.console.ConsoleKeys.CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new QuickMenuScreen());
+			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) open();
+			while (MENU.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new QuickMenuScreen());
 		});
 	}
 
 	static boolean matches(net.minecraft.client.input.KeyEvent e) {
-		return KEY != null && KEY.matches(e);
+		return MENU != null && MENU.matches(e);
 	}
 
 	/** The loadout itself: the server opens its menu. */

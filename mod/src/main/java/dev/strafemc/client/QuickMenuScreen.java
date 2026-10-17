@@ -8,8 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * The strafeMC menu (key U): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
- * middle saying what the one under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold U, point and let go.
+ * The strafeMC menu (key "<"): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
+ * middle saying what the one under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold the menu key, point and let go.
  */
 public final class QuickMenuScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54;
@@ -140,7 +140,7 @@ public final class QuickMenuScreen extends Screen {
 		return super.keyPressed(e);
 	}
 
-	/** Held U let go (after a moment): the slice under the mouse, like CS2's radial wheels. */
+	/** The held menu key let go (after a moment): the slice under the mouse, like CS2's radial wheels. */
 	@Override
 	public boolean keyReleased(net.minecraft.client.input.KeyEvent e) {
 		if (LoadoutKey.matches(e) && !released) {

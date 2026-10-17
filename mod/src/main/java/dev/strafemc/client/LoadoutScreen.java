@@ -12,7 +12,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The loadout (strafeMC menu, key U): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
+ * The loadout (key U, or the strafeMC menu): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
  * below, and a preview of the slot under the mouse on the right: the worn gloves in 3D, posed like in first person.
  * Drag gloves and skin wraps into their slots; shift-click moves them in and out. FLAGGED: wrap slots preview the item,
  * not yet the skinned 3D weapon (comes with the weapon skin renderer).
