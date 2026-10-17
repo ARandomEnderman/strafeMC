@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * The strafeMC menu (key "<"): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
+ * The strafeMC menu (key V): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
  * middle saying what the one under the mouse does. Point at one (the whole slice around it counts, like CS2's wheels) and click, or hold the menu key, point and let go.
  */
 public final class QuickMenuScreen extends Screen {
@@ -87,7 +87,12 @@ public final class QuickMenuScreen extends Screen {
 		if (conn == null) return;
 		var adv = conn.getAdvancements();
 		var root = adv.get(Identifier.fromNamespaceAndPath("strafemc", "root"));
-		minecraft.setScreen(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(adv, this));
+		minecraft.setScreen(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(adv, this) {
+			@Override
+			public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+				return LoadoutKey.closesAll(this, e) || super.keyPressed(e); // the strafeMC menu key closes it all
+			}
+		});
 		if (root != null) adv.setSelectedTab(root, true);
 	}
 

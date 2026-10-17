@@ -177,6 +177,12 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		extractTooltip(g, mx, my);
 	}
 
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+		if (LoadoutKey.closesAll(this, e)) return true; // the strafeMC menu key closes it all
+		return super.keyPressed(e);
+	}
+
 	/** Opened from the strafeMC menu: closing goes back to it, like its other screens. */
 	@Override
 	public void onClose() {

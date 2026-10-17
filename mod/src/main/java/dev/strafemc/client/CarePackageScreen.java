@@ -176,6 +176,12 @@ public final class CarePackageScreen extends Screen {
 	}
 
 	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+		if (LoadoutKey.closesAll(this, e)) return true; // the strafeMC menu key closes every menu screen
+		return super.keyPressed(e);
+	}
+
+	@Override
 	public void onClose() {
 		minecraft.setScreen(parent);
 	}
