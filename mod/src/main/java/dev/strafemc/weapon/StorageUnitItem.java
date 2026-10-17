@@ -33,7 +33,8 @@ import java.util.function.Consumer;
 /**
  * CS2's Storage Unit (tools/casket): holds up to 1,000 strafeMC collectibles (the strafemc:storable tag: guns, knives,
  * wraps, gloves, cases, keys; later sprays, stickers, capsules). Right-click it in the main hand to open a scrollable
- * six-row view; shift-click from the inventory files an item into the first free place in the whole unit.
+ * six-row view; shift-click from the inventory files an item into the first free place in the whole unit, and so
+ * does a left click with the unit onto an item (or the item onto the unit), like the mag pouch.
  */
 public class StorageUnitItem extends Item {
 	/** CS2: "store up to 1,000 of your surplus items". */
@@ -79,6 +80,52 @@ public class StorageUnitItem extends Item {
 		int n = 0;
 		for (ItemStack s : unit.getOrDefault(CONTENTS, List.<ItemStack>of())) if (!s.isEmpty()) n++;
 		return n;
+	}
+
+	/** Files a stack into the unit (onto the same item first, then the first free places); true if any went in. */
+	private static boolean take(ItemStack unit, ItemStack s) {
+		if (!storable(s)) return false;
+		int before = s.getCount();
+		List<ItemStack> all = contents(unit);
+		for (int i = 0; i < CAPACITY && !s.isEmpty(); i++) {
+			ItemStack in = all.get(i);
+			if (!in.isEmpty() && ItemStack.isSameItemSameComponents(in, s) && in.getCount() < in.getMaxStackSize()) {
+				int n = Math.min(s.getCount(), in.getMaxStackSize() - in.getCount());
+				in.grow(n);
+				s.shrink(n);
+			}
+		}
+		for (int i = 0; i < CAPACITY && !s.isEmpty(); i++) if (all.get(i).isEmpty()) all.set(i, s.copyAndClear());
+		if (s.getCount() == before) return false;
+		store(unit, all);
+		return true;
+	}
+
+	private static void sound(Player p, boolean in) {
+		p.playSound(in ? net.minecraft.sounds.SoundEvents.BUNDLE_INSERT : net.minecraft.sounds.SoundEvents.BUNDLE_INSERT_FAIL, 0.8f,
+				0.8f + p.level().getRandom().nextFloat() * 0.4f);
+	}
+
+	/** Like the mag pouch: the unit on the cursor left-clicked onto a storable item takes it in. */
+	@Override
+	public boolean overrideStackedOnOther(ItemStack unit, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p) {
+		if (action != net.minecraft.world.inventory.ClickAction.PRIMARY || unit.getCount() != 1) return false;
+		ItemStack in = slot.getItem();
+		if (!storable(in) || !slot.mayPickup(p)) return false;
+		ItemStack moving = in.copy();
+		boolean any = take(unit, moving);
+		if (any) slot.set(moving);
+		sound(p, any);
+		return true;
+	}
+
+	/** A storable item on the cursor left-clicked onto the unit goes in (what doesn't fit stays held). */
+	@Override
+	public boolean overrideOtherStackedOnMe(ItemStack unit, ItemStack other, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p,
+											net.minecraft.world.entity.SlotAccess access) {
+		if (action != net.minecraft.world.inventory.ClickAction.PRIMARY || unit.getCount() != 1 || !storable(other) || !slot.allowModification(p)) return false;
+		sound(p, take(unit, other));
+		return true;
 	}
 
 	@Override

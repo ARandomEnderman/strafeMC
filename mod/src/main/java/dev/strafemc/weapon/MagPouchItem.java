@@ -23,7 +23,8 @@ import net.minecraft.world.level.Level;
 
 /**
  * A mag pouch: a shulker-box-like bag for magazines and shells only (full or empty), opened by right-clicking it in the
- * main hand, and filled like a bundle (right-click it onto magazines or gunpowder, or them onto it). Reloading takes full magazines from it after the inventory's own and puts the emptied one back in it. Its
+ * main hand, and filled bundle-style with left clicks (it onto magazines or gunpowder, or them onto it). Reloading
+ * takes full magazines from it after the inventory's own and puts the emptied one back in it. Its
  * last slot holds gunpowder: a second after an empty magazine is in the pouch, it's refilled with one gunpowder (the
  * crafting refill's cost).
  */
@@ -81,10 +82,10 @@ public class MagPouchItem extends Item {
 				0.8f + p.level().getRandom().nextFloat() * 0.4f);
 	}
 
-	/** Like a bundle: the pouch on the cursor right-clicked onto magazines or gunpowder takes in as much as fits. */
+	/** Like a bundle: the pouch on the cursor left-clicked onto magazines or gunpowder takes in as much as fits. */
 	@Override
 	public boolean overrideStackedOnOther(ItemStack pouch, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p) {
-		if (action != net.minecraft.world.inventory.ClickAction.SECONDARY || pouch.getCount() != 1) return false;
+		if (action != net.minecraft.world.inventory.ClickAction.PRIMARY || pouch.getCount() != 1) return false;
 		ItemStack in = slot.getItem();
 		if (!fits(in) || !slot.mayPickup(p)) return false;
 		ItemStack moving = in.copy();
@@ -94,11 +95,11 @@ public class MagPouchItem extends Item {
 		return true;
 	}
 
-	/** Like a bundle: magazines or gunpowder on the cursor right-clicked onto the pouch go in (what doesn't fit stays held). */
+	/** Like a bundle: magazines or gunpowder on the cursor left-clicked onto the pouch go in (what doesn't fit stays held). */
 	@Override
 	public boolean overrideOtherStackedOnMe(ItemStack pouch, ItemStack other, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p,
 											net.minecraft.world.entity.SlotAccess access) {
-		if (action != net.minecraft.world.inventory.ClickAction.SECONDARY || pouch.getCount() != 1 || !fits(other) || !slot.allowModification(p)) return false;
+		if (action != net.minecraft.world.inventory.ClickAction.PRIMARY || pouch.getCount() != 1 || !fits(other) || !slot.allowModification(p)) return false;
 		sound(p, take(pouch, other));
 		return true;
 	}
