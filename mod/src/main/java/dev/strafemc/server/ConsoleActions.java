@@ -114,6 +114,34 @@ public final class ConsoleActions {
 				else wrap.remove(dev.strafemc.weapon.WeaponItems.WEAR);
 				if (wrap != held) dev.strafemc.weapon.Loadout.set(p, slot, wrap);
 			}
+			case "strafemc_stattrak" -> { // makes a wrap StatTrak with this many kills (off: plain again); a cheat like the float
+				if (!cheat || !p.getAbilities().instabuild) {
+					p.sendSystemMessage(Component.literal("StatTrak needs sv_cheats 1, operator and creative."));
+					break;
+				}
+				var held = p.getMainHandItem();
+				String slot = held.getItem() instanceof dev.strafemc.weapon.KnifeItem ? "knife"
+						: held.getItem() instanceof dev.strafemc.weapon.GunItem g && !(g instanceof dev.strafemc.weapon.GrenadeItem)
+						&& !(g instanceof dev.strafemc.weapon.HealthshotItem) ? g.weaponClass : null;
+				ItemStack wrap = held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? held : slot != null ? dev.strafemc.weapon.Loadout.get(p, slot).copy() : ItemStack.EMPTY;
+				if (!(wrap.getItem() instanceof dev.strafemc.weapon.SkinWrapItem)) {
+					p.sendSystemMessage(Component.literal(slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
+					break;
+				}
+				String a = arg.trim();
+				if (a.equalsIgnoreCase("off")) wrap.remove(dev.strafemc.weapon.WeaponItems.STATTRAK);
+				else {
+					int k;
+					try {
+						k = a.isEmpty() ? 0 : Integer.parseInt(a);
+					} catch (NumberFormatException e) {
+						p.sendSystemMessage(Component.literal("strafemc_stattrak <kills | off>"));
+						break;
+					}
+					wrap.set(dev.strafemc.weapon.WeaponItems.STATTRAK, Math.max(0, Math.min(dev.strafemc.weapon.StatTrak.MAX, k)));
+				}
+				if (wrap != held) dev.strafemc.weapon.Loadout.set(p, slot, wrap);
+			}
 			case "strafemc_wear" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change wear on case drops."));

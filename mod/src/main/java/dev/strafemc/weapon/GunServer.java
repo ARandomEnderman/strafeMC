@@ -532,11 +532,13 @@ public final class GunServer {
 		boolean wasAlive = target.isAlive();
 		hurtCs(p, target, mc, w.cls());
 		hitSounds(p, target, group.equals("head"), armored, target.isDeadOrDying());
-		if (wasAlive && target.isDeadOrDying())
+		if (wasAlive && target.isDeadOrDying()) {
 			KillFeed.notice(p, target, w.cls().replace("weapon_", ""), KillFeed.attackerFlags(p) | (group.equals("head") ? KillFeed.HEADSHOT : 0)
 					| (walls > 0 ? KillFeed.PENETRATE : 0) | (GrenadeZones.throughSmoke(p.level(), eye, at) ? KillFeed.THROUGH_SMOKE : 0)
 					// a scoped weapon fired without its scope
 					| (w.q().zoomLevels() > 0 && (f.flags() & dev.strafemc.net.StrafePayloads.Fire.ZOOM_MASK) == 0 ? KillFeed.NOSCOPE : 0));
+			StatTrak.kill(p, w.cls());
+		}
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
 					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
@@ -632,8 +634,10 @@ public final class GunServer {
 		dmg = CsArmor.apply(target, dmg, knifeStats != null ? knifeStats.armorRatio() : 1.7, "chest");
 		boolean wasAlive = target.isAlive();
 		hurtCs(p, target, (float) (dmg * StrafeConfig.hpScale), "weapon_knife");
-		if (wasAlive && target.isDeadOrDying())
+		if (wasAlive && target.isDeadOrDying()) {
 			KillFeed.notice(p, target, p.getMainHandItem().getItem() instanceof KnifeItem usedKnife ? usedKnife.weaponClass.replace("weapon_", "") : "knife", KillFeed.attackerFlags(p));
+			if (p.getMainHandItem().getItem() instanceof KnifeItem) StatTrak.kill(p, "knife");
+		}
 		if (StrafeConfig.debug)
 			StrafeMc.LOG.info("[strafemc] knife {}{} {}: {} CS dmg", heavy ? "stab" : "slash", k.backstab() ? " backstab" : "", target.getType().toShortString(), dmg);
 	}

@@ -125,6 +125,8 @@ public final class ConsoleCommands {
 			}
 			action("strafemc_float", String.join(" ", a), true);
 		});
+		local("strafemc_stattrak", "Make the skin you're holding StatTrak with this many kills (off: plain). Cheat.",
+				a -> action("strafemc_stattrak", String.join(" ", a), true));
 		local("strafemc_wear", "Wear on case drops (1) or all Factory New (0). Operators.",
 				a -> action("strafemc_wear", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})

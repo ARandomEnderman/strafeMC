@@ -318,6 +318,98 @@ public final class Viewmodel {
 		t.start();
 	}
 
+	/** CS2's StatTrak modules: guns' (housing + lit display), knives' (engraved digits only). */
+	private static final String STATTRAK_GUN = "weapons/models/shared/stattrak/stattrak_module.vmdl_c",
+			STATTRAK_KNIFE = "weapons/models/shared/stattrak/stattrak_module_knife.vmdl_c";
+	/** VRF bakes its Source-to-glTF turn into the module's vertices (the weapon root bone carries the same turn: (-.5,-.5,-.5,.5)); this undoes it, into the attachment's frame. */
+	private static final org.joml.Quaternionf FROM_GLTF = new org.joml.Quaternionf(0.5f, 0.5f, 0.5f, 0.5f);
+
+	/** A loaded module: its housing, its display quads (digits) and their UVs as exported. */
+	private static final class Module {
+		final VmModel body = new VmModel(), display = new VmModel();
+		final Map<VmModel.Part, float[]> baseUv = new HashMap<>();
+		int shown = Integer.MIN_VALUE;
+
+		/**
+		 * Puts a count on the display, as CS2's weapon vertex shader does with g_nStatTrakValue: a display vertex has
+		 * V < 0 and its digit slot k = floor(U) - 1 (0-5, left to right); q = value / 10^(5-k); the atlas cell (row 0,
+		 * 1/16 wide) is q % 10 + 1, or cell 0 (an unlit 0) for leading zeros (q == 0, except the last digit); U moves
+		 * from cell k to that cell. The sampler wraps, so U and V go into 0-1 here.
+		 */
+		void show(int value) {
+			if (value == shown) return;
+			shown = value;
+			int[] pow = {100_000, 10_000, 1_000, 100, 10, 1};
+			for (var e : baseUv.entrySet()) {
+				float[] base = e.getValue(), uv = e.getKey().uv;
+				for (int i = 0; i + 1 < base.length; i += 2) {
+					float u = base[i], v = base[i + 1];
+					if (v < 0) {
+						float slot = (float) Math.floor(u + 1e-4f) - 1;
+						int k = Math.max(0, Math.min(5, (int) slot));
+						int q = value / pow[k];
+						int cell = (q != 0 || k == 5 ? 1 : 0) + q % 10;
+						u = u - slot * 0.0625f + cell * 0.0625f;
+					}
+					uv[i] = u - (float) Math.floor(u);
+					uv[i + 1] = v - (float) Math.floor(v);
+				}
+			}
+		}
+	}
+
+	private final Map<Boolean, Module> modules = new java.util.concurrent.ConcurrentHashMap<>();
+	private final java.util.Set<Boolean> moduleLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** The StatTrak module (loaded in the background on first use), or null until it's ready. */
+	private Module module(boolean knife) {
+		Module m = modules.get(knife);
+		if (m != null || !moduleLoading.add(knife)) return m;
+		Thread t = new Thread(() -> {
+			try {
+				Module n = new Module();
+				VmModel all = VmModel.load(Glb.read(AssetCache.exportGlb(knife ? STATTRAK_KNIFE : STATTRAK_GUN, true)), null);
+				for (VmModel.Part part : all.parts) {
+					if (part.texture == null) continue;
+					boolean digits = part.texture.getFileName().toString().startsWith("stattrak_digit_atlas");
+					if (digits) { // drawn on the CPU (its UVs change with the count), cut out like the knife's engraving
+						part.alphaMode = "MASK";
+						n.baseUv.put(part, part.uv.clone());
+						n.display.parts.add(part);
+					} else {
+						part.metal = metalPerVertex(part);
+						n.body.parts.add(part);
+					}
+					downscaled(part.texture);
+					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+				}
+				modules.put(knife, n);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] StatTrak module failed: {}", e.toString());
+			}
+		}, "strafemc-stattrak");
+		t.setDaemon(true);
+		t.start();
+		return null;
+	}
+
+	/** The StatTrak module on the weapon's "stattrak" attachment ("stattrak_legacy" on a legacy-model finish), if its wrap is StatTrak. */
+	private void statTrak(Loaded l, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
+		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
+		int kills = dev.strafemc.client.WrapChoice.statTrak(l.cls, knife);
+		if (kills < 0) return;
+		String kit = knife ? dev.strafemc.client.WrapChoice.knifeKit(l.cls) : dev.strafemc.client.WrapChoice.gunKit(l.cls);
+		String name = kit != null && WeaponSkinCache.legacy(kit) && l.attachments.containsKey("stattrak_legacy") ? "stattrak_legacy" : "stattrak";
+		Matrix4f at = l.attachments.containsKey(name) ? attachmentTransforms.get(name) : null;
+		Module m = at == null ? null : module(knife);
+		if (m == null) return;
+		m.show(kills);
+		Matrix4f place = new Matrix4f(at).rotate(FROM_GLTF), rigid = new Matrix4f();
+		emit(m.body, new Matrix4f[0][], place, cam, ps, out, light, rigid);
+		emit(m.display, new Matrix4f[0][], place, cam, ps, out, knife ? light : 0xF000F0, rigid); // the gun display glows (F_SELF_ILLUM)
+	}
+
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
 	public static void warmClips() {
 		for (Weapon w : WEAPONS.values())
@@ -526,6 +618,7 @@ public final class Viewmodel {
 		emit(arms, armSkin, toView, cam, ps, out, light, null);
 		emit(gun(l), gunSkin, toView, cam, ps, out, light, rigid); // same skeleton and mesh, its own colour (a wrap's finish)
 		updateAttachments(l, gunSkin, toView);
+		statTrak(l, cam, ps, out, light);
 		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
 		return true;
 	}

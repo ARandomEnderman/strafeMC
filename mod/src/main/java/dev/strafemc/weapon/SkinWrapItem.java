@@ -91,7 +91,7 @@ public class SkinWrapItem extends Item {
 		if (w == null) return super.getName(stack);
 		// the name in CS2's rarity colour
 		var r = w.rarity();
-		var name = Component.literal(w.name() + (knife ? " Knife Wrap" : " Wrap"));
+		var name = Component.literal((StatTrak.kills(stack) >= 0 ? "StatTrak™ " : "") + w.name() + (knife ? " Knife Wrap" : " Wrap"));
 		return r == null ? name : name.withColor(r.color);
 	}
 
@@ -118,5 +118,7 @@ public class SkinWrapItem extends Item {
 		float wear = wear(stack);
 		out.accept(Component.literal("§7Exterior: " + Wear.exterior(wear) + " (" + String.format(java.util.Locale.ROOT, "%.8f", wear) + ")"));
 		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));
+		int kills = StatTrak.kills(stack);
+		if (kills >= 0) out.accept(Component.literal("StatTrak™ Confirmed Kills: " + kills).withColor(StatTrak.COLOR));
 	}
 }

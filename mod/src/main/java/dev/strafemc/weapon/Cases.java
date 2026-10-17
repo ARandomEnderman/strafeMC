@@ -128,7 +128,7 @@ public final class Cases {
 
 	/**
 	 * Opens a case: a tier by CS2's odds (a tier the case lacks falls to the next lower one it has), then one of its
-	 * items at random, handed out as a wrap / knife wrap / gloves with a random pattern template (0-1000).
+	 * items at random, handed out as a wrap / knife wrap / gloves with a random pattern template (0-1000); wraps are StatTrak 10% of the time.
 	 */
 	public static Drop roll(Case c, Random rng) {
 		double x = rng.nextDouble();
@@ -141,7 +141,7 @@ public final class Cases {
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
 				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor((SkinWraps.Rarity) null) ? Wear.roll(e.kit(), rng) : 0);
-				if (!s.isEmpty()) return new Drop(e, null, s);
+				if (!s.isEmpty()) return new Drop(e, null, statTrak(e, s, rng));
 			}
 		}
 		if (tier == null) tier = SkinWraps.Rarity.ANCIENT;
@@ -152,10 +152,16 @@ public final class Cases {
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
 				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor(SkinWraps.Rarity.values()[t]) ? Wear.roll(e.kit(), rng) : 0);
-				if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], s);
+				if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], statTrak(e, s, rng));
 			}
 		}
 		return null;
+	}
+
+	/** CS2's StatTrak roll on a drop: wraps (guns and knives) only, never gloves. */
+	private static ItemStack statTrak(Entry e, ItemStack s, Random rng) {
+		if (!e.gloves() && rng.nextDouble() < StatTrak.CASE_ODDS) s.set(WeaponItems.STATTRAK, 0);
+		return s;
 	}
 
 	/** The item for an entry: the gun's wrap, the knife wrap of that finish, or the gloves; empty if we have none. */

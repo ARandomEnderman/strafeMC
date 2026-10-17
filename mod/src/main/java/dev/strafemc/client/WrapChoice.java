@@ -42,4 +42,12 @@ public final class WrapChoice {
 	public static int gunPattern(String cls) {
 		return SkinWrapItem.finish(gunWrap(cls));
 	}
+
+	/** The Confirmed Kills the StatTrak module shows on this weapon (its wrap's), or -1 for no module. */
+	public static int statTrak(String cls, boolean knife) {
+		ItemStack s = knife ? knifeWrap() : gunWrap(cls);
+		if (!(s.getItem() instanceof SkinWrapItem w) || w.knife() != knife) return -1;
+		String kit = knife ? knifeKit(cls) : gunKit(cls);
+		return kit == null ? -1 : dev.strafemc.weapon.StatTrak.kills(s);
+	}
 }
