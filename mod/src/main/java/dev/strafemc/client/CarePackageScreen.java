@@ -16,17 +16,15 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * CS2's Weekly Care Package screen (rankup_redemption_store), hourly: four item tiles with CS2's inventory pictures, pick
- * as many as your balance (2) and Claim Rewards; claimed tiles say CLAIMED. A bar shows the time to the next package.
+ * CS2's Care Package screen (rankup_redemption_store), one package per CS2 rank: Redeem opens the next queued package,
+ * four item tiles with CS2's inventory pictures; pick as many as your balance (2) and Claim Rewards; claimed tiles say
+ * CLAIMED. Your rank and its XP bar (CS2's, toward the next package) sit under them.
  */
 public final class CarePackageScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, CASE_GREY = 0xFFB0C3D9;
 	private final Screen parent;
 	private int selected;
-	private Button claim;
-	/** When the shown progress arrived (the server syncs it each minute; the bar counts on between). */
-	private static int lastProgress = -1;
-	private static long progressAt;
+	private Button claim, redeem;
 
 	public CarePackageScreen(Screen parent) {
 		super(Component.literal("Care Package"));
@@ -38,15 +36,19 @@ public final class CarePackageScreen extends Screen {
 		return p == null ? CarePackage.State.NONE : CarePackage.get(p);
 	}
 
-	/** Whether there's something to claim (the quick menu marks it). */
+	/** Whether there's something to claim or redeem (the quick menu marks it). */
 	public static boolean claimable() {
 		CarePackage.State s = state();
-		return !s.items().isEmpty() && s.balance() > 0;
+		return s.open() || s.queued() > 0;
 	}
 
 	@Override
 	protected void init() {
 		claim = addRenderableWidget(Button.builder(Component.literal("Claim Rewards"), b -> claim()).bounds(width / 2 - 75, height - 52, 150, 20).build());
+		redeem = addRenderableWidget(Button.builder(Component.literal("Redeem Care Package"), b -> {
+			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("drop_redeem", ""));
+			selected = 0;
+		}).bounds(width / 2 - 75, height - 52, 150, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		for (ItemStack s : state().items()) picture(s); // start converting the pictures
 	}
@@ -108,41 +110,25 @@ public final class CarePackageScreen extends Screen {
 		pose.scale(2f, 2f);
 		g.text(font, "Care Package", -font.width("Care Package") / 2, 0, 0xFFFFFFFF, true);
 		pose.popMatrix();
-		boolean open = !s.items().isEmpty() && s.balance() > 0;
-		String badge = s.items().isEmpty() ? "Play to earn rewards" : open ? "Claim your rewards" : "Rewards Claimed";
-		g.text(font, badge, width / 2 - font.width(badge) / 2, 38, open ? GOLD : 0xFFB0B0B0, true);
-		String desc = open ? "Pick " + s.balance() + (s.balance() == 1 ? " item." : " items.") + " Unclaimed rewards are gone when the next package arrives."
-				: "You will receive a new Care Package in " + timeLeft(s) + ".";
+		boolean open = s.open();
+		String badge = open ? "Claim your rewards" : s.queued() > 0 ? "Redeem your Care Package" : s.items().isEmpty() ? "Earn an XP level" : "Rewards Claimed";
+		g.text(font, badge, width / 2 - font.width(badge) / 2, 38, open || s.queued() > 0 ? GOLD : 0xFFB0B0B0, true);
+		String desc = open ? "Pick " + s.balance() + (s.balance() == 1 ? " item." : " items.")
+				: s.queued() > 0 ? s.queued() + (s.queued() == 1 ? " Care Package" : " Care Packages") + " to redeem."
+				: "You will receive a new Care Package when you earn your next rank.";
 		g.text(font, desc, width / 2 - font.width(desc) / 2, 50, 0xFFB0B0B0, false);
 		int w = tileW(), h = w + 22, y = tileY();
 		for (int i = 0; i < s.items().size(); i++) tile(g, font, s.items().get(i), tileX(i), y, w, h, s.claimed(i), (selected >> i & 1) != 0, mx, my);
-		// the time to the next package, as CS2's XP bar toward it
-		int bw = Math.min(300, width - 40), bx = width / 2 - bw / 2, by = height - 66;
-		float f = progress(s) / (float) CarePackage.INTERVAL;
-		g.fill(bx, by, bx + bw, by + 4, 0xFF2A2F36);
-		g.fill(bx, by, bx + (int) (bw * f), by + 4, GOLD);
-		String next = "Next in " + timeLeft(s);
-		g.text(font, next, bx + bw - font.width(next), by - 11, 0xFF909090, false);
+		RankBar.draw(g, width / 2 + 14, height - 80, Math.min(260, width - 80)); // CS2's XP bar toward the next package
 		claim.visible = open;
 		claim.active = selected != 0;
+		redeem.visible = !open && s.queued() > 0;
+		redeem.setMessage(Component.literal(s.queued() > 1 ? "Redeem Care Package (" + s.queued() + ")" : "Redeem Care Package"));
 		super.extractRenderState(g, mx, my, delta);
 	}
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {}
-
-	private static int progress(CarePackage.State s) {
-		if (s.progress() != lastProgress) {
-			lastProgress = s.progress();
-			progressAt = System.currentTimeMillis();
-		}
-		return (int) Math.min(CarePackage.INTERVAL, s.progress() + (System.currentTimeMillis() - progressAt) / 50);
-	}
-
-	private static String timeLeft(CarePackage.State s) {
-		int sec = Math.max(0, (CarePackage.INTERVAL - progress(s)) / 20);
-		return sec >= 60 ? (sec / 60) + " min" : sec + " s";
-	}
 
 	private void tile(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, ItemStack s, int x, int y, int w, int h, boolean claimed, boolean on, int mx, int my) {
 		boolean hover = mx >= x && mx < x + w && my >= y && my < y + h && !claimed;

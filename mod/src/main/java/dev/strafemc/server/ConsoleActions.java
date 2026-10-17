@@ -207,9 +207,14 @@ public final class ConsoleActions {
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
-			case "strafemc_drop" -> { // a care package now, without the hour: a cheat
+			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
+			case "strafemc_drop" -> { // a care package without a new XP level: a cheat
 				if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
-				else dev.strafemc.weapon.CarePackage.give(p);
+				else dev.strafemc.weapon.CarePackage.queue(p, 1);
+			}
+			case "drop_everyone" -> { // a care package for every player online
+				if (!op) p.sendSystemMessage(Component.literal("Only operators can give everyone a care package."));
+				else for (var o : p.level().getServer().getPlayerList().getPlayers()) dev.strafemc.weapon.CarePackage.queue(o, 1);
 			}
 			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
 			case "redeploy" -> dev.strafemc.weapon.GunServer.redeploy(p);

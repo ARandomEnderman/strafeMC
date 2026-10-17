@@ -23,7 +23,7 @@ import net.minecraft.world.level.Level;
 
 /**
  * A mag pouch: a shulker-box-like bag for magazines and shells only (full or empty), opened by right-clicking it in the
- * main hand. Reloading takes full magazines from it after the inventory's own and puts the emptied one back in it. Its
+ * main hand, and filled like a bundle (right-click it onto magazines or gunpowder, or them onto it). Reloading takes full magazines from it after the inventory's own and puts the emptied one back in it. Its
  * last slot holds gunpowder: a second after an empty magazine is in the pouch, it's refilled with one gunpowder (the
  * crafting refill's cost).
  */
@@ -51,6 +51,56 @@ public class MagPouchItem extends Item {
 			p.openMenu(new SimpleMenuProvider((id, inv, pl) -> new Menu(id, inv, new Bag(pouch), slot), pouch.getHoverName()));
 		}
 		return InteractionResult.SUCCESS;
+	}
+
+	/** What a pouch takes in: magazines (and shells), and gunpowder for its powder slot. */
+	private static boolean fits(ItemStack s) {
+		return !s.isEmpty() && (s.getItem() instanceof MagazineItem || s.is(net.minecraft.world.item.Items.GUNPOWDER));
+	}
+
+	/** Puts as much of the stack as fits into the pouch (gunpowder into its slot); true if any went in. */
+	private static boolean take(ItemStack pouch, ItemStack s) {
+		int before = s.getCount();
+		NonNullList<ItemStack> list = contents(pouch);
+		if (s.is(net.minecraft.world.item.Items.GUNPOWDER)) {
+			ItemStack powder = list.get(POWDER_SLOT);
+			if (powder.isEmpty()) list.set(POWDER_SLOT, s.copyAndClear());
+			else if (powder.is(net.minecraft.world.item.Items.GUNPOWDER)) {
+				int n = Math.min(s.getCount(), powder.getMaxStackSize() - powder.getCount());
+				powder.grow(n);
+				s.shrink(n);
+			}
+		} else insert(list, s);
+		if (s.getCount() == before) return false;
+		store(pouch, list);
+		return true;
+	}
+
+	private static void sound(Player p, boolean in) {
+		p.playSound(in ? net.minecraft.sounds.SoundEvents.BUNDLE_INSERT : net.minecraft.sounds.SoundEvents.BUNDLE_INSERT_FAIL, 0.8f,
+				0.8f + p.level().getRandom().nextFloat() * 0.4f);
+	}
+
+	/** Like a bundle: the pouch on the cursor right-clicked onto magazines or gunpowder takes in as much as fits. */
+	@Override
+	public boolean overrideStackedOnOther(ItemStack pouch, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p) {
+		if (action != net.minecraft.world.inventory.ClickAction.SECONDARY || pouch.getCount() != 1) return false;
+		ItemStack in = slot.getItem();
+		if (!fits(in) || !slot.mayPickup(p)) return false;
+		ItemStack moving = in.copy();
+		boolean any = take(pouch, moving);
+		if (any) slot.set(moving);
+		sound(p, any);
+		return true;
+	}
+
+	/** Like a bundle: magazines or gunpowder on the cursor right-clicked onto the pouch go in (what doesn't fit stays held). */
+	@Override
+	public boolean overrideOtherStackedOnMe(ItemStack pouch, ItemStack other, Slot slot, net.minecraft.world.inventory.ClickAction action, Player p,
+											net.minecraft.world.entity.SlotAccess access) {
+		if (action != net.minecraft.world.inventory.ClickAction.SECONDARY || pouch.getCount() != 1 || !fits(other) || !slot.allowModification(p)) return false;
+		sound(p, take(pouch, other));
+		return true;
 	}
 
 	/** A pouch's contents, SIZE slots long. */

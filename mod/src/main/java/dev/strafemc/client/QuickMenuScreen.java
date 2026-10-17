@@ -37,7 +37,7 @@ public final class QuickMenuScreen extends Screen {
 					minecraft.setScreen(null);
 					LoadoutKey.open();
 				}, true),
-				new Entry("care_package", "Care Package", CarePackageScreen.claimable() ? "Rewards to claim!" : "Free rewards every hour",
+				new Entry("care_package", "Care Package", CarePackageScreen.claimable() ? "Rewards waiting!" : "Free rewards for every rank",
 						() -> minecraft.setScreen(new CarePackageScreen(this)), true),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
@@ -94,9 +94,11 @@ public final class QuickMenuScreen extends Screen {
 		var font = Minecraft.getInstance().font;
 		int cx = width / 2, cy = height / 2, r = radius();
 		hovered = slice(mx, my);
+		RankBar.draw(g, cx + 14, 10, Math.min(220, width - 80)); // your CS2 rank, at the top
 		// the ring: dots around, a darker disc in the middle
+		double spin = System.nanoTime() / 1e9 * 0.15; // the dots turn slowly; the entries stay
 		for (int k = 0; k < 120; k++) {
-			double a = k * Math.PI * 2 / 120;
+			double a = spin + k * Math.PI * 2 / 120;
 			int x = (int) Math.round(cx + Math.cos(a) * r), y = (int) Math.round(cy + Math.sin(a) * r);
 			g.fill(x, y, x + 1, y + 1, 0x60FFFFFF);
 		}
