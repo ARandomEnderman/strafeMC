@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_glock"
+    },
+    "title": "First Blood",
+    "description": "Get a kill with a CS weapon",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

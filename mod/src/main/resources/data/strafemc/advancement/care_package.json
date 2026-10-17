@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:chest"
+    },
+    "title": "Care Package",
+    "description": "Claim rewards from a care package",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

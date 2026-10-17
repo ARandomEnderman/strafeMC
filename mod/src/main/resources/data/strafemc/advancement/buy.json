@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "strafemc:item_assaultsuit"
+    },
+    "title": "Buy Time",
+    "description": "Buy something from the buy menu",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

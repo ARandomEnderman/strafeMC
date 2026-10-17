@@ -1,0 +1,19 @@
+{
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_ak47"
+    },
+    "title": "strafeMC",
+    "description": "Counter-Strike in Minecraft",
+    "frame": "task",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:gui/advancements/backgrounds/stone"
+  },
+  "criteria": {
+    "tick": {
+      "trigger": "minecraft:tick"
+    }
+  }
+}

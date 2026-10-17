@@ -33,29 +33,39 @@ public final class CaseImages {
 
 	/** The picture's texture once loaded, else null (it starts loading). */
 	public static Identifier get(Cases.Entry e) {
-		Identifier id = READY.get(base(e));
-		if (id == null) load(List.of(e));
+		return image(base(e));
+	}
+
+	/** Any CS2 inventory picture by its panorama path without extension ("panorama/images/econ/weapon_cases/crate_community_8_png"). */
+	public static Identifier image(String base) {
+		Identifier id = READY.get(base);
+		if (id == null) loadPaths(List.of(base));
 		return id;
 	}
 
 	/** Loads every picture a case shows, in one converter run for the missing ones (off the render thread). */
 	public static void load(List<Cases.Entry> entries) {
-		List<Cases.Entry> todo = new ArrayList<>();
-		for (Cases.Entry e : entries) if (REQUESTED.add(base(e))) todo.add(e);
+		List<String> bases = new ArrayList<>();
+		for (Cases.Entry e : entries) bases.add(base(e));
+		loadPaths(bases);
+	}
+
+	private static void loadPaths(List<String> bases) {
+		List<String> todo = new ArrayList<>();
+		for (String b : bases) if (REQUESTED.add(b)) todo.add(b);
 		if (todo.isEmpty()) return;
 		Thread t = new Thread(() -> {
 			try {
 				List<String> missing = new ArrayList<>();
-				for (Cases.Entry e : todo) if (!Files.exists(png(e))) missing.add(base(e) + ".vtex_c");
+				for (String b : todo) if (!Files.exists(png(b))) missing.add(b + ".vtex_c");
 				for (int i = 0; i < missing.size(); i += 64) AssetCache.decompileAll(missing.subList(i, Math.min(missing.size(), i + 64)));
-				for (Cases.Entry e : todo) {
-					Path p = png(e);
+				for (String key : todo) {
+					Path p = png(key);
 					if (!Files.exists(p)) continue;
 					NativeImage img;
 					try (var in = Files.newInputStream(p)) {
 						img = NativeImage.read(in);
 					}
-					String key = base(e);
 					Minecraft.getInstance().execute(() -> {
 						Identifier id = Identifier.fromNamespaceAndPath("strafemc", "case_img/" + Integer.toHexString(key.hashCode()));
 						Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "strafemc case picture " + key, img));
@@ -70,7 +80,7 @@ public final class CaseImages {
 		t.start();
 	}
 
-	private static Path png(Cases.Entry e) {
-		return StrafeConfig.cacheDir().resolve(base(e) + ".png");
+	private static Path png(String base) {
+		return StrafeConfig.cacheDir().resolve(base + ".png");
 	}
 }

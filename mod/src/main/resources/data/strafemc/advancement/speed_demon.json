@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:bhop",
+  "display": {
+    "icon": {
+      "id": "minecraft:sugar"
+    },
+    "title": "Speed Demon",
+    "description": "Reach 600 units per second in the air",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

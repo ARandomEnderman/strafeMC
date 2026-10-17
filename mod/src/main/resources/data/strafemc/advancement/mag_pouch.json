@@ -1,0 +1,28 @@
+{
+  "parent": "strafemc:magazine",
+  "display": {
+    "icon": {
+      "id": "strafemc:mag_pouch"
+    },
+    "title": "Prepared",
+    "description": "Get a mag pouch",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "strafemc:mag_pouch"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

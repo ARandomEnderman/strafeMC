@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "strafemc:skin_wrap"
+    },
+    "title": "Fresh Finish",
+    "description": "Put a wrap in your loadout",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

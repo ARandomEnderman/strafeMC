@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:open_case",
+  "display": {
+    "icon": {
+      "id": "strafemc:knife_wrap"
+    },
+    "title": "Rare Special Item",
+    "description": "Unbox a knife or gloves",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

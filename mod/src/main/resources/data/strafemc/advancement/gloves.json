@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:wrap_on",
+  "display": {
+    "icon": {
+      "id": "strafemc:sporty_gloves"
+    },
+    "title": "Gloved Up",
+    "description": "Wear gloves",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

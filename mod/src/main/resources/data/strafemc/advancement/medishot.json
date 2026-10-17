@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:buy",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_healthshot"
+    },
+    "title": "Patched Up",
+    "description": "Use a Medi-Shot",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

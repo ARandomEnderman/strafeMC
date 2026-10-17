@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:headshot",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_ssg08"
+    },
+    "title": "No Scope",
+    "description": "Kill with a sniper rifle without scoping in",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

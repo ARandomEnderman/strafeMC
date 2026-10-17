@@ -1,0 +1,26 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_case",
+      "components": {
+        "minecraft:custom_model_data": {
+          "strings": [
+            "crate_valve_1"
+          ]
+        }
+      }
+    },
+    "title": "Unboxing",
+    "description": "Open a weapon case",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

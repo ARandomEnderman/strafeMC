@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:player_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_ak47"
+    },
+    "title": "Ace",
+    "description": "Get five kills within ten seconds",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

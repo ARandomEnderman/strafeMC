@@ -7,20 +7,25 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import org.lwjgl.glfw.GLFW;
 
-/** Opens the loadout (key U by default): the server opens the menu. */
+/** The strafeMC menu key (U by default): opens the quick menu (loadout, care package, buy menu, settings). */
 public final class LoadoutKey {
 	private static KeyMapping KEY;
 
 	private LoadoutKey() {}
 
 	public static void register() {
-		KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.loadout", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U,
+		KEY = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U,
 				dev.strafemc.client.console.ConsoleKeys.CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) open();
+			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new QuickMenuScreen());
 		});
 	}
 
+	static boolean matches(net.minecraft.client.input.KeyEvent e) {
+		return KEY != null && KEY.matches(e);
+	}
+
+	/** The loadout itself: the server opens its menu. */
 	public static void open() {
 		if (ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.Action.TYPE))
 			ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.Action("loadout", ""));

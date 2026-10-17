@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:enderman_kill",
+  "display": {
+    "icon": {
+      "id": "minecraft:dragon_head"
+    },
+    "title": "Dragon Slayer",
+    "description": "Kill the Ender Dragon with a CS weapon",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

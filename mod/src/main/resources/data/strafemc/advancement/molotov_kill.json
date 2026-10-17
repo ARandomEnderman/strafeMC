@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:he_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_molotov"
+    },
+    "title": "Up in Flames",
+    "description": "Kill with a Molotov or Incendiary",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

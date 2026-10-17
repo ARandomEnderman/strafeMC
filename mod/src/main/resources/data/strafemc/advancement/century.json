@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:stattrak",
+  "display": {
+    "icon": {
+      "id": "strafemc:skin_wrap"
+    },
+    "title": "Confirmed Kills",
+    "description": "Get 100 kills on a StatTrak™ item",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

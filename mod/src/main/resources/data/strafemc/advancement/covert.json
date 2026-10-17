@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:open_case",
+  "display": {
+    "icon": {
+      "id": "strafemc:skin_wrap"
+    },
+    "title": "Covert",
+    "description": "Unbox a Covert item",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

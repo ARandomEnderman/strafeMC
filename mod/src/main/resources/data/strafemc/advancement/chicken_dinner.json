@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:molotov_kill",
+  "display": {
+    "icon": {
+      "id": "minecraft:cooked_chicken"
+    },
+    "title": "Winner Winner",
+    "description": "Cook a chicken with a Molotov",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

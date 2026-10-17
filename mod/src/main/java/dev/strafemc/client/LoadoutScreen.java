@@ -12,7 +12,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The loadout (key U): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
+ * The loadout (strafeMC menu, key U): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
  * below, and a preview of the slot under the mouse on the right: the worn gloves in 3D, posed like in first person.
  * Drag gloves and skin wraps into their slots; shift-click moves them in and out. FLAGGED: wrap slots preview the item,
  * not yet the skinned 3D weapon (comes with the weapon skin renderer).
@@ -30,8 +30,8 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	@Override
 	protected void init() {
 		super.init();
-		// leave room on the right for the preview when the window is wide enough
-		int preview = width >= imageWidth + 200 ? 180 : 0;
+		// leave room on the right for the preview: up to 180 wide, narrower at big GUI scales (it fits down to 100)
+		int preview = width >= imageWidth + 120 ? Math.min(180, width - imageWidth - 20) : 0;
 		leftPos = (width - imageWidth - preview) / 2;
 		titleLabelX = Loadout.Menu.TILES_X;
 		titleLabelY = 8;
@@ -79,7 +79,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	/** Right of the panel: the slot under the mouse (or last looked at), big. */
 	private void preview(GuiGraphicsExtractor g) {
 		int px = leftPos + imageWidth + 10, pw = width - px - 10;
-		if (pw < 150) return;
+		if (pw < 100) return;
 		var defs = Loadout.defs();
 		if (!hoveredWrap.isEmpty() && hoverWrap(g, px, pw)) return;
 		if (previewSlot >= defs.size()) return;

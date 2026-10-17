@@ -1,0 +1,102 @@
+package dev.strafemc.weapon;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+
+import java.util.ArrayDeque;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The strafeMC advancement tab (data/strafemc/advancement): most are granted from here as things happen (kills and
+ * their modifiers, unboxings, StatTrak, care packages, movement speed); crafting ones use vanilla's inventory trigger.
+ */
+public final class Advancements {
+	/** "Ace": five kills within this many ms (ours: CS2's ace is per round). */
+	private static final long ACE_MS = 10_000;
+	/** Movement goals, in Hammer units per second of horizontal speed (40 units a block). */
+	private static final double BHOP_SPEED = 350, SPEED_DEMON = 600, SURF_SPEED = 300;
+
+	private static final Map<UUID, ArrayDeque<Long>> RECENT_KILLS = new ConcurrentHashMap<>();
+
+	private Advancements() {}
+
+	/** Grants strafemc:&lt;id&gt; (all its criteria); nothing if it's done or doesn't exist. */
+	public static void award(ServerPlayer p, String id) {
+		MinecraftServer server = p.level().getServer();
+		if (server == null) return;
+		var h = server.getAdvancements().get(Identifier.fromNamespaceAndPath("strafemc", id));
+		if (h == null) return;
+		var progress = p.getAdvancements().getOrStartProgress(h);
+		if (progress.isDone()) return;
+		for (String c : progress.getRemainingCriteria()) p.getAdvancements().award(h, c);
+	}
+
+	/** A kill the killfeed announced: the kill advancements for the player who made it. */
+	static void kill(ServerPlayer p, LivingEntity victim, String icon, int flags, ServerPlayer assister) {
+		if (assister != null && (flags & KillFeed.FLASH_ASSIST) != 0) award(assister, "flash_assist");
+		if (victim == p) return;
+		award(p, "first_kill");
+		if ((flags & KillFeed.HEADSHOT) != 0) award(p, "headshot");
+		if ((flags & KillFeed.PENETRATE) != 0) award(p, "wallbang");
+		if ((flags & KillFeed.NOSCOPE) != 0) award(p, "noscope");
+		if ((flags & KillFeed.THROUGH_SMOKE) != 0) award(p, "smoke_kill");
+		if ((flags & KillFeed.ATTACKER_BLIND) != 0) award(p, "blind_kill");
+		if ((flags & KillFeed.IN_AIR) != 0) award(p, "air_kill");
+		if (icon.contains("knife") || icon.equals("bayonet")) award(p, "knife_kill");
+		if (icon.equals("taser")) award(p, "zeus_kill");
+		if (icon.equals("hegrenade")) award(p, "he_kill");
+		if (icon.equals("inferno")) {
+			award(p, "molotov_kill");
+			if (victim instanceof net.minecraft.world.entity.animal.chicken.Chicken) award(p, "chicken_dinner");
+		}
+		if (Bots.isBot(victim)) award(p, "bot_kill");
+		else if (victim instanceof ServerPlayer) award(p, "player_kill");
+		if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) award(p, "dragon_kill");
+		if (victim instanceof net.minecraft.world.entity.monster.EnderMan && !icon.equals("inferno") && !icon.equals("hegrenade")) award(p, "enderman_kill");
+		long now = System.currentTimeMillis();
+		ArrayDeque<Long> recent = RECENT_KILLS.computeIfAbsent(p.getUUID(), k -> new ArrayDeque<>());
+		synchronized (recent) {
+			recent.addLast(now);
+			while (!recent.isEmpty() && now - recent.peekFirst() > ACE_MS) recent.removeFirst();
+			if (recent.size() >= 5) award(p, "ace");
+		}
+	}
+
+	/** An unboxed item (CaseOpening): the case itself, then what came out. rarity null: a rare special item. */
+	static void unboxed(ServerPlayer p, net.minecraft.world.item.ItemStack s, SkinWraps.Rarity rarity) {
+		award(p, "open_case");
+		if (rarity == null) award(p, "rare_special");
+		else if (rarity.ordinal() >= SkinWraps.Rarity.ANCIENT.ordinal()) award(p, "covert");
+		if (StatTrak.kills(s) >= 0) award(p, "stattrak");
+	}
+
+	/** Every tick: speed goals from how fast each Source-movement player moves through the air (their position change). */
+	public static void tick(MinecraftServer server) {
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			if (p.onGround() || p.getAbilities().flying || p.isPassenger() || p.isFallFlying() || p.isInWater()) continue;
+			double dx = p.getX() - p.xo, dz = p.getZ() - p.zo;
+			double speed = Math.sqrt(dx * dx + dz * dz) * 20 * dev.strafemc.config.StrafeConfig.unitsPerBlock;
+			if (speed > 4000) continue; // a teleport, not movement
+			if (speed >= BHOP_SPEED) award(p, "bhop");
+			if (speed >= SPEED_DEMON) award(p, "speed_demon");
+			if (speed >= SURF_SPEED && onSurf(p)) award(p, "surf");
+		}
+	}
+
+	/** On (just above) a surf ramp or slope. */
+	private static boolean onSurf(ServerPlayer p) {
+		var box = p.getBoundingBox();
+		var level = p.level();
+		for (int x = (int) Math.floor(box.minX); x <= (int) Math.floor(box.maxX); x++)
+			for (int z = (int) Math.floor(box.minZ); z <= (int) Math.floor(box.maxZ); z++)
+				for (int y = (int) Math.floor(box.minY) - 1; y <= (int) Math.floor(box.minY); y++) {
+					var b = level.getBlockState(new net.minecraft.core.BlockPos(x, y, z)).getBlock();
+					if (b == WeaponItems.SURF_RAMP || b == WeaponItems.SURF_SLOPE || b == WeaponItems.SURF_RAMP_LYING) return true;
+				}
+		return false;
+	}
+}

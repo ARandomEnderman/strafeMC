@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:he_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_smokegrenade"
+    },
+    "title": "Through the Smoke",
+    "description": "Kill through a smoke",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

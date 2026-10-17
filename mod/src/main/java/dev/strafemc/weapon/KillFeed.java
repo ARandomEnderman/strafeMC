@@ -85,6 +85,7 @@ public final class KillFeed {
 		var msg = new StrafePayloads.KillNotice(attacker instanceof ServerPlayer ap ? ap.getScoreboardName() : attacker.getName().getString(), CsTeam.isT(attacker),
 				attacker.getId(), victim.getName().getString(), CsTeam.isT(victim), victim.getId(), victimPlayer, icon, flags,
 				assister == null ? "" : assister.getScoreboardName(), assister != null && CsTeam.isT(assister));
+		if (attacker instanceof ServerPlayer ap) Advancements.kill(ap, victim, icon, flags, assister);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] killfeed: {} -> {} ({}, flags {})", msg.attacker(), msg.victim(), icon, flags);
 		for (ServerPlayer o : level.players()) if (ServerPlayNetworking.canSend(o, StrafePayloads.KillNotice.TYPE)) ServerPlayNetworking.send(o, msg);
 	}

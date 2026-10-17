@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:flash_assist",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_flashbang"
+    },
+    "title": "Blind Fire",
+    "description": "Get a kill while flashed",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

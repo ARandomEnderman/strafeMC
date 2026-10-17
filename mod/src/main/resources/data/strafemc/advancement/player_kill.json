@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:bot_kill",
+  "display": {
+    "icon": {
+      "id": "minecraft:player_head"
+    },
+    "title": "Real Opponent",
+    "description": "Kill a player",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

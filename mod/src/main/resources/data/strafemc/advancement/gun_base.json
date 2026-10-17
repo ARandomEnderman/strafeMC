@@ -1,0 +1,28 @@
+{
+  "parent": "strafemc:root",
+  "display": {
+    "icon": {
+      "id": "strafemc:gun_base"
+    },
+    "title": "Gunsmith",
+    "description": "Get a gun base",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "strafemc:gun_base"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:he_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_flashbang"
+    },
+    "title": "Flash Assist",
+    "description": "Flash an enemy a teammate then kills",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

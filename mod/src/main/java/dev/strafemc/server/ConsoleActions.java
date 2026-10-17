@@ -205,6 +205,11 @@ public final class ConsoleActions {
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
 			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
+			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
+			case "strafemc_drop" -> { // a care package now, without the hour: a cheat
+				if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
+				else dev.strafemc.weapon.CarePackage.give(p);
+			}
 			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
 			case "redeploy" -> dev.strafemc.weapon.GunServer.redeploy(p);
 			case "burst" -> dev.strafemc.weapon.GunServer.toggleBurst(p);

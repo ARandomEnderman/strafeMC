@@ -40,6 +40,7 @@ public class HealthshotItem extends GunItem {
 			hp = HEAL;
 		}
 		p.heal((float) (hp * dev.strafemc.config.StrafeConfig.hpScale));
+		Advancements.award(p, "medishot");
 		long rest = Math.round((CLIP - INJECT_AT) * 20);
 		if (!p.getAbilities().instabuild) PENDING.put(p.getUUID(), new Pending(p.getInventory().getSelectedSlot(), p.level().getGameTime() + rest));
 		GunServer.soundAt(p.level(), "Healthshot.Success", p.position(), p);

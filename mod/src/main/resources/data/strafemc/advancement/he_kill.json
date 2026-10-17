@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:first_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_hegrenade"
+    },
+    "title": "Fire in the Hole",
+    "description": "Kill with an HE grenade",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

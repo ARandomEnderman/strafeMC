@@ -1,0 +1,61 @@
+{
+  "parent": "strafemc:gun_base",
+  "display": {
+    "icon": {
+      "id": "strafemc:mag_ak47"
+    },
+    "title": "Locked and Loaded",
+    "description": "Get a magazine",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "got": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "strafemc:mag_ak47",
+              "strafemc:mag_aug",
+              "strafemc:mag_awp",
+              "strafemc:mag_bizon",
+              "strafemc:mag_cz75a",
+              "strafemc:mag_deagle",
+              "strafemc:mag_elite",
+              "strafemc:mag_famas",
+              "strafemc:mag_fiveseven",
+              "strafemc:mag_g3sg1",
+              "strafemc:mag_galilar",
+              "strafemc:mag_glock",
+              "strafemc:mag_hkp2000",
+              "strafemc:mag_m249",
+              "strafemc:mag_m4a1",
+              "strafemc:mag_m4a1_silencer",
+              "strafemc:mag_mac10",
+              "strafemc:mag_mag7",
+              "strafemc:mag_mp5sd",
+              "strafemc:mag_mp7",
+              "strafemc:mag_mp9",
+              "strafemc:mag_negev",
+              "strafemc:mag_nova",
+              "strafemc:mag_p250",
+              "strafemc:mag_p90",
+              "strafemc:mag_revolver",
+              "strafemc:mag_sawedoff",
+              "strafemc:mag_scar20",
+              "strafemc:mag_sg556",
+              "strafemc:mag_ssg08",
+              "strafemc:mag_tec9",
+              "strafemc:mag_ump45",
+              "strafemc:mag_usp_silencer",
+              "strafemc:mag_xm1014"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

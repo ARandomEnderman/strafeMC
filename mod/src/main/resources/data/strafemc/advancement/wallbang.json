@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:headshot",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_awp"
+    },
+    "title": "Wallbang",
+    "description": "Kill through a wall",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

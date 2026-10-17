@@ -83,6 +83,8 @@ public final class Loadout {
 		if (stack.isEmpty()) m.remove(slot);
 		else m.put(slot, stack.copy());
 		p.setAttached(DATA, Map.copyOf(m));
+		if (p instanceof ServerPlayer sp && stack.getItem() instanceof SkinWrapItem) Advancements.award(sp, "wrap_on");
+		if (p instanceof ServerPlayer sp && stack.getItem() instanceof GloveItem) Advancements.award(sp, "gloves");
 	}
 
 	public static boolean accepts(Def d, ItemStack s) {

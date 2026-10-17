@@ -36,6 +36,7 @@ public final class CaseOpening {
 		for (int i = 0; i < d.stacks().size(); i++) {
 			ItemStack s = d.stacks().get(i);
 			if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
+			Advancements.unboxed(p, s, d.rarity().get(i));
 			if (p.level().getServer() == null) continue;
 			// Classified (pink) and up are told to everyone on the server; Covert and the rare special items stand out
 			SkinWraps.Rarity r = d.rarity().get(i);

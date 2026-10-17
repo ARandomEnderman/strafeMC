@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:first_kill",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_knife_karambit"
+    },
+    "title": "Knife Fight",
+    "description": "Kill with a knife",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
