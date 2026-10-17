@@ -21,6 +21,8 @@ public final class Advancements {
 	private static final double BHOP_SPEED = 350, SPEED_DEMON = 600, SURF_SPEED = 300;
 
 	private static final Map<UUID, ArrayDeque<Long>> RECENT_KILLS = new ConcurrentHashMap<>();
+	/** Each player's position at the end of the last tick (xo is already caught up by then, so it can't measure speed). */
+	private static final Map<UUID, net.minecraft.world.phys.Vec3> LAST_POS = new ConcurrentHashMap<>();
 
 	private Advancements() {}
 
@@ -73,11 +75,14 @@ public final class Advancements {
 		if (StatTrak.kills(s) >= 0) award(p, "stattrak");
 	}
 
-	/** Every tick: speed goals from how fast each Source-movement player moves through the air (their position change). */
+	/** Every tick: speed goals from how fast each player moves through the air (their position change since the last tick). */
 	public static void tick(MinecraftServer server) {
+		if (server.getTickCount() % 200 == 0) LAST_POS.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-			if (p.onGround() || p.getAbilities().flying || p.isPassenger() || p.isFallFlying() || p.isInWater()) continue;
-			double dx = p.getX() - p.xo, dz = p.getZ() - p.zo;
+			var pos = p.position();
+			var last = LAST_POS.put(p.getUUID(), pos);
+			if (last == null || p.onGround() || p.getAbilities().flying || p.isPassenger() || p.isFallFlying() || p.isInWater()) continue;
+			double dx = pos.x - last.x, dz = pos.z - last.z;
 			double speed = Math.sqrt(dx * dx + dz * dz) * 20 * dev.strafemc.config.StrafeConfig.unitsPerBlock;
 			if (speed > 4000) continue; // a teleport, not movement
 			if (speed >= BHOP_SPEED) award(p, "bhop");
