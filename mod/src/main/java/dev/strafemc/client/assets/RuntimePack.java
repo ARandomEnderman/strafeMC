@@ -443,6 +443,15 @@ public final class RuntimePack {
 		}
 		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
 				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}}");
+		// the Storage Unit: CS2's picture of it (econ/tools/casket)
+		try {
+			String img = "panorama/images/econ/tools/casket_png";
+			icon(img + ".vtex_c", img + ".png", tex.resolve("item/storage_unit.png"), 128);
+			Files.writeString(models.resolve("storage_unit.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/storage_unit\"}}");
+			Files.writeString(items.resolve("storage_unit.json"), "{\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/storage_unit\"}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] storage unit icon: {}", e.toString());
+		}
 	}
 
 	/** A CS2 texture as it is (no resizing). */
