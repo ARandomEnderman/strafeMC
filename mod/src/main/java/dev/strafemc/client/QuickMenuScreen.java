@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 /**
  * The strafeMC menu (key "<"): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
- * middle saying what the one under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold the menu key, point and let go.
+ * middle saying what the one under the mouse does. Point at one (the whole slice around it counts, like CS2's wheels) and click, or hold the menu key, point and let go.
  */
 public final class QuickMenuScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54;
@@ -41,6 +41,7 @@ public final class QuickMenuScreen extends Screen {
 						() -> minecraft.setScreen(new CarePackageScreen(this)), true),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
+		addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
 
 	private int radius() {
@@ -56,7 +57,8 @@ public final class QuickMenuScreen extends Screen {
 	/** The slice under the mouse (by angle, outside the middle), or -1. */
 	private int slice(double mx, double my) {
 		double dx = mx - width / 2.0, dy = my - height / 2.0;
-		if (dx * dx + dy * dy < 30 * 30 || entries.isEmpty()) return -1;
+		double d2 = dx * dx + dy * dy, outer = radius() + 40;
+		if (d2 < 30 * 30 || d2 > outer * outer || entries.isEmpty()) return -1;
 		double a = Math.atan2(dy, dx) + Math.PI / 2 + Math.PI / entries.size();
 		a = (a % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
 		return (int) (a / (2 * Math.PI / entries.size())) % entries.size();
@@ -70,12 +72,13 @@ public final class QuickMenuScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
+		if (super.mouseClicked(e, doubleClick)) return true; // Done
 		int i = slice(e.x(), e.y());
 		if (i >= 0) {
 			pick(i);
 			return true;
 		}
-		return super.mouseClicked(e, doubleClick);
+		return false;
 	}
 
 	/** Vanilla's advancement screen, opened on the strafeMC tab. */

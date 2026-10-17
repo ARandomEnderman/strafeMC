@@ -49,7 +49,7 @@ public final class PresetScreen extends Screen {
 			}).bounds(cx + 80, y, 70, 20).build());
 			y += 24;
 		}
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(cx - 100, height - 28, 200, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
 
 	@Override

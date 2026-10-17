@@ -27,7 +27,7 @@ public final class HostingInfoScreen extends Screen {
 
 	@Override
 	protected void init() {
-		addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose()).bounds(width / 2 - 75, height - 28, 150, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
 
 	@Override

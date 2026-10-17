@@ -117,14 +117,13 @@ public final class CaseScreen extends Screen {
 		for (int n : counts) {
 			int w = n == 1 ? 150 : bw;
 			Button b = addRenderableWidget(Button.builder(Component.literal(n == 1 ? "Unlock Container" : n + "x"), btn -> unlock(n))
-					.bounds(x, height - 30, w, 20).build());
+					.bounds(x, height - 50, w, 20).build());
 			b.active = spins == null && n <= openable();
 			b.visible = !revealed;
 			unlocks.add(b);
 			x += w + 4;
 		}
-		close = addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(width / 2 - 75, height - 30, 150, 20).build());
-		close.visible = revealed;
+		close = addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> show(-1)).bounds(width / 2 - 200, height / 2 - 40, 24, 40).build());
 		next = addRenderableWidget(Button.builder(Component.literal(">"), b -> show(1)).bounds(width / 2 + 176, height / 2 - 40, 24, 40).build());
 		arrows();

@@ -37,6 +37,8 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		titleLabelY = 8;
 		inventoryLabelX = Loadout.Menu.INV_X;
 		inventoryLabelY = Loadout.Menu.INV_Y - 11;
+		if (topPos + imageHeight <= height - 28)
+			addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
 
 	@Override

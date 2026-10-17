@@ -710,7 +710,8 @@ public final class Viewmodel {
 		Matrix4f view = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
 				(float) -StrafeConfig.viewmodelOffsetY / upb).mul(toView());
 		if (!StrafeConfig.rightHand) view = new Matrix4f().scale(-1, 1, 1).mul(view);
-		boolean mirrored = view.determinant3x3() < 0;
+		// the picture is drawn like the loadout preview's (drawFitted: winding as exported), so only the left hand turns triangles round
+		boolean mirrored = !StrafeConfig.rightHand;
 		float f = (float) (1 / Math.tan(Math.toRadians(StrafeConfig.viewmodelFov) / 2)) * height / 2;
 		PoseStack.Pose last = ps.last();
 		for (VmModel m : new VmModel[] {arms, gun}) {

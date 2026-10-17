@@ -46,8 +46,8 @@ public final class CarePackageScreen extends Screen {
 
 	@Override
 	protected void init() {
-		claim = addRenderableWidget(Button.builder(Component.literal("Claim Rewards"), b -> claim()).bounds(width / 2 - 75, height - 34, 150, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose()).bounds(8, 8, 50, 20).build());
+		claim = addRenderableWidget(Button.builder(Component.literal("Claim Rewards"), b -> claim()).bounds(width / 2 - 75, height - 52, 150, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		for (ItemStack s : state().items()) picture(s); // start converting the pictures
 	}
 
@@ -117,7 +117,7 @@ public final class CarePackageScreen extends Screen {
 		int w = tileW(), h = w + 22, y = tileY();
 		for (int i = 0; i < s.items().size(); i++) tile(g, font, s.items().get(i), tileX(i), y, w, h, s.claimed(i), (selected >> i & 1) != 0, mx, my);
 		// the time to the next package, as CS2's XP bar toward it
-		int bw = Math.min(300, width - 40), bx = width / 2 - bw / 2, by = height - 52;
+		int bw = Math.min(300, width - 40), bx = width / 2 - bw / 2, by = height - 66;
 		float f = progress(s) / (float) CarePackage.INTERVAL;
 		g.fill(bx, by, bx + bw, by + 4, 0xFF2A2F36);
 		g.fill(bx, by, bx + (int) (bw * f), by + 4, GOLD);

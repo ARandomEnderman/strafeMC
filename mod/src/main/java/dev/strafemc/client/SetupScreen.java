@@ -150,7 +150,7 @@ public final class SetupScreen extends Screen {
 				addRenderableWidget(Button.builder(Component.literal("§aQuit Minecraft now"), b -> minecraft.stop()).bounds(cx - 155, bottom, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Later"), b -> onClose()).bounds(cx + 5, bottom, 150, 20).build());
 			}
-			case FAILED -> addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(cx - 75, bottom, 150, 20).build());
+			case FAILED -> addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		}
 	}
 
