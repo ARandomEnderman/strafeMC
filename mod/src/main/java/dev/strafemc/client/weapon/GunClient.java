@@ -51,6 +51,8 @@ public final class GunClient {
 	/** Reload foley in clip time (event, time). */
 	private final List<Object[]> reloadSounds = new ArrayList<>();
 	private boolean triggerWasDown;
+	/** The last round was just fired: the gun reloads by itself as soon as it could fire again. */
+	private boolean emptied;
 	private double penalty;
 	/** CS2 recoil: aim punch (bullets), view punch (camera only), recoil index into the spray table. */
 	private final dev.strafemc.weapon.AimPunch aimPunch = new dev.strafemc.weapon.AimPunch();
@@ -239,6 +241,13 @@ public final class GunClient {
 			if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("silencer", ""));
 		}
 		useWasDown = use;
+		// every gun (not just full-auto ones) starts its reload by itself once its last round is out and it could fire again
+		if (emptied && now >= nextFire && burstLeft == 0 && reload == null && !reloadLocked()) {
+			emptied = false;
+			int left = g.clip(held);
+			if (predictedClip >= 0 && now - lastShot < sec(0.5)) left = Math.min(left, predictedClip);
+			if (left <= 0 && infiniteAmmo() != 1) reload(false);
+		}
 		// a sniper goes back to its zoom once the bolt is worked (unless reloading or empty)
 		if (resumeZoom > 0 && now >= nextFire) {
 			if (reload == null && g.clip(held) > 0) setZoom(p, dev.strafemc.client.ClientGameplay.stats(g.weaponClass), resumeZoom, false);
@@ -678,6 +687,7 @@ public final class GunClient {
 		double t = System.nanoTime() / 1e9;
 		aimPunch.advance(t);
 		int shot = shotNumber++;
+		if (roundsLeft <= 0) emptied = true;
 		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
