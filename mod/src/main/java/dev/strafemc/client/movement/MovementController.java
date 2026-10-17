@@ -378,6 +378,7 @@ public final class MovementController {
 		// fall damage: measured by the server (server/ServerFall), never reported from here
 		input.jumpImpulse = false; // a wheel jump happens once, in the first slice
 		peakSpeed = Math.max(peakSpeed, sim.horizontalSpeed());
+		SpeedGoals.check(sim);
 		if (StrafeConfig.debug && sim.jumpedThisStep)
 			StrafeMc.LOG.info("[strafemc] jump  hspeed={} vy={} t={}", f(sim.horizontalSpeed()), f(sim.vy), f(sim.time));
 		if (StrafeConfig.debug && sim.landedThisStep)

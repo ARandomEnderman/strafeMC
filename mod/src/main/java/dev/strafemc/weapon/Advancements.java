@@ -17,12 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Advancements {
 	/** "Ace": five kills within this many ms (ours: CS2's ace is per round). */
 	private static final long ACE_MS = 10_000;
-	/** Movement goals, in Hammer units per second of horizontal speed (40 units a block). */
-	private static final double BHOP_SPEED = 350, SPEED_DEMON = 600, SURF_SPEED = 300;
 
 	private static final Map<UUID, ArrayDeque<Long>> RECENT_KILLS = new ConcurrentHashMap<>();
-	/** Each player's position at the end of the last tick (xo is already caught up by then, so it can't measure speed). */
-	private static final Map<UUID, net.minecraft.world.phys.Vec3> LAST_POS = new ConcurrentHashMap<>();
 
 	private Advancements() {}
 
@@ -75,32 +71,8 @@ public final class Advancements {
 		if (StatTrak.kills(s) >= 0) award(p, "stattrak");
 	}
 
-	/** Every tick: speed goals from how fast each player moves through the air (their position change since the last tick). */
-	public static void tick(MinecraftServer server) {
-		if (server.getTickCount() % 200 == 0) LAST_POS.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
-		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-			var pos = p.position();
-			var last = LAST_POS.put(p.getUUID(), pos);
-			if (last == null || p.onGround() || p.getAbilities().flying || p.isPassenger() || p.isFallFlying() || p.isInWater()) continue;
-			double dx = pos.x - last.x, dz = pos.z - last.z;
-			double speed = Math.sqrt(dx * dx + dz * dz) * 20 * dev.strafemc.config.StrafeConfig.unitsPerBlock;
-			if (speed > 4000) continue; // a teleport, not movement
-			if (speed >= BHOP_SPEED) award(p, "bhop");
-			if (speed >= SPEED_DEMON) award(p, "speed_demon");
-			if (speed >= SURF_SPEED && onSurf(p)) award(p, "surf");
-		}
-	}
-
-	/** On (just above) a surf ramp or slope. */
-	private static boolean onSurf(ServerPlayer p) {
-		var box = p.getBoundingBox();
-		var level = p.level();
-		for (int x = (int) Math.floor(box.minX); x <= (int) Math.floor(box.maxX); x++)
-			for (int z = (int) Math.floor(box.minZ); z <= (int) Math.floor(box.maxZ); z++)
-				for (int y = (int) Math.floor(box.minY) - 1; y <= (int) Math.floor(box.minY); y++) {
-					var b = level.getBlockState(new net.minecraft.core.BlockPos(x, y, z)).getBlock();
-					if (b == WeaponItems.SURF_RAMP || b == WeaponItems.SURF_SLOPE || b == WeaponItems.SURF_RAMP_LYING) return true;
-				}
-		return false;
+	/** The client reached a speed goal with its own u/s (SpeedGoals): bhop, speed_demon or surf. */
+	public static void speedGoal(ServerPlayer p, String goal) {
+		if (goal.equals("bhop") || goal.equals("speed_demon") || goal.equals("surf")) award(p, goal);
 	}
 }

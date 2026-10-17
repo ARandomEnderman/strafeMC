@@ -206,6 +206,7 @@ public final class ConsoleActions {
 			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
+			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "strafemc_drop" -> { // a care package now, without the hour: a cheat
 				if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
 				else dev.strafemc.weapon.CarePackage.give(p);
