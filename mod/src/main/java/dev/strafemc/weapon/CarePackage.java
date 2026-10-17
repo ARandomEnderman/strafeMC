@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * CS2's XP rank and Care Package (rankup_redemption_store): kills with CS weapons earn CS2 XP (KILL_XP, times 1.5 for
+ * CS2's XP rank and Care Package (rankup_redemption_store): kills with CS weapons earn CS2 XP (by what died, times 1.5 for
  * each modifier: headshot, no-scope, in the air, wallbang, through smoke, while blind, knife, Zeus), ranks 1-40 with
  * CS2's icons and names, each rank costing more like Minecraft's levels (need()). XP never goes down; every rank up
  * (and past 40, every rank-40's worth of XP) queues one package. You
@@ -54,8 +54,11 @@ public final class CarePackage {
 			n++;
 		}
 	}
-	/** XP for a kill, and the multiplier per modifier. FLAGGED ours: CS2's match XP formula lives on Valve's servers. */
-	static final double KILL_XP = 100, MODIFIER = 1.5;
+	/**
+	 * XP for killing a player or bot, per point of Minecraft XP a hostile mob drops (zombie 5 -> 100), the most a mob
+	 * gives, and the multiplier per modifier. FLAGGED ours: CS2's match XP formula lives on Valve's servers.
+	 */
+	static final double PLAYER_XP = 100, HOSTILE_PER_MC_XP = 20, MOB_MAX = 2000, MODIFIER = 1.5;
 
 	/**
 	 * items: the open package (empty: none); claimed: bit per item; balance: claims left in it; queued: packages earned and
@@ -113,11 +116,20 @@ public final class CarePackage {
 		return p.getAttachedOrElse(DATA, State.NONE);
 	}
 
-	/** A kill the killfeed announced: CS2 XP for the killer, a package per rank (5000 XP) passed. */
-	static void kill(ServerPlayer p, String icon, int flags) {
+	/**
+	 * A kill the killfeed announced: CS2 XP for the killer by what died (players and bots PLAYER_XP, hostile mobs 20x
+	 * their Minecraft XP, peaceful ones just their Minecraft XP: a pig is 1-3), times 1.5 per modifier.
+	 */
+	static void kill(ServerPlayer p, net.minecraft.world.entity.LivingEntity victim, String icon, int flags) {
+		double base;
+		if (victim instanceof ServerPlayer || Bots.isBot(victim)) base = PLAYER_XP;
+		else {
+			int mc = victim.level() instanceof net.minecraft.server.level.ServerLevel l ? victim.getExperienceReward(l, p) : 0;
+			base = victim instanceof net.minecraft.world.entity.monster.Enemy ? Math.min(MOB_MAX, Math.max(1, mc) * HOSTILE_PER_MC_XP) : Math.max(1, mc);
+		}
 		int mods = Integer.bitCount(flags & (KillFeed.HEADSHOT | KillFeed.NOSCOPE | KillFeed.IN_AIR | KillFeed.PENETRATE | KillFeed.THROUGH_SMOKE
 				| KillFeed.ATTACKER_BLIND)) + (icon.contains("knife") || icon.equals("bayonet") ? 1 : 0) + (icon.equals("taser") ? 1 : 0);
-		addXp(p, (int) Math.round(KILL_XP * Math.pow(MODIFIER, mods)));
+		addXp(p, (int) Math.round(base * Math.pow(MODIFIER, mods)));
 	}
 
 	/** Adds CS2 XP (never taken away); each 5000 passed queues a care package. */
