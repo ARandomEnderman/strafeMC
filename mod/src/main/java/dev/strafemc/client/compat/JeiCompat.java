@@ -66,6 +66,19 @@ public final class JeiCompat implements IModPlugin {
 		}
 	}
 
+	/**
+	 * Our variants are one item each, told apart by their custom model data string (which skin, case, key, glove finish):
+	 * without this JEI folds them into one entry and the rest go missing.
+	 */
+	@Override
+	public void registerItemSubtypes(mezz.jei.api.registration.ISubtypeRegistration r) {
+		var cmd = net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA;
+		for (var item : new net.minecraft.world.item.Item[] {dev.strafemc.weapon.WeaponItems.GUN_WRAP, dev.strafemc.weapon.WeaponItems.KNIFE_WRAP,
+				dev.strafemc.weapon.WeaponItems.WEAPON_CASE, dev.strafemc.weapon.WeaponItems.CASE_KEY})
+			r.registerFromDataComponentTypes(item, cmd);
+		for (var gloves : dev.strafemc.weapon.WeaponItems.GLOVES.values()) r.registerFromDataComponentTypes(gloves, cmd);
+	}
+
 	@Override
 	public void registerVanillaCategoryExtensions(IVanillaCategoryExtensionRegistration r) {
 		r.getCraftingCategory().addExtension(Example.class, new ICraftingCategoryExtension<Example>() {
