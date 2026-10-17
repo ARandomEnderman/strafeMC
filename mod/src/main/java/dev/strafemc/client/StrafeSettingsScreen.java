@@ -106,10 +106,6 @@ public final class StrafeSettingsScreen extends Screen {
 		toggle("Speed meter", () -> StrafeConfig.showSpeedMeter, v -> StrafeConfig.showSpeedMeter = v);
 		toggle("Jump stats", () -> StrafeConfig.jumpStats, v -> StrafeConfig.jumpStats = v);
 		toggle("Velocity graph", () -> StrafeConfig.velGraph, v -> StrafeConfig.velGraph = v);
-		if (minecraft != null && minecraft.level != null) { // the loadout belongs to a world
-			header("Items");
-			button("Loadout", "Open", LoadoutKey::open);
-		}
 	}
 
 	private void viewmodel() {
