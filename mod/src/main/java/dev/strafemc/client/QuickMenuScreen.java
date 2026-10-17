@@ -8,13 +8,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * The strafeMC menu (key U): a wheel of CS2's own UI icons with their names around the middle, which says what the one
- * under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold U, point and let go.
+ * The strafeMC menu (key U): loadout, care package, achievements and settings on a wheel of CS2's own UI icons, the
+ * middle saying what the one under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold U, point and let go.
  */
 public final class QuickMenuScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54;
 	/** Wheel icons: texture name, CS2 panorama image (gui/menu/&lt;name&gt;.png, made by RuntimePack). */
-	public static final String[][] ICONS = {{"loadout", "icons/ui/loadout"}, {"care_package", "icons/care_package"}, {"buy", "icons/ui/buyzone"},
+	public static final String[][] ICONS = {{"loadout", "icons/ui/loadout"}, {"care_package", "icons/care_package"},
 			{"achievements", "icons/ui/trophy"}, {"settings", "icons/ui/settings"}};
 
 	private record Entry(String icon, String label, String sub, Runnable action, boolean active) {}
@@ -32,7 +32,6 @@ public final class QuickMenuScreen extends Screen {
 
 	@Override
 	protected void init() {
-		boolean buy = ClientGameplay.buyMode() != 0;
 		entries = java.util.List.of(
 				new Entry("loadout", "Loadout", "Gloves, knife and gun wraps", () -> {
 					minecraft.setScreen(null);
@@ -40,7 +39,6 @@ public final class QuickMenuScreen extends Screen {
 				}, true),
 				new Entry("care_package", "Care Package", CarePackageScreen.claimable() ? "Rewards to claim!" : "Free rewards every hour",
 						() -> minecraft.setScreen(new CarePackageScreen(this)), true),
-				new Entry("buy", "Buy Menu", buy ? "Guns, grenades and gear" : "Off on this server", () -> BuyMenuScreen.open(minecraft), buy),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
 	}
