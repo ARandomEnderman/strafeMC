@@ -26,8 +26,10 @@ public final class QuickMenuScreen extends Screen {
 	/** The key that opened it has been let go (until then its repeats don't close it). */
 	private boolean released;
 
-	public QuickMenuScreen() {
+	/** byKey: opened by the menu key (still held); false when coming back from one of its screens. */
+	public QuickMenuScreen(boolean byKey) {
 		super(Component.literal("strafeMC"));
+		released = !byKey;
 	}
 
 	@Override
@@ -35,6 +37,7 @@ public final class QuickMenuScreen extends Screen {
 		entries = java.util.List.of(
 				new Entry("loadout", "Loadout", "Gloves, knife and gun wraps", () -> {
 					minecraft.setScreen(null);
+					LoadoutKey.fromMenu = true; // its Done comes back here
 					LoadoutKey.open();
 				}, true),
 				new Entry("care_package", "Care Package", CarePackageScreen.claimable() ? "Rewards waiting!" : "Free rewards for every rank",

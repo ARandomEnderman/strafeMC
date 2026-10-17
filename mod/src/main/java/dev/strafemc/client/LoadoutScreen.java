@@ -177,6 +177,16 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		extractTooltip(g, mx, my);
 	}
 
+	/** Opened from the strafeMC menu: closing goes back to it, like its other screens. */
+	@Override
+	public void onClose() {
+		super.onClose();
+		if (LoadoutKey.fromMenu) {
+			LoadoutKey.fromMenu = false;
+			minecraft.setScreen(new QuickMenuScreen(false));
+		}
+	}
+
 	@Override
 	public boolean isPauseScreen() {
 		return false;

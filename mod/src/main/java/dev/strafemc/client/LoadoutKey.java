@@ -10,6 +10,8 @@ import org.lwjgl.glfw.GLFW;
 /** The loadout key (U by default) and the strafeMC menu key (the ISO "<" key by default: loadout, care package, achievements, settings). */
 public final class LoadoutKey {
 	private static KeyMapping KEY, MENU;
+	/** The loadout was opened from the strafeMC menu: closing it goes back there. */
+	static boolean fromMenu;
 
 	private LoadoutKey() {}
 
@@ -20,8 +22,11 @@ public final class LoadoutKey {
 		MENU = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.strafemc.menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_WORLD_2,
 				dev.strafemc.client.console.ConsoleKeys.CATEGORY));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) open();
-			while (MENU.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new QuickMenuScreen());
+			while (KEY.consumeClick()) if (mc.screen == null && mc.player != null) {
+				fromMenu = false;
+				open();
+			}
+			while (MENU.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new QuickMenuScreen(true));
 		});
 	}
 
