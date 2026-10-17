@@ -247,7 +247,7 @@ public final class CaseScreen extends Screen {
 		g.fill(0, 0, width, height, 0xE0101418);
 		var font = Minecraft.getInstance().font;
 		g.text(font, c.name(), width / 2 - font.width(c.name()) / 2, 12, 0xFFFFFFFF, true);
-		if (spins == null) contents(g, font);
+		if (spins == null) contents(g, font, mx, my);
 		else if (revealed) preview(g, font);
 		else reels(g, font);
 		super.extractRenderState(g, mx, my, delta);
@@ -257,11 +257,18 @@ public final class CaseScreen extends Screen {
 	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {}
 
 	/** The contents grid, best first, then the rare special item line. */
-	private void contents(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
+	private void contents(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int mx, int my) {
 		int cols = Math.max(1, Math.min(6, (width - 40) / (TILE + 8))), x0 = width / 2 - cols * (TILE + 8) / 2, y = 32;
 		for (int i = 0; i < contents.size(); i++) {
 			int x = x0 + (i % cols) * (TILE + 8), ty = y + (i / cols) * (TILE + 6);
-			tile(g, font, contents.get(i), x, ty, TILE, TILE);
+			Tile t = contents.get(i);
+			tile(g, font, t, x, ty, TILE, TILE);
+			if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null) { // full name, and the exteriors it comes in
+				double[] r = dev.strafemc.weapon.Wear.range(t.entry().kit());
+				String lo = dev.strafemc.weapon.Wear.exterior((float) r[0]), hi = dev.strafemc.weapon.Wear.exterior((float) Math.max(r[0], r[1] - 1e-4));
+				g.setTooltipForNextFrame(font, java.util.List.of(Component.literal(TileText.clean(t.name())).withColor(t.color()),
+						Component.literal(lo.equals(hi) ? lo : lo + " to " + hi).withColor(0xFF909090)), java.util.Optional.empty(), mx, my);
+			}
 		}
 		int rows = (contents.size() + cols - 1) / cols;
 		if (!c.special().isEmpty()) {
@@ -276,11 +283,10 @@ public final class CaseScreen extends Screen {
 		// CS2's picture of the gun in its skin, 4:3 above the name; the item's own icon until it's loaded
 		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
 		if (pic != null) {
-			int ph = Math.min(h - 16, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
+			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
 			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 2, 0, 0, pw, ph, pw, ph);
 		} else if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
-		String n = font.plainSubstrByWidth(t.name(), w - 4);
-		g.text(font, n, x + w / 2 - font.width(n) / 2, y + h - 13, 0xFFE0E0E0, false);
+		TileText.draw(g, font, t.name(), x + w / 2, y + h - 4 - TileText.HEIGHT, w - 4, 0xFFE0E0E0); // weapon / finish, never cut off
 	}
 
 	/** The reels, stacked, each eased to a stop on its drop (a little apart); ticks as tiles pass the line. */

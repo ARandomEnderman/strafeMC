@@ -82,7 +82,7 @@ public final class CarePackageScreen extends Screen {
 	@Override
 	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
 		CarePackage.State s = state();
-		int w = tileW(), h = w + 22, y = tileY();
+		int w = tileW(), h = w + 40, y = tileY();
 		for (int i = 0; i < s.items().size(); i++) {
 			int x = tileX(i);
 			if (e.x() < x || e.x() >= x + w || e.y() < y || e.y() >= y + h || s.claimed(i) || s.items().get(i).isEmpty()) continue;
@@ -117,7 +117,7 @@ public final class CarePackageScreen extends Screen {
 				: s.queued() > 0 ? s.queued() + (s.queued() == 1 ? " Care Package" : " Care Packages") + " to redeem."
 				: "You will receive a new Care Package when you earn your next rank.";
 		g.text(font, desc, width / 2 - font.width(desc) / 2, 50, 0xFFB0B0B0, false);
-		int w = tileW(), h = w + 22, y = tileY();
+		int w = tileW(), h = w + 40, y = tileY();
 		for (int i = 0; i < s.items().size(); i++) tile(g, font, s.items().get(i), tileX(i), y, w, h, s.claimed(i), (selected >> i & 1) != 0, mx, my);
 		RankBar.draw(g, width / 2 + 14, height - 80, Math.min(260, width - 80)); // CS2's XP bar toward the next package
 		claim.visible = open;
@@ -136,11 +136,15 @@ public final class CarePackageScreen extends Screen {
 		g.fill(x, y + h - 3, x + w, y + h, color(s));
 		if (on) g.outline(x - 1, y - 1, w + 2, h + 2, GOLD);
 		Identifier pic = picture(s);
-		int ph = Math.min(h - 26, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
+		int ph = Math.min(h - 42, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
 		if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 4, 0, 0, pw, ph, pw, ph);
 		else if (!s.isEmpty()) g.item(s, x + w / 2 - 8, y + 4 + ph / 2 - 8);
-		String n = font.plainSubstrByWidth(s.getHoverName().getString(), w - 6);
-		g.text(font, n, x + w / 2 - font.width(n) / 2, y + h - 15, 0xFFE0E0E0, false);
+		// the name (weapon / finish, never cut off), then the exterior: what you'd get, before picking it
+		TileText.draw(g, font, s.getHoverName().getString(), x + w / 2, y + h - 34, w - 6, 0xFFE0E0E0);
+		String ext = s.getItem() instanceof SkinWrapItem ? (dev.strafemc.weapon.StatTrak.kills(s) >= 0 ? "StatTrak™ " : "")
+				+ dev.strafemc.weapon.Wear.exterior(SkinWrapItem.wear(s)) : "Weapon Case";
+		g.text(font, font.plainSubstrByWidth(ext, w - 6), x + w / 2 - Math.min(w - 6, font.width(ext)) / 2, y + h - 14, 0xFF909090, false);
+		if (mx >= x && mx < x + w && my >= y && my < y + h && !s.isEmpty()) g.setTooltipForNextFrame(font, s, mx, my); // float, pattern...
 		if (on) { // CS2's check mark in the corner
 			g.fill(x + w - 14, y + 2, x + w - 2, y + 14, GOLD);
 			g.text(font, "✔", x + w - 12, y + 4, 0xFF101317, false);
