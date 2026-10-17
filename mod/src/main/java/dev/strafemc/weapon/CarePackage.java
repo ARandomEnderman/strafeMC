@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * CS2's XP rank and Care Package (rankup_redemption_store): kills with CS weapons earn CS2 XP (by what died, times 1.5 for
+ * CS2's XP rank and Care Package (rankup_redemption_store, items like CS2's drops: see CASES): kills with CS weapons earn CS2 XP (by what died, times 1.5 for
  * each modifier: headshot, no-scope, in the air, wallbang, through smoke, while blind, knife, Zeus), ranks 1-40 with
  * CS2's icons and names, each rank costing more like Minecraft's levels (need()). XP never goes down; every rank up
  * (and past 40, every rank-40's worth of XP) queues one package. You
@@ -29,8 +29,14 @@ import java.util.Random;
 public final class CarePackage {
 	/** Items offered and how many you may claim (CS2: 4 shown, a balance of 2, each costs 1). */
 	public static final int OFFERED = 4, BALANCE = 2;
-	/** Our mix: each offered item is a case this often, else a wrap. FLAGGED: CS2's drop pool weights live on Valve's servers. */
-	static final double CASE_SHARE = 0.3;
+	/**
+	 * CS2's drops are weapon finishes from its drop-pool collections (the map collections, not cases) and weapon cases. Our
+	 * mix, FLAGGED (CS2's pool and weights live on Valve's servers): one case and three finishes from the collections no
+	 * case has, a grade by the case odds moved down one (Consumer 79.92%, Industrial 15.98%, Mil-Spec 3.2%, Restricted
+	 * 0.64%, Classified the rest).
+	 */
+	static final int CASES = 1;
+	private static final double[] GRADE_ODDS = {0.7992, 0.1598, 0.032, 0.0064, 0.0026};
 	/** CS2's ranks go up to 40 (past it, every rank 40's worth of XP still queues a package). */
 	public static final int MAX_RANK = 40;
 
@@ -170,20 +176,57 @@ public final class CarePackage {
 		State s = get(p);
 		if (s.queued() <= 0 || s.open()) return;
 		Random rng = new Random();
-		List<ItemStack> items = new ArrayList<>();
-		for (int i = 0; i < OFFERED; i++) items.add(roll(rng));
-		p.setAttached(DATA, new State(List.copyOf(items), 0, BALANCE, s.queued() - 1, s.xp()));
+		p.setAttached(DATA, new State(List.copyOf(roll(rng)), 0, BALANCE, s.queued() - 1, s.xp()));
 	}
 
-	private static ItemStack roll(Random rng) {
-		List<Cases.Case> cases = Cases.all();
-		if (cases.isEmpty()) return ItemStack.EMPTY;
-		if (rng.nextDouble() < CASE_SHARE) return CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(rng.nextInt(cases.size())).id());
-		for (int tries = 0; tries < 8; tries++) {
-			ItemStack s = Cases.rollWrap(cases.get(rng.nextInt(cases.size())), rng);
-			if (!s.isEmpty()) return s;
+	/** The drop pool: gun wraps from collections no case has, by grade (COMMON .. LEGENDARY). */
+	private static List<List<SkinWraps.Wrap>> pool;
+
+	private static synchronized List<List<SkinWraps.Wrap>> pool() {
+		if (pool != null) return pool;
+		java.util.Set<String> inCases = new java.util.HashSet<>();
+		for (Cases.Case c : Cases.all()) {
+			for (var list : c.guns().values()) for (Cases.Entry e : list) inCases.add(e.item() + "|" + e.kit());
+			for (Cases.Entry e : c.special()) inCases.add(e.item() + "|" + e.kit());
 		}
-		return CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(rng.nextInt(cases.size())).id());
+		List<List<SkinWraps.Wrap>> out = new ArrayList<>();
+		for (int i = 0; i < GRADE_ODDS.length; i++) out.add(new ArrayList<>());
+		for (SkinWraps.Wrap w : SkinWraps.all()) {
+			if (w.knife() || w.kits().size() != 1 || w.rarity() == null || w.rarity().ordinal() >= GRADE_ODDS.length) continue;
+			var e = w.kits().entrySet().iterator().next();
+			if (!inCases.contains(e.getKey() + "|" + e.getValue())) out.get(w.rarity().ordinal()).add(w);
+		}
+		return pool = out;
+	}
+
+	/** One finish from the drop pool: a grade by GRADE_ODDS (one it has none of falls to the next lower), a pattern and wear. */
+	private static ItemStack dropWrap(Random rng) {
+		List<List<SkinWraps.Wrap>> pool = pool();
+		double x = rng.nextDouble();
+		int grade = 0;
+		for (double acc = GRADE_ODDS[0]; grade < GRADE_ODDS.length - 1 && x >= acc; acc += GRADE_ODDS[++grade]) ;
+		for (int g = grade; g >= 0; g--) {
+			List<SkinWraps.Wrap> list = pool.get(g);
+			if (list.isEmpty()) continue;
+			SkinWraps.Wrap w = list.get(rng.nextInt(list.size()));
+			String kit = w.kits().values().iterator().next();
+			float wear = dev.strafemc.server.StrafeSettings.wearFor(w.rarity()) ? Wear.roll(kit, rng) : 0;
+			return SkinWrapItem.stack(WeaponItems.GUN_WRAP, w.id(), rng.nextInt(1001), wear);
+		}
+		return ItemStack.EMPTY;
+	}
+
+	/** A package: CASES weapon cases and finishes for the rest, in random order. */
+	private static List<ItemStack> roll(Random rng) {
+		List<Cases.Case> cases = Cases.all();
+		List<ItemStack> items = new ArrayList<>();
+		for (int i = 0; i < OFFERED; i++) {
+			ItemStack s = i < CASES || pool().stream().allMatch(List::isEmpty) ? ItemStack.EMPTY : dropWrap(rng);
+			if (s.isEmpty() && !cases.isEmpty()) s = CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(rng.nextInt(cases.size())).id());
+			items.add(s);
+		}
+		java.util.Collections.shuffle(items, rng);
+		return items;
 	}
 
 	/** The player claims these items (indices into the open package): as many as the balance allows, each once. */

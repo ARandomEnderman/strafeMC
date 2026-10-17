@@ -158,24 +158,6 @@ public final class Cases {
 		return null;
 	}
 
-	/**
-	 * A care package's gun wrap from this case's guns: a tier by the case's odds without the rare special item, a random
-	 * pattern and wear; never StatTrak (CS2's drops aren't). Empty if the case has none of ours.
-	 */
-	public static ItemStack rollWrap(Case c, Random rng) {
-		double x = rng.nextDouble() * (MIL_SPEC + RESTRICTED + CLASSIFIED + COVERT);
-		SkinWraps.Rarity tier = x < MIL_SPEC ? SkinWraps.Rarity.RARE : x < MIL_SPEC + RESTRICTED ? SkinWraps.Rarity.MYTHICAL
-				: x < MIL_SPEC + RESTRICTED + CLASSIFIED ? SkinWraps.Rarity.LEGENDARY : SkinWraps.Rarity.ANCIENT;
-		for (int t = tier.ordinal(); t >= 0; t--) {
-			List<Entry> list = c.guns().get(SkinWraps.Rarity.values()[t]);
-			if (list == null || list.isEmpty()) continue;
-			Entry e = list.get(rng.nextInt(list.size()));
-			ItemStack s = stack(e, rng.nextInt(1001), dev.strafemc.server.StrafeSettings.wearFor(SkinWraps.Rarity.values()[t]) ? Wear.roll(e.kit(), rng) : 0);
-			if (!s.isEmpty()) return s;
-		}
-		return ItemStack.EMPTY;
-	}
-
 	/** CS2's StatTrak roll on a drop: wraps (guns and knives) only, never gloves. */
 	private static ItemStack statTrak(Entry e, ItemStack s, Random rng) {
 		if (!e.gloves() && rng.nextDouble() < StatTrak.CASE_ODDS) s.set(WeaponItems.STATTRAK, 0);
