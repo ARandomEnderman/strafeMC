@@ -2,20 +2,29 @@ package dev.strafemc.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 /**
- * The strafeMC menu (key U): one place for the loadout, the care package, the buy menu, the advancement tab and the
- * settings. Big tiles in a row, CS2-dark; the care package tile is marked while it has rewards to claim.
+ * The strafeMC menu (key U): a wheel of CS2's own UI icons with their names around the middle, which says what the one
+ * under the mouse does. Point at one (the whole slice counts, like CS2's wheels) and click, or hold U, point and let go.
  */
 public final class QuickMenuScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54;
+	/** Wheel icons: texture name, CS2 panorama image (gui/menu/&lt;name&gt;.png, made by RuntimePack). */
+	public static final String[][] ICONS = {{"loadout", "icons/ui/loadout"}, {"care_package", "icons/care_package"}, {"buy", "icons/ui/buyzone"},
+			{"achievements", "icons/ui/trophy"}, {"settings", "icons/ui/settings"}};
 
-	private record Entry(String label, String sub, Runnable action, boolean active) {}
+	private record Entry(String icon, String label, String sub, Runnable action, boolean active) {}
 
 	private java.util.List<Entry> entries = java.util.List.of();
+	private int hovered = -1;
+	/** When the screen opened: a held key let go after this long picks the slice under the mouse. */
+	private final long opened = System.currentTimeMillis();
+	/** The key that opened it has been let go (until then its repeats don't close it). */
+	private boolean released;
 
 	public QuickMenuScreen() {
 		super(Component.literal("strafeMC"));
@@ -25,25 +34,50 @@ public final class QuickMenuScreen extends Screen {
 	protected void init() {
 		boolean buy = ClientGameplay.buyMode() != 0;
 		entries = java.util.List.of(
-				new Entry("Loadout", "Gloves, knife and gun wraps", () -> {
+				new Entry("loadout", "Loadout", "Gloves, knife and gun wraps", () -> {
 					minecraft.setScreen(null);
 					LoadoutKey.open();
 				}, true),
-				new Entry("Care Package", "Free rewards every hour", () -> minecraft.setScreen(new CarePackageScreen(this)), true),
-				new Entry("Buy Menu", buy ? "Guns, grenades and gear" : "Off on this server", () -> BuyMenuScreen.open(minecraft), buy),
-				new Entry("Achievements", "The strafeMC advancement tab", this::advancements, true),
-				new Entry("Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
-		int n = entries.size(), w = tileW(), x0 = width / 2 - (n * (w + 6) - 6) / 2, y = height / 2 - 20;
-		for (int i = 0; i < n; i++) {
-			Entry e = entries.get(i);
-			Button b = addRenderableWidget(Button.builder(Component.literal(e.label()), btn -> e.action().run()).bounds(x0 + i * (w + 6), y, w, 40).build());
-			b.active = e.active();
-		}
-		addRenderableWidget(Button.builder(Component.literal("Close"), b -> onClose()).bounds(width / 2 - 50, height - 30, 100, 20).build());
+				new Entry("care_package", "Care Package", CarePackageScreen.claimable() ? "Rewards to claim!" : "Free rewards every hour",
+						() -> minecraft.setScreen(new CarePackageScreen(this)), true),
+				new Entry("buy", "Buy Menu", buy ? "Guns, grenades and gear" : "Off on this server", () -> BuyMenuScreen.open(minecraft), buy),
+				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
+				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
 	}
 
-	private int tileW() {
-		return Math.max(64, Math.min(110, (width - 20) / Math.max(1, entries.size()) - 6));
+	private int radius() {
+		return Math.max(50, Math.min(110, Math.min(width, height) / 2 - 40));
+	}
+
+	/** Slice i's centre: the first at the top, then clockwise. */
+	private double[] at(int i) {
+		double a = -Math.PI / 2 + i * 2 * Math.PI / entries.size();
+		return new double[] {width / 2.0 + Math.cos(a) * radius(), height / 2.0 + Math.sin(a) * radius()};
+	}
+
+	/** The slice under the mouse (by angle, outside the middle), or -1. */
+	private int slice(double mx, double my) {
+		double dx = mx - width / 2.0, dy = my - height / 2.0;
+		if (dx * dx + dy * dy < 30 * 30 || entries.isEmpty()) return -1;
+		double a = Math.atan2(dy, dx) + Math.PI / 2 + Math.PI / entries.size();
+		a = (a % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+		return (int) (a / (2 * Math.PI / entries.size())) % entries.size();
+	}
+
+	private void pick(int i) {
+		if (i < 0 || i >= entries.size() || !entries.get(i).active()) return;
+		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.5f);
+		entries.get(i).action().run();
+	}
+
+	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
+		int i = slice(e.x(), e.y());
+		if (i >= 0) {
+			pick(i);
+			return true;
+		}
+		return super.mouseClicked(e, doubleClick);
 	}
 
 	/** Vanilla's advancement screen, opened on the strafeMC tab. */
@@ -51,33 +85,49 @@ public final class QuickMenuScreen extends Screen {
 		var conn = minecraft.getConnection();
 		if (conn == null) return;
 		var adv = conn.getAdvancements();
-		var root = adv.get(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "root"));
+		var root = adv.get(Identifier.fromNamespaceAndPath("strafemc", "root"));
 		minecraft.setScreen(new net.minecraft.client.gui.screens.advancements.AdvancementsScreen(adv, this));
 		if (root != null) adv.setSelectedTab(root, true);
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		g.fill(0, 0, width, height, StrafeSettingsScreen.BG);
+		g.fill(0, 0, width, height, 0xB0101317);
 		var font = Minecraft.getInstance().font;
-		var pose = g.pose();
-		pose.pushMatrix();
-		pose.translate(width / 2f, height / 2f - 60);
-		pose.scale(2f, 2f);
-		g.text(font, "strafeMC", -font.width("strafeMC") / 2, 0, GOLD, true);
-		pose.popMatrix();
-		super.extractRenderState(g, mx, my, delta);
-		int n = entries.size(), w = tileW(), x0 = width / 2 - (n * (w + 6) - 6) / 2, y = height / 2 - 20;
-		for (int i = 0; i < n; i++) {
+		int cx = width / 2, cy = height / 2, r = radius();
+		hovered = slice(mx, my);
+		// the ring: dots around, a darker disc in the middle
+		for (int k = 0; k < 120; k++) {
+			double a = k * Math.PI * 2 / 120;
+			int x = (int) Math.round(cx + Math.cos(a) * r), y = (int) Math.round(cy + Math.sin(a) * r);
+			g.fill(x, y, x + 1, y + 1, 0x60FFFFFF);
+		}
+		for (int i = 0; i < entries.size(); i++) {
 			Entry e = entries.get(i);
-			int x = x0 + i * (w + 6);
-			String sub = font.plainSubstrByWidth(e.sub(), w + 4);
-			g.text(font, sub, x + w / 2 - font.width(sub) / 2, y + 46, 0xFF909090, false);
-			if (e.label().equals("Care Package") && CarePackageScreen.claimable()) { // rewards waiting
-				g.fill(x + w - 10, y + 2, x + w - 2, y + 10, GOLD);
-				g.text(font, "!", x + w - 7, y + 2, 0xFF101317, false);
+			double[] p = at(i);
+			int x = (int) p[0], y = (int) p[1], s = 22;
+			boolean hot = i == hovered && e.active();
+			g.fill(x - s, y - s, x + s, y + s, hot ? 0xE0303843 : 0xC01A1F26);
+			if (hot) g.outline(x - s, y - s, 2 * s, 2 * s, GOLD);
+			int color = !e.active() ? 0xFF606060 : hot ? GOLD : 0xFFFFFFFF;
+			g.blit(RenderPipelines.GUI_TEXTURED, Identifier.fromNamespaceAndPath("strafemc", "textures/gui/menu/" + e.icon() + ".png"), x - 12, y - 16, 0, 0, 24, 24,
+					64, 64, 64, 64, color);
+			String label = font.plainSubstrByWidth(e.label(), 2 * s + 30);
+			g.text(font, label, x - font.width(label) / 2, y + 10, color, true);
+			if (e.icon().equals("care_package") && CarePackageScreen.claimable()) { // rewards waiting
+				g.fill(x + s - 9, y - s + 1, x + s - 1, y - s + 9, GOLD);
+				g.text(font, "!", x + s - 6, y - s + 1, 0xFF101317, false);
 			}
 		}
+		// the middle: the title, or what the pointed-at entry does
+		String title = hovered >= 0 ? entries.get(hovered).label() : "strafeMC";
+		String sub = hovered >= 0 ? entries.get(hovered).sub() : "Point and click";
+		g.text(font, title, cx - font.width(title) / 2, cy - 9, GOLD, true);
+		for (var line : font.split(Component.literal(sub), Math.max(60, r - 30))) {
+			g.text(font, line, cx - font.width(line) / 2, cy + 3, 0xFFB0B0B0, false);
+			cy += 10;
+		}
+		super.extractRenderState(g, mx, my, delta);
 	}
 
 	@Override
@@ -85,11 +135,22 @@ public final class QuickMenuScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
-		if (LoadoutKey.matches(e)) { // the menu key closes it again
-			onClose();
+		if (LoadoutKey.matches(e)) { // pressing the menu key again closes it (not the opening press's repeats)
+			if (released) onClose();
 			return true;
 		}
 		return super.keyPressed(e);
+	}
+
+	/** Held U let go (after a moment): the slice under the mouse, like CS2's radial wheels. */
+	@Override
+	public boolean keyReleased(net.minecraft.client.input.KeyEvent e) {
+		if (LoadoutKey.matches(e) && !released) {
+			released = true;
+			if (System.currentTimeMillis() - opened > 300 && hovered >= 0) pick(hovered); // held, pointed, let go
+			return true;
+		}
+		return super.keyReleased(e);
 	}
 
 	@Override

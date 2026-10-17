@@ -685,6 +685,64 @@ public final class Viewmodel {
 		return drawFitted(kit == null ? gun(l) : gun(l, kit, pattern), skin, side, rigid, ps, buffers, width, height, yaw, pitch);
 	}
 
+	/**
+	 * A weapon as you'd hold it in first person, for the settings preview: its idle animation, the worn gloves, your
+	 * viewmodel offsets and hand, seen through viewmodel_fov (vertical) into a width x height picture centred on the
+	 * crosshair. The perspective is done per vertex here (the picture is drawn flat). False until it's loaded.
+	 */
+	public boolean previewFirstPerson(String cls, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers, float width, float height) {
+		if (broken || cls == null) return false;
+		Loaded l = cache.get(cls);
+		if (l == null) {
+			if (WEAPONS.containsKey(cls) && loading.add(cls)) loadAsync(cls);
+			return false;
+		}
+		VmClip c = l.clips.get("idle");
+		if (c == null) return false;
+		float t = c.duration > 0 ? (System.nanoTime() / 1e9f) % c.duration : 0;
+		Matrix4f[] pose = c.pose(t);
+		Matrix4f wpn = mount(c, pose);
+		VmModel arms = arms(l), gun = gun(l);
+		Matrix4f[][] armSkin = skins(arms, c, pose, null), gunSkin = skins(l.gun, c, pose, wpn);
+		Integer weaponNode = c.node("weapon");
+		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
+		float upb = (float) StrafeConfig.unitsPerBlock;
+		Matrix4f view = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
+				(float) -StrafeConfig.viewmodelOffsetY / upb).mul(toView());
+		if (!StrafeConfig.rightHand) view = new Matrix4f().scale(-1, 1, 1).mul(view);
+		boolean mirrored = view.determinant3x3() < 0;
+		float f = (float) (1 / Math.tan(Math.toRadians(StrafeConfig.viewmodelFov) / 2)) * height / 2;
+		PoseStack.Pose last = ps.last();
+		for (VmModel m : new VmModel[] {arms, gun}) {
+			Matrix4f[][] skins = m == arms ? armSkin : gunSkin;
+			for (VmModel.Part p : m.parts) {
+				if (p.alphaMode.equals("BLEND")) continue;
+				Identifier tex = texture(p.texture, !p.alphaMode.equals("MASK"));
+				if (tex == null) continue;
+				Matrix4f[] s = p.skin >= 0 && p.skin < skins.length ? skins[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
+				float[][] sk = skinVertices(p, s, view);
+				float[] sp = sk[0], sn = sk[1];
+				for (int i = 0; i + 2 < sp.length; i += 3) { // camera space (looking down -Z) -> picture pixels, y down
+					float z = Math.min(-0.01f, sp[i + 2]);
+					sp[i] = sp[i] / -z * f;
+					sp[i + 1] = -sp[i + 1] / -z * f;
+					sp[i + 2] = (z + 0.5f) * 100;
+					sn[i + 1] = -sn[i + 1];
+				}
+				var vc = buffers.getBuffer(p.alphaMode.equals("MASK") ? RenderTypes.entityCutout(tex) : VmRender.opaque(tex));
+				int[] idx = p.idx;
+				for (int i = 0; i + 2 < idx.length; i += 3) {
+					int b = mirrored ? idx[i + 2] : idx[i + 1], cc = mirrored ? idx[i + 1] : idx[i + 2];
+					vertex(vc, last, sp, sn, p, idx[i], 0xF000F0);
+					vertex(vc, last, sp, sn, p, b, 0xF000F0);
+					vertex(vc, last, sp, sn, p, cc, 0xF000F0);
+					vertex(vc, last, sp, sn, p, cc, 0xF000F0);
+				}
+			}
+		}
+		return true;
+	}
+
 	/** Draws a posed model fitted into width x height (GUI pixels), centred, turned by yaw degrees. */
 	private boolean drawFitted(VmModel model, Matrix4f[][] skin, Matrix4f toView, Matrix4f rigid, PoseStack ps, net.minecraft.client.renderer.MultiBufferSource buffers,
 							   float width, float height, float yaw) {

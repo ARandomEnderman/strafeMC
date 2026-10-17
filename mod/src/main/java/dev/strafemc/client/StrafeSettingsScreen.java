@@ -23,7 +23,7 @@ import java.util.function.DoubleSupplier;
 /**
  * strafeMC's settings, laid out like CS2's: tabs across the top (Game, Viewmodel, Crosshair, Audio, Binds, Setup &
  * Hosting), each a column of rows with the setting's name on the left and its control on the right, scrolling when
- * taller than the screen. The Crosshair tab is the crosshair editor, with a live preview.
+ * taller than the screen. The Crosshair tab is the crosshair editor; it and the Viewmodel tab have a live first-person preview.
  */
 public final class StrafeSettingsScreen extends Screen {
 	private static final String[] TABS = {"Game", "Viewmodel", "Crosshair", "Audio", "Binds", "Setup & Hosting"};
@@ -75,7 +75,7 @@ public final class StrafeSettingsScreen extends Screen {
 				rebuildWidgets();
 			}).bounds(tx + i * tw, 5, tw, 20).build()));
 		}
-		boolean xhair = tab == 2;
+		boolean xhair = tab == 1 || tab == 2; // these two have the preview beside them
 		int contentW = Math.min(xhair ? 420 : 520, width - 40);
 		x0 = xhair ? Math.max(20, width / 2 - contentW + 40) : (width - contentW) / 2;
 		x1 = x0 + contentW;
@@ -304,15 +304,24 @@ public final class StrafeSettingsScreen extends Screen {
 		// the open tab: an accent line under it
 		Button t = tabButtons.get(tab);
 		g.fill(t.getX() + 4, t.getY() + t.getHeight() + 1, t.getX() + t.getWidth() - 4, t.getY() + t.getHeight() + 3, ACCENT);
-		if (tab == 2) { // the crosshair, live, beside its settings
-			int px0 = x1 + 20, px1 = width - 20, py0 = top, py1 = Math.min(bottom, top + (px1 - px0));
+		if (tab == 1 || tab == 2) { // the viewmodel and crosshair, live, beside their settings (a 16:9 view)
+			int px0 = x1 + 20, px1 = width - 20, py0 = top, py1 = Math.min(bottom, top + (px1 - px0) * 9 / 16);
 			if (px1 - px0 > 60) {
 				g.fill(px0, py0, px1, py1, 0xFF5A7894);
 				g.fill(px0, py0 + (py1 - py0) * 2 / 3, px1, py1, 0xFF6B5A44);
+				LoadoutPreview.drawFirstPerson(g, px0, py0, px1, py1, previewWeapon());
 				Crosshair.preview(g, (px0 + px1) / 2f, (py0 + py1) / 2f);
 				g.text(font, "Preview", px0 + 4, py0 + 4, 0xFFFFFFFF, true);
 			}
 		}
+	}
+
+	/** The preview's weapon: the gun or knife in your hand, else an AK-47. */
+	private String previewWeapon() {
+		var p = minecraft.player;
+		if (p != null && p.getMainHandItem().getItem() instanceof dev.strafemc.weapon.GunItem gi && !(gi instanceof dev.strafemc.weapon.GrenadeItem)
+				&& !(gi instanceof dev.strafemc.weapon.HealthshotItem)) return gi.weaponClass;
+		return "weapon_ak47";
 	}
 
 	@Override

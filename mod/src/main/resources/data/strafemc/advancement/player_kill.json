@@ -1,5 +1,5 @@
 {
-  "parent": "strafemc:bot_kill",
+  "parent": "strafemc:first_kill",
   "display": {
     "icon": {
       "id": "minecraft:player_head"

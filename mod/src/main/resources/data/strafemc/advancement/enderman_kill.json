@@ -5,7 +5,7 @@
       "id": "minecraft:ender_pearl"
     },
     "title": "Hold Still",
-    "description": "Shoot an Enderman dead",
+    "description": "Kill an Enderman with a CS weapon",
     "frame": "goal",
     "show_toast": true,
     "announce_to_chat": true,

@@ -173,7 +173,6 @@ public final class BuyMenu {
 	private static void bought(ServerPlayer p, String what, List<ItemStack> given, CsArmor.Armor armorBefore) {
 		BOUGHT.computeIfAbsent(p.getUUID(), u -> new java.util.concurrent.ConcurrentLinkedDeque<>()).add(new Purchase(what, List.copyOf(given), armorBefore));
 		sendRefundable(p);
-		Advancements.award(p, "buy");
 	}
 
 	private static void give(ServerPlayer p, ItemStack stack, List<ItemStack> given) {

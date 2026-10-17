@@ -53,10 +53,9 @@ public final class Advancements {
 			award(p, "molotov_kill");
 			if (victim instanceof net.minecraft.world.entity.animal.chicken.Chicken) award(p, "chicken_dinner");
 		}
-		if (Bots.isBot(victim)) award(p, "bot_kill");
-		else if (victim instanceof ServerPlayer) award(p, "player_kill");
+		if (victim instanceof ServerPlayer) award(p, "player_kill");
 		if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) award(p, "dragon_kill");
-		if (victim instanceof net.minecraft.world.entity.monster.EnderMan && !icon.equals("inferno") && !icon.equals("hegrenade")) award(p, "enderman_kill");
+		if (victim instanceof net.minecraft.world.entity.monster.EnderMan) award(p, "enderman_kill"); // shot ones teleport: knives and grenades count too
 		long now = System.currentTimeMillis();
 		ArrayDeque<Long> recent = RECENT_KILLS.computeIfAbsent(p.getUUID(), k -> new ArrayDeque<>());
 		synchronized (recent) {

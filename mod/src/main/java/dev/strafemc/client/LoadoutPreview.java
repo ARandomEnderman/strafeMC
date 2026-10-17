@@ -14,7 +14,7 @@ public final class LoadoutPreview {
 
 	/** weapon: the weapon class to show (in its wrap's finish), null for the worn gloves. */
 	/** kit: a given finish (null: the weapon's loadout wrap); pitch NaN: the loadout's side-on view; zoom: the viewer's (1 = fitted). */
-	public record State(int x0, int y0, int x1, int y1, float yaw, String weapon, String kit, int pattern, float pitch, float zoom, ScreenRectangle scissorArea,
+	public record State(int x0, int y0, int x1, int y1, float yaw, String weapon, String kit, int pattern, float pitch, float zoom, boolean firstPerson, ScreenRectangle scissorArea,
 						ScreenRectangle bounds) implements PictureInPictureRenderState {
 		@Override
 		public float scale() {
@@ -36,7 +36,8 @@ public final class LoadoutPreview {
 		protected void renderToTexture(State s, PoseStack ps) {
 			Minecraft.getInstance().gameRenderer.getLighting().setupFor(com.mojang.blaze3d.platform.Lighting.Entry.ENTITY_IN_UI);
 			var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
-			if (s.weapon() == null) vm.previewArms(ps, bufferSource, s.x1() - s.x0(), s.y1() - s.y0(), s.yaw());
+			if (s.firstPerson()) vm.previewFirstPerson(s.weapon(), ps, bufferSource, s.x1() - s.x0(), s.y1() - s.y0());
+			else if (s.weapon() == null) vm.previewArms(ps, bufferSource, s.x1() - s.x0(), s.y1() - s.y0(), s.yaw());
 			else {
 				if (s.zoom() != 1) ps.scale(s.zoom(), s.zoom(), s.zoom());
 				vm.previewWeapon(s.weapon(), s.kit(), s.pattern(), ps, bufferSource, s.x1() - s.x0(), s.y1() - s.y0(), s.yaw(), s.pitch());
@@ -66,7 +67,14 @@ public final class LoadoutPreview {
 		float yaw = (float) Math.sin(System.nanoTime() / 1e9 * 0.6) * 25; // a slow sway, to show it's 3D
 		ScreenRectangle box = new ScreenRectangle(x0, y0, x1 - x0, y1 - y0);
 		((dev.strafemc.mixin.client.GuiGraphicsExtractorAccessor) g).strafemc$renderState()
-				.addPicturesInPictureState(new State(x0, y0, x1, y1, yaw, weapon, null, 0, Float.NaN, 1, null, box));
+				.addPicturesInPictureState(new State(x0, y0, x1, y1, yaw, weapon, null, 0, Float.NaN, 1, false, null, box));
+	}
+
+	/** A weapon held in first person (your viewmodel settings and gloves), filling the box: the settings preview. */
+	public static void drawFirstPerson(GuiGraphicsExtractor g, int x0, int y0, int x1, int y1, String weapon) {
+		ScreenRectangle box = new ScreenRectangle(x0, y0, x1 - x0, y1 - y0);
+		((dev.strafemc.mixin.client.GuiGraphicsExtractorAccessor) g).strafemc$renderState()
+				.addPicturesInPictureState(new State(x0, y0, x1, y1, 0, weapon, null, 0, Float.NaN, 1, true, box, box));
 	}
 
 	/** A weapon in a given finish, turned to yaw / pitch (degrees) by the viewer: a case's reveal. */
@@ -78,6 +86,6 @@ public final class LoadoutPreview {
 								  float zoom) {
 		ScreenRectangle box = new ScreenRectangle(x0, y0, x1 - x0, y1 - y0);
 		((dev.strafemc.mixin.client.GuiGraphicsExtractorAccessor) g).strafemc$renderState()
-				.addPicturesInPictureState(new State(x0, y0, x1, y1, yaw, weapon, kit, Math.max(0, pattern), pitch, zoom, null, box));
+				.addPicturesInPictureState(new State(x0, y0, x1, y1, yaw, weapon, kit, Math.max(0, pattern), pitch, zoom, false, null, box));
 	}
 }

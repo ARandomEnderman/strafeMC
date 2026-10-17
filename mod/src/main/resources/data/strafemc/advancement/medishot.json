@@ -1,5 +1,5 @@
 {
-  "parent": "strafemc:buy",
+  "parent": "strafemc:root",
   "display": {
     "icon": {
       "id": "strafemc:weapon_healthshot"
