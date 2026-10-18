@@ -27,6 +27,7 @@ public class KeyItem extends Item {
 
 	@Override
 	public Component getName(ItemStack stack) {
+		if (CaseKeys.UNIVERSAL.equals(keyId(stack))) return Component.literal("Universal Key");
 		Cases.Key k = Cases.key(keyId(stack));
 		return k == null ? super.getName(stack) : Component.literal(k.name());
 	}

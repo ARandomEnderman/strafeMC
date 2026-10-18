@@ -236,11 +236,10 @@ public final class ConsoleActions {
 				if (c == null) break;
 				var inv = p.getInventory();
 				boolean creative = p.getAbilities().instabuild;
-				int cases = 0, keys = 0;
+				int cases = 0, keys = dev.strafemc.weapon.CaseKeys.count(p, c.key()).total(); // its own and Universal Keys, storage units too
 				for (int i = 0; i < inv.getContainerSize(); i++) {
 					var s = inv.getItem(i);
 					if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) cases += s.getCount();
-					if (s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) keys += s.getCount();
 				}
 				if (!creative && (cases < n || keys < n)) {
 					var k = dev.strafemc.weapon.Cases.key(c.key());
@@ -263,20 +262,17 @@ public final class ConsoleActions {
 							drop.stack().getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? dev.strafemc.weapon.SkinWrapItem.wear(drop.stack()) : -1));
 				}
 				if (stacks.isEmpty()) break;
-				if (!creative) { // n cases and n of their keys used up
-					int needCases = stacks.size(), needKeys = stacks.size();
-					for (int i = 0; i < inv.getContainerSize() && (needCases > 0 || needKeys > 0); i++) {
+				if (!creative) { // n cases and n keys used up (its own keys first, then Universal Keys)
+					int needCases = stacks.size();
+					for (int i = 0; i < inv.getContainerSize() && needCases > 0; i++) {
 						var s = inv.getItem(i);
-						if (needCases > 0 && s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) {
+						if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) {
 							int t = Math.min(needCases, s.getCount());
 							s.shrink(t);
 							needCases -= t;
-						} else if (needKeys > 0 && s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) {
-							int t = Math.min(needKeys, s.getCount());
-							s.shrink(t);
-							needKeys -= t;
 						}
 					}
+					dev.strafemc.weapon.CaseKeys.use(p, c.key(), stacks.size());
 				}
 				dev.strafemc.weapon.CaseOpening.hold(p, stacks, rarity);
 				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))

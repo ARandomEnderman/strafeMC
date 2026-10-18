@@ -169,12 +169,11 @@ public final class CaseScreen extends Screen {
 		var p = Minecraft.getInstance().player;
 		if (p == null) return 0;
 		if (p.getAbilities().instabuild) return 5;
-		int cases = 0, keys = 0;
+		int cases = 0, keys = dev.strafemc.weapon.CaseKeys.count(p, c.key()).total(); // its own and Universal Keys, storage units too
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && c.id().equals(dev.strafemc.weapon.CaseItem.caseId(s))) cases += s.getCount();
-			if (s.is(dev.strafemc.weapon.WeaponItems.CASE_KEY) && c.key().equals(dev.strafemc.weapon.KeyItem.keyId(s))) keys += s.getCount();
 		}
 		return Math.min(cases, keys);
 	}
@@ -251,10 +250,25 @@ public final class CaseScreen extends Screen {
 		else if (revealed) preview(g, font);
 		else reels(g, font);
 		super.extractRenderState(g, mx, my, delta);
+		universalKeys(g, font);
 	}
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {}
+
+	/** Red over each unlock button that would use Universal Keys: how many ("(2xuK)"); the case's own keys go first. */
+	private void universalKeys(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
+		var p = Minecraft.getInstance().player;
+		if (p == null || p.getAbilities().instabuild || spins != null || unlocking) return;
+		var keys = dev.strafemc.weapon.CaseKeys.count(p, c.key());
+		for (int i = 0; i < unlocks.size(); i++) {
+			Button b = unlocks.get(i);
+			int u = keys.universalFor(i + 1);
+			if (!b.visible || !b.active || u <= 0) continue;
+			String s = "(" + u + "xuK)";
+			g.text(font, s, b.getX() + b.getWidth() / 2 - font.width(s) / 2, b.getY() - 10, 0xFFE04040, true);
+		}
+	}
 
 	/** The contents grid, best first, then the rare special item line. */
 	private void contents(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int mx, int my) {

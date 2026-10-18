@@ -441,6 +441,22 @@ public final class RuntimePack {
 			if (keys.length() > 0) keys.append(',');
 			keys.append("{\"when\":\"").append(k.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/key/").append(k.id()).append("\"}}");
 		}
+		// the Universal Key (ours): CS2's eSports key picture with its blue turned red
+		try {
+			String img = "panorama/images/econ/tools/weapon_case_key_special_1_png";
+			Path out = tex.resolve("item/key/universal.png");
+			if (!Files.exists(out)) {
+				Path tmp = tex.resolve("item/key/universal_src.png");
+				icon(img + ".vtex_c", img + ".png", tmp, 128);
+				write(redKey(ImageIO.read(tmp.toFile())), out);
+				Files.deleteIfExists(tmp);
+			}
+			Files.writeString(models.resolve("key/universal.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/key/universal\"}}");
+			if (keys.length() > 0) keys.append(',');
+			keys.append("{\"when\":\"universal\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/key/universal\"}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] universal key icon: {}", e.toString());
+		}
 		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
 				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}}");
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
@@ -452,6 +468,20 @@ public final class RuntimePack {
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] storage unit icon: {}", e.toString());
 		}
+	}
+
+	/** The eSports key recoloured: its blue (hue 0.5-0.75, saturated) turned to the same shade of red. FLAGGED: our key, our colour. */
+	private static BufferedImage redKey(BufferedImage in) {
+		BufferedImage out = new BufferedImage(in.getWidth(), in.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		float[] hsb = new float[3];
+		for (int y = 0; y < in.getHeight(); y++)
+			for (int x = 0; x < in.getWidth(); x++) {
+				int argb = in.getRGB(x, y), a = argb >>> 24;
+				java.awt.Color.RGBtoHSB(argb >> 16 & 255, argb >> 8 & 255, argb & 255, hsb);
+				if (hsb[0] >= 0.5f && hsb[0] <= 0.75f && hsb[1] > 0.2f) argb = a << 24 | (java.awt.Color.HSBtoRGB(0.0f, hsb[1], hsb[2]) & 0xFFFFFF);
+				out.setRGB(x, y, argb);
+			}
+		return out;
 	}
 
 	/** A CS2 texture as it is (no resizing). */

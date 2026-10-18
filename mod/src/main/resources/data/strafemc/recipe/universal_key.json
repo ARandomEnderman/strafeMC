@@ -1,0 +1,19 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "misc",
+ "ingredients": [
+  "minecraft:redstone",
+  "minecraft:gold_ingot"
+ ],
+ "result": {
+  "id": "strafemc:case_key",
+  "count": 1,
+  "components": {
+   "minecraft:custom_model_data": {
+    "strings": [
+     "universal"
+    ]
+   }
+  }
+ }
+}

@@ -144,6 +144,7 @@ public final class WeaponItems {
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (w.knife()) e.accept(SkinWrapItem.stack(KNIFE_WRAP, w.id())); });
 		tab("cases", () -> CaseItem.stack(WEAPON_CASE, "crate_valve_1"), e -> {
 			for (Cases.Case c : Cases.all()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
+			e.accept(CaseKeys.universal());
 			for (Cases.Key k : Cases.keys()) e.accept(KeyItem.stack(CASE_KEY, k.id()));
 		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
