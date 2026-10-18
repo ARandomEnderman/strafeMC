@@ -19,6 +19,8 @@ public final class DeathCam {
 	private static Screen pending;
 	private static float fromYaw, fromPitch;
 	private static boolean released;
+	/** The server's death panel details (who, with what skin, their health, damage both ways). */
+	private static StrafePayloads.DeathInfo info;
 
 	private DeathCam() {}
 
@@ -28,6 +30,59 @@ public final class DeathCam {
 		if (p == null || m.victimId() != p.getId() || m.attackerId() == p.getId()) return;
 		killer = m.attackerId();
 		headshot = (m.flags() & dev.strafemc.weapon.KillFeed.HEADSHOT) != 0;
+	}
+
+	public static void info(StrafePayloads.DeathInfo m) {
+		Minecraft.getInstance().execute(() -> info = m);
+	}
+
+	public static void register() {
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "death_panel"),
+				(g, delta) -> panel(g));
+	}
+
+	/**
+	 * CS2's death panel (huddeathpanel): top centre, 410 px wide at 1080p; the killer's face (players) with their health
+	 * bar under it, their name, "killed you with their {weapon}" (the skin's name), damage taken and given, and the
+	 * weapon's picture on the right. Shown while the death camera holds.
+	 */
+	private static void panel(net.minecraft.client.gui.GuiGraphicsExtractor g) {
+		var mc = Minecraft.getInstance();
+		StrafePayloads.DeathInfo m = info;
+		if (pending == null || m == null || mc.player == null) return;
+		var font = mc.font;
+		float u = g.guiHeight() / 1080f * 2; // our GUI units are 2 screen px at the usual scale
+		int w = Math.round(410 * u / 2), pic = Math.round(128 * u / 2), h = Math.round(150 * u / 2), x = g.guiWidth() / 2 - (w + pic) / 2, y = Math.round(60 * u / 2);
+		g.fill(x, y, x + w + pic, y + h, 0xAA000000);
+		int av = Math.round(80 * u / 2);
+		g.fill(x + 6, y + 6, x + 6 + av, y + 6 + av, 0x80000000);
+		Entity k = mc.level == null ? null : mc.level.getEntity(m.killerId());
+		if (k instanceof net.minecraft.client.player.AbstractClientPlayer cp)
+			net.minecraft.client.gui.components.PlayerFaceExtractor.extractRenderState(g, cp.getSkin(), x + 8, y + 8, av - 4);
+		// their health bar under the face (CS2's #dee5c8)
+		g.fill(x + 6, y + 8 + av, x + 6 + av, y + 11 + av, 0xFF2A2F36);
+		g.fill(x + 6, y + 8 + av, x + 6 + Math.round(av * Math.min(1, m.hp() / 100f)), y + 11 + av, 0xFFDEE5C8);
+		int tx = x + 12 + av;
+		g.text(font, m.self() ? dev.strafemc.client.CsText.get("DeathPanel_KilledSelf", "YOU KILLED YOURSELF") : m.killer(), tx, y + 10, 0xFFCCCCCC, true);
+		if (!m.self()) {
+			String desc = "killed you with their " + m.weapon();
+			int ty = y + 22;
+			for (var line : font.split(net.minecraft.network.chat.Component.literal(desc), w - av - 18)) {
+				g.text(font, line, tx, ty, 0xFFFFFFFF, true);
+				ty += 10;
+			}
+			g.text(font, m.hp() + " HP", tx, ty + 2, 0xFFDEE5C8, false);
+		}
+		int dy = y + 14 + av;
+		g.text(font, "§7Damage taken:  §f" + m.taken() + " §7in §f" + m.hitsTaken() + (m.hitsTaken() == 1 ? " hit" : " hits"), x + 8, dy, -1, false);
+		g.text(font, "§7Damage given:  §f" + m.given() + " §7in §f" + m.hitsGiven() + (m.hitsGiven() == 1 ? " hit" : " hits"), x + 8, dy + 11, -1, false);
+		// the weapon's picture (in the killer's skin)
+		net.minecraft.resources.Identifier img = m.kit().isEmpty() ? CaseImages.image("panorama/images/econ/weapons/base_weapons/" + m.cls() + "_png")
+				: CaseImages.get(new dev.strafemc.weapon.Cases.Entry(m.kit(), m.cls()));
+		if (img != null) {
+			int ph = pic * 3 / 4;
+			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, img, x + w, y + (h - ph) / 2, 0, 0, pic, ph, pic, ph);
+		}
 	}
 
 	/** The death screen asked to open: hold it while the camera looks at the killer. True if it was held. */
@@ -69,6 +124,7 @@ public final class DeathCam {
 			Screen s = pending;
 			pending = null;
 			released = true;
+			info = null;
 			mc.execute(() -> mc.setScreen(s)); // not from inside the frame being drawn
 		}
 	}

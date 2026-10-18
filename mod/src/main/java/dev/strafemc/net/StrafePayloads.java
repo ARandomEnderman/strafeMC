@@ -144,6 +144,34 @@ public final class StrafePayloads {
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** Cases opened (1-5 at once): per drop its kit on an item, rarity ordinal (-1: rare special item), name, pattern (-1: none). */
+	/**
+	 * Server -> the player who died: CS2's death panel. weapon: its name with the killer's skin ("AK-47 | Redline");
+	 * cls / kit: for its picture (kit empty: the plain weapon); hp: the killer's CS health left; damage both ways.
+	 */
+	public record DeathInfo(String killer, int killerId, boolean self, String weapon, String cls, String kit, int hp, int given, int hitsGiven, int taken,
+							int hitsTaken) implements CustomPacketPayload {
+		public static final Type<DeathInfo> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "death_info"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, DeathInfo> CODEC = StreamCodec.of((b, v) -> {
+			b.writeUtf(v.killer(), 64);
+			b.writeVarInt(v.killerId());
+			b.writeBoolean(v.self());
+			b.writeUtf(v.weapon(), 128);
+			b.writeUtf(v.cls(), 64);
+			b.writeUtf(v.kit(), 96);
+			b.writeVarInt(v.hp());
+			b.writeVarInt(v.given());
+			b.writeVarInt(v.hitsGiven());
+			b.writeVarInt(v.taken());
+			b.writeVarInt(v.hitsTaken());
+		}, b -> new DeathInfo(b.readUtf(64), b.readVarInt(), b.readBoolean(), b.readUtf(128), b.readUtf(64), b.readUtf(96), b.readVarInt(), b.readVarInt(),
+				b.readVarInt(), b.readVarInt(), b.readVarInt()));
+
+		@Override
+		public Type<DeathInfo> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> everyone in the level: a graffiti sprayed (where, which face, the sprayer's yaw for floors, who). */
 	public record SprayPlaced(String spray, int tint, double x, double y, double z, int face, long block, float yaw, java.util.UUID owner) implements CustomPacketPayload {
 		public static final Type<SprayPlaced> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "spray_placed"));

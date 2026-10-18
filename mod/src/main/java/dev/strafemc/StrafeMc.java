@@ -70,6 +70,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.GameplaySync::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.CaseOpening::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Shop::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.DamageReport::tick);
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.Shop.sync(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Bots::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> dev.strafemc.weapon.Bots.onLoad(e));
@@ -109,6 +110,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE, dev.strafemc.net.StrafePayloads.UpgradeResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, dev.strafemc.net.StrafePayloads.TradeUpResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE, dev.strafemc.net.StrafePayloads.SprayPlaced.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.DeathInfo.TYPE, dev.strafemc.net.StrafePayloads.DeathInfo.CODEC);
 		// a player's CS2 footsteps / jump / landing, passed on to the players near them (not back to them)
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, (msg, ctx) -> {
 			var p = ctx.player();
