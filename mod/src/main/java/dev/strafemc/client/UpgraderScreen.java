@@ -19,15 +19,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The upgrader (strafeMC menu): pick skins from your inventory to stake (left), one of the five offers for exactly that
- * stake (right), and Upgrade: a needle spins round the dial and stops in the green part (your chance) or not.
+ * The upgrader (strafeMC menu): pick skins to stake (left: your inventory, then each Storage Unit you carry under its
+ * name, foldable), one of the five offers for exactly that stake (right), and Upgrade: a needle spins round the dial
+ * and stops in the green part (your chance) or not.
  */
 public final class UpgraderScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, WIN = 0xFF4CAF50, LOSE = 0xFFE04040;
 	private static UpgraderScreen open;
 	private final Screen parent;
-	/** Inventory slots being staked. */
+	/** The staked skins, by ref (Upgrader.at: inventory slot or storage unit place). */
 	private final List<Integer> stake = new ArrayList<>();
+	/** Folded sections (-1 the inventory, else the storage unit's inventory slot), and the left column's scroll. */
+	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
+	private double listScroll;
+	private int listHeight;
+
+	/** A group of stakeable skins: the inventory, or one Storage Unit (key: its inventory slot). */
+	private record Section(String label, int key, List<Integer> refs) {}
 	private List<Upgrader.Offer> offers = List.of();
 	private int chosen = -1;
 	private Button go;
@@ -54,24 +62,70 @@ public final class UpgraderScreen extends Screen {
 		refresh();
 	}
 
-	/** The player's stakeable items, by inventory slot. */
-	private List<Integer> items() {
-		List<Integer> out = new ArrayList<>();
+	/** The inventory's skins, then each carried Storage Unit's (with its name), by ref. */
+	private List<Section> sections() {
+		List<Section> out = new ArrayList<>();
 		var p = minecraft.player;
 		if (p == null) return out;
 		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) if (Upgrader.stakeable(inv.getItem(i))) out.add(i);
+		List<Integer> loose = new ArrayList<>();
+		for (int i = 0; i < inv.getContainerSize(); i++) if (Upgrader.stakeable(inv.getItem(i))) loose.add(i);
+		out.add(new Section("YOUR ITEMS", -1, loose));
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack unit = inv.getItem(i);
+			if (!(unit.getItem() instanceof dev.strafemc.weapon.StorageUnitItem)) continue;
+			List<Integer> in = new ArrayList<>();
+			List<ItemStack> all = unit.getOrDefault(dev.strafemc.weapon.StorageUnitItem.CONTENTS, List.<ItemStack>of());
+			for (int j = 0; j < all.size(); j++) if (Upgrader.stakeable(all.get(j))) in.add(Upgrader.unitRef(i, j));
+			out.add(new Section(unit.getHoverName().getString(), i, in));
+		}
 		return out;
+	}
+
+	private interface Visit {
+		void header(Section s, int y);
+
+		void item(int ref, int x, int y);
+	}
+
+	/** Walks the left column's layout (scrolled): each section's header, then its skins unless it's folded. */
+	private void layout(Visit v) {
+		int per = Math.max(1, (colW() - 4) / 18), y = LIST_TOP - (int) listScroll;
+		for (Section s : sections()) {
+			v.header(s, y);
+			y += 12;
+			if (!folded.contains(s.key())) {
+				for (int i = 0; i < s.refs().size(); i++) v.item(s.refs().get(i), 20 + (i % per) * 18, y + (i / per) * 18);
+				y += Math.max(1, (s.refs().size() + per - 1) / per) * 18;
+			}
+			y += 4;
+		}
+		listHeight = y + (int) listScroll - LIST_TOP;
+	}
+
+	private static final int LIST_TOP = 30;
+
+	private int listBottom() {
+		return height - 60;
 	}
 
 	private List<ItemStack> stakeStacks() {
 		List<ItemStack> out = new ArrayList<>();
-		for (int sl : stake) out.add(minecraft.player.getInventory().getItem(sl));
+		for (int ref : stake) out.add(Upgrader.at(minecraft.player, ref));
 		return out;
 	}
 
+	@Override
+	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+		if (mx < 20 + colW()) {
+			listScroll = Math.max(0, Math.min(Math.max(0, listHeight - (listBottom() - LIST_TOP)), listScroll - sy * 18));
+			return true;
+		}
+		return super.mouseScrolled(mx, my, sx, sy);
+	}
+
 	private void refresh() {
-		stake.removeIf(sl -> !Upgrader.stakeable(minecraft.player.getInventory().getItem(sl)));
+		stake.removeIf(ref -> !Upgrader.stakeable(Upgrader.at(minecraft.player, ref)));
 		offers = Upgrader.offers(minecraft.player.getUUID(), stakeStacks());
 		if (chosen >= offers.size()) chosen = -1;
 	}
@@ -83,7 +137,7 @@ public final class UpgraderScreen extends Screen {
 	private void upgrade() {
 		if (chosen < 0 || stake.isEmpty() || spinStart != 0 && spinning()) return;
 		StringBuilder b = new StringBuilder().append(chosen);
-		for (int sl : stake) b.append(' ').append(sl);
+		for (int ref : stake) b.append(' ').append(ref);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("upgrade", b.toString()));
 		go.active = false;
 		waiting = true;
@@ -130,19 +184,30 @@ public final class UpgraderScreen extends Screen {
 		if (super.mouseClicked(e, doubleClick)) return true;
 		if (spinning() || waiting) return false;
 		double mx = e.x(), my = e.y();
-		// your items: toggle into / out of the stake
-		List<Integer> items = items();
-		int cw = colW(), x0 = 20, y0 = 40, per = Math.max(1, (cw - 4) / 18);
-		for (int i = 0; i < items.size(); i++) {
-			int x = x0 + (i % per) * 18, y = y0 + (i / per) * 18;
-			if (mx >= x && mx < x + 18 && my >= y && my < y + 18) {
-				Integer sl = items.get(i);
-				if (stake.contains(sl)) stake.remove(sl);
-				else if (stake.size() < Upgrader.MAX_STAKE) stake.add(sl);
-				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
-				refresh();
-				return true;
-			}
+		// the left column: a header folds its section, a skin goes into / out of the stake
+		int cw = colW();
+		if (mx >= 20 && mx < 20 + cw && my >= LIST_TOP && my < listBottom()) {
+			boolean[] done = {false};
+			layout(new Visit() {
+				@Override
+				public void header(Section s, int y) {
+					if (!done[0] && my >= y && my < y + 11) {
+						if (!folded.remove(s.key())) folded.add(s.key());
+						done[0] = true;
+					}
+				}
+
+				@Override
+				public void item(int ref, int x, int y) {
+					if (done[0] || mx < x || mx >= x + 18 || my < y || my >= y + 18) return;
+					if (stake.contains(ref)) stake.remove(Integer.valueOf(ref));
+					else if (stake.size() < Upgrader.MAX_STAKE) stake.add(ref);
+					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
+					refresh();
+					done[0] = true;
+				}
+			});
+			if (done[0]) return true;
 		}
 		// the offers
 		int ox = width - 20 - cw;
@@ -168,24 +233,32 @@ public final class UpgraderScreen extends Screen {
 		g.text(font, "Upgrader", -font.width("Upgrader") / 2, 0, 0xFFFFFFFF, true);
 		pose.popMatrix();
 		int cw = colW();
-		// left: your items
-		g.text(font, "YOUR ITEMS", 20, 30, GOLD, false);
-		List<Integer> items = items();
-		int per = Math.max(1, (cw - 4) / 18);
-		ItemStack hover = ItemStack.EMPTY;
-		for (int i = 0; i < items.size(); i++) {
-			int x = 20 + (i % per) * 18, y = 40 + (i / per) * 18;
-			ItemStack s = minecraft.player.getInventory().getItem(items.get(i));
-			boolean in = stake.contains(items.get(i));
-			g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
-			if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
-			g.item(s, x, y);
-			if (mx >= x && mx < x + 18 && my >= y && my < y + 18) hover = s;
-		}
-		if (items.isEmpty()) g.text(font, "No skins to stake", 20, 40, 0xFF808080, false);
+		// left: your skins, then each Storage Unit's under its name (click a header to fold it); scrolls
+		ItemStack[] hover = {ItemStack.EMPTY};
+		g.enableScissor(0, LIST_TOP, 20 + cw + 4, listBottom());
+		layout(new Visit() {
+			@Override
+			public void header(Section s, int y) {
+				boolean fold = folded.contains(s.key());
+				String label = (fold ? "▶ " : "▼ ") + s.label() + "  " + s.refs().size();
+				g.text(font, font.plainSubstrByWidth(label, cw), 20, y + 1, s.key() < 0 ? GOLD : 0xFF9AC8FF, false);
+				if (!fold && s.refs().isEmpty()) g.text(font, "No skins", 30, y + 13, 0xFF707070, false);
+			}
+
+			@Override
+			public void item(int ref, int x, int y) {
+				ItemStack s = Upgrader.at(minecraft.player, ref);
+				boolean in = stake.contains(ref);
+				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
+				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
+				g.item(s, x, y);
+				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = s;
+			}
+		});
+		g.disableScissor();
 		// right: the five offers for this stake
 		int ox = width - 20 - cw;
-		g.text(font, "UPGRADE TO", ox, 30, GOLD, false);
+		g.text(font, "UPGRADE TO", ox, LIST_TOP + 1, GOLD, false);
 		if (offers.isEmpty()) g.text(font, font.plainSubstrByWidth("Pick skins to stake", cw), ox, 40, 0xFF808080, false);
 		for (int i = 0; i < offers.size(); i++) {
 			Upgrader.Offer o = offers.get(i);
@@ -199,7 +272,7 @@ public final class UpgraderScreen extends Screen {
 			int tx = ox + 38, tw = cw - 40;
 			g.text(font, font.plainSubstrByWidth(TileText.clean(o.item().getHoverName().getString()), tw), tx, y + 4, rarity(o.item()), false);
 			g.text(font, Worth.format(o.worth()) + "  " + String.format(java.util.Locale.ROOT, "%.1f%%", o.chance() * 100), tx, y + 16, 0xFFB0B0B0, false);
-			if (over) hover = o.item();
+			if (over) hover[0] = o.item();
 		}
 		// middle: the stake, the dial and the verdict
 		int cx = width / 2, cy = height / 2 + 4, r = Math.max(30, Math.min(60, Math.min(width / 6, height / 4)));
@@ -222,7 +295,7 @@ public final class UpgraderScreen extends Screen {
 		if (spinStart != 0 && !spinning() && verdict != null) mid = verdict;
 		g.text(font, mid, cx - font.width(mid) / 2, cy + r + 8, verdict != null && !spinning() ? (verdict.equals("Lost") ? LOSE : WIN) : 0xFFFFFFFF, true);
 		super.extractRenderState(g, mx, my, delta);
-		if (!hover.isEmpty()) g.setTooltipForNextFrame(font, hover, mx, my);
+		if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
 	}
 
 	/** Where the needle points (turns from the top): spinning, eased to its stop; at rest, where it stopped. */

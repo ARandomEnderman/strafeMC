@@ -208,33 +208,18 @@ public final class ConsoleActions {
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
-			case "upgrade" -> { // "offer slot slot ...": stake those inventory slots on that offer
+			case "upgrade" -> { // "offer ref ref ...": stake the skins at those refs (inventory slots or storage unit places, Upgrader.UNIT)
 				String[] a = arg.trim().split(" ");
-				var inv = p.getInventory();
-				java.util.List<Integer> slots = new java.util.ArrayList<>();
+				java.util.List<Integer> refs = new java.util.ArrayList<>();
 				int offer;
 				try {
 					offer = Integer.parseInt(a[0]);
-					for (int i = 1; i < a.length; i++) {
-						int sl = Integer.parseInt(a[i]);
-						if (sl < 0 || sl >= inv.getContainerSize() || slots.contains(sl) || !dev.strafemc.weapon.Upgrader.stakeable(inv.getItem(sl))) throw new NumberFormatException();
-						slots.add(sl);
-					}
+					for (int i = 1; i < a.length; i++) refs.add(Integer.parseInt(a[i]));
 				} catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
 					break;
 				}
-				if (slots.isEmpty() || slots.size() > dev.strafemc.weapon.Upgrader.MAX_STAKE) break;
-				java.util.List<net.minecraft.world.item.ItemStack> stake = new java.util.ArrayList<>();
-				for (int sl : slots) stake.add(inv.getItem(sl).copy());
-				var offers = dev.strafemc.weapon.Upgrader.offers(p.getUUID(), stake);
-				if (offer < 0 || offer >= offers.size()) break;
-				var o = offers.get(offer);
-				for (int sl : slots) inv.setItem(sl, net.minecraft.world.item.ItemStack.EMPTY); // the stake is gone either way
-				boolean win = p.getRandom().nextDouble() < o.chance();
-				if (win && !inv.add(o.item().copy())) p.drop(o.item().copy(), false);
-				StrafeMc.LOG.info("[strafemc] upgrader: {} staked ${} for {} (${}, {}%): {}", p.getScoreboardName(), String.format("%.2f", dev.strafemc.weapon.Upgrader.worth(stake)),
-						o.item().getHoverName().getString(), String.format("%.2f", o.worth()), Math.round(o.chance() * 100), win ? "won" : "lost");
-				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE))
+				Boolean win = dev.strafemc.weapon.Upgrader.stake(p, offer, refs);
+				if (win != null && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE))
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.UpgradeResult(offer, win));
 			}
 			case "strafemc_drop" -> { // a care package without a new rank: a cheat

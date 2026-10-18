@@ -27,6 +27,62 @@ public final class Upgrader {
 
 	private Upgrader() {}
 
+	/**
+	 * Where a staked skin is: an inventory slot (below UNIT), or a place in a Storage Unit carried in the inventory
+	 * (UNIT + its inventory slot x 1000 + the place).
+	 */
+	public static final int UNIT = 100_000;
+
+	public static int unitRef(int unitSlot, int place) {
+		return UNIT + unitSlot * 1000 + place;
+	}
+
+	/** The skin at a ref (the live stack for the inventory, a copy for a storage unit), or empty. */
+	public static ItemStack at(net.minecraft.world.entity.player.Player p, int ref) {
+		var inv = p.getInventory();
+		if (ref >= 0 && ref < UNIT) return ref < inv.getContainerSize() ? inv.getItem(ref) : ItemStack.EMPTY;
+		int slot = (ref - UNIT) / 1000, place = (ref - UNIT) % 1000;
+		if (ref < UNIT || slot >= inv.getContainerSize() || !(inv.getItem(slot).getItem() instanceof StorageUnitItem)) return ItemStack.EMPTY;
+		List<ItemStack> in = inv.getItem(slot).getOrDefault(StorageUnitItem.CONTENTS, List.<ItemStack>of());
+		return place < in.size() ? in.get(place) : ItemStack.EMPTY;
+	}
+
+	/** Takes the staked skins out (inventory slots emptied, storage unit places cleared). */
+	static void take(net.minecraft.world.entity.player.Player p, List<Integer> refs) {
+		var inv = p.getInventory();
+		java.util.Map<Integer, List<ItemStack>> units = new java.util.HashMap<>();
+		for (int ref : refs) {
+			if (ref < UNIT) {
+				inv.setItem(ref, ItemStack.EMPTY);
+				continue;
+			}
+			int slot = (ref - UNIT) / 1000, place = (ref - UNIT) % 1000;
+			List<ItemStack> all = units.computeIfAbsent(slot, s -> StorageUnitItem.contents(inv.getItem(s)));
+			all.set(place, ItemStack.EMPTY);
+		}
+		for (var e : units.entrySet()) StorageUnitItem.store(inv.getItem(e.getKey()), e.getValue());
+	}
+
+	/** Stakes it (server): the skins at these refs on that offer; true if won. Null if the stake or offer isn't valid. */
+	public static Boolean stake(net.minecraft.server.level.ServerPlayer p, int offer, List<Integer> refs) {
+		if (refs.isEmpty() || refs.size() > MAX_STAKE || new java.util.HashSet<>(refs).size() != refs.size()) return null;
+		List<ItemStack> stake = new ArrayList<>();
+		for (int ref : refs) {
+			ItemStack s = at(p, ref);
+			if (!stakeable(s)) return null;
+			stake.add(s.copy());
+		}
+		List<Offer> offers = offers(p.getUUID(), stake);
+		if (offer < 0 || offer >= offers.size()) return null;
+		Offer o = offers.get(offer);
+		take(p, refs); // the stake is gone either way
+		boolean win = p.getRandom().nextDouble() < o.chance();
+		if (win && !p.getInventory().add(o.item().copy())) p.drop(o.item().copy(), false);
+		dev.strafemc.StrafeMc.LOG.info("[strafemc] upgrader: {} staked ${} for {} (${}, {}%): {}", p.getScoreboardName(), String.format("%.2f", worth(stake)),
+				o.item().getHoverName().getString(), String.format("%.2f", o.worth()), Math.round(o.chance() * 100), win ? "won" : "lost");
+		return win;
+	}
+
 	/** What can be staked: anything with a worth. */
 	public static boolean stakeable(ItemStack s) {
 		return !s.isEmpty() && Worth.of(s) > 0;
