@@ -138,6 +138,13 @@ public final class RuntimePack {
 					write(additive ? SvgIcon.rasterizeAdditive(src, dev.strafemc.client.KillCards.ART_H) : SvgIcon.rasterize(src, dev.strafemc.client.KillCards.ART_H, true), out);
 				}, out, Placeholders.Icon.BULLET, 32);
 			}
+			// the cards' blue-dot pattern (kill-flag-bg-pattern: CS2's bluedots_large tiled at its own size, 20% opacity,
+			// clipped to kill_mask), drawn over the dark backing
+			try { // no placeholder here: a missing pattern just leaves it out
+				killPattern(tex);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] kill card pattern: {}", e.toString());
+			}
 			try {
 				mags(tex);
 			} catch (Exception e) {
@@ -155,6 +162,26 @@ public final class RuntimePack {
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] could not build the CS2 asset pack (CS2 copy missing?): {}", e.toString());
 		}
+	}
+
+	private static void killPattern(Path tex) throws Exception {
+		Path out = tex.resolve(dev.strafemc.client.KillCards.ART_DIR + "kill_pattern.png"), mask = tex.resolve(dev.strafemc.client.KillCards.ART_DIR + "kill_mask.png");
+		if (Files.exists(out) || !Files.exists(mask)) return;
+		String img = "panorama/images/backgrounds/bluedots_large_png";
+		Path src = StrafeConfig.cacheDir().resolve(img + ".png");
+		AssetCache.ensureDecompiled(img + ".vtex_c", src);
+		BufferedImage dots = ImageIO.read(src.toFile()), m = ImageIO.read(mask.toFile());
+		double k = dev.strafemc.client.KillCards.ART_H / 152.0; // art pixels per CS2 1080p pixel (card-svg-height 152px)
+		BufferedImage o = new BufferedImage(m.getWidth(), m.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		for (int y = 0; y < o.getHeight(); y++)
+			for (int x = 0; x < o.getWidth(); x++) {
+				int ma = m.getRGB(x, y) >>> 24;
+				if (ma == 0) continue;
+				int d = dots.getRGB((int) (x / k) % dots.getWidth(), (int) (y / k) % dots.getHeight());
+				int a = (int) Math.round((d >>> 24) * (ma / 255.0) * 0.2);
+				o.setRGB(x, y, a << 24 | (d & 0xFFFFFF));
+			}
+		write(o, out);
 	}
 
 	private interface Step {

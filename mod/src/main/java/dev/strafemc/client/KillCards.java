@@ -117,6 +117,7 @@ public final class KillCards {
 			pose.scale((float) pop, (float) pop);
 			int x0 = Math.round(-w / 2), y0 = Math.round(-h / 2), iw = Math.round(w), ih = Math.round(h);
 			card(g, "kill_mask", x0, y0, iw, ih, alpha << 24 | 0x101418, alpha * 0xB0 / 255);
+			if (pattern()) card(g, "kill_pattern", x0, y0, iw, ih, alpha << 24 | 0xFFFFFF, alpha); // CS2's blue dots on the card
 			card(g, extra ? "kill_extra" : "kill_" + (i + 1), x0, y0, iw, ih, alpha << 24 | 0xFFFFFF, alpha);
 			if (!extra) card(g, "kill_pip_" + c.pip, x0, y0, iw, ih, alpha << 24 | 0xFFFFFF, alpha);
 			else {
@@ -128,6 +129,15 @@ public final class KillCards {
 			}
 			pose.popMatrix();
 		}
+	}
+
+	private static Boolean pattern;
+
+	/** Whether the dot pattern was made (without the CS2 files it isn't, and the card goes without). */
+	private static boolean pattern() {
+		if (pattern == null) pattern = Minecraft.getInstance().getResourceManager()
+				.getResource(Identifier.fromNamespaceAndPath("strafemc", "textures/" + ART_DIR + "kill_pattern.png")).isPresent();
+		return pattern;
 	}
 
 	private static void card(GuiGraphicsExtractor g, String name, int x, int y, int w, int h, int rgb, int alpha) {
