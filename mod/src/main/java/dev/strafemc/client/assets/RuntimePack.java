@@ -562,6 +562,30 @@ public final class RuntimePack {
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] sticker icons: {}", e.toString());
 		}
+		// charms: CS2's own charm pictures (econ/keychains/...), converted 64 at a time when missing
+		try {
+			Files.createDirectories(models.resolve("charm"));
+			java.util.List<String> charmMissing = new java.util.ArrayList<>();
+			for (var c : dev.strafemc.weapon.Charms.all())
+				if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/" + c.image() + "_png.png"))) charmMissing.add("panorama/images/" + c.image() + "_png.vtex_c");
+			for (int i = 0; i < charmMissing.size(); i += 64) AssetCache.decompileAll(charmMissing.subList(i, Math.min(charmMissing.size(), i + 64)));
+			StringBuilder charms = new StringBuilder();
+			for (var c : dev.strafemc.weapon.Charms.all()) {
+				String img = "panorama/images/" + c.image() + "_png";
+				try {
+					icon(img + ".vtex_c", img + ".png", tex.resolve("item/charm/" + c.id() + ".png"), 64);
+				} catch (Exception e) {
+					continue;
+				}
+				Files.writeString(models.resolve("charm/" + c.id() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/charm/" + c.id() + "\"}}");
+				if (charms.length() > 0) charms.append(',');
+				charms.append("{\"when\":\"").append(c.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/charm/").append(c.id()).append("\"}}");
+			}
+			Files.writeString(items.resolve("charm.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+					+ "\"index\":0,\"cases\":[" + charms + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/tripwire_hook\"}}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] charm icons: {}", e.toString());
+		}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {
 			String img = "panorama/images/econ/tools/casket_png";

@@ -155,6 +155,7 @@
 	"item.strafemc.spray": "Graffiti",
 	"itemGroup.strafemc.sprays": "strafeMC Graffiti",
 	"item.strafemc.sticker": "Sticker",
+	"item.strafemc.charm": "Charm",
 	"itemGroup.strafemc.stickers": "strafeMC Stickers",
 	"death.attack.strafemc.bullet": "%1$s was shot by %2$s",
 	"death.attack.strafemc.bullet.item": "%1$s was shot by %2$s using %3$s",

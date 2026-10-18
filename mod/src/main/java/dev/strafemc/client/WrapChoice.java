@@ -43,6 +43,12 @@ public final class WrapChoice {
 		return SkinWrapItem.finish(gunWrap(cls));
 	}
 
+	/** The charm hanging on this gun's wrap, or null for none. */
+	public static String gunCharm(String cls) {
+		String c = gunKit(cls) == null ? "" : dev.strafemc.weapon.StickerSlots.charm(gunWrap(cls));
+		return c.isEmpty() ? null : c;
+	}
+
 	/** The stickers on this gun's wrap, slot by slot ("" for none), or null when it has none. */
 	public static String[] gunStickers(String cls) {
 		ItemStack s = gunWrap(cls);

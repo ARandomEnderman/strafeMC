@@ -34,6 +34,10 @@ public final class CaseImages {
 			return st == null ? null : "panorama/images/econ/stickers/" + st.material() + "_png";
 		}
 		if (e.spray()) return null;
+		if (e.charm()) {
+			var c = dev.strafemc.weapon.Charms.get(e.kit());
+			return c == null ? null : "panorama/images/" + c.image() + "_png";
+		}
 		return "panorama/images/econ/default_generated/" + e.item() + "_" + e.kit() + "_light_png";
 	}
 
@@ -102,6 +106,10 @@ public final class CaseImages {
 			String id = dev.strafemc.weapon.StickerItem.sticker(s);
 			return id == null ? null : get(new Cases.Entry(id, "sticker"));
 		}
+		if (s.getItem() instanceof dev.strafemc.weapon.CharmItem) {
+			String id = dev.strafemc.weapon.CharmItem.charm(s);
+			return id == null ? null : get(new Cases.Entry(id, "charm"));
+		}
 		if (s.getItem() instanceof dev.strafemc.weapon.SkinWrapItem) {
 			var w = dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(s));
 			if (w == null || w.kits().isEmpty()) return null;
@@ -155,6 +163,9 @@ public final class CaseImages {
 		} else if (s.getItem() instanceof dev.strafemc.weapon.SprayItem) {
 			var sp = dev.strafemc.weapon.Sprays.get(dev.strafemc.weapon.SprayItem.spray(s));
 			r = sp == null ? null : sp.rarity();
+		} else if (s.getItem() instanceof dev.strafemc.weapon.CharmItem) {
+			var c = dev.strafemc.weapon.Charms.get(dev.strafemc.weapon.CharmItem.charm(s));
+			r = c == null ? null : c.rarity();
 		}
 		return r == null ? fallback : 0xFF000000 | r.color;
 	}

@@ -418,6 +418,74 @@ public final class Viewmodel {
 		emit(m.display, new Matrix4f[0][], place, cam, ps, out, knife ? light : 0xF000F0, rigid); // the gun display glows (F_SELF_ILLUM)
 	}
 
+	/** Charm models by charm id, loaded in the background on first use. */
+	private final Map<String, VmModel> charmModels = new java.util.concurrent.ConcurrentHashMap<>();
+	private final java.util.Set<String> charmLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	/** The charm's swing: angle (radians) about the attachment's two sideways axes and how fast, driven by the view turning. */
+	private float swingX, swingZ, swingVX, swingVZ, lastYaw = Float.NaN, lastPitch;
+	private long lastSwingNs;
+
+	private VmModel charmModel(String id) {
+		VmModel m = charmModels.get(id);
+		if (m != null || !charmLoading.add(id)) return m;
+		var c = dev.strafemc.weapon.Charms.get(id);
+		if (c == null) return null;
+		Thread t = new Thread(() -> {
+			try {
+				VmModel all = VmModel.load(Glb.read(AssetCache.exportGlb(c.model() + "_c", true)), null);
+				for (VmModel.Part part : all.parts) {
+					if (part.texture == null) continue;
+					part.metal = metalPerVertex(part);
+					downscaled(part.texture);
+					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+				}
+				charmModels.put(id, all);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] charm {} failed: {}", id, e.toString());
+			}
+		}, "strafemc-charm");
+		t.setDaemon(true);
+		t.start();
+		return null;
+	}
+
+	/**
+	 * The charm on the gun's wrap, hanging from the weapon's "keychain" attachment ("keychain_legacy" on a legacy-model
+	 * finish) and swinging as you turn: a damped pendulum pushed by the view's turn. FLAGGED ours: the swing's spring
+	 * and damping (CS2 simulates the chain).
+	 */
+	private void charm(Loaded l, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
+		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
+		String id = knife ? null : dev.strafemc.client.WrapChoice.gunCharm(l.cls);
+		if (id == null) return;
+		String kit = dev.strafemc.client.WrapChoice.gunKit(l.cls);
+		String name = kit != null && WeaponSkinCache.legacy(kit) && l.attachments.containsKey("keychain_legacy") ? "keychain_legacy" : "keychain";
+		Matrix4f at = l.attachments.containsKey(name) ? attachmentTransforms.get(name) : null;
+		VmModel m = at == null ? null : charmModel(id);
+		if (m == null) return;
+		var p = net.minecraft.client.Minecraft.getInstance().player;
+		long now = System.nanoTime();
+		float dt = lastSwingNs == 0 ? 0 : Math.min(0.05f, (now - lastSwingNs) / 1e9f);
+		lastSwingNs = now;
+		if (p != null) {
+			float yaw = p.getYRot(), pitch = p.getXRot();
+			if (!Float.isNaN(lastYaw) && dt > 0) { // turning pushes it the other way
+				swingVZ += net.minecraft.util.Mth.wrapDegrees(yaw - lastYaw) * 0.015f;
+				swingVX -= (pitch - lastPitch) * 0.015f;
+			}
+			lastYaw = yaw;
+			lastPitch = pitch;
+		}
+		float k = 60, damp = 4.5f; // spring back to hanging, losing speed
+		swingVX += (-k * swingX - damp * swingVX) * dt;
+		swingVZ += (-k * swingZ - damp * swingVZ) * dt;
+		swingX = Math.max(-0.8f, Math.min(0.8f, swingX + swingVX * dt));
+		swingZ = Math.max(-0.8f, Math.min(0.8f, swingZ + swingVZ * dt));
+		Matrix4f place = new Matrix4f(at).rotate(FROM_GLTF).rotateX(swingX).rotateZ(swingZ);
+		emit(m, new Matrix4f[0][], place, cam, ps, out, light, new Matrix4f());
+	}
+
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */
 	public static void warmClips() {
 		for (Weapon w : WEAPONS.values())
@@ -627,6 +695,7 @@ public final class Viewmodel {
 		emit(gun(l), gunSkin, toView, cam, ps, out, light, rigid); // same skeleton and mesh, its own colour (a wrap's finish)
 		updateAttachments(l, gunSkin, toView);
 		statTrak(l, cam, ps, out, light);
+		charm(l, cam, ps, out, light);
 		dev.strafemc.client.particle.Effects.renderView(ps, out, cam);
 		return true;
 	}

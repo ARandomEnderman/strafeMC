@@ -112,8 +112,10 @@ public final class Shop {
 		java.util.Collections.shuffle(cases, rng);
 		for (int i = 0; i < 3 && i < cases.size(); i++)
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
-		// a sticker capsule (2-6 of it) and a graffiti box (1-3): priced like cases, their average opening x CASE_SHARE
-		List<Cases.Case> stickers = Cases.capsules("sticker"), boxes = Cases.capsules("spray");
+		// a sticker capsule (2-6 of it) and a graffiti box or, half the time, a charm collection (1-3): priced like cases,
+		// their average opening x CASE_SHARE
+		List<Cases.Case> stickers = Cases.capsules("sticker"), charms = Cases.capsules("charm");
+		List<Cases.Case> boxes = !charms.isEmpty() && rng.nextBoolean() ? charms : Cases.capsules("spray");
 		if (!stickers.isEmpty()) {
 			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 2 + rng.nextInt(5)));

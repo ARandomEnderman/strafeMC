@@ -346,6 +346,14 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
+			case "charm_apply" -> { // "charmSlot target"
+				String[] a = arg.trim().split(" ");
+				try {
+					if (a.length == 2) dev.strafemc.weapon.StickerSlots.applyCharm(p, Integer.parseInt(a[0]), a[1]);
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			case "charm_remove" -> dev.strafemc.weapon.StickerSlots.removeCharm(p, arg.trim());
 			case "sticker_scrape" -> { // "target slot"
 				String[] a = arg.trim().split(" ");
 				try {

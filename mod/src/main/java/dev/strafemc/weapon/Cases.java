@@ -26,12 +26,17 @@ public final class Cases {
 		}
 
 		public boolean gloves() {
-			return !item.startsWith("weapon_") && !sticker() && !spray();
+			return !item.startsWith("weapon_") && !sticker() && !spray() && !charm();
 		}
 
 		/** From a sticker capsule: the kit is the sticker (Stickers). */
 		public boolean sticker() {
 			return item.equals("sticker");
+		}
+
+		/** From a charm collection: the kit is the charm (Charms). */
+		public boolean charm() {
+			return item.equals("charm");
 		}
 
 		/** From a graffiti box: the kit is the graffiti (Sprays). */
@@ -243,6 +248,7 @@ public final class Cases {
 	/** The same with a wear. */
 	public static ItemStack stack(Entry e, int pattern, float wear) {
 		if (e.sticker()) return Stickers.get(e.kit()) == null ? ItemStack.EMPTY : StickerItem.stack(WeaponItems.STICKER, e.kit());
+		if (e.charm()) return Charms.get(e.kit()) == null ? ItemStack.EMPTY : CharmItem.stack(WeaponItems.CHARM, e.kit());
 		if (e.spray()) {
 			Sprays.Spray sp = Sprays.get(e.kit());
 			return sp == null ? ItemStack.EMPTY : SprayItem.stack(WeaponItems.SPRAY, sp.id(), sp.tintable() ? 2 : 0);

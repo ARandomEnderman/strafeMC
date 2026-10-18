@@ -1,0 +1,79 @@
+# strafeMC charms in the charm collections (from CS2 items_game keychain_definitions): id TAB English name TAB rarity TAB inventory image TAB model
+kc_missinglink_ava	Lil' Ava	rare	econ/keychains/missinglink/kc_missinglink_ava	weapons/keychains/missinglink/vmdl/kc_missinglink_ava.vmdl
+kc_missinglink_sam_salty	Pinch O' Salt	rare	econ/keychains/missinglink/kc_missinglink_sam_salty	weapons/keychains/missinglink/vmdl/kc_missinglink_sam_salty.vmdl
+kc_missinglink_sam_catchup	Hot Sauce	rare	econ/keychains/missinglink/kc_missinglink_sam_catchup	weapons/keychains/missinglink/vmdl/kc_missinglink_sam_catchup.vmdl
+kc_missinglink_sas	Lil' SAS	rare	econ/keychains/missinglink/kc_missinglink_sas	weapons/keychains/missinglink/vmdl/kc_missinglink_sas.vmdl
+kc_missinglink_guerilla	Lil' Crass	rare	econ/keychains/missinglink/kc_missinglink_guerilla	weapons/keychains/missinglink/vmdl/kc_missinglink_guerilla.vmdl
+kc_missinglink_kev	Big Kev	rare	econ/keychains/missinglink/kc_missinglink_kev	weapons/keychains/missinglink/vmdl/kc_missinglink_kev.vmdl
+kc_missinglink_chicken	Chicken Lil'	mythical	econ/keychains/missinglink/kc_missinglink_chicken	weapons/keychains/missinglink/vmdl/kc_missinglink_chicken.vmdl
+kc_missinglink_banana	That's Bananas	mythical	econ/keychains/missinglink/kc_missinglink_banana	weapons/keychains/missinglink/vmdl/kc_missinglink_banana.vmdl
+kc_missinglink_cat	Lil' Whiskers	mythical	econ/keychains/missinglink/kc_missinglink_cat	weapons/keychains/missinglink/vmdl/kc_missinglink_cat.vmdl
+kc_missinglink_catbeach	Lil' Sandy	mythical	econ/keychains/missinglink/kc_missinglink_catbeach	weapons/keychains/missinglink/vmdl/kc_missinglink_catbeach.vmdl
+kc_missinglink_bigfoot	Lil' Squatch	mythical	econ/keychains/missinglink/kc_missinglink_bigfoot	weapons/keychains/missinglink/vmdl/kc_missinglink_bigfoot.vmdl
+kc_missinglink_sam_toile	Lil' Teacup	mythical	econ/keychains/missinglink/kc_missinglink_sam_toile	weapons/keychains/missinglink/vmdl/kc_missinglink_sam_toile.vmdl
+kc_missinglink_monster	Lil' Monster	legendary	econ/keychains/missinglink/kc_missinglink_monster	weapons/keychains/missinglink/vmdl/kc_missinglink_monster.vmdl
+kc_missinglink_sam_diamond	Diamond Dog	legendary	econ/keychains/missinglink/kc_missinglink_sam_diamond	weapons/keychains/missinglink/vmdl/kc_missinglink_sam_diamond.vmdl
+kc_missinglink_sam_shape	Diner Dog	legendary	econ/keychains/missinglink/kc_missinglink_sam_shape	weapons/keychains/missinglink/vmdl/kc_missinglink_sam_shape.vmdl
+kc_missinglink_howl	Hot Howl	ancient	econ/keychains/missinglink/kc_missinglink_howl	weapons/keychains/missinglink/vmdl/kc_missinglink_howl.vmdl
+kc_missinglink_wurst	Hot Wurst	ancient	econ/keychains/missinglink/kc_missinglink_wurst	weapons/keychains/missinglink/vmdl/kc_missinglink_wurst.vmdl
+kc_db_biomech	Biomech	rare	econ/keychains/drboom/kc_db_biomech	weapons/keychains/drboom/vmdl/kc_db_biomech.vmdl
+kc_db_terror	Gritty	rare	econ/keychains/drboom/kc_db_terror	weapons/keychains/drboom/vmdl/kc_db_terror.vmdl
+kc_db_hellcat	Splatter Cat	rare	econ/keychains/drboom/kc_db_hellcat	weapons/keychains/drboom/vmdl/kc_db_hellcat.vmdl
+kc_db_ugly	Fluffy	rare	econ/keychains/drboom/kc_db_ugly	weapons/keychains/drboom/vmdl/kc_db_ugly.vmdl
+kc_db_wood	Whittle Guy	rare	econ/keychains/drboom/kc_db_wood	weapons/keychains/drboom/vmdl/kc_db_wood.vmdl
+kc_db_yinyang	Lil' Zen	rare	econ/keychains/drboom/kc_db_yinyang	weapons/keychains/drboom/vmdl/kc_db_yinyang.vmdl
+kc_db_aztec	Lil' Facelift	mythical	econ/keychains/drboom/kc_db_aztec	weapons/keychains/drboom/vmdl/kc_db_aztec.vmdl
+kc_db_200iq	Big Brain	mythical	econ/keychains/drboom/kc_db_200iq	weapons/keychains/drboom/vmdl/kc_db_200iq.vmdl
+kc_db_eviscerate	Bomb Tag	mythical	econ/keychains/drboom/kc_db_eviscerate	weapons/keychains/drboom/vmdl/kc_db_eviscerate.vmdl
+kc_db_clown	Lil' Bloody	mythical	econ/keychains/drboom/kc_db_clown	weapons/keychains/drboom/vmdl/kc_db_clown.vmdl
+kc_db_dimsum	Lil' Dumplin'	mythical	econ/keychains/drboom/kc_db_dimsum	weapons/keychains/drboom/vmdl/kc_db_dimsum.vmdl
+kc_db_bombacat	Lil' Chomper	mythical	econ/keychains/drboom/kc_db_bombacat	weapons/keychains/drboom/vmdl/kc_db_bombacat.vmdl
+kc_db_drbrian	Dr. Brian	mythical	econ/keychains/drboom/kc_db_drbrian	weapons/keychains/drboom/vmdl/kc_db_drbrian.vmdl
+kc_db_eco	Lil' Eco	legendary	econ/keychains/drboom/kc_db_eco	weapons/keychains/drboom/vmdl/kc_db_eco.vmdl
+kc_db_occult	Eye of Ball	legendary	econ/keychains/drboom/kc_db_occult	weapons/keychains/drboom/vmdl/kc_db_occult.vmdl
+kc_db_yeti	Lil' Yeti	legendary	econ/keychains/drboom/kc_db_yeti	weapons/keychains/drboom/vmdl/kc_db_yeti.vmdl
+kc_db_eyecritter	Hungry Eyes	legendary	econ/keychains/drboom/kc_db_eyecritter	weapons/keychains/drboom/vmdl/kc_db_eyecritter.vmdl
+kc_db_flash	Flash Bomb	legendary	econ/keychains/drboom/kc_db_flash	weapons/keychains/drboom/vmdl/kc_db_flash.vmdl
+kc_db_dripfade	Glitter Bomb	ancient	econ/keychains/drboom/kc_db_dripfade	weapons/keychains/drboom/vmdl/kc_db_dripfade.vmdl
+kc_db_8ball	8 Ball IGL	ancient	econ/keychains/drboom/kc_db_8ball	weapons/keychains/drboom/vmdl/kc_db_8ball.vmdl
+kc_db_incendiary	Lil' Ferno	ancient	econ/keychains/drboom/kc_db_incendiary	weapons/keychains/drboom/vmdl/kc_db_incendiary.vmdl
+kc_db_lighter	Butane Buddy	ancient	econ/keychains/drboom/kc_db_lighter	weapons/keychains/drboom/vmdl/kc_db_lighter.vmdl
+kc_wpn_ak_base	Baby's AK	rare	econ/keychains/weapon_1/kc_wpn_ak_base	weapons/keychains/weapon_1/vmdl/kc_wpn_ak_base.vmdl
+kc_wpn_usp_yarn	Stitch-Loaded	rare	econ/keychains/weapon_1/kc_wpn_usp_yarn	weapons/keychains/weapon_1/vmdl/kc_wpn_usp_yarn.vmdl
+kc_wpn_tec9_cap	Lil' Cap Gun	rare	econ/keychains/weapon_1/kc_wpn_tec9_cap	weapons/keychains/weapon_1/vmdl/kc_wpn_tec9_cap.vmdl
+kc_wpn_awp_plastic	Pocket AWP	rare	econ/keychains/weapon_1/kc_wpn_awp_plastic	weapons/keychains/weapon_1/vmdl/kc_wpn_awp_plastic.vmdl
+kc_wpn_mac10_tile	Backsplash	rare	econ/keychains/weapon_1/kc_wpn_mac10_tile	weapons/keychains/weapon_1/vmdl/kc_wpn_mac10_tile.vmdl
+kc_wpn_ctknife_wood	Whittle Knife	rare	econ/keychains/weapon_1/kc_wpn_ctknife_wood	weapons/keychains/weapon_1/vmdl/kc_wpn_ctknife_wood.vmdl
+kc_wpn_m4a1s_comic	POP Art	mythical	econ/keychains/weapon_1/kc_wpn_m4a1s_comic	weapons/keychains/weapon_1/vmdl/kc_wpn_m4a1s_comic.vmdl
+kc_wpn_usp_jewel	Glamour Shot	mythical	econ/keychains/weapon_1/kc_wpn_usp_jewel	weapons/keychains/weapon_1/vmdl/kc_wpn_usp_jewel.vmdl
+kc_wpn_ak_jelly	Die-cast AK	mythical	econ/keychains/weapon_1/kc_wpn_ak_jelly	weapons/keychains/weapon_1/vmdl/kc_wpn_ak_jelly.vmdl
+kc_wpn_mac10_glitter	Disco MAC	mythical	econ/keychains/weapon_1/kc_wpn_mac10_glitter	weapons/keychains/weapon_1/vmdl/kc_wpn_mac10_glitter.vmdl
+kc_wpn_tec9_magma	Hot Hands	mythical	econ/keychains/weapon_1/kc_wpn_tec9_magma	weapons/keychains/weapon_1/vmdl/kc_wpn_tec9_magma.vmdl
+kc_wpn_awp_spoon	Titeenium AWP	legendary	econ/keychains/weapon_1/kc_wpn_awp_spoon	weapons/keychains/weapon_1/vmdl/kc_wpn_awp_spoon.vmdl
+kc_wpn_m4a1s_ss	Lil' Squirt	legendary	econ/keychains/weapon_1/kc_wpn_m4a1s_ss	weapons/keychains/weapon_1/vmdl/kc_wpn_m4a1s_ss.vmdl
+kc_wpn_tknife_crystal	Semi-Precious	legendary	econ/keychains/weapon_1/kc_wpn_tknife_crystal	weapons/keychains/weapon_1/vmdl/kc_wpn_tknife_crystal.vmdl
+kc_wpn_ctknife_gold	Baby Karat CT	ancient	econ/keychains/weapon_1/kc_wpn_ctknife_gold	weapons/keychains/weapon_1/vmdl/kc_wpn_ctknife_gold.vmdl
+kc_wpn_tknife_gold	Baby Karat T	ancient	econ/keychains/weapon_1/kc_wpn_tknife_gold	weapons/keychains/weapon_1/vmdl/kc_wpn_tknife_gold.vmdl
+kc_missinglink_ancientcurse	Lil' Curse	rare	econ/keychains/missinglink_community_01/kc_missinglink_ancientcurse	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_pencil	Lil' No. 2	rare	econ/keychains/missinglink_community_01/kc_missinglink_pencil	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_cigar	Lil' Smokey	rare	econ/keychains/missinglink_community_01/kc_missinglink_cigar	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_winemaker	Lil' Vino	rare	econ/keychains/missinglink_community_01/kc_missinglink_winemaker	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_lillol	Lil' Cackle	rare	econ/keychains/missinglink_community_01/kc_missinglink_lillol	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_bodybag	Dead Weight	rare	econ/keychains/missinglink_community_01/kc_missinglink_bodybag	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_basketball	Lil' Baller	rare	econ/keychains/missinglink_community_01/kc_missinglink_basketball	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_sillyelephant	Lil' Tusk	rare	econ/keychains/missinglink_community_01/kc_missinglink_sillyelephant	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_surfsup	Hang Loose	mythical	econ/keychains/missinglink_community_01/kc_missinglink_surfsup	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_slime	Lil' Goop	mythical	econ/keychains/missinglink_community_01/kc_missinglink_slime	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_retrovision	Lil' Moments	mythical	econ/keychains/missinglink_community_01/kc_missinglink_retrovision	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_popsicle	Pocket Pop	mythical	econ/keychains/missinglink_community_01/kc_missinglink_popsicle	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_lilhothead	Magmatude	mythical	econ/keychains/missinglink_community_01/kc_missinglink_lilhothead	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_charmburger	Lil' Buns	mythical	econ/keychains/missinglink_community_01/kc_missinglink_charmburger	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_lilhatchling	Lil' Chirp	legendary	econ/keychains/missinglink_community_01/kc_missinglink_lilhatchling	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_pinata	Piñatita	legendary	econ/keychains/missinglink_community_01/kc_missinglink_pinata	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_happy	Lil' Happy	legendary	econ/keychains/missinglink_community_01/kc_missinglink_happy	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_cactus	Lil' Prick	legendary	econ/keychains/missinglink_community_01/kc_missinglink_cactus	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_sentai	Lil' Hero	legendary	econ/keychains/missinglink_community_01/kc_missinglink_sentai	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_muteghost	Lil' Boo	ancient	econ/keychains/missinglink_community_01/kc_missinglink_muteghost	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_melted	Quick Silver	ancient	econ/keychains/missinglink_community_01/kc_missinglink_melted	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_cthulhu	Lil' Eldritch	ancient	econ/keychains/missinglink_community_01/kc_missinglink_cthulhu	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl
+kc_missinglink_babyserpent	Lil' Serpent	ancient	econ/keychains/missinglink_community_01/kc_missinglink_babyserpent	weapons/keychains/workshop_blanks/kc_missinglink_default.vmdl

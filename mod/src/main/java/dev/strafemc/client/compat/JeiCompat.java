@@ -75,7 +75,7 @@ public final class JeiCompat implements IModPlugin {
 		var cmd = net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA;
 		for (var item : new net.minecraft.world.item.Item[] {dev.strafemc.weapon.WeaponItems.GUN_WRAP, dev.strafemc.weapon.WeaponItems.KNIFE_WRAP,
 				dev.strafemc.weapon.WeaponItems.WEAPON_CASE, dev.strafemc.weapon.WeaponItems.CASE_KEY, dev.strafemc.weapon.WeaponItems.SPRAY,
-				dev.strafemc.weapon.WeaponItems.STICKER})
+				dev.strafemc.weapon.WeaponItems.STICKER, dev.strafemc.weapon.WeaponItems.CHARM})
 			r.registerFromDataComponentTypes(item, cmd);
 		for (var gloves : dev.strafemc.weapon.WeaponItems.GLOVES.values()) r.registerFromDataComponentTypes(gloves, cmd);
 		r.registerFromDataComponentTypes(dev.strafemc.weapon.WeaponItems.VOUCHER_ITEM, dev.strafemc.weapon.WeaponItems.VOUCHER);

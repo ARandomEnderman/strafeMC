@@ -777,6 +777,66 @@
        }
       }
      ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "keychain_pack_kc_missinglink"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "keychain_pack_kc_drboom"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "keychain_pack_kc_weapon_01"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "keychain_pack_kc_ml_community_01"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
     }
    ]
   }

@@ -112,6 +112,8 @@ public class SkinWrapItem extends Item {
 		if (w == null) return;
 		var stickers = StickerSlots.names(stack);
 		if (!stickers.isEmpty()) out.accept(Component.literal("§7Stickers: " + String.join(", ", stickers)));
+		Charms.Charm charm = Charms.get(StickerSlots.charm(stack));
+		if (charm != null) out.accept(Component.literal("§7Charm: " + charm.name()));
 		float wear = wear(stack);
 		out.accept(Component.literal("§7Exterior: " + Wear.exterior(wear) + " (" + String.format(java.util.Locale.ROOT, "%.8f", wear) + ")"));
 		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));

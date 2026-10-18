@@ -18,9 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Applying a sticker (right-click one): your gun wraps on the left (the loadout's first, then your inventory's), the
- * picked one on the right with its sticker slots. Click an empty slot to put the sticker there; right-click a slot
- * with a sticker to scrape it off (it's gone, as in CS2).
+ * Applying a sticker or a charm (right-click one): your gun wraps on the left (the loadout's first, then your
+ * inventory's), the picked one on the right with its sticker slots, or its one charm spot. Click an empty one to put it
+ * there; right-click a sticker to scrape it off (it's gone, as in CS2), a charm to take it off (it comes back).
  */
 public final class StickerScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, ROW = 22;
@@ -43,6 +43,24 @@ public final class StickerScreen extends Screen {
 	@Override
 	protected void init() {
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
+	}
+
+	/** A charm is being hung, not a sticker applied: one spot. */
+	private boolean charmMode() {
+		return sticker().getItem() instanceof dev.strafemc.weapon.CharmItem;
+	}
+
+	private int spots(ItemStack wrap) {
+		return charmMode() ? (StickerSlots.count(wrap) > 0 ? 1 : 0) : StickerSlots.count(wrap);
+	}
+
+	/** What's in each spot: the stickers, or the charm. */
+	private String[] in(ItemStack wrap) {
+		return charmMode() ? new String[] {StickerSlots.charm(wrap)} : StickerSlots.get(wrap);
+	}
+
+	private ItemStack shown(String id) {
+		return charmMode() ? dev.strafemc.weapon.CharmItem.stack(WeaponItems.CHARM, id) : StickerItem.stack(WeaponItems.STICKER, id);
 	}
 
 	private ItemStack sticker() {
@@ -103,14 +121,15 @@ public final class StickerScreen extends Screen {
 		}
 		if (picked < 0 || picked >= targets.size()) return false;
 		Target t = targets.get(picked);
-		int n = StickerSlots.count(t.stack());
-		String[] in = StickerSlots.get(t.stack());
+		int n = spots(t.stack());
+		String[] in = in(t.stack());
+		boolean charm = charmMode();
 		for (int i = 0; i < n; i++) {
 			int[] b = slotBox(i, n);
 			if (mx < b[0] || mx >= b[0] + b[2] || my < b[1] || my >= b[1] + b[2]) continue;
-			if (e.button() == 1 && !in[i].isEmpty()) send("sticker_scrape", t.ref() + " " + i);
-			else if (e.button() == 0 && in[i].isEmpty() && sticker().getItem() instanceof StickerItem) {
-				send("sticker_apply", stickerSlot + " " + t.ref() + " " + i);
+			if (e.button() == 1 && !in[i].isEmpty()) send(charm ? "charm_remove" : "sticker_scrape", charm ? t.ref() : t.ref() + " " + i);
+			else if (e.button() == 0 && in[i].isEmpty() && (charm || sticker().getItem() instanceof StickerItem)) {
+				send(charm ? "charm_apply" : "sticker_apply", charm ? stickerSlot + " " + t.ref() : stickerSlot + " " + t.ref() + " " + i);
 				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
 			}
 			return true;
@@ -128,7 +147,8 @@ public final class StickerScreen extends Screen {
 		g.fill(0, 0, width, height, StrafeSettingsScreen.BG);
 		var font = minecraft.font;
 		ItemStack st = sticker();
-		String head = st.getItem() instanceof StickerItem ? "Apply " + st.getHoverName().getString() : "No sticker in that slot any more";
+		String head = st.getItem() instanceof StickerItem || charmMode() ? (charmMode() ? "Hang " : "Apply ") + st.getHoverName().getString()
+				: "Nothing to apply in that slot any more";
 		g.text(font, head, width / 2 - font.width(head) / 2, 12, 0xFFFFFFFF, true);
 		// left: the wraps
 		int lw = listW();
@@ -150,8 +170,8 @@ public final class StickerScreen extends Screen {
 			Target t = targets.get(picked);
 			int px = 20 + lw + 20, pw = width - px - 20;
 			CaseImages.draw(g, t.stack(), px, 40, pw, pw * 3 / 8);
-			int n = StickerSlots.count(t.stack());
-			String[] in = StickerSlots.get(t.stack());
+			int n = spots(t.stack());
+			String[] in = in(t.stack());
 			for (int i = 0; i < n; i++) {
 				int[] b = slotBox(i, n);
 				boolean over = mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[2];
@@ -161,15 +181,15 @@ public final class StickerScreen extends Screen {
 					String plus = "+";
 					g.text(font, plus, b[0] + b[2] / 2 - font.width(plus) / 2, b[1] + b[2] / 2 - 4, 0xFF909090, false);
 				} else {
-					ItemStack on = StickerItem.stack(WeaponItems.STICKER, in[i]);
+					ItemStack on = shown(in[i]);
 					CaseImages.draw(g, on, b[0] + 2, b[1] + 2, b[2] - 4, b[2] - 4);
-					if (over) g.setTooltipForNextFrame(font, List.of(on.getHoverName(), Component.literal("§7Right-click to scrape it off (it's destroyed)")),
-							java.util.Optional.empty(), mx, my);
+					if (over) g.setTooltipForNextFrame(font, List.of(on.getHoverName(), Component.literal(charmMode() ? "§7Right-click to take it off (you keep it)"
+							: "§7Right-click to scrape it off (it's destroyed)")), java.util.Optional.empty(), mx, my);
 				}
-				String num = String.valueOf(i + 1);
+				String num = charmMode() ? "Charm" : String.valueOf(i + 1);
 				g.text(font, num, b[0] + 3, b[1] + 3, 0xFF707070, false);
 			}
-			String help = "Click an empty slot to apply it here";
+			String help = charmMode() ? "Click the spot to hang it here" : "Click an empty slot to apply it here";
 			int[] b0 = slotBox(0, n);
 			g.text(font, help, px + pw / 2 - font.width(help) / 2, b0[1] + b0[2] + 8, 0xFF909090, false);
 		}

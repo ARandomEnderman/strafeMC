@@ -155,7 +155,7 @@ public final class CarePackageScreen extends Screen {
 
 	private static String containerKind(ItemStack s) {
 		Cases.Case c = s.getItem() instanceof CaseItem ? Cases.get(CaseItem.caseId(s)) : null;
-		return c == null || !c.capsule() ? "Weapon Case" : c.kind().equals("spray") ? "Graffiti Box" : "Sticker Capsule";
+		return c == null || !c.capsule() ? "Weapon Case" : c.kind().equals("spray") ? "Graffiti Box" : c.kind().equals("charm") ? "Charm Collection" : "Sticker Capsule";
 	}
 
 	/** CS2's inventory picture: a case's, or the gun in the wrap's skin (like the case screen). */

@@ -25,6 +25,8 @@ import java.util.Map;
 public final class StickerSlots {
 	public static final int MAX = 5;
 	public static DataComponentType<List<String>> STICKERS;
+	/** The charm hanging on a gun wrap (Charms id). */
+	public static DataComponentType<String> CHARM;
 	private static final Map<String, Integer> SLOTS = load();
 
 	private StickerSlots() {}
@@ -32,6 +34,8 @@ public final class StickerSlots {
 	public static void register() {
 		STICKERS = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, WeaponItems.id("stickers"), DataComponentType.<List<String>>builder()
 				.persistent(Codec.STRING.listOf()).networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
+		CHARM = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, WeaponItems.id("charm"), DataComponentType.<String>builder()
+				.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build());
 	}
 
 	private static Map<String, Integer> load() {
@@ -140,6 +144,43 @@ public final class StickerSlots {
 		set(wrap, s);
 		store(p, ref, wrap);
 		dev.strafemc.server.Toasts.info(p, "Sticker scraped off.");
+	}
+
+	/** The charm on a wrap, or "" for none. */
+	public static String charm(ItemStack wrap) {
+		String c = wrap.get(CHARM);
+		return c == null ? "" : c;
+	}
+
+	/** Hangs the charm at inventory slot charmSlot on the wrap at ref (one with none): the charm goes onto it. */
+	public static void applyCharm(ServerPlayer p, int charmSlot, String ref) {
+		var inv = p.getInventory();
+		if (charmSlot < 0 || charmSlot >= inv.getContainerSize()) return;
+		ItemStack charm = inv.getItem(charmSlot);
+		if (!(charm.getItem() instanceof CharmItem) || Charms.get(CharmItem.charm(charm)) == null) return;
+		ItemStack live = target(p, ref);
+		if (count(live) == 0) return; // guns only, as in CS2
+		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		if (!charm(wrap).isEmpty()) {
+			dev.strafemc.server.Toasts.warn(p, "That wrap already has a charm. Take it off first.");
+			return;
+		}
+		wrap.set(CHARM, CharmItem.charm(charm));
+		store(p, ref, wrap);
+		charm.shrink(1);
+		dev.strafemc.server.Toasts.send(p, "Charm attached.", dev.strafemc.server.Toasts.GOOD);
+	}
+
+	/** Takes the charm off the wrap at ref: it comes back, as in CS2. */
+	public static void removeCharm(ServerPlayer p, String ref) {
+		ItemStack live = target(p, ref);
+		String id = charm(live);
+		if (id.isEmpty()) return;
+		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		wrap.remove(CHARM);
+		store(p, ref, wrap);
+		ItemStack back = CharmItem.stack(WeaponItems.CHARM, id);
+		if (!p.getInventory().add(back)) p.drop(back, false);
 	}
 
 	/** Lines for a wrap's tooltip: its stickers' names. */

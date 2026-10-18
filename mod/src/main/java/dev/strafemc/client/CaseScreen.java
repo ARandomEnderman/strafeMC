@@ -319,7 +319,7 @@ public final class CaseScreen extends Screen {
 		g.fill(x, y + h - 3, x + w, y + h, t.color());
 		// CS2's picture of the gun in its skin, 4:3 above the name; the item's own icon until it's loaded
 		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
-		if (t.entry() != null && (t.entry().sticker() || t.entry().spray()))
+		if (t.entry() != null && (t.entry().sticker() || t.entry().spray() || t.entry().charm()))
 			CaseImages.draw(g, t.stack(), x + 2, y + 2, w - 4, Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4)); // stickers 4:3, graffiti their decal
 		else if (pic != null) {
 			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
@@ -381,7 +381,7 @@ public final class CaseScreen extends Screen {
 		// a gun or knife: its model in this finish, turned by dragging; gloves (and until the model's baked): CS2's picture
 		Cases.Entry e = s.result().entry();
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
-		if (e.sticker() || e.spray()) CaseImages.draw(g, s.result().stack(), px + 8, py + 8, cw - 16, ch - 16); // the sticker's picture, the graffiti's decal
+		if (e.sticker() || e.spray() || e.charm()) CaseImages.draw(g, s.result().stack(), px + 8, py + 8, cw - 16, ch - 16); // the sticker's or charm's picture, the graffiti's decal
 		else if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
 			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.finish(), yaw, pitch, zoom);
 		else {
@@ -396,6 +396,7 @@ public final class CaseScreen extends Screen {
 		pose.popMatrix();
 		String grade = s.rarity() < 0 ? "★ Rare Special Item" : SkinWraps.Rarity.values()[s.rarity()].weaponName;
 		if (e.sticker() && s.rarity() >= 0) grade = dev.strafemc.weapon.Stickers.grade(SkinWraps.Rarity.values()[s.rarity()]) + " Sticker";
+		else if (e.charm() && s.rarity() >= 0) grade = dev.strafemc.weapon.Stickers.grade(SkinWraps.Rarity.values()[s.rarity()]) + " Charm";
 		else if (e.spray() && s.rarity() >= 0) grade = SkinWraps.Rarity.values()[s.rarity()].weaponName.replace(" Grade", "") + " Graffiti";
 		if (s.wear() >= 0) grade += "  |  " + dev.strafemc.weapon.Wear.exterior(s.wear()) + " " + String.format(java.util.Locale.ROOT, "%.8f", s.wear());
 		if (s.pattern() >= 0) grade += "  |  Pattern template " + s.pattern();

@@ -29,13 +29,15 @@ public final class Worth {
 	private static final double SPECIAL = 375, STATTRAK = 2.5, AVG_TIER = 4, BEST_FLOAT_BONUS = 0.25, AVG_SPECIALS = 24;
 	/** A High Grade sticker's / graffiti's worth before scarcity (calibrated, see above). FLAGGED ours. */
 	private static final double STICKER = 0.4854, GRAFFITI = 0.404;
+	/** A High Grade charm's worth before scarcity: a collection comes to about $1.15 (CS2 sells one for three armory stars). FLAGGED ours. */
+	private static final double CHARM = 0.27;
 	/** "sticker|kit" / "spray|id" -> its capsule scarcity. */
 	private static Map<String, Double> capsuleScarcity;
 
 	private static synchronized double capsuleScarcity(String kind, String id) {
 		if (capsuleScarcity == null) {
 			Map<String, Double> out = new HashMap<>();
-			for (String k : new String[] {"sticker", "spray"}) {
+			for (String k : new String[] {"sticker", "spray", "charm"}) {
 				List<Cases.Case> caps = Cases.capsules(k);
 				Map<String, Integer> sources = new HashMap<>();
 				double sum = 0;
@@ -167,6 +169,10 @@ public final class Worth {
 			Sprays.Spray sp = Sprays.get(SprayItem.spray(s));
 			if (sp == null || !SprayItem.sealed(s)) return -1;
 			base = ladder(GRAFFITI, sp.rarity()) * capsuleScarcity("spray", sp.id());
+		} else if (s.getItem() instanceof CharmItem) {
+			Charms.Charm c = Charms.get(CharmItem.charm(s));
+			if (c == null) return -1;
+			base = ladder(CHARM, c.rarity()) * capsuleScarcity("charm", c.id());
 		} else if (s.getItem() instanceof StickerItem) {
 			Stickers.Sticker st = Stickers.get(StickerItem.sticker(s));
 			if (st == null) return -1;
