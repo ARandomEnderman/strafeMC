@@ -89,10 +89,37 @@ public final class Upgrader {
 		}
 		take(p, refs); // the stake is gone either way
 		boolean win = p.getRandom().nextDouble() < o.chance();
-		if (win && !p.getInventory().add(o.item().copy())) p.drop(o.item().copy(), false);
+		if (win) hold(p, o.item().copy()); // handed over when the needle lands (or the upgrader closes), like a case
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] upgrader: {} staked ${} for {} (${}, {}%): {}", p.getScoreboardName(), String.format("%.2f", worth(stake)),
 				o.item().getHoverName().getString(), String.format("%.2f", o.worth()), Math.round(o.chance() * 100), win ? "won" : "lost");
 		return win;
+	}
+
+	/** A won skin waiting for the needle to land (or the screen to close); handed out anyway after HOLD_MS. */
+	private record Pending(ItemStack item, long dueMs) {}
+
+	private static final java.util.Map<UUID, Pending> PENDING = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final long HOLD_MS = 15_000;
+
+	private static void hold(net.minecraft.server.level.ServerPlayer p, ItemStack item) {
+		claim(p); // an earlier one not claimed yet goes out first
+		PENDING.put(p.getUUID(), new Pending(item, System.currentTimeMillis() + HOLD_MS));
+	}
+
+	/** The needle landed, or the upgrader closed (or the player left): the won skin is theirs. */
+	public static void claim(net.minecraft.server.level.ServerPlayer p) {
+		Pending d = PENDING.remove(p.getUUID());
+		if (d != null && !p.getInventory().add(d.item().copy())) p.drop(d.item().copy(), false);
+	}
+
+	public static void tick(net.minecraft.server.MinecraftServer server) {
+		if (PENDING.isEmpty() || server.getTickCount() % 20 != 0) return;
+		long now = System.currentTimeMillis();
+		for (var e : PENDING.entrySet()) {
+			if (e.getValue().dueMs() > now) continue;
+			var p = server.getPlayerList().getPlayer(e.getKey());
+			if (p != null) claim(p);
+		}
 	}
 
 	/** What can be staked: anything with a worth. */

@@ -208,6 +208,7 @@ public final class ConsoleActions {
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
+			case "upgrade_claim" -> dev.strafemc.weapon.Upgrader.claim(p);
 			case "storage_rename" -> dev.strafemc.weapon.StorageUnitItem.rename(p, arg);
 			case "tradeup" -> { // "ref x10": a trade up contract (Upgrader refs)
 				java.util.List<Integer> refs = new java.util.ArrayList<>();

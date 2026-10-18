@@ -162,7 +162,8 @@ public final class UpgraderScreen extends Screen {
 	@Override
 	public void tick() {
 		super.tick();
-		if (spinStart != 0 && !spinning() && won != null) { // landed: the sound, then a fresh start (the stake is gone)
+		if (spinStart != 0 && !spinning() && won != null) { // landed: the skin is handed over, the sound, then a fresh start
+			claim();
 			dev.strafemc.client.sound.CsSounds.playFile(won ? "sounds/ui/panorama/case_reveal_legendary_01" : "sounds/ui/weapon_cant_buy", won ? 1f : 0.6f);
 			won = null;
 			stake.clear();
@@ -326,10 +327,22 @@ public final class UpgraderScreen extends Screen {
 		return super.keyPressed(e);
 	}
 
+	/** Tells the server to hand the won skin over (the needle landed, or the upgrader is closing). */
+	private static void claim() {
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("upgrade_claim", ""));
+	}
+
 	@Override
 	public void onClose() {
+		claim(); // closed mid-spin: it's yours at once, as when skipping a case's reel
 		open = null;
 		minecraft.setScreen(parent);
+	}
+
+	@Override
+	public void removed() {
+		if (open == this) claim(); // closed another way (the menu key, a server screen)
+		super.removed();
 	}
 
 	@Override

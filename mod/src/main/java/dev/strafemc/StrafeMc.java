@@ -72,6 +72,8 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Shop::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.DamageReport::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Spin::tick);
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Upgrader::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.Upgrader.claim(handler.getPlayer()));
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.Shop.sync(handler.getPlayer()));
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.Bots::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register((e, level) -> dev.strafemc.weapon.Bots.onLoad(e));
