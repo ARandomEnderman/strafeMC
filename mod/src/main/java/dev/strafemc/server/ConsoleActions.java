@@ -235,17 +235,19 @@ public final class ConsoleActions {
 				}
 				dev.strafemc.weapon.Shop.sell(p, refs);
 			}
-			case "upgrade" -> { // "offer ref ref ...": stake the skins at those refs (inventory slots or storage unit places, Upgrader.UNIT)
+			case "upgrade" -> { // "offer expect ref ref ...": stake the skins at those refs (Upgrader.UNIT) on the offer the client saw as expect
 				String[] a = arg.trim().split(" ");
 				java.util.List<Integer> refs = new java.util.ArrayList<>();
 				int offer;
+				String expect;
 				try {
 					offer = Integer.parseInt(a[0]);
-					for (int i = 1; i < a.length; i++) refs.add(Integer.parseInt(a[i]));
+					expect = a[1];
+					for (int i = 2; i < a.length; i++) refs.add(Integer.parseInt(a[i]));
 				} catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
 					break;
 				}
-				Boolean win = dev.strafemc.weapon.Upgrader.stake(p, offer, refs);
+				Boolean win = dev.strafemc.weapon.Upgrader.stake(p, offer, refs, expect);
 				if (win != null && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE))
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.UpgradeResult(offer, win));
 			}

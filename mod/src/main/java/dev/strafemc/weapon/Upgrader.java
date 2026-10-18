@@ -63,8 +63,13 @@ public final class Upgrader {
 		for (var e : units.entrySet()) StorageUnitItem.store(inv.getItem(e.getKey()), e.getValue());
 	}
 
-	/** Stakes it (server): the skins at these refs on that offer; true if won. Null if the stake or offer isn't valid. */
-	public static Boolean stake(net.minecraft.server.level.ServerPlayer p, int offer, List<Integer> refs) {
+	/** What the client sends to say which skin it picked: finish id and float bits. */
+	public static String key(Offer o) {
+		return SkinWrapItem.skin(o.item()) + "@" + Float.floatToIntBits(SkinWrapItem.wear(o.item()));
+	}
+
+	/** Stakes it (server): the skins at these refs on that offer, if it's the skin the client picked (expect); true if won. Null if not valid. */
+	public static Boolean stake(net.minecraft.server.level.ServerPlayer p, int offer, List<Integer> refs, String expect) {
 		if (refs.isEmpty() || refs.size() > MAX_STAKE || new java.util.HashSet<>(refs).size() != refs.size()) return null;
 		List<ItemStack> stake = new ArrayList<>();
 		for (int ref : refs) {
@@ -75,6 +80,13 @@ public final class Upgrader {
 		List<Offer> offers = offers(p.getUUID(), stake);
 		if (offer < 0 || offer >= offers.size()) return null;
 		Offer o = offers.get(offer);
+		// the skin the player picked on their screen must be the server's offer too, or nothing happens
+		String got = key(o);
+		if (expect != null && !expect.equals(got)) {
+			p.sendSystemMessage(net.minecraft.network.chat.Component.literal("The upgrader's offers changed. Nothing was staked; pick again."));
+			dev.strafemc.StrafeMc.LOG.warn("[strafemc] upgrader: {} picked {} but the server's offer {} is {}", p.getScoreboardName(), expect, offer, got);
+			return null;
+		}
 		take(p, refs); // the stake is gone either way
 		boolean win = p.getRandom().nextDouble() < o.chance();
 		if (win && !p.getInventory().add(o.item().copy())) p.drop(o.item().copy(), false);
@@ -94,6 +106,18 @@ public final class Upgrader {
 		return w;
 	}
 
+	/**
+	 * A skin's fingerprint that is the same on every computer: its item id, finish, pattern, float, StatTrak count, tint
+	 * and count. (Minecraft's own item hash includes component types' identity hashes, which differ between the server
+	 * and a remote player's game: their offers came out different and they got another item than they picked.)
+	 */
+	static int stableHash(ItemStack s) {
+		var cmd = s.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
+		return java.util.Objects.hash(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).toString(),
+				cmd == null ? java.util.List.of() : cmd.strings(), s.get(WeaponItems.PATTERN), s.get(WeaponItems.WEAR), s.get(WeaponItems.STATTRAK),
+				s.get(WeaponItems.TINT), s.getCount());
+	}
+
 	/** The five offers for this player and stake (empty if nothing staked has a worth). */
 	public static List<Offer> offers(UUID player, List<ItemStack> stake) {
 		double s = worth(stake);
@@ -101,7 +125,7 @@ public final class Upgrader {
 		if (s <= 0) return out;
 		// the seed: the player and the staked items (order doesn't matter)
 		List<Integer> hashes = new ArrayList<>();
-		for (ItemStack st : stake) hashes.add(ItemStack.hashItemAndComponents(st) * 31 + st.getCount());
+		for (ItemStack st : stake) hashes.add(stableHash(st));
 		hashes.sort(Integer::compare);
 		long seed = player.getMostSignificantBits() ^ player.getLeastSignificantBits() * 0x9E3779B97F4A7C15L;
 		for (int h : hashes) seed = seed * 1_000_003L + h;

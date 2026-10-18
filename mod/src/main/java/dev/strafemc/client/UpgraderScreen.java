@@ -136,7 +136,7 @@ public final class UpgraderScreen extends Screen {
 
 	private void upgrade() {
 		if (chosen < 0 || stake.isEmpty() || spinStart != 0 && spinning()) return;
-		StringBuilder b = new StringBuilder().append(chosen);
+		StringBuilder b = new StringBuilder().append(chosen).append(' ').append(Upgrader.key(offers.get(chosen))); // which skin, so the server can't give another
 		for (int ref : stake) b.append(' ').append(ref);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("upgrade", b.toString()));
 		go.active = false;
