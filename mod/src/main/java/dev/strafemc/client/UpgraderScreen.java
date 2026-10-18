@@ -28,7 +28,8 @@ public final class UpgraderScreen extends Screen {
 	private static UpgraderScreen open;
 	private final Screen parent;
 	/** The staked skins, by ref (Upgrader.at: inventory slot or storage unit place). */
-	private final List<Integer> stake = new ArrayList<>();
+	/** The stake: ref -> how many of that stack (left click adds one, right click takes one off). */
+	private final java.util.Map<Integer, Integer> stake = new java.util.LinkedHashMap<>();
 	/** Folded sections (-1 the inventory, else the storage unit's inventory slot), and the left column's scroll. */
 	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
@@ -111,7 +112,10 @@ public final class UpgraderScreen extends Screen {
 
 	private List<ItemStack> stakeStacks() {
 		List<ItemStack> out = new ArrayList<>();
-		for (int ref : stake) out.add(Upgrader.at(minecraft.player, ref));
+		for (var e : stake.entrySet()) {
+			ItemStack s = Upgrader.at(minecraft.player, e.getKey());
+			out.add(s.copyWithCount(Math.max(1, Math.min(s.getCount(), e.getValue()))));
+		}
 		return out;
 	}
 
@@ -125,7 +129,8 @@ public final class UpgraderScreen extends Screen {
 	}
 
 	private void refresh() {
-		stake.removeIf(ref -> !Upgrader.stakeable(Upgrader.at(minecraft.player, ref)));
+		stake.entrySet().removeIf(e -> !Upgrader.stakeable(Upgrader.at(minecraft.player, e.getKey())));
+		stake.replaceAll((ref, n) -> Math.min(n, Upgrader.at(minecraft.player, ref).getCount()));
 		offers = Upgrader.offers(minecraft.player.getUUID(), stakeStacks());
 		if (chosen >= offers.size()) chosen = -1;
 	}
@@ -137,7 +142,7 @@ public final class UpgraderScreen extends Screen {
 	private void upgrade() {
 		if (chosen < 0 || stake.isEmpty() || spinStart != 0 && spinning()) return;
 		StringBuilder b = new StringBuilder().append(chosen).append(' ').append(Upgrader.key(offers.get(chosen))); // which skin, so the server can't give another
-		for (int ref : stake) b.append(' ').append(ref);
+		for (var e : stake.entrySet()) b.append(' ').append(e.getKey()).append(':').append(e.getValue());
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("upgrade", b.toString()));
 		go.active = false;
 		waiting = true;
@@ -201,8 +206,16 @@ public final class UpgraderScreen extends Screen {
 				@Override
 				public void item(int ref, int x, int y) {
 					if (done[0] || mx < x || mx >= x + 18 || my < y || my >= y + 18) return;
-					if (stake.contains(ref)) stake.remove(Integer.valueOf(ref));
-					else if (stake.size() < Upgrader.MAX_STAKE) stake.add(ref);
+					int have = Upgrader.at(minecraft.player, ref).getCount();
+					Integer n = stake.get(ref);
+					if (e.button() == 1) { // right click: one fewer
+						if (n == null) return;
+						if (n <= 1) stake.remove(ref);
+						else stake.put(ref, n - 1);
+					} else if (n == null) {
+						if (stake.size() < Upgrader.MAX_STAKE) stake.put(ref, 1); // left click: one more of the stack each click
+					} else if (have <= 1) stake.remove(ref); // a single item: a second click takes it back out
+					else stake.put(ref, Math.min(have, n + 1));
 					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
 					refresh();
 					done[0] = true;
@@ -249,17 +262,18 @@ public final class UpgraderScreen extends Screen {
 			@Override
 			public void item(int ref, int x, int y) {
 				ItemStack s = Upgrader.at(minecraft.player, ref);
-				boolean in = stake.contains(ref);
+				Integer n = stake.get(ref);
+				boolean in = n != null;
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
 				g.item(s, x, y);
-				if (s.getCount() > 1) { // a stack (stickers, graffiti): staked whole, its worth counts each one
-					String c = String.valueOf(s.getCount());
+				if (s.getCount() > 1) { // a stack (stickers, graffiti): how many there are, and how many of them are staked
+					String c = in ? n + "/" + s.getCount() : String.valueOf(s.getCount());
 					var pose = g.pose();
 					pose.pushMatrix();
 					pose.translate(x + 17, y + 11);
 					pose.scale(0.75f, 0.75f);
-					g.text(font, c, -font.width(c), 0, 0xFFFFFFFF, true);
+					g.text(font, c, -font.width(c), 0, in ? GOLD : 0xFFFFFFFF, true);
 					pose.popMatrix();
 				}
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = s;

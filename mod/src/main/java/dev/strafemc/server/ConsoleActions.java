@@ -247,15 +247,18 @@ public final class ConsoleActions {
 				}
 				dev.strafemc.weapon.Shop.sell(p, refs);
 			}
-			case "upgrade" -> { // "offer expect ref ref ...": stake the skins at those refs (Upgrader.UNIT) on the offer the client saw as expect
+			case "upgrade" -> { // "offer expect ref:count ...": stake that many at each ref (Upgrader.UNIT) on the offer the client saw as expect
 				String[] a = arg.trim().split(" ");
-				java.util.List<Integer> refs = new java.util.ArrayList<>();
+				java.util.Map<Integer, Integer> refs = new java.util.LinkedHashMap<>();
 				int offer;
 				String expect;
 				try {
 					offer = Integer.parseInt(a[0]);
 					expect = a[1];
-					for (int i = 2; i < a.length; i++) refs.add(Integer.parseInt(a[i]));
+					for (int i = 2; i < a.length; i++) {
+						int k = a[i].indexOf(':'), ref = Integer.parseInt(k < 0 ? a[i] : a[i].substring(0, k));
+						refs.put(ref, k < 0 ? dev.strafemc.weapon.Upgrader.at(p, ref).getCount() : Integer.parseInt(a[i].substring(k + 1)));
+					}
 				} catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
 					break;
 				}

@@ -8,7 +8,7 @@
     "description": "Kill with a sniper rifle without scoping in",
     "frame": "challenge",
     "show_toast": true,
-    "announce_to_chat": true,
+    "announce_to_chat": false,
     "hidden": false
   },
   "criteria": {

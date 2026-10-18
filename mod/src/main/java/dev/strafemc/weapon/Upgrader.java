@@ -88,13 +88,13 @@ public final class Upgrader {
 	}
 
 	/** Stakes it (server): the skins at these refs on that offer, if it's the skin the client picked (expect); true if won. Null if not valid. */
-	public static Boolean stake(net.minecraft.server.level.ServerPlayer p, int offer, List<Integer> refs, String expect) {
-		if (refs.isEmpty() || refs.size() > MAX_STAKE || new java.util.HashSet<>(refs).size() != refs.size()) return null;
+	public static Boolean stake(net.minecraft.server.level.ServerPlayer p, int offer, java.util.Map<Integer, Integer> refs, String expect) {
+		if (refs.isEmpty() || refs.size() > MAX_STAKE) return null;
 		List<ItemStack> stake = new ArrayList<>();
-		for (int ref : refs) {
-			ItemStack s = at(p, ref);
-			if (!stakeable(s)) return null;
-			stake.add(s.copy());
+		for (var e : refs.entrySet()) { // how many of each stack
+			ItemStack s = at(p, e.getKey());
+			if (!stakeable(s) || e.getValue() < 1 || e.getValue() > s.getCount()) return null;
+			stake.add(s.copyWithCount(e.getValue()));
 		}
 		List<Offer> offers = offers(p.getUUID(), stake);
 		if (offer < 0 || offer >= offers.size()) return null;
