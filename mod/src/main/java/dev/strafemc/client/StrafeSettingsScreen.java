@@ -109,6 +109,8 @@ public final class StrafeSettingsScreen extends Screen {
 	}
 
 	private void viewmodel() {
+		header("Agent");
+		button("Agents", "Choose...", () -> minecraft.setScreen(new AgentScreen(this)));
 		header("Viewmodel");
 		toggle("Right-handed", () -> StrafeConfig.rightHand, v -> StrafeConfig.rightHand = v);
 		slider("Field of view", 60, 68, 1, () -> StrafeConfig.viewmodelFov, v -> StrafeConfig.viewmodelFov = v);

@@ -42,7 +42,7 @@ public final class SkinWraps {
 			this.color = color;
 		}
 
-		static Rarity of(String id) {
+		public static Rarity of(String id) {
 			try {
 				return valueOf(id.toUpperCase(java.util.Locale.ROOT));
 			} catch (IllegalArgumentException e) {

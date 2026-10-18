@@ -1,0 +1,64 @@
+# strafeMC: CS2 agents (items_game customplayer items): id TAB English name TAB side (t / ct) TAB model TAB inventory image TAB rarity
+customplayer_tm_leet_variantg	Ground Rebel  | Elite Crew	t	agents/models/tm_leet/tm_leet_variantg.vmdl	econ/characters/customplayer_tm_leet_variantg	rare
+customplayer_tm_leet_varianth	Osiris | Elite Crew	t	agents/models/tm_leet/tm_leet_varianth.vmdl	econ/characters/customplayer_tm_leet_varianth	mythical
+customplayer_tm_leet_varianti	Prof. Shahmat | Elite Crew	t	agents/models/tm_leet/tm_leet_varianti.vmdl	econ/characters/customplayer_tm_leet_varianti	legendary
+customplayer_tm_leet_variantf	The Elite Mr. Muhlik | Elite Crew	t	agents/models/tm_leet/tm_leet_variantf.vmdl	econ/characters/customplayer_tm_leet_variantf	ancient
+customplayer_tm_leet_variantj	Jungle Rebel | Elite Crew	t	agents/models/tm_leet/tm_leet_variantj.vmdl	econ/characters/customplayer_tm_leet_variantj	rare
+customplayer_tm_phoenix_varianth	Soldier | Phoenix	t	agents/models/tm_phoenix/tm_phoenix_varianth.vmdl	econ/characters/customplayer_tm_phoenix_varianth	rare
+customplayer_tm_phoenix_variantf	Enforcer | Phoenix	t	agents/models/tm_phoenix/tm_phoenix_variantf.vmdl	econ/characters/customplayer_tm_phoenix_variantf	rare
+customplayer_tm_phoenix_variantg	Slingshot | Phoenix	t	agents/models/tm_phoenix/tm_phoenix_variantg.vmdl	econ/characters/customplayer_tm_phoenix_variantg	mythical
+customplayer_tm_phoenix_varianti	Street Soldier | Phoenix	t	agents/models/tm_phoenix/tm_phoenix_varianti.vmdl	econ/characters/customplayer_tm_phoenix_varianti	rare
+customplayer_ctm_fbi_variantf	Operator | FBI SWAT	ct	agents/models/ctm_fbi/ctm_fbi_variantf.vmdl	econ/characters/customplayer_ctm_fbi_variantf	rare
+customplayer_ctm_fbi_variantg	Markus Delrow | FBI HRT	ct	agents/models/ctm_fbi/ctm_fbi_variantg.vmdl	econ/characters/customplayer_ctm_fbi_variantg	mythical
+customplayer_ctm_fbi_varianth	Michael Syfers  | FBI Sniper	ct	agents/models/ctm_fbi/ctm_fbi_varianth.vmdl	econ/characters/customplayer_ctm_fbi_varianth	legendary
+customplayer_ctm_fbi_variantb	Special Agent Ava | FBI	ct	agents/models/ctm_fbi/ctm_fbi_variantb.vmdl	econ/characters/customplayer_ctm_fbi_variantb	ancient
+customplayer_ctm_st6_variantk	3rd Commando Company | KSK	ct	agents/models/ctm_st6/ctm_st6_variantk.vmdl	econ/characters/customplayer_ctm_st6_variantk	rare
+customplayer_ctm_st6_variante	Seal Team 6 Soldier | NSWC SEAL	ct	agents/models/ctm_st6/ctm_st6_variante.vmdl	econ/characters/customplayer_ctm_st6_variante	rare
+customplayer_ctm_st6_variantg	Buckshot | NSWC SEAL	ct	agents/models/ctm_st6/ctm_st6_variantg.vmdl	econ/characters/customplayer_ctm_st6_variantg	mythical
+customplayer_ctm_st6_variantm	'Two Times' McCoy | USAF TACP	ct	agents/models/ctm_st6/ctm_st6_variantm.vmdl	econ/characters/customplayer_ctm_st6_variantm	legendary
+customplayer_ctm_st6_varianti	Lt. Commander Ricksaw | NSWC SEAL	ct	agents/models/ctm_st6/ctm_st6_varianti.vmdl	econ/characters/customplayer_ctm_st6_varianti	ancient
+customplayer_ctm_st6_variantj	'Blueberries' Buckshot | NSWC SEAL	ct	agents/models/ctm_st6/ctm_st6_variantj.vmdl	econ/characters/customplayer_ctm_st6_variantj	mythical
+customplayer_ctm_st6_variantl	'Two Times' McCoy | TACP Cavalry	ct	agents/models/ctm_st6/ctm_st6_variantl.vmdl	econ/characters/customplayer_ctm_st6_variantl	legendary
+customplayer_ctm_st6_variantn	Primeiro Tenente | Brazilian 1st Battalion	ct	agents/models/ctm_st6/ctm_st6_variantn.vmdl	econ/characters/customplayer_ctm_st6_variantn	rare
+customplayer_tm_balkan_variantf	Dragomir | Sabre	t	agents/models/tm_balkan/tm_balkan_variantf.vmdl	econ/characters/customplayer_tm_balkan_variantf	mythical
+customplayer_tm_balkan_varianti	Maximus | Sabre	t	agents/models/tm_balkan/tm_balkan_varianti.vmdl	econ/characters/customplayer_tm_balkan_varianti	mythical
+customplayer_tm_balkan_variantg	Rezan The Ready | Sabre	t	agents/models/tm_balkan/tm_balkan_variantg.vmdl	econ/characters/customplayer_tm_balkan_variantg	legendary
+customplayer_tm_balkan_variantj	Blackwolf | Sabre	t	agents/models/tm_balkan/tm_balkan_variantj.vmdl	econ/characters/customplayer_tm_balkan_variantj	legendary
+customplayer_tm_balkan_varianth	'The Doctor' Romanov | Sabre	t	agents/models/tm_balkan/tm_balkan_varianth.vmdl	econ/characters/customplayer_tm_balkan_varianth	ancient
+customplayer_tm_balkan_variantk	Rezan the Redshirt | Sabre	t	agents/models/tm_balkan/tm_balkan_variantk.vmdl	econ/characters/customplayer_tm_balkan_variantk	legendary
+customplayer_tm_balkan_variantl	Dragomir | Sabre Footsoldier	t	agents/models/tm_balkan/tm_balkan_variantl.vmdl	econ/characters/customplayer_tm_balkan_variantl	rare
+customplayer_ctm_sas_variantf	B Squadron Officer | SAS	ct	agents/models/ctm_sas/ctm_sas_variantf.vmdl	econ/characters/customplayer_ctm_sas_variantf	rare
+customplayer_ctm_sas_variantg	D Squadron Officer | NZSAS	ct	agents/models/ctm_sas/ctm_sas_variantg.vmdl	econ/characters/customplayer_ctm_sas_variantg	rare
+customplayer_ctm_swat_variante	Cmdr. Mae 'Dead Cold' Jamison | SWAT	ct	agents/models/ctm_swat/ctm_swat_variante.vmdl	econ/characters/customplayer_ctm_swat_variante	ancient
+customplayer_ctm_swat_variantf	1st Lieutenant Farlow | SWAT	ct	agents/models/ctm_swat/ctm_swat_variantf.vmdl	econ/characters/customplayer_ctm_swat_variantf	legendary
+customplayer_ctm_swat_variantg	John 'Van Healen' Kask | SWAT	ct	agents/models/ctm_swat/ctm_swat_variantg.vmdl	econ/characters/customplayer_ctm_swat_variantg	mythical
+customplayer_ctm_swat_varianth	Bio-Haz Specialist | SWAT	ct	agents/models/ctm_swat/ctm_swat_varianth.vmdl	econ/characters/customplayer_ctm_swat_varianth	rare
+customplayer_ctm_swat_varianti	Sergeant Bombson | SWAT	ct	agents/models/ctm_swat/ctm_swat_varianti.vmdl	econ/characters/customplayer_ctm_swat_varianti	mythical
+customplayer_ctm_swat_variantj	Chem-Haz Specialist | SWAT	ct	agents/models/ctm_swat/ctm_swat_variantj.vmdl	econ/characters/customplayer_ctm_swat_variantj	rare
+customplayer_ctm_swat_variantk	Lieutenant 'Tree Hugger' Farlow | SWAT	ct	agents/models/ctm_swat/ctm_swat_variantk.vmdl	econ/characters/customplayer_ctm_swat_variantk	mythical
+customplayer_tm_professional_varf	Sir Bloody Miami Darryl | The Professionals	t	agents/models/tm_professional/tm_professional_varf.vmdl	econ/characters/customplayer_tm_professional_varf	ancient
+customplayer_tm_professional_varf1	Sir Bloody Silent Darryl | The Professionals	t	agents/models/tm_professional/tm_professional_varf1.vmdl	econ/characters/customplayer_tm_professional_varf1	ancient
+customplayer_tm_professional_varf2	Sir Bloody Skullhead Darryl | The Professionals	t	agents/models/tm_professional/tm_professional_varf2.vmdl	econ/characters/customplayer_tm_professional_varf2	ancient
+customplayer_tm_professional_varf3	Sir Bloody Darryl Royale | The Professionals	t	agents/models/tm_professional/tm_professional_varf3.vmdl	econ/characters/customplayer_tm_professional_varf3	ancient
+customplayer_tm_professional_varf4	Sir Bloody Loudmouth Darryl | The Professionals	t	agents/models/tm_professional/tm_professional_varf4.vmdl	econ/characters/customplayer_tm_professional_varf4	ancient
+customplayer_tm_professional_varg	Safecracker Voltzmann | The Professionals	t	agents/models/tm_professional/tm_professional_varg.vmdl	econ/characters/customplayer_tm_professional_varg	legendary
+customplayer_tm_professional_varh	Little Kev | The Professionals	t	agents/models/tm_professional/tm_professional_varh.vmdl	econ/characters/customplayer_tm_professional_varh	mythical
+customplayer_tm_professional_vari	Number K | The Professionals	t	agents/models/tm_professional/tm_professional_vari.vmdl	econ/characters/customplayer_tm_professional_vari	legendary
+customplayer_tm_professional_varj	Getaway Sally | The Professionals	t	agents/models/tm_professional/tm_professional_varj.vmdl	econ/characters/customplayer_tm_professional_varj	mythical
+customplayer_tm_professional_varf5	Bloody Darryl The Strapped | The Professionals	t	agents/models/tm_professional/tm_professional_varf5.vmdl	econ/characters/customplayer_tm_professional_varf5	legendary
+customplayer_ctm_gendarmerie_varianta	Sous-Lieutenant Medic | Gendarmerie Nationale	ct	agents/models/ctm_gendarmerie/ctm_gendarmerie_varianta.vmdl	econ/characters/customplayer_ctm_gendarmerie_varianta	mythical
+customplayer_ctm_gendarmerie_variantb	Chem-Haz Capitaine | Gendarmerie Nationale	ct	agents/models/ctm_gendarmerie/ctm_gendarmerie_variantb.vmdl	econ/characters/customplayer_ctm_gendarmerie_variantb	legendary
+customplayer_ctm_gendarmerie_variantc	Chef d'Escadron Rouchard | Gendarmerie Nationale	ct	agents/models/ctm_gendarmerie/ctm_gendarmerie_variantc.vmdl	econ/characters/customplayer_ctm_gendarmerie_variantc	ancient
+customplayer_ctm_gendarmerie_variantd	Aspirant | Gendarmerie Nationale	ct	agents/models/ctm_gendarmerie/ctm_gendarmerie_variantd.vmdl	econ/characters/customplayer_ctm_gendarmerie_variantd	rare
+customplayer_ctm_gendarmerie_variante	Officer Jacques Beltram | Gendarmerie Nationale	ct	agents/models/ctm_gendarmerie/ctm_gendarmerie_variante.vmdl	econ/characters/customplayer_ctm_gendarmerie_variante	mythical
+customplayer_ctm_diver_varianta	Cmdr. Davida 'Goggles' Fernandez | SEAL Frogman	ct	agents/models/ctm_diver/ctm_diver_varianta.vmdl	econ/characters/customplayer_ctm_diver_varianta	ancient
+customplayer_ctm_diver_variantb	Cmdr. Frank 'Wet Sox' Baroud | SEAL Frogman	ct	agents/models/ctm_diver/ctm_diver_variantb.vmdl	econ/characters/customplayer_ctm_diver_variantb	ancient
+customplayer_ctm_diver_variantc	Lieutenant Rex Krikey | SEAL Frogman	ct	agents/models/ctm_diver/ctm_diver_variantc.vmdl	econ/characters/customplayer_ctm_diver_variantc	legendary
+customplayer_tm_jungle_raider_varianta	Elite Trapper Solman | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_varianta.vmdl	econ/characters/customplayer_tm_jungle_raider_varianta	legendary
+customplayer_tm_jungle_raider_variantb	Crasswater The Forgotten | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantb.vmdl	econ/characters/customplayer_tm_jungle_raider_variantb	ancient
+customplayer_tm_jungle_raider_variantc	Arno The Overgrown | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantc.vmdl	econ/characters/customplayer_tm_jungle_raider_variantc	legendary
+customplayer_tm_jungle_raider_variantd	Col. Mangos Dabisi | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantd.vmdl	econ/characters/customplayer_tm_jungle_raider_variantd	mythical
+customplayer_tm_jungle_raider_variante	Vypa Sista of the Revolution | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variante.vmdl	econ/characters/customplayer_tm_jungle_raider_variante	ancient
+customplayer_tm_jungle_raider_variantf	Trapper Aggressor | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantf.vmdl	econ/characters/customplayer_tm_jungle_raider_variantf	rare
+customplayer_tm_jungle_raider_variantb2	'Medium Rare' Crasswater | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantb2.vmdl	econ/characters/customplayer_tm_jungle_raider_variantb2	ancient
+customplayer_tm_jungle_raider_variantf2	Trapper | Guerrilla Warfare	t	agents/models/tm_jungle_raider/tm_jungle_raider_variantf2.vmdl	econ/characters/customplayer_tm_jungle_raider_variantf2	mythical

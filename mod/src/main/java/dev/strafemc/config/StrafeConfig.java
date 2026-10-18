@@ -92,6 +92,8 @@ public final class StrafeConfig {
 	public static boolean velGraph = false;
 	/** Your CS side, "ct" or "t" (console quick menu, strafemc_team): footstep set and smoke colour, later your agent. */
 	public static String team = "ct";
+	/** The CS2 agent picked for each side (client.Agents id; "" for none): the viewmodel wears its sleeves. */
+	public static String agentT = "", agentCT = "";
 	/** The viewmodel skinned on the GPU from static buffers (false: on the CPU every frame, the older and slower path). */
 	public static boolean gpuSkinning = true;
 	/** CS2's cl_righthand: the viewmodel in the right hand (false: mirrored into the left). switchhands flips it. */
@@ -151,6 +153,8 @@ public final class StrafeConfig {
 			viewmodelOffsetZ = Double.parseDouble(p.getProperty("viewmodelOffsetZ", String.valueOf(viewmodelOffsetZ)));
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
 			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
+			agentT = p.getProperty("agentT", agentT);
+			agentCT = p.getProperty("agentCT", agentCT);
 			rightHand = Boolean.parseBoolean(p.getProperty("rightHand", String.valueOf(rightHand)));
 			gpuSkinning = Boolean.parseBoolean(p.getProperty("gpuSkinning", String.valueOf(gpuSkinning)));
 			glove = p.getProperty("glove", glove);
@@ -204,6 +208,8 @@ public final class StrafeConfig {
 		p.setProperty("jumpStats", String.valueOf(jumpStats));
 		p.setProperty("gpuSkinning", String.valueOf(gpuSkinning));
 		p.setProperty("team", team);
+		p.setProperty("agentT", agentT);
+		p.setProperty("agentCT", agentCT);
 		p.setProperty("rightHand", String.valueOf(rightHand));
 		p.setProperty("glove", glove);
 		p.setProperty("gloveSkin", gloveSkin);

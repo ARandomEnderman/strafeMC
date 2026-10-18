@@ -418,6 +418,37 @@ public final class Viewmodel {
 		emit(m.display, new Matrix4f[0][], place, cam, ps, out, knife ? light : 0xF000F0, rigid); // the gun display glows (F_SELF_ILLUM)
 	}
 
+	/** Agents' first-person sleeves by model, loaded in the background on first use. */
+	private final Map<String, VmModel> sleeveModels = new java.util.concurrent.ConcurrentHashMap<>();
+	private final java.util.Set<String> sleevesLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+	/** The sleeves of the agent picked for your side (its model's firstperson_sleeves mesh), or null. */
+	private VmModel sleeves() {
+		var a = dev.strafemc.client.Agents.current();
+		if (a == null) return null;
+		String model = a.model() + "_c";
+		VmModel m = sleeveModels.get(model);
+		if (m != null || !sleevesLoading.add(model)) return m;
+		Thread t = new Thread(() -> {
+			try {
+				VmModel s = VmModel.load(Glb.read(AssetCache.exportGlb(model, true)), ".firstperson_sleeves");
+				for (VmModel.Part part : s.parts) {
+					if (part.texture == null) continue;
+					part.metal = metalPerVertex(part);
+					downscaled(part.texture);
+					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
+						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
+				}
+				sleeveModels.put(model, s);
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] agent sleeves {} failed: {}", model, e.toString());
+			}
+		}, "strafemc-agent");
+		t.setDaemon(true);
+		t.start();
+		return null;
+	}
+
 	/** Charm models by charm id, loaded in the background on first use. */
 	private final Map<String, VmModel> charmModels = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> charmLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -692,6 +723,8 @@ public final class Viewmodel {
 		Integer weaponNode = clip.node("weapon");
 		Matrix4f rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
 		emit(arms, armSkin, toView, cam, ps, out, light, null);
+		VmModel sleeves = sleeves();
+		if (sleeves != null) emit(sleeves, skins(sleeves, clip, pose, null), toView, cam, ps, out, light, null); // the agent's sleeves on the same arms
 		emit(gun(l), gunSkin, toView, cam, ps, out, light, rigid); // same skeleton and mesh, its own colour (a wrap's finish)
 		updateAttachments(l, gunSkin, toView);
 		statTrak(l, cam, ps, out, light);
