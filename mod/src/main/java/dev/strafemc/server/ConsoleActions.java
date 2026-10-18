@@ -339,6 +339,20 @@ public final class ConsoleActions {
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
+			case "sticker_apply" -> { // "stickerSlot target slot": target L:<loadout slot> or I:<inventory slot>
+				String[] a = arg.trim().split(" ");
+				try {
+					if (a.length == 3) dev.strafemc.weapon.StickerSlots.apply(p, Integer.parseInt(a[0]), a[1], Integer.parseInt(a[2]));
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			case "sticker_scrape" -> { // "target slot"
+				String[] a = arg.trim().split(" ");
+				try {
+					if (a.length == 2) dev.strafemc.weapon.StickerSlots.scrape(p, a[0], Integer.parseInt(a[1]));
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "spray_slot" -> { // the graffiti wheel let go on one of the loadout's graffiti
 				try {
 					dev.strafemc.weapon.SprayItem.sprayFromLoadout(p, Integer.parseInt(arg.trim()));

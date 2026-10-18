@@ -254,7 +254,14 @@ public final class Viewmodel {
 		String kit = knife ? dev.strafemc.client.WrapChoice.knifeKit(l.cls) : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		if (kit == null) return l.gun;
 		int pattern = knife ? dev.strafemc.client.WrapChoice.knifePattern() : dev.strafemc.client.WrapChoice.gunPattern(l.cls);
-		return gun(l, kit, pattern);
+		String[] stickers = knife ? null : dev.strafemc.client.WrapChoice.gunStickers(l.cls);
+		if (stickers == null) return gun(l, kit, pattern);
+		String key = l.cls + "#" + kit + "#" + pattern + "#" + String.join(",", stickers);
+		VmModel m = finishes.get(key);
+		if (m != null) return m;
+		loadFinish(l, kit, pattern, key, stickers);
+		VmModel plain = finishes.get(l.cls + "#" + kit + "#" + pattern); // until the stickers are on: the finish without them
+		return plain != null ? plain : l.gun;
 	}
 
 	/** The weapon in a given finish (baked once, the plain weapon until then). */
@@ -262,12 +269,12 @@ public final class Viewmodel {
 		String key = l.cls + "#" + kit + "#" + pattern;
 		VmModel m = finishes.get(key);
 		if (m != null) return m;
-		loadFinish(l, kit, pattern, key);
+		loadFinish(l, kit, pattern, key, null);
 		return l.gun;
 	}
 
 	/** Bakes (once, cached on disk) and loads a weapon in a finish; a weapon that can't wear finishes keeps its own look. */
-	private void loadFinish(Loaded l, String kit, int pattern, String key) {
+	private void loadFinish(Loaded l, String kit, int pattern, String key, String[] stickers) {
 		Weapon w = WEAPONS.get(l.cls);
 		if (w == null || !finishLoading.add(key)) return;
 		String label = dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(l.cls, l.cls.replace("weapon_", "").replace('_', ' ')) + " (" + kit + ")";
@@ -287,7 +294,8 @@ public final class Viewmodel {
 						base = part.texture;
 					}
 				if (base != null) downscaled(base);
-				Path tex = base == null ? null : WeaponSkinCache.ensure(l.cls, paintMat.material(), kit, pattern, paintable, base);
+				Path tex = base == null ? null : stickers != null ? WeaponSkinCache.ensureStickers(l.cls, paintMat.material(), kit, pattern, paintable, base, stickers)
+						: WeaponSkinCache.ensure(l.cls, paintMat.material(), kit, pattern, paintable, base);
 				if (tex == null) { // no finish for this weapon (CS2's default knives have no composite inputs)
 					finishes.put(key, l.gun);
 					return;

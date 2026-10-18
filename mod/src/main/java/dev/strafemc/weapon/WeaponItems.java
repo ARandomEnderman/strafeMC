@@ -66,6 +66,7 @@ public final class WeaponItems {
 		TINT = component("tint");
 		VOUCHER = component("voucher");
 		OPENED = component("opened");
+		StickerSlots.register();
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

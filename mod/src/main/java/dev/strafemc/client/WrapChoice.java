@@ -43,6 +43,12 @@ public final class WrapChoice {
 		return SkinWrapItem.finish(gunWrap(cls));
 	}
 
+	/** The stickers on this gun's wrap, slot by slot ("" for none), or null when it has none. */
+	public static String[] gunStickers(String cls) {
+		ItemStack s = gunWrap(cls);
+		return gunKit(cls) != null && dev.strafemc.weapon.StickerSlots.any(s) ? dev.strafemc.weapon.StickerSlots.get(s) : null;
+	}
+
 	/** The Confirmed Kills the StatTrak module shows on this weapon (its wrap's), or -1 for no module. */
 	public static int statTrak(String cls, boolean knife) {
 		ItemStack s = knife ? knifeWrap() : gunWrap(cls);

@@ -28,6 +28,17 @@ public class StickerItem extends Item {
 		return d == null ? null : d.getString(0);
 	}
 
+	/** Opens the apply screen for the sticker in this inventory slot (set by the client). */
+	public static java.util.function.IntConsumer clientOpen;
+
+	@Override
+	public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level level, net.minecraft.world.entity.player.Player player,
+			net.minecraft.world.InteractionHand hand) {
+		if (level.isClientSide() && clientOpen != null)
+			clientOpen.accept(hand == net.minecraft.world.InteractionHand.MAIN_HAND ? player.getInventory().getSelectedSlot() : 40); // 40: the off hand
+		return net.minecraft.world.InteractionResult.SUCCESS;
+	}
+
 	@Override
 	public Component getName(ItemStack stack) {
 		Stickers.Sticker st = Stickers.get(sticker(stack));
@@ -38,6 +49,7 @@ public class StickerItem extends Item {
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		Stickers.Sticker st = Stickers.get(sticker(stack));
 		if (st != null) out.accept(Component.literal("§7" + Stickers.grade(st.rarity()) + " Sticker"));
+		out.accept(Component.literal("§8Right-click to put it on a gun wrap"));
 		double worth = Worth.of(stack);
 		if (worth >= 0) out.accept(Component.literal("§7Worth: §a" + Worth.format(worth)));
 	}

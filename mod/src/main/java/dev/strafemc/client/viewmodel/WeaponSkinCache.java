@@ -260,9 +260,9 @@ public final class WeaponSkinCache {
 			if (bounds.rotation() != null) paint.values.put("g_flPatternTexCoordRotation", new double[] {place.rotation()});
 		}
 		// Black Pearl only: its pattern is mostly strong colour weights, so CS2's maths alone reads lighter than CS2 shows
-		// it; its paint is darkened in linear light (FLAGGED: factor by eye, user-reported)
+		// it; its paint is darkened in linear light (FLAGGED: factor by eye)
 		if (kit.startsWith("am_blackpearl_marbleized")) paint.values.put("strafemc_albedo_scale", new double[] {0.35});
-		// Case Hardened only: more saturated blues and golds (FLAGGED: factor by eye, user-reported)
+		// Case Hardened only: more saturated blues and golds (FLAGGED: factor by eye)
 		if (kit.equals("aq_oiled") || kit.contains("case_hardened")) paint.values.put("strafemc_saturation", new double[] {1.6});
 		// newer kits may bring their own masks and ambient occlusion (g_bOverrideDefaultMasks / g_bOverrideAmbientOcclusion)
 		BufferedImage masks = paint.f("g_bOverrideDefaultMasks", 0) != 0 && paint.textures.containsKey("g_tPaintByNumberMasks")
@@ -300,6 +300,102 @@ public final class WeaponSkinCache {
 		write(rough, sibling(tex, ".vm1024r.png"));
 		write(result.color(), pixels);
 		return tex;
+	}
+
+	/**
+	 * The finish with stickers on (cached next to it, "_s" + the stickers' hash). CS2's weapon material has a slot per
+	 * sticker (g_vStickerNOffset, g_vStickerNScale, g_flStickerNRotation) in the mesh's second UV set, a side view of the
+	 * gun: slot N's sticker covers 1 / scale of it around (0.5 + offset), turned by the rotation, and only where the
+	 * weapon's sticker mask (g_tStickerWepInputs red) allows. The sticker's own art is its material's g_tSticker0.
+	 * FLAGGED ours: CS2's paper / foil / holo looks are left out (the plain art, by its alpha).
+	 */
+	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
+		Path plain = ensure(cls, material, kit, pattern, parts, base);
+		if (plain == null) return null;
+		String sig = Integer.toHexString(String.join(",", stickers).hashCode());
+		Path tex = plain.resolveSibling(plain.getFileName().toString().replace(".png", "_s" + sig + ".png")), pixels = sibling(tex, ".vm1024b.png");
+		if (Files.exists(pixels)) return tex;
+		BufferedImage img = ImageIO.read(sibling(plain, ".vm1024b.png").toFile());
+		for (String sfx : new String[] {".vm1024m.png", ".vm1024r.png"}) // metalness and roughness: the finish's
+			if (Files.exists(sibling(plain, sfx))) Files.copy(sibling(plain, sfx), sibling(tex, sfx), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		var wp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(material + "_c")));
+		BufferedImage mask = image(wp, "g_tStickerWepInputs");
+		int n = img.getWidth();
+		float[] side = secondUv(parts, n);
+		for (int i = 0; i < stickers.length; i++) {
+			if (stickers[i] == null || stickers[i].isEmpty()) continue;
+			double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
+			double scale = sc[0], rot = wp.f("g_flSticker" + i + "Rotation", 0);
+			if (scale <= 0) continue;
+			BufferedImage art = stickerArt(stickers[i]);
+			if (art == null) continue;
+			double cx = 0.5 + off[0], cy = 0.5 + (off.length > 1 ? off[1] : 0), cos = Math.cos(rot), sin = Math.sin(rot);
+			for (int y = 0; y < n; y++)
+				for (int x = 0; x < n; x++) {
+					int o = 2 * (y * n + x);
+					if (Float.isNaN(side[o])) continue;
+					double du = (side[o] - cx) * scale, dv = (side[o + 1] - cy) * scale;
+					double su = du * cos - dv * sin + 0.5, sv = du * sin + dv * cos + 0.5;
+					if (su < 0 || su > 1 || sv < 0 || sv > 1) continue;
+					int sc0 = GloveSkinBaker.sampleBilinear(art, su, sv);
+					double a = (sc0 >>> 24) / 255.0;
+					if (mask != null) a *= (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
+					if (a <= 0.004) continue;
+					int c = img.getRGB(x, y);
+					int r = (int) Math.round((c >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((c >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),
+							b = (int) Math.round((c & 255) * (1 - a) + (sc0 & 255) * a);
+					img.setRGB(x, y, (c & 0xFF000000) | r << 16 | gg << 8 | b);
+				}
+		}
+		write(img, pixels);
+		return tex;
+	}
+
+	/** A sticker's art: its material (stickers/<material>.vmat) names it (g_tSticker0). */
+	private static BufferedImage stickerArt(String id) {
+		var st = dev.strafemc.weapon.Stickers.get(id);
+		if (st == null) return null;
+		try {
+			var p = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock("stickers/" + st.material() + ".vmat_c")));
+			String t = p.textures.get("g_tSticker0");
+			return t == null ? null : GloveSkinCache.load(t);
+		} catch (Exception e) {
+			dev.strafemc.StrafeMc.LOG.warn("[strafemc] sticker {} art: {}", id, e.toString());
+			return null;
+		}
+	}
+
+	/** The mesh's second UV set (TEXCOORD_1) per texel of its texture (u, v pairs; NaN where nothing covers it). */
+	private static float[] secondUv(List<VmModel.Part> parts, int size) {
+		float[] out = new float[size * size * 2];
+		java.util.Arrays.fill(out, Float.NaN);
+		for (VmModel.Part p : parts) {
+			if (p.uv1 == null) continue;
+			float[] uv = p.uv, u1 = p.uv1;
+			for (int t = 0; t + 2 < p.idx.length; t += 3) {
+				int a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
+				double ax = frac(uv[a * 2]) * size, ay = frac(uv[a * 2 + 1]) * size, bx = frac(uv[b * 2]) * size, by = frac(uv[b * 2 + 1]) * size,
+						cx = frac(uv[c * 2]) * size, cy = frac(uv[c * 2 + 1]) * size;
+				double area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+				if (Math.abs(area) < 1e-9) continue;
+				int x0 = Math.max(0, (int) Math.floor(Math.min(ax, Math.min(bx, cx)))), x1 = Math.min(size - 1, (int) Math.ceil(Math.max(ax, Math.max(bx, cx))));
+				int y0 = Math.max(0, (int) Math.floor(Math.min(ay, Math.min(by, cy)))), y1 = Math.min(size - 1, (int) Math.ceil(Math.max(ay, Math.max(by, cy))));
+				for (int y = y0; y <= y1; y++)
+					for (int x = x0; x <= x1; x++) {
+						double px = x + 0.5, py = y + 0.5;
+						double wa = ((bx - px) * (cy - py) - (cx - px) * (by - py)) / area, wb = ((cx - px) * (ay - py) - (ax - px) * (cy - py)) / area, wc = 1 - wa - wb;
+						if (wa < -0.01 || wb < -0.01 || wc < -0.01) continue;
+						int o = 2 * (y * size + x);
+						out[o] = (float) (wa * u1[a * 2] + wb * u1[b * 2] + wc * u1[c * 2]);
+						out[o + 1] = (float) (wa * u1[a * 2 + 1] + wb * u1[b * 2 + 1] + wc * u1[c * 2 + 1]);
+					}
+			}
+		}
+		return out;
+	}
+
+	private static double frac(double v) {
+		return v - Math.floor(v);
 	}
 
 	/** The composite's position map (g_tPosition, half floats), or null. */
