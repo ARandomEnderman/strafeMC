@@ -220,6 +220,12 @@ public final class ConsoleActions {
 				if (got != null && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE))
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.TradeUpResult(got));
 			}
+			case "shop_withdraw" -> {
+				try {
+					dev.strafemc.weapon.Shop.withdraw(p, Integer.parseInt(arg.trim()));
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "shop_buy" -> {
 				try {
 					dev.strafemc.weapon.Shop.buy(p, Integer.parseInt(arg.trim()));

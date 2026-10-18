@@ -161,14 +161,25 @@ public final class Shop {
 		return Math.max(0.03, ev * CASE_SHARE);
 	}
 
-	/** Sells the skins at these refs (inventory slots or storage unit places, Upgrader refs) for SELL_RATE of their worth. */
+	/** What the shop buys: skins (with a worth) and money vouchers (with a value). */
+	public static boolean sellable(ItemStack s) {
+		return Upgrader.stakeable(s) || s.getItem() instanceof VoucherItem && VoucherItem.dollars(s) > 0;
+	}
+
+	/** What selling it pays: a voucher its full dollars, a skin SELL_RATE of its worth. */
+	public static long sellCents(ItemStack s) {
+		if (s.getItem() instanceof VoucherItem) return VoucherItem.dollars(s) * 100L * s.getCount();
+		return Math.round(Worth.of(s) * s.getCount() * SELL_RATE * 100);
+	}
+
+	/** Sells the items at these refs (inventory slots or storage unit places, Upgrader refs): skins at SELL_RATE, vouchers at full value. */
 	public static void sell(ServerPlayer p, List<Integer> refs) {
 		if (refs.isEmpty() || new java.util.HashSet<>(refs).size() != refs.size()) return;
 		long cents = 0;
 		for (int ref : refs) {
 			ItemStack s = Upgrader.at(p, ref);
-			if (!Upgrader.stakeable(s)) return;
-			cents += Math.round(Worth.of(s) * s.getCount() * SELL_RATE * 100);
+			if (!sellable(s)) return;
+			cents += sellCents(s);
 		}
 		Upgrader.take(p, refs);
 		State s = get(p);
@@ -176,7 +187,20 @@ public final class Shop {
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} sold {} item(s) for {}", p.getScoreboardName(), refs.size(), money(cents));
 	}
 
-	/** Adds to the player's balance (a money voucher). */
+	/** Takes whole dollars off the balance as a money voucher (to keep or give away), if the balance covers it. */
+	public static void withdraw(ServerPlayer p, int dollars) {
+		State s = get(p);
+		if (dollars < 1 || s.cents() < dollars * 100L) {
+			p.sendOverlayMessage(Component.literal("Not enough balance."));
+			return;
+		}
+		p.setAttached(DATA, new State(s.cents() - dollars * 100L, s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
+		ItemStack v = VoucherItem.stack(WeaponItems.VOUCHER_ITEM, dollars);
+		if (!p.getInventory().add(v)) p.drop(v, false);
+		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} withdrew ${}", p.getScoreboardName(), dollars);
+	}
+
+	/** Adds to the player's balance. */
 	public static void deposit(ServerPlayer p, long cents) {
 		State s = get(p);
 		p.setAttached(DATA, new State(s.cents() + Math.max(0, cents), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));

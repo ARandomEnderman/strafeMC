@@ -31,7 +31,9 @@ public final class ShopScreen extends Screen {
 	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
 	private int listHeight, chosen = -1;
-	private Button sell, buy;
+	private Button sell, buy, withdraw;
+	/** Dollars to take off the balance as a money voucher. */
+	private net.minecraft.client.gui.components.EditBox amount;
 	private static int lastProgress = -1;
 	private static long progressAt;
 
@@ -55,6 +57,14 @@ public final class ShopScreen extends Screen {
 		sell = addRenderableWidget(Button.builder(Component.literal("Sell"), b -> sell()).bounds(20, height - 52, colW(), 20).build());
 		buy = addRenderableWidget(Button.builder(Component.literal("Buy"), b -> buy()).bounds(offersX() + offersW() / 2 - 60, height - 52, 120, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
+		// withdraw: whole dollars off the balance, as a voucher to keep or give away (under the balance)
+		amount = addRenderableWidget(new net.minecraft.client.gui.components.EditBox(font, width - 20 - 130, 24, 56, 16, Component.literal("Dollars")));
+		amount.setMaxLength(9);
+		amount.setHint(Component.literal("$"));
+		withdraw = addRenderableWidget(Button.builder(Component.literal("Withdraw"), b -> {
+			send("shop_withdraw", amount.getValue());
+			amount.setValue("");
+		}).bounds(width - 20 - 70, 22, 70, 20).build());
 	}
 
 	private int colW() {
@@ -77,7 +87,7 @@ public final class ShopScreen extends Screen {
 		long c = 0;
 		for (int ref : selling) {
 			ItemStack s = Upgrader.at(minecraft.player, ref);
-			if (Upgrader.stakeable(s)) c += Math.round(Worth.of(s) * s.getCount() * Shop.SELL_RATE * 100);
+			if (Shop.sellable(s)) c += Shop.sellCents(s);
 		}
 		return c;
 	}
@@ -101,8 +111,15 @@ public final class ShopScreen extends Screen {
 	@Override
 	public void tick() {
 		super.tick();
-		selling.removeIf(ref -> !Upgrader.stakeable(Upgrader.at(minecraft.player, ref)));
+		selling.removeIf(ref -> !Shop.sellable(Upgrader.at(minecraft.player, ref)));
 		sell.active = !selling.isEmpty();
+		long want;
+		try {
+			want = amount.getValue().isEmpty() ? 0 : Long.parseLong(amount.getValue()) * 100;
+		} catch (NumberFormatException e) {
+			want = 0;
+		}
+		withdraw.active = want > 0 && want <= state().cents();
 		sell.setMessage(Component.literal(selling.isEmpty() ? "Sell" : "Sell for " + Shop.money(sellValue())));
 		List<Shop.Offer> offers = offers();
 		Shop.State s = state();
@@ -115,14 +132,14 @@ public final class ShopScreen extends Screen {
 		List<Section> out = new ArrayList<>();
 		var inv = minecraft.player.getInventory();
 		List<Integer> loose = new ArrayList<>();
-		for (int i = 0; i < inv.getContainerSize(); i++) if (Upgrader.stakeable(inv.getItem(i))) loose.add(i);
+		for (int i = 0; i < inv.getContainerSize(); i++) if (Shop.sellable(inv.getItem(i))) loose.add(i);
 		out.add(new Section("YOUR ITEMS", -1, loose));
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack unit = inv.getItem(i);
 			if (!(unit.getItem() instanceof dev.strafemc.weapon.StorageUnitItem)) continue;
 			List<Integer> in = new ArrayList<>();
 			List<ItemStack> all = unit.getOrDefault(dev.strafemc.weapon.StorageUnitItem.CONTENTS, List.<ItemStack>of());
-			for (int j = 0; j < all.size(); j++) if (Upgrader.stakeable(all.get(j))) in.add(Upgrader.unitRef(i, j));
+			for (int j = 0; j < all.size(); j++) if (Shop.sellable(all.get(j))) in.add(Upgrader.unitRef(i, j));
 			out.add(new Section(unit.getHoverName().getString(), i, in));
 		}
 		return out;
@@ -229,7 +246,7 @@ public final class ShopScreen extends Screen {
 		String next = "New items in " + timeLeft(s);
 		g.text(font, next, width / 2 - font.width(next) / 2, 30, 0xFF909090, false);
 		int cw = colW();
-		g.text(font, "SELL (" + Math.round(Shop.SELL_RATE * 100) + "%)", 20, 30, GOLD, false);
+		g.text(font, "SELL (skins " + Math.round(Shop.SELL_RATE * 100) + "%, vouchers 100%)", 20, 30, GOLD, false);
 		ItemStack[] hover = {ItemStack.EMPTY};
 		boolean[] offerHover = {false};
 		g.enableScissor(0, LIST_TOP, 20 + cw + 4, listBottom());

@@ -1,18 +1,14 @@
 package dev.strafemc.weapon;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 
 /**
- * A money voucher (ours): right-click to put its dollars on your shop balance. Found in structure chests; a voucher
- * without a value yet (fresh from a chest) gets one the first time it's in a player's inventory: $10-$1000, higher
- * ones rarer (10 x 100^(u^2): half are $31 or less, one in ten is $440 or more). FLAGGED ours.
+ * A money voucher (ours): sold in the shop for its full dollars (onto the balance), or made there by withdrawing from
+ * it, to keep or give away. Found in structure chests; a voucher without a value yet (fresh from a chest) gets one the
+ * first time it's in a player's inventory: $10-$1000, higher ones rarer (10 x 100^(u^2): half are $31 or less, one in
+ * ten is $440 or more). FLAGGED ours. Not a skin: no worth, so the upgrader and trade ups don't take it.
  */
 public class VoucherItem extends Item {
 	public static final int MIN = 10, MAX = 1000;
@@ -23,7 +19,7 @@ public class VoucherItem extends Item {
 
 	public static ItemStack stack(Item item, int dollars) {
 		ItemStack s = new ItemStack(item);
-		s.set(WeaponItems.VOUCHER, Math.max(MIN, Math.min(MAX, dollars)));
+		s.set(WeaponItems.VOUCHER, Math.max(1, dollars)); // withdrawn ones can be any whole-dollar amount
 		return s;
 	}
 
@@ -50,16 +46,4 @@ public class VoucherItem extends Item {
 		return d > 0 ? Component.literal("Money Voucher ($" + d + ")").withColor(0x55FF55) : super.getName(stack);
 	}
 
-	@Override
-	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (player instanceof ServerPlayer p) {
-			ItemStack s = p.getItemInHand(hand);
-			int d = dollars(s) > 0 ? dollars(s) : roll(level.getRandom());
-			Shop.deposit(p, d * 100L);
-			s.shrink(1);
-			p.sendOverlayMessage(Component.literal("+$" + d + " to your balance").withColor(0x55FF55));
-			GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
-		}
-		return InteractionResult.SUCCESS;
-	}
 }
