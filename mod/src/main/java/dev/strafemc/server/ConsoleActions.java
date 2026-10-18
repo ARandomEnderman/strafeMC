@@ -287,7 +287,7 @@ public final class ConsoleActions {
 				if (c == null) break;
 				var inv = p.getInventory();
 				boolean creative = p.getAbilities().instabuild;
-				int cases = 0, keys = dev.strafemc.weapon.CaseKeys.count(p, c.key()).total(); // its own and Universal Keys, storage units too
+				int cases = 0, keys = c.needsKey() ? dev.strafemc.weapon.CaseKeys.count(p, c.key()).total() : n; // its own and Universal Keys, storage units too; capsules need none
 				for (int i = 0; i < inv.getContainerSize(); i++) {
 					var s = inv.getItem(i);
 					if (s.getItem() instanceof dev.strafemc.weapon.CaseItem && caseId.equals(dev.strafemc.weapon.CaseItem.caseId(s))) cases += s.getCount();
@@ -323,7 +323,7 @@ public final class ConsoleActions {
 							needCases -= t;
 						}
 					}
-					dev.strafemc.weapon.CaseKeys.use(p, c.key(), stacks.size());
+					if (c.needsKey()) dev.strafemc.weapon.CaseKeys.use(p, c.key(), stacks.size());
 				}
 				dev.strafemc.weapon.CaseOpening.hold(p, stacks, rarity);
 				if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.CaseResult.TYPE))

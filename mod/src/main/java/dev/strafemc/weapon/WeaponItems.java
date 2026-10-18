@@ -43,7 +43,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -92,6 +92,7 @@ public final class WeaponItems {
 		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1)));
 		SPRAY = item("spray", p -> new SprayItem(p.stacksTo(1)));
 		VOUCHER_ITEM = item("voucher", p -> new VoucherItem(p.stacksTo(64)));
+		STICKER = item("sticker", p -> new StickerItem(p.stacksTo(64)));
 		StorageUnitItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
@@ -161,6 +162,10 @@ public final class WeaponItems {
 		});
 		tab("sprays", () -> SprayItem.stack(SPRAY, "spray_std_axes_crossed", 2), e -> {
 			for (Sprays.Spray s : Sprays.all()) e.accept(SprayItem.stack(SPRAY, s.id(), s.tintable() ? 2 : 0));
+		});
+		tab("stickers", () -> CaseItem.stack(WEAPON_CASE, "crate_sticker_pack01"), e -> {
+			for (Cases.Case c : Cases.capsules()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
+			for (Stickers.Sticker s : Stickers.all()) e.accept(StickerItem.stack(STICKER, s.id()));
 		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });

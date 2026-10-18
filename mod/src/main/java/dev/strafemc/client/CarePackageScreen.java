@@ -142,7 +142,8 @@ public final class CarePackageScreen extends Screen {
 		// the name (weapon / finish, never cut off), then the exterior: what you'd get, before picking it
 		TileText.draw(g, font, s.getHoverName().getString(), x + w / 2, y + h - 34, w - 6, 0xFFE0E0E0);
 		String ext = s.getItem() instanceof SkinWrapItem ? (dev.strafemc.weapon.StatTrak.kills(s) >= 0 ? "StatTrak™ " : "")
-				+ dev.strafemc.weapon.Wear.exterior(SkinWrapItem.wear(s)) : s.getItem() instanceof dev.strafemc.weapon.SprayItem ? "Graffiti" : "Weapon Case";
+				+ dev.strafemc.weapon.Wear.exterior(SkinWrapItem.wear(s)) : s.getItem() instanceof dev.strafemc.weapon.SprayItem ? "Graffiti" : containerKind(s);
+		if (s.getCount() > 1) g.text(font, "x" + s.getCount(), x + 4, y + 4, 0xFFFFFFFF, true); // two sticker capsules
 		g.text(font, font.plainSubstrByWidth(ext, w - 6), x + w / 2 - Math.min(w - 6, font.width(ext)) / 2, y + h - 14, 0xFF909090, false);
 		if (mx >= x && mx < x + w && my >= y && my < y + h && !s.isEmpty()) g.setTooltipForNextFrame(font, s, mx, my); // float, pattern...
 		if (on) { // CS2's check mark in the corner
@@ -153,6 +154,11 @@ public final class CarePackageScreen extends Screen {
 			g.fill(x, y, x + w, y + h, 0xB0101317);
 			g.text(font, "CLAIMED", x + w / 2 - font.width("CLAIMED") / 2, y + h / 2 - 4, GOLD, true);
 		}
+	}
+
+	private static String containerKind(ItemStack s) {
+		Cases.Case c = s.getItem() instanceof CaseItem ? Cases.get(CaseItem.caseId(s)) : null;
+		return c == null || !c.capsule() ? "Weapon Case" : c.kind().equals("spray") ? "Graffiti Box" : "Sticker Capsule";
 	}
 
 	/** CS2's inventory picture: a case's, or the gun in the wrap's skin (like the case screen). */

@@ -421,13 +421,15 @@ public final class RuntimePack {
 		Files.createDirectories(models.resolve("case"));
 		Files.createDirectories(items);
 		java.util.List<String> missing = new java.util.ArrayList<>();
-		for (var c : dev.strafemc.weapon.Cases.all()) {
+		java.util.List<dev.strafemc.weapon.Cases.Case> allCases = new java.util.ArrayList<>(dev.strafemc.weapon.Cases.all());
+		allCases.addAll(dev.strafemc.weapon.Cases.capsules()); // sticker capsules and graffiti boxes are the same item
+		for (var c : allCases) {
 			String vpk = "panorama/images/" + c.image() + "_png.vtex_c";
 			if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/" + c.image() + "_png.png"))) missing.add(vpk);
 		}
 		if (!missing.isEmpty()) AssetCache.decompileAll(missing);
 		StringBuilder cases = new StringBuilder();
-		for (var c : dev.strafemc.weapon.Cases.all()) {
+		for (var c : allCases) {
 			String img = "panorama/images/" + c.image() + "_png";
 			Path out = tex.resolve("item/case/" + c.id() + ".png");
 			try {
@@ -507,6 +509,31 @@ public final class RuntimePack {
 					+ "\"index\":0,\"cases\":[" + sprays + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/paper\"}}}");
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] graffiti icons: {}", e.toString());
+		}
+		// stickers: CS2's own sticker pictures (econ/stickers/<material>), converted 64 at a time when missing
+		try {
+			Files.createDirectories(models.resolve("sticker"));
+			java.util.List<String> stickerMissing = new java.util.ArrayList<>();
+			for (var st : dev.strafemc.weapon.Stickers.all())
+				if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/econ/stickers/" + st.material() + "_png.png")))
+					stickerMissing.add("panorama/images/econ/stickers/" + st.material() + "_png.vtex_c");
+			for (int i = 0; i < stickerMissing.size(); i += 64) AssetCache.decompileAll(stickerMissing.subList(i, Math.min(stickerMissing.size(), i + 64)));
+			StringBuilder stickers = new StringBuilder();
+			for (var st : dev.strafemc.weapon.Stickers.all()) {
+				String img = "panorama/images/econ/stickers/" + st.material() + "_png";
+				try {
+					icon(img + ".vtex_c", img + ".png", tex.resolve("item/sticker/" + st.id() + ".png"), 64);
+				} catch (Exception e) {
+					continue;
+				}
+				Files.writeString(models.resolve("sticker/" + st.id() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/sticker/" + st.id() + "\"}}");
+				if (stickers.length() > 0) stickers.append(',');
+				stickers.append("{\"when\":\"").append(st.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/sticker/").append(st.id()).append("\"}}");
+			}
+			Files.writeString(items.resolve("sticker.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+					+ "\"index\":0,\"cases\":[" + stickers + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/paper\"}}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] sticker icons: {}", e.toString());
 		}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {

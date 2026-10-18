@@ -1,0 +1,735 @@
+# strafeMC stickers in the capsules (from CS2 items_game sticker_kits): kit TAB English name TAB material (panorama/images/econ/stickers/<it>_png) TAB rarity
+std_thirteen	Lucky 13	standard/thirteen	rare
+std_aces_high	Aces High	standard/aces_high	rare
+std_conquered	I Conquered	standard/conquered	rare
+std_destroy	Seek & Destroy	standard/destroy	rare
+std_dispatch	Black Dog	standard/dispatch	rare
+std_fearsome	Fearsome	standard/fearsome	rare
+std_guarding_hell	Cerberus	standard/guarding_hell	rare
+std_lemon	Easy Peasy	standard/lemon	rare
+std_luck	Luck Skill	standard/luck	rare
+std_vigilance	Vigilance	standard/vigilance	rare
+std_aces_high_holo	Aces High (Holo)	standard/aces_high_holo	mythical
+std_fearsome_holo	Fearsome (Holo)	standard/fearsome_holo	mythical
+std_vigilance_holo	Vigilance (Holo)	standard/vigilance_holo	mythical
+std_thirteen_foil	Lucky 13 (Foil)	standard/thirteen_foil	legendary
+std_luck_foil	Luck Skill (Foil)	standard/luck_foil	legendary
+std2_banana	Banana	stickers2/banana	rare
+std2_bomb_code	Bomb Code	stickers2/bomb_code	rare
+std2_chicken_lover	Chicken Lover	stickers2/chicken_lover	rare
+std2_goodgame	Good Game	stickers2/goodgame	rare
+std2_goodluck	Good Luck	stickers2/goodluck	rare
+std2_havefun	Have Fun	stickers2/havefun	rare
+std2_lets_roll_oll	Let's Roll-oll	stickers2/lets_roll_oll	rare
+std2_metal	Metal	stickers2/metal	rare
+std2_nice_shot	Nice Shot	stickers2/nice_shot	rare
+std2_welcome_clutch	Welcome to the Clutch	stickers2/welcome_clutch	rare
+std2_bish_holo	Bish (Holo)	stickers2/bish_holo	mythical
+std2_bash_holo	Bash (Holo)	stickers2/bash_holo	mythical
+std2_bosh_holo	Bosh (Holo)	stickers2/bosh_holo	mythical
+std2_lets_roll_oll_holo	Let's Roll-oll (Holo)	stickers2/lets_roll_oll_holo	mythical
+std_crown_foil	Crown (Foil)	stickers2/crown_foil	legendary
+std2_stupid_banana_foil	Stupid Banana (Foil)	stickers2/stupid_banana_foil	legendary
+comm01_backstab	Backstab	community01/backstab	rare
+comm01_pocket_bbq	Pocket BBQ	community01/pocket_bbq	rare
+comm01_bomb_doge	Bomb Doge	community01/bomb_doge	rare
+comm01_burn_them_all	Burn Them All	community01/burn_them_all	rare
+comm01_llama_cannon	Llama Cannon	community01/llama_cannon	rare
+comm01_other_awp	My Other Awp	community01/other_awp	rare
+comm01_shavemaster	Shave Master	community01/shavemaster	rare
+comm01_skull	Rising Skull	community01/skull	rare
+comm01_sneaky_beaky	Sneaky Beaky Like	community01/sneaky_beaky	rare
+comm01_to_b_or_not_to_b	To B or not to B	community01/to_b_or_not_to_b	rare
+comm01_death_comes	Death Comes	community01/death_comes	rare
+comm01_teamwork_holo	Teamwork (Holo)	community01/teamwork_holo	mythical
+comm01_rekt_holo	Rekt (Holo)	community01/rekt	mythical
+comm01_headhunter_foil	Headhunter (Foil)	community01/headhunter_foil	legendary
+comm01_flammable_foil	Flammable (Foil)	community01/flammable_foil	legendary
+comm01_new_sheriff_foil	New Sheriff (Foil)	community01/new_sheriff_foil	legendary
+comm01_swag_foil	Swag (Foil)	community01/swag_foil	legendary
+enfu_chicken	Chabo	enfu_capsule/chicken	rare
+enfu_bombsquad	Bombsquad	enfu_capsule/enfu_bombsquad	rare
+enfu_skullfuskulltorgeist	Skulltorgeist	enfu_capsule/skullfuskulltorgeist	rare
+enfu_guru	The Guru	enfu_capsule/guru	rare
+enfu_ninja	Silent Ninja	enfu_capsule/ninja	rare
+enfu_samurai	The Samurai	enfu_capsule/samurai	rare
+enfu_skullfutrooop	Skull Troop	enfu_capsule/skullfutrooop	rare
+enfu_soldier	Salute!	enfu_capsule/soldier	rare
+enfu_spartan	The Spartan	enfu_capsule/spartan	rare
+enfu_unicorn	Unicorn	enfu_capsule/unicorn	rare
+enfu_skullfulilboney	Skull Lil Boney	enfu_capsule/skullfulilboney	rare
+enfu_zombie	The Zombie	enfu_capsule/zombie	rare
+enfu_unicorn_holo	Unicorn (Holo)	enfu_capsule/unicorn_holo	mythical
+enfu_bombsquad_foil	Bombsquad (Foil)	enfu_capsule/enfu_bombsquad_foil	legendary
+enfu_ninja_foil	Silent Ninja (Foil)	enfu_capsule/ninja_foil	legendary
+pinups_ivette	Ivette	pinups_capsule/ivette	rare
+pinups_kimberly	Kimberly	pinups_capsule/kimberly	rare
+pinups_martha	Martha	pinups_capsule/martha	rare
+pinups_merietta	Merietta	pinups_capsule/merietta	rare
+pinups_scherry	Sherry	pinups_capsule/scherry	rare
+pinups_tamara	Tamara	pinups_capsule/tamara	rare
+pinups_ivette_holo	Ivette (Holo)	pinups_capsule/ivette_holo	mythical
+pinups_kimberly_holo	Kimberly (Holo)	pinups_capsule/kimberly_holo	mythical
+pinups_martha_holo	Martha (Holo)	pinups_capsule/martha_holo	mythical
+pinups_merietta_holo	Merietta (Holo)	pinups_capsule/merietta_holo	mythical
+pinups_scherry_holo	Sherry (Holo)	pinups_capsule/scherry_holo	mythical
+pinups_tamara_holo	Tamara (Holo)	pinups_capsule/tamara_holo	mythical
+slid3_boom	Boom	slid3_capsule/boom	rare
+slid3_countdown	Countdown	slid3_capsule/countdown	rare
+slid3_dontworryigotcha	Don't Worry	slid3_capsule/dontworryigotcha	rare
+slid3_hardclucklife	Hard Cluck Life	slid3_capsule/hardclucklife	rare
+slid3_moveit	Move It	slid3_capsule/moveit	rare
+slid3_boom_holo	Boom (Holo)	slid3_capsule/boom_holo	mythical
+slid3_countdown_holo	Countdown (Holo)	slid3_capsule/countdown_holo	mythical
+slid3_dontworryigotcha_holo	Don't Worry (Holo)	slid3_capsule/dontworryigotcha_holo	mythical
+slid3_hardclucklife_holo	Hard Cluck Life (Holo)	slid3_capsule/hardclucklife_holo	mythical
+slid3_moveit_holo	Move It (Holo)	slid3_capsule/moveit_holo	mythical
+slid3_boom_foil	Boom (Foil)	slid3_capsule/boom_foil	legendary
+slid3_countdown_foil	Countdown (Foil)	slid3_capsule/countdown_foil	legendary
+slid3_dontworryigotcha_foil	Don't Worry (Foil)	slid3_capsule/dontworryigotcha_foil	legendary
+slid3_hardclucklife_foil	Hard Cluck Life (Foil)	slid3_capsule/hardclucklife_foil	legendary
+slid3_moveit_foil	Move It (Foil)	slid3_capsule/moveit_foil	legendary
+team_roles_awper	The Awper	team_roles_capsule/awper	rare
+team_roles_baiter	The Baiter	team_roles_capsule/baiter	rare
+team_roles_bomber	The Bomber	team_roles_capsule/bomber	rare
+team_roles_bot	The Bot	team_roles_capsule/bot	rare
+team_roles_fragger	The Fragger	team_roles_capsule/fragger	rare
+team_roles_leader	The Leader	team_roles_capsule/leader	rare
+team_roles_lurker	The Lurker	team_roles_capsule/lurker	rare
+team_roles_nader	The 'Nader	team_roles_capsule/nader	rare
+team_roles_ninja	The Ninja	team_roles_capsule/ninja	rare
+team_roles_support	Support	team_roles_capsule/support	rare
+team_roles_pro_foil	The Pro (Foil)	team_roles_capsule/pro_foil	legendary
+sugarface_boris	Boris	sugarface_capsule/boris	rare
+sugarface_max	Max	sugarface_capsule/max	rare
+sugarface_stan	Stan	sugarface_capsule/stan	rare
+sugarface_jack	Jack	sugarface_capsule/jack	rare
+sugarface_perry	Perry	sugarface_capsule/perry	rare
+sugarface_viggo	Viggo	sugarface_capsule/viggo	rare
+sugarface_joan	Joan	sugarface_capsule/joan	rare
+sugarface_boris_holo	Boris (Holo)	sugarface_capsule/boris_holo	mythical
+sugarface_max_holo	Max (Holo)	sugarface_capsule/max_holo	mythical
+sugarface_stan_holo	Stan (Holo)	sugarface_capsule/stan_holo	mythical
+sugarface_jack_holo	Jack (Holo)	sugarface_capsule/jack_holo	mythical
+sugarface_perry_holo	Perry (Holo)	sugarface_capsule/perry_holo	mythical
+sugarface_viggo_holo	Viggo (Holo)	sugarface_capsule/viggo_holo	mythical
+sugarface_joan_holo	Joan (Holo)	sugarface_capsule/joan_holo	mythical
+bestiary_basilisk	Basilisk	bestiary_capsule/basilisk	rare
+bestiary_dragon	Dragon	bestiary_capsule/dragon	rare
+bestiary_hippocamp	Hippocamp	bestiary_capsule/hippocamp	rare
+bestiary_manticore	Manticore	bestiary_capsule/manticore	rare
+bestiary_pegasus	Pegasus	bestiary_capsule/pegasus	rare
+bestiary_phoenix	Phoenix Reborn	bestiary_capsule/phoenix	rare
+bestiary_sphinx	Sphinx	bestiary_capsule/sphinx	rare
+bestiary_hippocamp_holo	Hippocamp (Holo)	bestiary_capsule/hippocamp_holo	mythical
+bestiary_manticore_holo	Manticore (Holo)	bestiary_capsule/manticore_holo	mythical
+bestiary_pegasus_holo	Pegasus (Holo)	bestiary_capsule/pegasus_holo	mythical
+bestiary_sphinx_holo	Sphinx (Holo)	bestiary_capsule/sphinx_holo	mythical
+bestiary_basilisk_foil	Basilisk (Foil)	bestiary_capsule/basilisk_foil	legendary
+bestiary_dragon_foil	Dragon (Foil)	bestiary_capsule/dragon_foil	legendary
+bestiary_phoenix_foil	Phoenix Reborn (Foil)	bestiary_capsule/phoenix_foil	legendary
+illuminate_hotpot	Hotpot	illuminate_capsule_01/hotpot	rare
+illuminate_noodles	Noodles	illuminate_capsule_01/noodles	rare
+illuminate_rice	Rice Bomb	illuminate_capsule_01/rice	rare
+illuminate_rice_pudding	Terror Rice	illuminate_capsule_01/rice_pudding	rare
+illuminate_cheongsam_1	Water Gun	illuminate_capsule_01/cheongsam_1	rare
+illuminate_cheongsam_2	Cheongsam	illuminate_capsule_01/cheongsam_2	rare
+illuminate_koi_2	Fancy Koi	illuminate_capsule_01/koi_2	rare
+illuminate_chinese_dragon	Guardian Dragon	illuminate_capsule_01/chinese_dragon	rare
+illuminate_mahjong_fa	Mahjong Fa	illuminate_capsule_01/mahjong_fa	rare
+illuminate_mahjong_rooster	Mahjong Rooster	illuminate_capsule_01/mahjong_rooster	rare
+illuminate_mahjong_zhong	Mahjong Zhong	illuminate_capsule_01/mahjong_zhong	rare
+illuminate_toytiger	Toy Tiger	illuminate_capsule_01/toytiger	rare
+illuminate_cheongsam_2_holo	Cheongsam (Holo)	illuminate_capsule_01/cheongsam_2_holo	mythical
+illuminate_chinese_dragon_foil	Guardian Dragon (Foil)	illuminate_capsule_01/chinese_dragon_foil	legendary
+illuminate_koi_2_foil	Fancy Koi (Foil)	illuminate_capsule_01/koi_2_foil	legendary
+illuminate_god_of_fortune	God of Fortune	illuminate_capsule_02/god_of_fortune	rare
+illuminate_huaji	Huaji	illuminate_capsule_02/huaji	rare
+illuminate_nezha	Nezha	illuminate_capsule_02/nezha	rare
+illuminate_fury	Rage	illuminate_capsule_02/fury	rare
+illuminate_longevity	Longevity	illuminate_capsule_02/longevity	rare
+illuminate_panda	Non-Veg	illuminate_capsule_02/panda	rare
+illuminate_pixiu	Pixiu	illuminate_capsule_02/pixiu	rare
+illuminate_red_koi	Twin Koi	illuminate_capsule_02/red_koi	rare
+illuminate_shaolin_1	Shaolin	illuminate_capsule_02/shaolin_1	rare
+illuminate_swallow_1	Green Swallow	illuminate_capsule_02/swallow_1	rare
+illuminate_swallow_2	Blue Swallow	illuminate_capsule_02/swallow_2	rare
+illuminate_zombie	Zombie Hop	illuminate_capsule_02/zombie	rare
+illuminate_red_koi_holo	Twin Koi (Holo)	illuminate_capsule_02/red_koi_holo	mythical
+illuminate_longevity_foil	Longevity (Foil)	illuminate_capsule_02/longevity_foil	legendary
+illuminate_pixiu_foil	Pixiu (Foil)	illuminate_capsule_02/pixiu_foil	legendary
+comm2018_01_bullet_rain	Bullet Rain	comm2018_01/bullet_rain	rare
+comm2018_01_camper	Camper	comm2018_01/camper	rare
+comm2018_01_dessert_eagle	Dessert Eagle	comm2018_01/dessert_eagle	rare
+comm2018_01_devouring_flame	Devouring Flame	comm2018_01/devouring_flame	rare
+comm2018_01_entry_fragger	Entry Fragger	comm2018_01/entry_fragger	rare
+comm2018_01_friendly_fire	Friendly Fire	comm2018_01/friendly_fire	rare
+comm2018_01_retake_expert	Retake Expert	comm2018_01/retake_expert	rare
+comm2018_01_small_arms	Small Arms	comm2018_01/small_arms	rare
+comm2018_01_devouring_flame_holo	Devouring Flame (Holo)	comm2018_01/devouring_flame_holo	mythical
+comm2018_01_friendly_fire_holo	Friendly Fire (Holo)	comm2018_01/friendly_fire_holo	mythical
+comm2018_01_retake_expert_holo	Retake Expert (Holo)	comm2018_01/retake_expert_holo	mythical
+comm2018_01_small_arms_holo	Small Arms (Holo)	comm2018_01/small_arms_holo	mythical
+comm2018_01_bullet_rain_normal	Bullet Rain (Foil)	comm2018_01/bullet_rain_normal	legendary
+comm2018_01_camper_normal	Camper (Foil)	comm2018_01/camper_normal	legendary
+skillgroup_silver	Silver	skillgroup_capsule/silver	rare
+skillgroup_gold_nova	Gold Nova	skillgroup_capsule/gold_nova	rare
+skillgroup_master_guardian	Master Guardian	skillgroup_capsule/master_guardian	rare
+skillgroup_mge	Master Guardian Elite	skillgroup_capsule/mge	rare
+skillgroup_dmg	Distinguished Master Guardian	skillgroup_capsule/dmg	rare
+skillgroup_legendary_eagle	Legendary Eagle	skillgroup_capsule/legendary_eagle	rare
+skillgroup_lem	Legendary Eagle Master	skillgroup_capsule/lem	rare
+skillgroup_smfc	Supreme Master First Class	skillgroup_capsule/smfc	rare
+skillgroup_global_elite	Global Elite	skillgroup_capsule/global_elite	rare
+skillgroup_gold_nova_holo	Gold Nova (Holo)	skillgroup_capsule/gold_nova_holo	mythical
+skillgroup_master_guardian_holo	Master Guardian (Holo)	skillgroup_capsule/master_guardian_holo	mythical
+skillgroup_mge_holo	Master Guardian Elite (Holo)	skillgroup_capsule/mge_holo	mythical
+skillgroup_dmg_holo	Distinguished Master Guardian (Holo)	skillgroup_capsule/dmg_holo	mythical
+skillgroup_legendary_eagle_holo	Legendary Eagle (Holo)	skillgroup_capsule/legendary_eagle_holo	mythical
+skillgroup_lem_holo	Legendary Eagle Master (Holo)	skillgroup_capsule/lem_holo	mythical
+skillgroup_smfc_holo	Supreme Master First Class (Holo)	skillgroup_capsule/smfc_holo	mythical
+skillgroup_silver_normal	Silver (Foil)	skillgroup_capsule/silver_normal	legendary
+skillgroup_global_elite_normal	Global Elite (Foil)	skillgroup_capsule/global_elite_normal	legendary
+feral_predators_baited_glossy	Baited	feral_predators/baited_glossy	rare
+feral_predators_bite_me_glossy	Bite Me	feral_predators/bite_me_glossy	rare
+feral_predators_cluck_glossy	Cluck	feral_predators/cluck_glossy	rare
+feral_predators_first_blood_glossy	First Blood	feral_predators/first_blood_glossy	rare
+feral_predators_free_hugs_glossy	Free Hugs	feral_predators/free_hugs_glossy	rare
+feral_predators_lurker_glossy	Lurker	feral_predators/lurker_glossy	rare
+feral_predators_one_sting_glossy	One Sting	feral_predators/one_sting_glossy	rare
+feral_predators_scavenger_glossy	Scavenger	feral_predators/scavenger_glossy	rare
+feral_predators_toxic_glossy	Toxic	feral_predators/toxic_glossy	rare
+feral_predators_baited_holo	Baited (Holo)	feral_predators/baited_holo	mythical
+feral_predators_cluck_holo	Cluck (Holo)	feral_predators/cluck_holo	mythical
+feral_predators_first_blood_holo	First Blood (Holo)	feral_predators/first_blood_holo	mythical
+feral_predators_free_hugs_holo	Free Hugs (Holo)	feral_predators/free_hugs_holo	mythical
+feral_predators_one_sting_holo	One Sting (Holo)	feral_predators/one_sting_holo	mythical
+feral_predators_scavenger_holo	Scavenger (Holo)	feral_predators/scavenger_holo	mythical
+feral_predators_bite_me_foil	Bite Me (Foil)	feral_predators/bite_me_foil	legendary
+feral_predators_lurker_foil	Lurker (Foil)	feral_predators/lurker_foil	legendary
+feral_predators_toxic_foil	Toxic (Foil)	feral_predators/toxic_foil	legendary
+chicken_capsule_bigclucks_pack01	Big Clucks	chicken_capsule/bigclucks_pack01	rare
+chicken_capsule_bonehead_pack01	Bonehead	chicken_capsule/bonehead_pack01	rare
+chicken_capsule_bukawp_pack01	BukAWP	chicken_capsule/bukawp_pack01	rare
+chicken_capsule_doubledip_pack01	Double Dip	chicken_capsule/doubledip_pack01	rare
+chicken_capsule_fowlplay_pack01	Fowl Play	chicken_capsule/fowlplay_pack01	rare
+chicken_capsule_headsup_pack01	Heads Up	chicken_capsule/headsup_pack01	rare
+chicken_capsule_hotwings_pack01	Hot Wings	chicken_capsule/hotwings_pack01	rare
+chicken_capsule_nestegg_pack01	Nest Egg	chicken_capsule/nestegg_pack01	rare
+chicken_capsule_roostyboosty_pack01	Roosty Boosty	chicken_capsule/roostyboosty_pack01	rare
+chicken_capsule_whatwhat_pack01	What What	chicken_capsule/whatwhat_pack01	rare
+chicken_capsule_bonehead_holo	Bonehead (Holo)	chicken_capsule/bonehead_holo	mythical
+chicken_capsule_doubledip_holo	Double Dip (Holo)	chicken_capsule/doubledip_holo	mythical
+chicken_capsule_fowlplay_holo	Fowl Play (Holo)	chicken_capsule/fowlplay_holo	mythical
+chicken_capsule_hotwings_holo	Hot Wings (Holo)	chicken_capsule/hotwings_holo	mythical
+chicken_capsule_nestegg_holo	Nest Egg (Holo)	chicken_capsule/nestegg_holo	mythical
+chicken_capsule_bigclucks_foil	Big Clucks (Foil)	chicken_capsule/bigclucks_foil	legendary
+chicken_capsule_roostyboosty_foil	Roosty Boosty (Foil)	chicken_capsule/roostyboosty_foil	legendary
+shattered_web_counter_tech	Counter-Tech	shattered_web/counter_tech	rare
+shattered_web_gold_web	Gold Web	shattered_web/gold_web	rare
+shattered_web_mastermind	Mastermind	shattered_web/mastermind	rare
+shattered_web_shattered_web	Shattered Web	shattered_web/shattered_web	rare
+shattered_web_terrorist_tech_m9	Terrorist-Tech	shattered_web/terrorist_tech_m9	rare
+shattered_web_web_stuck	Web Stuck	shattered_web/web_stuck	rare
+shattered_web_mastermind_holo	Mastermind (Holo)	shattered_web/mastermind_holo	mythical
+shattered_web_web_stuck_holo	Web Stuck (Holo)	shattered_web/web_stuck_holo	mythical
+shattered_web_gold_web_normal	Gold Web (Foil)	shattered_web/gold_web_normal	legendary
+halo_assassin	Assassin	halo/assassin	rare
+halo_chief	Chief	halo/chief	rare
+halo_dirtymoney	Dirty Money	halo/dirtymoney	rare
+halo_extermination	Extermination	halo/extermination	rare
+halo_incineration	Incineration	halo/incineration	rare
+halo_killjoy	Killjoy	halo/killjoy	rare
+halo_legendary	Legendary	halo/legendary	rare
+halo_misterchief	Mister Chief	halo/misterchief	rare
+halo_noble	Noble	halo/noble	rare
+halo_spartan	Spartan	halo/spartan	rare
+halo_assassin_holo	Assassin (Holo)	halo/assassin_holo	mythical
+halo_chief_holo	Chief (Holo)	halo/chief_holo	mythical
+halo_incineration_holo	Incineration (Holo)	halo/incineration_holo	mythical
+halo_killjoy_holo	Killjoy (Holo)	halo/killjoy_holo	mythical
+halo_noble_holo	Noble (Holo)	halo/noble_holo	mythical
+halo_chief_foil	Chief (Foil)	halo/chief_foil	legendary
+halo_legendary_foil	Legendary (Foil)	halo/legendary_foil	legendary
+cs20_2old_glossy	Too Old for This	cs20/cs20_2old_glossy	rare
+cs20_arctic_avenger	Pixel Avenger	cs20/cs20_arctic_avenger	rare
+cs20_aztec_beast	Aztec	cs20/cs20_aztec_beast	rare
+cs20_sas_boom	Too Late	cs20/cs20_sas_boom	rare
+cs20_c4_friend	Friend Code	cs20/cs20_c4_friend	rare
+cs20_andre_sas	Obey SAS	cs20/cs20_andre_sas	rare
+cs20_nuke_beast	Nuke Beast	cs20/cs20_nuke_beast	rare
+cs20_map_office	Mondays	cs20/cs20_map_office	rare
+cs20_pixel_separatist	Separate Pixels	cs20/cs20_pixel_separatist	rare
+cs20_surf	Surf's Up	cs20/cs20_surf	rare
+cs20_tarot_temperance	Temperance	cs20/cs20_tarot_temperance	rare
+cs20_anniversary_pixel_holo	CS20 Classic (Holo)	cs20/cs20_anniversary_pixel_holo	mythical
+cs20_clutchman_holo	Clutchman (Holo)	cs20/cs20_clutchman_holo	mythical
+cs20_dz_guinea_pig_holo	Guinea Pig (Holo)	cs20/cs20_dz_guinea_pig_holo	mythical
+cs20_fire_in_the_hole_holo	Fire in the Hole (Holo)	cs20/cs20_fire_in_the_hole_holo	mythical
+cs20_boost_holo	Boost (Holo)	cs20/cs20_boost_holo	mythical
+cs20_rush_holo	Rush 4x20 (Holo)	cs20/cs20_rush_holo	mythical
+cs20_anniversary_foil	All Hail the King (Foil)	cs20/cs20_anniversary_foil	legendary
+cs20_door_stuck_foil	Door Stuck (Foil)	cs20/cs20_door_stuck_foil	legendary
+cs20_dragon_lore_foil	Dragon Lore (Foil)	cs20/cs20_dragon_lore_foil	legendary
+last_vance	Last Vance	alyx/last_vance	rare
+art_vort	Vortigaunt the Painter	alyx/art_vort	rare
+big_hugs	Big Hugs	alyx/big_hugs	rare
+combine_mask_broken	Combine Helmet	alyx/combine_mask_broken	rare
+gnome_mercy	Gnome Mercy	alyx/gnome_mercy	rare
+greetings	Greetings	alyx/greetings	rare
+lambda	Lambda	alyx/lambda	rare
+vortigaunt_holo	Vortigaunt (Holo)	alyx/vortigaunt_holo	mythical
+big_hugs_holo	Big Hugs (Holo)	alyx/big_hugs_holo	mythical
+combine_mask_broken_holo	Combine Helmet (Holo)	alyx/combine_mask_broken_holo	mythical
+lambda_holo	Lambda (Holo)	alyx/lambda_holo	mythical
+last_vance_gold	Last Vance (Gold)	alyx/last_vance_gold	legendary
+health_foil	Health (Gold)	alyx/health_foil	legendary
+warhammer_adepta_sororitas_paper	Adepta Sororitas	warhammer/adepta_sororitas_paper	rare
+warhammer_aeldari_paper	Aeldari Avatar	warhammer/aeldari_paper	rare
+warhammer_full_buy_paper	Full Buy	warhammer/full_buy_paper	rare
+warhammer_heresy_paper	Heresy	warhammer/heresy_paper	rare
+warhammer_necron_paper	Necron	warhammer/necron_paper	rare
+warhammer_ork_waaagh_paper	Ork Waaagh!	warhammer/ork_waaagh_paper	rare
+warhammer_primaris_keychain_paper	Primaris Keychain	warhammer/primaris_keychain_paper	rare
+warhammer_repulsor_paper	Repulsor	warhammer/repulsor_paper	rare
+warhammer_space_marine_paper	Space Marine	warhammer/space_marine_paper	rare
+warhammer_tyranids_ravener_paper	Tyranids Ravener	warhammer/tyranids_ravener_paper	rare
+warhammer_heresy_holo	Heresy (Holo)	warhammer/heresy_holo	mythical
+warhammer_lord_of_skulls_holo	Lord of Skulls (Holo)	warhammer/lord_of_skulls_holo	mythical
+warhammer_space_marine_holo	Space Marine (Holo)	warhammer/space_marine_holo	mythical
+warhammer_tyranids_hive_tyrant_holo	Tyranids Hive Tyrant (Holo)	warhammer/tyranids_hive_tyrant_holo	mythical
+warhammer_bloodthirster_foil	Bloodthirster (Foil)	warhammer/bloodthirster_foil	legendary
+warhammer_chaos_marine_foil	Chaos Marine (Foil)	warhammer/chaos_marine_foil	legendary
+warhammer_emperor_foil	Emperor (Foil)	warhammer/emperor_foil	legendary
+broken_fang_ancient_beast	Ancient Beast	broken_fang/ancient_beast	rare
+broken_fang_ancient_marauder	Ancient Marauder	broken_fang/ancient_marauder	rare
+broken_fang_ancient_protector	Ancient Protector	broken_fang/ancient_protector	rare
+broken_fang_badge_of_service	Badge of Service	broken_fang/badge_of_service	rare
+broken_fang_battle_scarred	Battle Scarred	broken_fang/battle_scarred	rare
+broken_fang_broken_fang	Broken Fang	broken_fang/broken_fang	rare
+broken_fang_coiled_strike	Coiled Strike	broken_fang/coiled_strike	rare
+broken_fang_enemy_spotted	Enemy Spotted	broken_fang/enemy_spotted	rare
+broken_fang_stalking_prey	Stalking Prey	broken_fang/stalking_prey	rare
+broken_fang_stone_scales	Stone Scales	broken_fang/stone_scales	rare
+broken_fang_battle_scarred_holo	Battle Scarred (Holo)	broken_fang/battle_scarred_holo	mythical
+broken_fang_broken_fang_holo	Broken Fang (Holo)	broken_fang/broken_fang_holo	mythical
+broken_fang_coiled_strike_holo	Coiled Strike (Holo)	broken_fang/coiled_strike_holo	mythical
+broken_fang_enemy_spotted_holo	Enemy Spotted (Holo)	broken_fang/enemy_spotted_holo	mythical
+broken_fang_ancient_beast_foil	Ancient Beast (Foil)	broken_fang/ancient_beast_foil	legendary
+broken_fang_stone_scales_foil	Stone Scales (Foil)	broken_fang/stone_scales_foil	legendary
+recoil_ak47	Hello AK-47	recoil/ak47_recoil	rare
+recoil_aug	Hello AUG	recoil/aug_recoil	rare
+recoil_awp	Hello AWP	recoil/awp_recoil	rare
+recoil_bizon	Hello PP-Bizon	recoil/bizon_recoil	rare
+recoil_cz	Hello CZ75-Auto	recoil/cz_recoil	rare
+recoil_famas	Hello FAMAS	recoil/famas_recoil	rare
+recoil_galil	Hello Galil AR	recoil/galil_recoil	rare
+recoil_m4a1	Hello M4A1-S	recoil/m4a1_recoil	rare
+recoil_m4a4	Hello M4A4	recoil/m4a4_recoil	rare
+recoil_mac10	Hello MAC-10	recoil/mac10_recoil	rare
+recoil_mp7	Hello MP7	recoil/mp7_recoil	rare
+recoil_mp9	Hello MP9	recoil/mp9_recoil	rare
+recoil_p90	Hello P90	recoil/p90_recoil	rare
+recoil_sg553	Hello SG 553	recoil/sg553_recoil	rare
+recoil_ump	Hello UMP-45	recoil/ump_recoil	rare
+recoil_xm1014	Hello XM1014	recoil/xm1014_recoil	rare
+recoil_ak47_gold	Hello AK-47 (Gold)	recoil/ak47_recoil_gold	mythical
+recoil_aug_gold	Hello AUG (Gold)	recoil/aug_recoil_gold	mythical
+recoil_awp_gold	Hello AWP (Gold)	recoil/awp_recoil_gold	mythical
+recoil_bizon_gold	Hello PP-Bizon (Gold)	recoil/bizon_recoil_gold	mythical
+recoil_cz_gold	Hello CZ75-Auto (Gold)	recoil/cz_recoil_gold	mythical
+recoil_famas_gold	Hello FAMAS (Gold)	recoil/famas_recoil_gold	mythical
+recoil_galil_gold	Hello Galil AR (Gold)	recoil/galil_recoil_gold	mythical
+recoil_m4a1_gold	Hello M4A1-S (Gold)	recoil/m4a1_recoil_gold	mythical
+recoil_m4a4_gold	Hello M4A4 (Gold)	recoil/m4a4_recoil_gold	mythical
+recoil_mac10_gold	Hello MAC-10 (Gold)	recoil/mac10_recoil_gold	mythical
+recoil_mp7_gold	Hello MP7 (Gold)	recoil/mp7_recoil_gold	mythical
+recoil_mp9_gold	Hello MP9 (Gold)	recoil/mp9_recoil_gold	mythical
+recoil_p90_gold	Hello P90 (Gold)	recoil/p90_recoil_gold	mythical
+recoil_sg553_gold	Hello SG 553 (Gold)	recoil/sg553_recoil_gold	mythical
+recoil_ump_gold	Hello UMP-45 (Gold)	recoil/ump_recoil_gold	mythical
+recoil_xm1014_gold	Hello XM1014 (Gold)	recoil/xm1014_recoil_gold	mythical
+poorly_drawn_ava	Poorly Drawn Ava	poorly_drawn/ava	rare
+poorly_drawn_balkan	Poorly Drawn Balkan	poorly_drawn/balkan	rare
+poorly_drawn_bloody_darryl	Poorly Drawn Bloody Darryl	poorly_drawn/bloody_darryl	rare
+poorly_drawn_chicken	Poorly Drawn Chicken	poorly_drawn/chicken	rare
+poorly_drawn_fbi	Poorly Drawn FBI	poorly_drawn/fbi	rare
+poorly_drawn_idf	Poorly Drawn IDF	poorly_drawn/idf	rare
+poorly_drawn_leet_crew	Poorly Drawn Leet Crew	poorly_drawn/leet_crew	rare
+poorly_drawn_number_k	Poorly Drawn Number K	poorly_drawn/number_k	rare
+poorly_drawn_sas	Poorly Drawn SAS	poorly_drawn/sas	rare
+poorly_drawn_terrorist	Poorly Drawn Terrorist	poorly_drawn/terrorist	rare
+poorly_drawn_ava_holo	Poorly Drawn Ava (Holo)	poorly_drawn/ava_holo	mythical
+poorly_drawn_balkan_holo	Poorly Drawn Balkan (Holo)	poorly_drawn/balkan_holo	mythical
+poorly_drawn_bloody_darryl_holo	Poorly Drawn Bloody Darryl (Holo)	poorly_drawn/bloody_darryl_holo	mythical
+poorly_drawn_chicken_holo	Poorly Drawn Chicken (Holo)	poorly_drawn/chicken_holo	mythical
+poorly_drawn_fbi_holo	Poorly Drawn FBI (Holo)	poorly_drawn/fbi_holo	mythical
+poorly_drawn_idf_holo	Poorly Drawn IDF (Holo)	poorly_drawn/idf_holo	mythical
+poorly_drawn_leet_crew_holo	Poorly Drawn Leet Crew (Holo)	poorly_drawn/leet_crew_holo	mythical
+poorly_drawn_number_k_holo	Poorly Drawn Number K (Holo)	poorly_drawn/number_k_holo	mythical
+poorly_drawn_sas_holo	Poorly Drawn SAS (Holo)	poorly_drawn/sas_holo	mythical
+poorly_drawn_terrorist_holo	Poorly Drawn Terrorist (Holo)	poorly_drawn/terrorist_holo	mythical
+gnar_01	Orange Gnar	riptide_surfshop/gnar_01	rare
+gnar_02	Blue Gnar	riptide_surfshop/gnar_02	rare
+gnar_03	Green Gnar	riptide_surfshop/gnar_03	rare
+gnar_04	Purple Gnar	riptide_surfshop/gnar_04	rare
+jaggyfish_01	Yellow Jaggyfish	riptide_surfshop/jaggyfish_01	rare
+jaggyfish_02	Pink Jaggyfish	riptide_surfshop/jaggyfish_02	rare
+jaggyfish_03	Purple Jaggyfish	riptide_surfshop/jaggyfish_03	rare
+jaggyfish_04	Black Jaggyfish	riptide_surfshop/jaggyfish_04	rare
+lethal_01	Blue Lethal	riptide_surfshop/lethal_01	rare
+lethal_02	Green Lethal	riptide_surfshop/lethal_02	rare
+lethal_03	Fade Lethal	riptide_surfshop/lethal_03	rare
+lethal_04	Yellow Lethal	riptide_surfshop/lethal_04	rare
+monster_ak_01	Green Shark Shooter	riptide_surfshop/monster_ak_01	rare
+monster_ak_02	Black Shark Shooter	riptide_surfshop/monster_ak_02	rare
+monster_ak_03	Blue Shark Shooter	riptide_surfshop/monster_ak_03	rare
+monster_ak_04	Red Shark Shooter	riptide_surfshop/monster_ak_04	rare
+monster_awp_01	Green Cyclawps	riptide_surfshop/monster_awp_01	rare
+monster_awp_02	Red Cyclawps	riptide_surfshop/monster_awp_02	rare
+monster_awp_03	Purple Cyclawps	riptide_surfshop/monster_awp_03	rare
+monster_awp_04	Yellow Cyclawps	riptide_surfshop/monster_awp_04	rare
+monster_bomb_01	Purple Bombster	riptide_surfshop/monster_bomb_01	rare
+monster_bomb_02	White Bombster	riptide_surfshop/monster_bomb_02	rare
+monster_bomb_03	Green Bombster	riptide_surfshop/monster_bomb_03	rare
+monster_bomb_04	Yellow Bombster	riptide_surfshop/monster_bomb_04	rare
+surf_octo_01	Watermelon Tentaskull	riptide_surfshop/surf_octo_01	rare
+surf_octo_02	Blood Moon Tentaskull	riptide_surfshop/surf_octo_02	rare
+surf_octo_03	Sunset Ocean Tentaskull	riptide_surfshop/surf_octo_03	rare
+surf_octo_04	Toxic Tentaskull	riptide_surfshop/surf_octo_04	rare
+swordfish_01	Watermelon Stabbyfish	riptide_surfshop/swordfish_01	rare
+swordfish_02	Miami Stabbyfish	riptide_surfshop/swordfish_02	rare
+swordfish_03	After Hours Stabbyfish	riptide_surfshop/swordfish_03	rare
+swordfish_04	Ocean Sunset Stabbyfish	riptide_surfshop/swordfish_04	rare
+wave_rider_01	Miami Wave Rider	riptide_surfshop/wave_rider_01	rare
+wave_rider_02	Blood Moon Wave Rider	riptide_surfshop/wave_rider_02	rare
+wave_rider_03	Toxic Wave Rider	riptide_surfshop/wave_rider_03	rare
+wave_rider_04	Fools Gold Wave Rider	riptide_surfshop/wave_rider_04	rare
+buttery_01	Candy Buttery (Holo)	riptide_surfshop/buttery_01	mythical
+buttery_02	Flame Buttery (Holo)	riptide_surfshop/buttery_02	mythical
+buttery_03	Watermelon Buttery (Holo)	riptide_surfshop/buttery_03	mythical
+buttery_04	Miami Buttery (Holo)	riptide_surfshop/buttery_04	mythical
+flick_01	Opal Flick (Holo)	riptide_surfshop/flick_01	mythical
+flick_02	Ocean Sunset Flick (Holo)	riptide_surfshop/flick_02	mythical
+flick_03	Mercury Flick (Holo)	riptide_surfshop/flick_03	mythical
+flick_04	Miami Flick (Holo)	riptide_surfshop/flick_04	mythical
+flow_01	Watermelon Flow (Holo)	riptide_surfshop/flow_01	mythical
+flow_02	Toxic Flow (Holo)	riptide_surfshop/flow_02	mythical
+flow_03	Cotton Candy Flow (Holo)	riptide_surfshop/flow_03	mythical
+flow_04	Miami Flow (Holo)	riptide_surfshop/flow_04	mythical
+skill_surf_01	Miami Skill Surf (Holo)	riptide_surfshop/skill_surf_01	mythical
+skill_surf_02	Ocean Sunset Skill Surf (Holo)	riptide_surfshop/skill_surf_02	mythical
+skill_surf_03	Coral Skill Surf (Holo)	riptide_surfshop/skill_surf_03	mythical
+skill_surf_04	Bubble Gum Skill Surf (Holo)	riptide_surfshop/skill_surf_04	mythical
+strafe_01	Abalone Strafe (Holo)	riptide_surfshop/strafe_01	mythical
+strafe_02	Watermelon Strafe (Holo)	riptide_surfshop/strafe_02	mythical
+strafe_03	Mood Ring Strafe (Holo)	riptide_surfshop/strafe_03	mythical
+strafe_04	Neon Opal Strafe (Holo)	riptide_surfshop/strafe_04	mythical
+tier6_01	Flame Tier6 (Holo)	riptide_surfshop/tier6_01	mythical
+tier6_02	Watermelon Tier6 (Holo)	riptide_surfshop/tier6_02	mythical
+tier6_03	Miami Tier6 (Holo)	riptide_surfshop/tier6_03	mythical
+tier6_04	Forge Tier6 (Holo)	riptide_surfshop/tier6_04	mythical
+surf_ava_01	Sticker Bomb Surf Ava (Foil)	riptide_surfshop/surf_ava_01	legendary
+surf_ava_02	Dragon Lore Surf Ava (Foil)	riptide_surfshop/surf_ava_02	legendary
+surf_ava_03	Akihabara Accept Surf Ava (Foil)	riptide_surfshop/surf_ava_03	legendary
+surf_ava_04	Dark Water Surf Ava (Foil)	riptide_surfshop/surf_ava_04	legendary
+surf_k_01	Sticker Bomb Surf K (Foil)	riptide_surfshop/surf_k_01	legendary
+surf_k_02	Hypnotic Surf K (Foil)	riptide_surfshop/surf_k_02	legendary
+surf_k_03	Fire Serpent Surf K (Foil)	riptide_surfshop/surf_k_03	legendary
+surf_k_04	Blaze Surf K (Foil)	riptide_surfshop/surf_k_04	legendary
+poisonfrog_01	Ultraviolet Poison Frog (Foil)	riptide_surfshop/poisonfrog_01	legendary
+poisonfrog_02	Lore Poison Frog (Foil)	riptide_surfshop/poisonfrog_02	legendary
+poisonfrog_03	Crimson Web Poison Frog (Foil)	riptide_surfshop/poisonfrog_03	legendary
+poisonfrog_04	Doppler Poison Frog (Foil)	riptide_surfshop/poisonfrog_04	legendary
+community2021_clutch_or_kick_glossy	Clutch Or Kick	community2021/clutch_or_kick_glossy	rare
+community2021_dr_dazzles_paper	Dr. Dazzles	community2021/dr_dazzles_paper	rare
+community2021_ez_glossy	EZ	community2021/ez_glossy	rare
+community2021_fast_banana_paper	Fast Banana	community2021/fast_banana_paper	rare
+community2021_hard_carry_paper	Hard Carry	community2021/hard_carry_paper	rare
+community2021_kitted_out_paper	Kitted Out	community2021/kitted_out_paper	rare
+community2021_nademan_paper	Nademan	community2021/nademan_paper	rare
+community2021_no_time_paper	No Time	community2021/no_time_paper	rare
+community2021_retro_leet_paper	Retro Leet	community2021/retro_leet_paper	rare
+community2021_speedy_glossy	Speedy T	community2021/speedy_glossy	rare
+community2021_this_is_fine_ct_paper	This Is Fine (CT)	community2021/this_is_fine_ct_paper	rare
+community2021_war_paper	War	community2021/war_paper	rare
+community2021_cyber_romanov_holo	Cyber Romanov (Holo)	community2021/cyber_romanov_holo	mythical
+community2021_eye_contact_holo	Eye Contact (Holo)	community2021/eye_contact_holo	mythical
+community2021_handle_with_care_holo	Handle With Care (Holo)	community2021/handle_with_care_holo	mythical
+community2021_i_see_you_holo	I See You (Holo)	community2021/i_see_you_holo	mythical
+community2021_nice_clutch_holo	Nice Clutch (Holo)	community2021/nice_clutch_holo	mythical
+community2021_runtime_holo	Runtime (Holo)	community2021/runtime_holo	mythical
+community2021_ace_devil_foil	Ace Devil (Foil)	community2021/ace_devil_foil	legendary
+community2021_bullet_hell_foil	Bullet Hell (Foil)	community2021/bullet_hell_foil	legendary
+community2021_purrurists_foil	Purrurists (Foil)	community2021/purrurists_foil	legendary
+bf2042_bf_portal_paper	Battlefield Portal	bf2042/bf_portal_paper	rare
+bf2042_bf2042_paper	BF 2042	bf2042/bf2042_paper	rare
+bf2042_comehereboy_paper	Come Here Boy	bf2042/comehereboy_paper	rare
+bf2042_fortytwo_paper	Forty Two	bf2042/fortytwo_paper	rare
+bf2042_knives_out_paper	Knives Out	bf2042/knives_out_paper	rare
+bf2042_mrchompy_paper	Mr. Chompy	bf2042/mrchompy_paper	rare
+bf2042_nopats_paper	No Pats	bf2042/nopats_paper	rare
+bf2042_pac_ai_paper	PAC AI	bf2042/pac_ai_paper	rare
+bf2042_ptfo_paper	PTFO	bf2042/ptfo_paper	rare
+bf2042_ready_for_battle_paper	Ready For Battle	bf2042/ready_for_battle_paper	rare
+bf2042_nopats_holo	No Pats (Holo)	bf2042/nopats_holo	mythical
+bf2042_ptfo_holo	PTFO (Holo)	bf2042/ptfo_holo	mythical
+bf2042_ready_for_battle_holo	Ready For Battle (Holo)	bf2042/ready_for_battle_holo	mythical
+bf2042_wingsuit_holo	Wingsuit (Holo)	bf2042/wingsuit_holo	mythical
+bf2042_mrchompy_foil	Mr. Chompy (Foil)	bf2042/mrchompy_foil	legendary
+bf2042_pac_ai_foil	PAC AI (Foil)	bf2042/pac_ai_foil	legendary
+bf2042_tornado_chaos_foil	Tornado Chaos (Foil)	bf2042/tornado_chaos_foil	legendary
+op_riptide_bandana_paper	Seeing Red	op_riptide/bandana_paper	rare
+op_riptide_goggles_paper	Dead Eye	op_riptide/goggles_paper	rare
+op_riptide_great_wave_paper	Great Wave	op_riptide/great_wave_paper	rare
+op_riptide_gutted_paper	Gutted	op_riptide/gutted_paper	rare
+op_riptide_kill_count_paper	Kill Count	op_riptide/kill_count_paper	rare
+op_riptide_operation_riptide_paper	Operation Riptide	op_riptide/operation_riptide_paper	rare
+op_riptide_rising_tide_paper	Liquid Fire	op_riptide/rising_tide_paper	rare
+op_riptide_sea_swallow_paper	Chicken of the Sky	op_riptide/sea_swallow_paper	rare
+op_riptide_goggles_holo	Dead Eye (Holo)	op_riptide/goggles_holo	mythical
+op_riptide_great_wave_holo	Great Wave (Holo)	op_riptide/great_wave_holo	mythical
+op_riptide_kill_count_holo	Kill Count (Holo)	op_riptide/kill_count_holo	mythical
+op_riptide_rising_tide_holo	Liquid Fire (Holo)	op_riptide/rising_tide_holo	mythical
+op_riptide_bandana_foil	Seeing Red (Foil)	op_riptide/bandana_foil	legendary
+op_riptide_great_wave_foil	Great Wave (Foil)	op_riptide/great_wave_foil	legendary
+spring2022_b_hop_paper	B Hop	spring2022/b_hop_paper	rare
+spring2022_flick_shot_paper	Flick Shotter	spring2022/flick_shot_paper	rare
+spring2022_get_clucked_paper	Get Clucked	spring2022/get_clucked_paper	rare
+spring2022_im_lit_paper	I'm Lit	spring2022/im_lit_paper	rare
+spring2022_mischief_t_paper	Little Mischief	spring2022/mischief_t_paper	rare
+spring2022_my_game_is_paper	Hi, My Game Is	spring2022/my_game_is_paper	rare
+spring2022_run_ct_run_paper	Run CT, Run	spring2022/run_ct_run_paper	rare
+spring2022_smoke_criminal_paper	Smoke Criminal	spring2022/smoke_criminal_paper	rare
+spring2022_squeaky_door_paper	Squeaky Door	spring2022/squeaky_door_paper	rare
+spring2022_teamwork_paper	Rat Pack	spring2022/teamwork_paper	rare
+spring2022_this_is_fine_t_paper	This Is Fine (T)	spring2022/this_is_fine_t_paper	rare
+spring2022_wallbang_paper	Wallbang	spring2022/wallbang_paper	rare
+spring2022_flashblack_holo	Flashblack (Holo)	spring2022/flashblack_holo	mythical
+spring2022_infinite_diamond_holo	Infinite Diamond (Holo)	spring2022/infinite_diamond_holo	mythical
+spring2022_phx_balaclava_holo	Phoenix Balaclava Co. (Holo)	spring2022/phx_balaclava_holo	mythical
+spring2022_sneaky_dept_holo	Sneaky Beaky Dept. (Holo)	spring2022/sneaky_dept_holo	mythical
+spring2022_t_rush_holo	T Rush (Holo)	spring2022/t_rush_holo	mythical
+spring2022_v_for_victory_holo	V For Victory (Holo)	spring2022/v_for_victory_holo	mythical
+spring2022_face_me_foil	Face Me (Foil)	spring2022/face_me_foil	legendary
+spring2022_inferno_diorama_foil	Inferno Diorama (Foil)	spring2022/inferno_diorama_foil	legendary
+spring2022_real_mvp_foil	The Real MVP (Foil)	spring2022/real_mvp_foil	legendary
+spring2022_rock_paper_scissors_foil	Rock, Paper, Scissors (Foil)	spring2022/rock_paper_scissors_foil	legendary
+csgo10_select_agent_paper	Agent Select	csgo10/select_agent_paper	rare
+csgo10_arms_race_paper	Arms Race	csgo10/arms_race_paper	rare
+csgo10_b_day_paper	B-Day	csgo10/b_day_paper	rare
+csgo10_baby_cerberus_paper	Baby Cerberus	csgo10/baby_cerberus_paper	rare
+csgo10_baby_fire_serpent_paper	Baby Fire Serpent	csgo10/baby_fire_serpent_paper	rare
+csgo10_baby_howl_paper	Baby Howl	csgo10/baby_howl_paper	rare
+csgo10_baby_lore_paper	Baby Lore	csgo10/baby_lore_paper	rare
+csgo10_baby_medusa_paper	Baby Medusa	csgo10/baby_medusa_paper	rare
+csgo10_beaky_decade_paper	Beaky Decade	csgo10/beaky_decade_paper	rare
+csgo10_booth_paper	Booth	csgo10/booth_paper	rare
+csgo10_cs_on_the_go_paper	C-S On The Go	csgo10/cs_on_the_go_paper	rare
+csgo10_call_your_flashes_paper	Call Your Flashes	csgo10/call_your_flashes_paper	rare
+csgo10_chicken_whisperer_paper	Chicken Whisperer	csgo10/chicken_whisperer_paper	rare
+csgo10_roshambo_paper	Choose Wisely	csgo10/roshambo_paper	rare
+csgo10_clicking_heads_paper	Clicking Heads	csgo10/clicking_heads_paper	rare
+csgo10_co_co_cs_paper	Co Co Co	csgo10/co_co_cs_paper	rare
+csgo10_cursed_penmanship_paper	Cursed Penmanship	csgo10/cursed_penmanship_paper	rare
+csgo10_dragons_keep_paper	Dragon's Keep	csgo10/dragons_keep_paper	rare
+csgo10_dragon_tale_paper	Dragon Tale	csgo10/dragon_tale_paper	rare
+csgo10_dreams_and_mimics_paper	Dreams And Mimics	csgo10/dreams_and_mimics_paper	rare
+csgo10_endless_cycle_paper	Endless Cycle	csgo10/endless_cycle_paper	rare
+csgo10_exo_jumper_paper	Exo Jumper	csgo10/exo_jumper_paper	rare
+csgo10_free_range_paper	Free Range	csgo10/free_range_paper	rare
+csgo10_go_paper	GO	csgo10/go_paper	rare
+csgo10_glhf_paper	Good Sports	csgo10/glhf_paper	rare
+csgo10_good_versus_evil_paper	Good Versus Evil	csgo10/good_versus_evil_paper	rare
+csgo10_green_problem_paper	Green's Problem	csgo10/green_problem_paper	rare
+csgo10_laser_beam_paper	Laser Beam	csgo10/laser_beam_paper	rare
+csgo10_monster_paper	Monster	csgo10/monster_paper	rare
+csgo10_noble_steed_paper	Noble Steed	csgo10/noble_steed_paper	rare
+csgo10_not_for_resale_paper	Not For Resale	csgo10/not_for_resale_paper	rare
+csgo10_press_start_paper	Press Start	csgo10/press_start_paper	rare
+csgo10_rush_more_paper	Rush More	csgo10/rush_more_paper	rare
+csgo10_save_me_paper	Save Me	csgo10/save_me_paper	rare
+csgo10_rush_b_csgo10_paper	Shifty Tactics	csgo10/rush_b_csgo10_paper	rare
+csgo10_this_is_fine_h_paper	This Is Fine (H)	csgo10/this_is_fine_h_paper	rare
+csgo10_tv_on_mirage_paper	TV On Mirage	csgo10/tv_on_mirage_paper	rare
+csgo10_zeused_paper	Zeused	csgo10/zeused_paper	rare
+csgo10_ace_clutch_co_holo	Ace Clutch Co. (Holo)	csgo10/ace_clutch_co_holo	mythical
+csgo10_blue_gem_glitter	Blue Gem (Glitter)	csgo10/blue_gem_glitter	mythical
+csgo10_cbbl_holo	Cbbl (Holo)	csgo10/cbbl_holo	mythical
+csgo10_conspiracy_club_holo	Conspiracy Club (Holo)	csgo10/conspiracy_club_holo	mythical
+csgo10_defuse_it_holo	Defuse It (Holo)	csgo10/defuse_it_holo	mythical
+csgo10_get_smoked_holo	Get Smoked (Holo)	csgo10/get_smoked_holo	mythical
+csgo10_boom_glitter	Go Boom (Glitter)	csgo10/boom_glitter	mythical
+csgo10_kawaii_ct_holo	Kawaii CT (Holo)	csgo10/kawaii_ct_holo	mythical
+csgo10_kawaii_t_holo	Kawaii T (Holo)	csgo10/kawaii_t_holo	mythical
+csgo10_train_heart_holo	Leaving The Station (Holo)	csgo10/train_heart_holo	mythical
+csgo10_pain_train_holo	Pain Train (Holo)	csgo10/pain_train_holo	mythical
+csgo10_vertigos_hero_holo	Vertigo's Hero (Holo)	csgo10/vertigos_hero_holo	mythical
+csgo10_zeusception_holo	Zeusception (Holo)	csgo10/zeusception_holo	mythical
+csgo10_jojo_csgo_foil	Approaching Site (Foil)	csgo10/jojo_csgo_foil	legendary
+csgo10_dust_fa_foil	Dust FA (Foil)	csgo10/dust_fa_foil	legendary
+csgo10_in_the_fire_foil	In The Fire (Foil)	csgo10/in_the_fire_foil	legendary
+csgo10_overpass_b_foil	Overpass Diorama (Foil)	csgo10/overpass_b_foil	legendary
+csgo10_pure_malt_foil	Pure Malt (Foil)	csgo10/pure_malt_foil	legendary
+csgo10_wildfire_genie_foil	Romanov's Fire (Foil)	csgo10/wildfire_genie_foil	legendary
+csgo10_showdown_foil	Showdown (Foil)	csgo10/showdown_foil	legendary
+csgo10_ten_years_foil	Ten Years (Foil)	csgo10/ten_years_foil	legendary
+csgo10_music_kits_lenticular	DJ Safecracker (Lenticular)	csgo10/music_kits_lenticular	ancient
+csgo10_freeze_lenticular	Freeze (Lenticular)	csgo10/freeze_lenticular	ancient
+csgo10_gotv_lenticular	Global TV (Lenticular)	csgo10/gotv_lenticular	ancient
+csgo10_magic_rush_ball_lenticular	Magic Rush Ball (Lenticular)	csgo10/magic_rush_ball_lenticular	ancient
+csgo10_skin_lover_lenticular	Skin Lover (Lenticular)	csgo10/skin_lover_lenticular	ancient
+csgo10_tv_installation_lenticular	TV Installation (Lenticular)	csgo10/tv_installation_lenticular	ancient
+community2022_360_no_scope_paper	360 No Scope	community2022/360_no_scope_paper	rare
+community2022_aim_and_fire_paper	Aim And Fire	community2022/aim_and_fire_paper	rare
+community2022_batter_up_paper	Batter Up	community2022/batter_up_paper	rare
+community2022_butterfly_sting_paper	Sting Like A Butterfly	community2022/butterfly_sting_paper	rare
+community2022_fireball_paper	Fireball	community2022/fireball_paper	rare
+community2022_noir_grenade_paper	Explosive Strength	community2022/noir_grenade_paper	rare
+community2022_not_a_bot_paper	Not A Bot	community2022/not_a_bot_paper	rare
+community2022_pride_paper	Knife's Edge	community2022/pride_paper	rare
+community2022_run_t_run_paper	Run T, Run	community2022/run_t_run_paper	rare
+community2022_spectators_paper	Spectators	community2022/spectators_paper	rare
+community2022_thundercat_paper	Zap Cat	community2022/thundercat_paper	rare
+community2022_well_played_paper	Well Played	community2022/well_played_paper	rare
+community2022_cyber_chicken_holo	Cyber Chicken (Holo)	community2022/cyber_chicken_holo	mythical
+community2022_in_your_head_holo	Mind Games (Holo)	community2022/in_your_head_holo	mythical
+community2022_infinite_triangle_holo	Infinite Triangle (Holo)	community2022/infinite_triangle_holo	mythical
+community2022_salty_holo	Salty (Holo)	community2022/salty_holo	mythical
+community2022_snow_glitter	Snowfall (Glitter)	community2022/snow_glitter	mythical
+community2022_street_artist_glitter	Street Artist (Glitter)	community2022/street_artist_glitter	mythical
+community2022_ninja_smokes_foil	Hidden Hero (Foil)	community2022/ninja_smokes_foil	legendary
+community2022_old_eye_foil	Ethereal Gaze (Foil)	community2022/old_eye_foil	legendary
+community2022_peek_foil	Peek Me (Foil)	community2022/peek_foil	legendary
+paper_this_is_fine_chicken	This Is Fine (Chicken)	community/community_2024/paper_this_is_fine_chicken	rare
+paper_retro_zeus	Retro Zeus	community/community_2024/paper_retro_zeus	rare
+paper_please_return	Please Return To	community/community_2024/paper_please_return	rare
+paper_peek_a_boo	Peek-A-Boo	community/community_2024/paper_peek_a_boo	rare
+paper_kickflip_47	AKickflip-47	community/community_2024/paper_kickflip_47	rare
+paper_easy_for_ricksaw	Easy For Ricksaw	community/community_2024/paper_easy_for_ricksaw	rare
+paper_bum_a_smoke	Bum A Smoke	community/community_2024/paper_bum_a_smoke	rare
+paper_angry_t	Angry T	community/community_2024/paper_angry_t	rare
+glitter_lotus	Lotus (Glitter)	community/community_2024/glitter_lotus	mythical
+glitter_pushing_smokes	Pushing Smokes (Glitter)	community/community_2024/glitter_pushing_smokes	mythical
+holo_cedar_creek	Cedar Creek (Holo)	community/community_2024/holo_cedar_creek	mythical
+holo_lit	Lit (Holo)	community/community_2024/holo_lit	mythical
+holo_loving_eyes	Loving Eyes (Holo)	community/community_2024/holo_loving_eyes	mythical
+holo_try_hard	Try Hard (Holo)	community/community_2024/holo_try_hard	mythical
+foil_lost_in_smoke	Lost In Smoke (Foil)	community/community_2024/foil_lost_in_smoke	legendary
+foil_on_eco	On An Eco (Foil)	community/community_2024/foil_on_eco	legendary
+foil_ouchie	Ouchie (Foil)	community/community_2024/foil_ouchie	legendary
+foil_sealed	Factory Sealed (Foil)	community/community_2024/foil_sealed	legendary
+lenticular_dystopian_gaze	Dystopian Gaze (Lenticular)	community/community_2024/lenticular_dystopian_gaze	ancient
+lenticular_econometer	Econometer (Lenticular)	community/community_2024/lenticular_econometer	ancient
+lenticular_old_school	Old School (Lenticular)	community/community_2024/lenticular_old_school	ancient
+paper_world_eaters_1	World Eaters 1	community/warhammer_decals/paper_world_eaters_1	rare
+paper_world_eaters_2	World Eaters 2	community/warhammer_decals/paper_world_eaters_2	rare
+paper_word_bearers_1	Word Bearers 1	community/warhammer_decals/paper_word_bearers_1	rare
+paper_word_bearers_2	Word Bearers 2	community/warhammer_decals/paper_word_bearers_2	rare
+paper_thousand_sons_1	Thousand Sons 1	community/warhammer_decals/paper_thousand_sons_1	rare
+paper_thousand_sons_2	Thousand Sons 2	community/warhammer_decals/paper_thousand_sons_2	rare
+paper_night_lords_1	Night Lords 1	community/warhammer_decals/paper_night_lords_1	rare
+paper_night_lords_2	Night Lords 2	community/warhammer_decals/paper_night_lords_2	rare
+paper_iron_warriors_1	Iron Warriors 1	community/warhammer_decals/paper_iron_warriors_1	rare
+paper_iron_warriors_2	Iron Warriors 2	community/warhammer_decals/paper_iron_warriors_2	rare
+paper_emperors_children_1	Emperor's Children 1	community/warhammer_decals/paper_emperors_children_1	rare
+paper_emperors_children_2	Emperor's Children 2	community/warhammer_decals/paper_emperors_children_2	rare
+paper_death_guard_1	Death Guard 1	community/warhammer_decals/paper_death_guard_1	rare
+paper_death_guard_2	Death Guard 2	community/warhammer_decals/paper_death_guard_2	rare
+paper_black_legion_1	Black Legion 1	community/warhammer_decals/paper_black_legion_1	rare
+paper_black_legion_2	Black Legion 2	community/warhammer_decals/paper_black_legion_2	rare
+paper_alpha_legion_1	Alpha Legion 1	community/warhammer_decals/paper_alpha_legion_1	rare
+paper_alpha_legion_2	Alpha Legion 2	community/warhammer_decals/paper_alpha_legion_2	rare
+paper_ultramarines	Ultramarines	community/warhammer_decals/paper_ultramarines	rare
+paper_dark_angels	Dark Angels	community/warhammer_decals/paper_dark_angels	rare
+paper_blood_angels	Blood Angels	community/warhammer_decals/paper_blood_angels	rare
+paper_space_wolves	Space Wolves	community/warhammer_decals/paper_space_wolves	rare
+paper_imperial_fists	Imperial Fists	community/warhammer_decals/paper_imperial_fists	rare
+paper_salamanders	Salamanders	community/warhammer_decals/paper_salamanders	rare
+paper_white_scars	White Scars	community/warhammer_decals/paper_white_scars	rare
+paper_raven_guard	Raven Guard	community/warhammer_decals/paper_raven_guard	rare
+paper_40k_skull	Astartes Skull	community/warhammer_decals/paper_40k_skull	rare
+paper_raptors	Raptors	community/warhammer_decals/paper_raptors	rare
+paper_iron_hands	Iron Hands	community/warhammer_decals/paper_iron_hands	rare
+paper_40k_halo	Iron Halo	community/warhammer_decals/paper_40k_halo	rare
+paper_flesh_tearers	Flesh Tearers	community/warhammer_decals/paper_flesh_tearers	rare
+paper_scythes_emperor	Scythes of the Emperor	community/warhammer_decals/paper_scythes_emperor	rare
+paper_blood_ravens	Blood Ravens	community/warhammer_decals/paper_blood_ravens	rare
+paper_adeptus_astartes	Adeptus Astartes	community/warhammer_decals/paper_adeptus_astartes	rare
+paper_crimson_fists	Crimson Fists	community/warhammer_decals/paper_crimson_fists	rare
+paper_silver_skulls	Silver Skulls	community/warhammer_decals/paper_silver_skulls	rare
+paper_ecclesiarchy	Ecclesiarchy	community/warhammer_decals/paper_ecclesiarchy	rare
+paper_inquisition	Inquisition	community/warhammer_decals/paper_inquisition	rare
+paper_imperial_knights	Imperial Knights	community/warhammer_decals/paper_imperial_knights	rare
+paper_astra_militarum	Astra Militarum 1	community/warhammer_decals/paper_astra_militarum	rare
+paper_astra_militarum_2	Astra Militarum 2	community/warhammer_decals/paper_astra_militarum_2	rare
+paper_cadia	Cadia	community/warhammer_decals/paper_cadia	rare
+paper_adeptus_custodes_1	Adeptus Custodes 1	community/warhammer_decals/paper_adeptus_custodes_1	rare
+paper_adeptus_custodes_2	Adeptus Custodes 2	community/warhammer_decals/paper_adeptus_custodes_2	rare
+paper_officio_assassinorum	Officio Assassinorum	community/warhammer_decals/paper_officio_assassinorum	rare
+paper_adepta_sororitas_1	Sisters of Battle 1	community/warhammer_decals/paper_adepta_sororitas_1	rare
+paper_adepta_sororitas_2	Sisters of Battle 2	community/warhammer_decals/paper_adepta_sororitas_2	rare
+paper_adeptus_arbites	Adeptus Arbites	community/warhammer_decals/paper_adeptus_arbites	rare
+paper_catachan	Catachan	community/warhammer_decals/paper_catachan	rare
+paper_adeptus_titanicus_1	Adeptus Titanicus 1	community/warhammer_decals/paper_adeptus_titanicus_1	rare
+paper_adeptus_titanicus_2	Adeptus Titanicus 2	community/warhammer_decals/paper_adeptus_titanicus_2	rare
+paper_adeptus_mechanicus_1	Adeptus Mechanicus 1	community/warhammer_decals/paper_adeptus_mechanicus_1	rare
+paper_adeptus_mechanicus_2	Adeptus Mechanicus 2	community/warhammer_decals/paper_adeptus_mechanicus_2	rare
+paper_rogue_trader	Rogue Trader	community/warhammer_decals/paper_rogue_trader	rare
+paper_tyranids_1	Tyranids 1	community/warhammer_decals/paper_tyranids_1	rare
+paper_tyranids_2	Tyranids 2	community/warhammer_decals/paper_tyranids_2	rare
+paper_tau_empire_1	T'au Empire 1	community/warhammer_decals/paper_tau_empire_1	rare
+paper_tau_empire_2	T'au Empire 2	community/warhammer_decals/paper_tau_empire_2	rare
+paper_orks_1	Orks 1	community/warhammer_decals/paper_orks_1	rare
+paper_orks_2	Orks 2	community/warhammer_decals/paper_orks_2	rare
+paper_necrons_1	Necron Ankh	community/warhammer_decals/paper_necrons_1	rare
+paper_necrons_2	Necron Glyphs	community/warhammer_decals/paper_necrons_2	rare
+paper_leagues_votann_1	Leagues of Votann 1	community/warhammer_decals/paper_leagues_votann_1	rare
+paper_leagues_votann_2	Leagues of Votann 2	community/warhammer_decals/paper_leagues_votann_2	rare
+paper_harlequins_1	Harlequins 1	community/warhammer_decals/paper_harlequins_1	rare
+paper_harlequins_2	Harlequins 2	community/warhammer_decals/paper_harlequins_2	rare
+paper_genestealer_cults_1	Genestealer Cults 1	community/warhammer_decals/paper_genestealer_cults_1	rare
+paper_genestealer_cults_2	Genestealer Cults 2	community/warhammer_decals/paper_genestealer_cults_2	rare
+paper_drukhari_1	Drukhari 1	community/warhammer_decals/paper_drukhari_1	rare
+paper_drukhari_2	Drukhari 2	community/warhammer_decals/paper_drukhari_2	rare
+paper_aeldari_1	Aeldari 1	community/warhammer_decals/paper_aeldari_1	rare
+paper_aeldari_2	Aeldari 2	community/warhammer_decals/paper_aeldari_2	rare
+paper_airhorn	Airhorn	community/jackass/paper_airhorn	rare
+paper_assterisk	Assterisk	community/jackass/paper_assterisk	rare
+paper_big_red_rocket	Big Red Rocket	community/jackass/paper_big_red_rocket	rare
+paper_boner_snap	Boner Snap	community/jackass/paper_boner_snap	rare
+paper_censored	Censored	community/jackass/paper_censored	rare
+paper_explosives	Explosives	community/jackass/paper_explosives	rare
+paper_golf_cart	Golf Cart	community/jackass/paper_golf_cart	rare
+paper_leave_a_mark	Gonna Leave A Mark	community/jackass/paper_leave_a_mark	rare
+paper_head_in_hands	Head In Hands	community/jackass/paper_head_in_hands	rare
+paper_high_five	High Five!	community/jackass/paper_high_five	rare
+paper_jackass	Jackass	community/jackass/paper_jackass	rare
+paper_partyboy	Partyboy	community/jackass/paper_partyboy	rare
+paper_radiograph	Radiograph	community/jackass/paper_radiograph	rare
+paper_rocket_skates	Rocket Skates	community/jackass/paper_rocket_skates	rare
+paper_skull_bunny	Skull Bunny	community/jackass/paper_skull_bunny	rare
+paper_bull	The Magic Trick	community/jackass/paper_bull	rare
+paper_warning	WARNING	community/jackass/paper_warning	rare
+paper_zzzap	ZZZAP!	community/jackass/paper_zzzap	rare
+glitter_airhorn	Airhorn (Glitter)	community/jackass/glitter_airhorn	mythical
+glitter_assterisk	Assterisk (Glitter)	community/jackass/glitter_assterisk	mythical
+glitter_big_red_rocket	Big Red Rocket (Glitter)	community/jackass/glitter_big_red_rocket	mythical
+glitter_head_in_hands	Head In Hands (Glitter)	community/jackass/glitter_head_in_hands	mythical
+glitter_high_five	High Five! (Glitter)	community/jackass/glitter_high_five	mythical
+glitter_skull_bunny	Skull Bunny (Glitter)	community/jackass/glitter_skull_bunny	mythical
+glitter_bull	The Magic Trick (Glitter)	community/jackass/glitter_bull	mythical
+holo_boner_snap	Boner Snap (Holo)	community/jackass/holo_boner_snap	mythical
+holo_jackass	Jackass (Holo)	community/jackass/holo_jackass	mythical
+holo_leave_a_mark	Gonna Leave A Mark (Holo)	community/jackass/holo_leave_a_mark	mythical
+holo_radiograph	Radiograph (Holo)	community/jackass/holo_radiograph	mythical
+holo_rocket_skates	Rocket Skates (Holo)	community/jackass/holo_rocket_skates	mythical
+holo_zzzap	ZZZAP! (Holo)	community/jackass/holo_zzzap	mythical
+foil_assterisk	Assterisk (Foil)	community/jackass/foil_assterisk	legendary
+foil_censored	Censored (Foil)	community/jackass/foil_censored	legendary
+foil_explosives	Explosives (Foil)	community/jackass/foil_explosives	legendary
+foil_radiograph	Radiograph (Foil)	community/jackass/foil_radiograph	legendary
+foil_warning	WARNING (Foil)	community/jackass/foil_warning	legendary
+lenticular_electric_avenue	Electric Avenue (Lenticular)	community/jackass/lenticular_electric_avenue	ancient
+lenticular_partyboy	Partyboy (Lenticular)	community/jackass/lenticular_partyboy	ancient
+lenticular_poo_cocktail	Poo Cocktail Supreme (Lenticular)	community/jackass/lenticular_poo_cocktail	ancient

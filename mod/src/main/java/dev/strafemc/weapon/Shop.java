@@ -21,12 +21,12 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and eight offers bought
- * from it (cases in a stock of 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
+ * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and ten offers bought
+ * from it (cases in a stock of 1-3, a sticker capsule 2-6, a graffiti box 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
-	public static final int ROTATION = 36_000, OFFERS = 8; // 30 minutes of play
+	public static final int ROTATION = 36_000, OFFERS = 10; // 30 minutes of play
 	/** Selling pays this share of a skin's worth. */
 	public static final double SELL_RATE = 0.75;
 	/** Offer prices: the item's worth times 80-110%. */
@@ -40,7 +40,7 @@ public final class Shop {
 	 */
 	private static final double CASE_SHARE = 1.2;
 
-	/** cents: the balance; rotation: which shop; bought: how many of each offer were bought, 2 bits each; progress: ticks into the rotation (synced each minute). */
+	/** cents: the balance; rotation: which shop; bought: how many of each offer were bought, 3 bits each; progress: ticks into the rotation (synced each minute). */
 	public record State(long cents, int rotation, int bought, int progress) {
 		public static final State NONE = new State(0, 0, 0, 0);
 
@@ -56,7 +56,7 @@ public final class Shop {
 
 		/** How many of offer i were bought this rotation. */
 		public int bought(int i) {
-			return bought >> 2 * i & 3;
+			return bought >> 3 * i & 7;
 		}
 	}
 
@@ -65,7 +65,7 @@ public final class Shop {
 	private static final AttachmentType<Integer> PROGRESS = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "shop_progress"),
 			b -> b.persistent(Codec.INT).copyOnDeath().initializer(() -> 0));
 
-	/** item: what you get; cents: its price; stock: how many can be bought this rotation (cases 1-3, the rest 1). */
+	/** item: what you get; cents: its price; stock: how many can be bought this rotation (cases 1-3, sticker capsules 2-6, graffiti boxes 1-3, the rest 1). */
 	public record Offer(ItemStack item, long cents, int stock) {}
 
 	private Shop() {}
@@ -104,7 +104,7 @@ public final class Shop {
 		p.setAttached(DATA, new State(s.cents(), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
 	}
 
-	/** The rotation's offers for this player: three cases, a Universal Key and four high-grade skins (knives and gloves too). */
+	/** The rotation's offers for this player: three cases, a sticker capsule, a graffiti box, a Universal Key and four high-grade skins (knives and gloves too). */
 	public static List<Offer> offers(UUID player, int rotation) {
 		Random rng = new Random((player.getMostSignificantBits() * 31 + player.getLeastSignificantBits()) * 1_000_003L + rotation);
 		List<Offer> out = new ArrayList<>();
@@ -112,6 +112,16 @@ public final class Shop {
 		java.util.Collections.shuffle(cases, rng);
 		for (int i = 0; i < 3 && i < cases.size(); i++)
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
+		// a sticker capsule (2-6 of it, asked for) and a graffiti box (1-3): priced like cases, their average opening x CASE_SHARE
+		List<Cases.Case> stickers = Cases.capsules("sticker"), boxes = Cases.capsules("spray");
+		if (!stickers.isEmpty()) {
+			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));
+			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 2 + rng.nextInt(5)));
+		}
+		if (!boxes.isEmpty()) {
+			Cases.Case c = boxes.get(rng.nextInt(boxes.size()));
+			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 1 + rng.nextInt(3)));
+		}
 		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1));
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();
 		for (SkinWraps.Wrap w : SkinWraps.all())
@@ -159,6 +169,11 @@ public final class Shop {
 		}
 		if (!c.special().isEmpty()) ev += 0.0026 * 375;
 		return Math.max(0.03, ev * CASE_SHARE);
+	}
+
+	/** A sticker capsule's / graffiti box's price base: its average opening x CASE_SHARE (about $1.20 / $1.00, see Worth). */
+	static double capsuleWorth(Cases.Case c) {
+		return Math.max(0.03, Worth.capsuleOpening(c) * CASE_SHARE);
 	}
 
 	/** What the shop buys: skins (with a worth) and money vouchers (with a value). */
@@ -216,7 +231,7 @@ public final class Shop {
 			p.sendOverlayMessage(Component.literal("Not enough balance."));
 			return;
 		}
-		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1 << 2 * i), p.getAttachedOrElse(PROGRESS, 0)));
+		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1 << 3 * i), p.getAttachedOrElse(PROGRESS, 0)));
 		ItemStack item = o.item().copy();
 		if (!p.getInventory().add(item)) p.drop(item, false);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} bought {} for {}", p.getScoreboardName(), o.item().getHoverName().getString(), money(o.cents()));

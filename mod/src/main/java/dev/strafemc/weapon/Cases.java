@@ -26,12 +26,34 @@ public final class Cases {
 		}
 
 		public boolean gloves() {
-			return !item.startsWith("weapon_");
+			return !item.startsWith("weapon_") && !sticker() && !spray();
+		}
+
+		/** From a sticker capsule: the kit is the sticker (Stickers). */
+		public boolean sticker() {
+			return item.equals("sticker");
+		}
+
+		/** From a graffiti box: the kit is the graffiti (Sprays). */
+		public boolean spray() {
+			return item.equals("spray");
 		}
 	}
 
-	/** image: CS2's inventory picture path (econ/weapon_cases/...). */
-	public record Case(String id, String name, String image, Map<SkinWraps.Rarity, List<Entry>> guns, List<Entry> special, String key) {}
+	/**
+	 * image: CS2's inventory picture path (econ/weapon_cases/...); kind: "case" (a weapon case), "sticker" (a sticker
+	 * capsule) or "spray" (a graffiti box). Capsules and boxes need no key (key ""), as most of CS2's don't.
+	 */
+	public record Case(String id, String name, String image, Map<SkinWraps.Rarity, List<Entry>> guns, List<Entry> special, String key, String kind) {
+		/** A sticker capsule or graffiti box rather than a weapon case. */
+		public boolean capsule() {
+			return !kind.equals("case");
+		}
+
+		public boolean needsKey() {
+			return !key.isEmpty();
+		}
+	}
 
 	/** A case's key (CS2 matches them by the tool restriction both carry): its English name and inventory picture. */
 	public record Key(String id, String name, String image) {}
@@ -66,23 +88,24 @@ public final class Cases {
 	/** What a roll gave: the entry, its rarity (null: a rare special item) and the item handed out. */
 	public record Drop(Entry entry, SkinWraps.Rarity rarity, ItemStack stack) {}
 
-	private static final Map<String, Case> ALL = load();
+	private static final Map<String, Case> ALL = load("/strafemc/cases.tsv", false), CAPSULES = load("/strafemc/capsules.tsv", true);
 
 	/** The odds per tier (CS2's published numbers; the rest of the 100% is the rare special item). */
 	private static final double MIL_SPEC = 0.7992, RESTRICTED = 0.1598, CLASSIFIED = 0.032, COVERT = 0.0064;
 
 	private Cases() {}
 
-	private static Map<String, Case> load() {
+	/** cases.tsv rows end in the rare special items and the key; capsules.tsv rows in the kind ("sticker" / "spray"). */
+	private static Map<String, Case> load(String path, boolean capsules) {
 		Map<String, Case> out = new LinkedHashMap<>();
-		var in = Cases.class.getResourceAsStream("/strafemc/cases.tsv");
+		var in = Cases.class.getResourceAsStream(path);
 		if (in == null) return out;
 		try (BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
 			String line;
 			while ((line = r.readLine()) != null) {
 				if (line.isBlank() || line.startsWith("#")) continue;
 				String[] f = line.split("\t", -1);
-				if (f.length < 5) continue;
+				if (f.length < (capsules ? 4 : 5)) continue;
 				Map<SkinWraps.Rarity, List<Entry>> guns = new EnumMap<>(SkinWraps.Rarity.class);
 				for (String e : f[3].split(" ")) {
 					int c = e.indexOf(':');
@@ -90,12 +113,16 @@ public final class Cases {
 					SkinWraps.Rarity rar = c > 0 ? rarity(e.substring(0, c)) : null;
 					if (en != null && rar != null) guns.computeIfAbsent(rar, k -> new ArrayList<>()).add(en);
 				}
+				if (capsules) {
+					out.put(f[0], new Case(f[0], f[1], f[2], guns, List.of(), "", f.length > 4 && f[4].equals("spray") ? "spray" : "sticker"));
+					continue;
+				}
 				List<Entry> special = new ArrayList<>();
 				for (String e : f[4].split(" ")) {
 					Entry en = entry(e);
 					if (en != null) special.add(en);
 				}
-				out.put(f[0], new Case(f[0], f[1], f[2], guns, Collections.unmodifiableList(special), f.length > 5 ? f[5] : ""));
+				out.put(f[0], new Case(f[0], f[1], f[2], guns, Collections.unmodifiableList(special), f.length > 5 ? f[5] : "", "case"));
 			}
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.error("[strafemc] cases unreadable", e);
@@ -118,12 +145,28 @@ public final class Cases {
 		}
 	}
 
+	/** A weapon case, sticker capsule or graffiti box. */
 	public static Case get(String id) {
-		return id == null ? null : ALL.get(id);
+		if (id == null) return null;
+		Case c = ALL.get(id);
+		return c != null ? c : CAPSULES.get(id);
 	}
 
+	/** The weapon cases (not the capsules). */
 	public static List<Case> all() {
 		return new ArrayList<>(ALL.values());
+	}
+
+	/** The sticker capsules and graffiti boxes. */
+	public static List<Case> capsules() {
+		return new ArrayList<>(CAPSULES.values());
+	}
+
+	/** Just the sticker capsules ("sticker") or just the graffiti boxes ("spray"). */
+	public static List<Case> capsules(String kind) {
+		List<Case> out = new ArrayList<>();
+		for (Case c : CAPSULES.values()) if (c.kind().equals(kind)) out.add(c);
+		return out;
 	}
 
 	/**
@@ -151,6 +194,13 @@ public final class Cases {
 			List<Entry> pool = new ArrayList<>(list);
 			Collections.shuffle(pool, rng);
 			for (Entry e : pool) {
+				if (c.capsule()) { // a sticker, or a sealed graffiti (the standard ones in a random tint)
+					ItemStack s = stack(e, 0);
+					if (e.spray() && Sprays.get(e.kit()) != null && Sprays.get(e.kit()).tintable() && !Sprays.tints().isEmpty())
+						s.set(WeaponItems.TINT, Sprays.tints().get(rng.nextInt(Sprays.tints().size())).id());
+					if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], s);
+					continue;
+				}
 				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor(SkinWraps.Rarity.values()[t]) ? Wear.roll(e.kit(), rng) : 0);
 				if (!s.isEmpty()) return new Drop(e, SkinWraps.Rarity.values()[t], statTrak(e, s, rng));
 			}
@@ -171,6 +221,11 @@ public final class Cases {
 
 	/** The same with a wear (wraps; gloves stay Factory New for now). */
 	public static ItemStack stack(Entry e, int pattern, float wear) {
+		if (e.sticker()) return Stickers.get(e.kit()) == null ? ItemStack.EMPTY : StickerItem.stack(WeaponItems.STICKER, e.kit());
+		if (e.spray()) {
+			Sprays.Spray sp = Sprays.get(e.kit());
+			return sp == null ? ItemStack.EMPTY : SprayItem.stack(WeaponItems.SPRAY, sp.id(), sp.tintable() ? 2 : 0);
+		}
 		if (e.gloves()) {
 			var skin = GloveSkins.get(e.kit());
 			return skin == null ? ItemStack.EMPTY : GloveItem.stack(WeaponItems.GLOVES.get(skin.kind()), e.kit());

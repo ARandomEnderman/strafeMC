@@ -232,13 +232,21 @@ public final class CarePackage {
 		return SprayItem.stack(WeaponItems.SPRAY, sp.id(), tints.isEmpty() ? 0 : tints.get(rng.nextInt(tints.size())).id());
 	}
 
-	/** A package: CASES weapon cases and finishes for the rest, in random order. */
+	/** The case slot is two sticker capsules this often instead (asked for: capsules from drops, 2x). FLAGGED ours. */
+	static final double CAPSULE_SHARE = 0.25;
+
+	/** A package: CASES weapon cases (now and then two sticker capsules) and finishes for the rest, in random order. */
 	private static List<ItemStack> roll(Random rng) {
 		List<Cases.Case> cases = Cases.all();
 		List<ItemStack> items = new ArrayList<>();
 		for (int i = 0; i < OFFERED; i++) {
 			ItemStack s = i < CASES || pool().stream().allMatch(List::isEmpty) ? ItemStack.EMPTY
 					: rng.nextDouble() < GRAFFITI_SHARE ? graffiti(rng) : dropWrap(rng);
+			List<Cases.Case> capsules = Cases.capsules("sticker");
+			if (s.isEmpty() && !capsules.isEmpty() && rng.nextDouble() < CAPSULE_SHARE) {
+				s = CaseItem.stack(WeaponItems.WEAPON_CASE, capsules.get(rng.nextInt(capsules.size())).id());
+				s.setCount(2);
+			}
 			if (s.isEmpty() && !cases.isEmpty()) s = CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(rng.nextInt(cases.size())).id());
 			items.add(s);
 		}

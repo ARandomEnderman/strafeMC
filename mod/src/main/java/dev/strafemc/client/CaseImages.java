@@ -27,13 +27,20 @@ public final class CaseImages {
 
 	private CaseImages() {}
 
+	/** A sticker's picture is square (econ/stickers/<material>); graffiti have none here (their item icon is used). */
 	private static String base(Cases.Entry e) {
+		if (e.sticker()) {
+			var st = dev.strafemc.weapon.Stickers.get(e.kit());
+			return st == null ? null : "panorama/images/econ/stickers/" + st.material() + "_png";
+		}
+		if (e.spray()) return null;
 		return "panorama/images/econ/default_generated/" + e.item() + "_" + e.kit() + "_light_png";
 	}
 
 	/** The picture's texture once loaded, else null (it starts loading). */
 	public static Identifier get(Cases.Entry e) {
-		return image(base(e));
+		String b = base(e);
+		return b == null ? null : image(b);
 	}
 
 	/** Any CS2 inventory picture by its panorama path without extension ("panorama/images/econ/weapon_cases/crate_community_8_png"). */
@@ -46,7 +53,7 @@ public final class CaseImages {
 	/** Loads every picture a case shows, in one converter run for the missing ones (off the render thread). */
 	public static void load(List<Cases.Entry> entries) {
 		List<String> bases = new ArrayList<>();
-		for (Cases.Entry e : entries) bases.add(base(e));
+		for (Cases.Entry e : entries) if (base(e) != null) bases.add(base(e));
 		loadPaths(bases);
 	}
 

@@ -3,6 +3,7 @@ package dev.strafemc.weapon;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,13 +17,49 @@ import java.util.Map;
  * exteriors and down for worse (FN x3.3, MW x1.17, FT x1, WW x0.85, BS x0.70), and up to 25% more toward the best float
  * of its exterior;</li>
  * <li>StatTrak x2.5 (its 10% odds would say x10);</li>
- * <li>gloves: $375 times (gloves in their case / 24) over the square root of how many cases hold them; sealed graffiti
- * half their grade's price, unsealed ones none.</li>
+ * <li>gloves: $375 times (gloves in their case / 24) over the square root of how many cases hold them;</li>
+ * <li>stickers and sealed graffiti: STICKER / GRAFFITI for a High Grade one, 5x per grade (a Base Grade graffiti 1/25),
+ * times the square root of (items in its capsule tier / the average tier) over the square root of how many capsules hold
+ * it: so a typical sticker capsule's shop price (its average opening x 1.2, as for cases) comes to about $1.20 and a
+ * graffiti box's to about $1.00 (tools/research/capsules/calibrate.py). Unsealed graffiti have none.</li>
  * </ul>
  */
 public final class Worth {
 	private static final double[] GRADE = {0.03, 0.15, 0.75, 3.75, 18.75, 93.75, 1875};
-	private static final double SPECIAL = 375, STATTRAK = 2.5, AVG_TIER = 4, BEST_FLOAT_BONUS = 0.25, GRAFFITI_SHARE = 0.5, AVG_SPECIALS = 24;
+	private static final double SPECIAL = 375, STATTRAK = 2.5, AVG_TIER = 4, BEST_FLOAT_BONUS = 0.25, AVG_SPECIALS = 24;
+	/** A High Grade sticker's / graffiti's worth before scarcity (calibrated, see above). FLAGGED ours. */
+	private static final double STICKER = 0.4854, GRAFFITI = 0.404;
+	/** "sticker|kit" / "spray|id" -> its capsule scarcity. */
+	private static Map<String, Double> capsuleScarcity;
+
+	private static synchronized double capsuleScarcity(String kind, String id) {
+		if (capsuleScarcity == null) {
+			Map<String, Double> out = new HashMap<>();
+			for (String k : new String[] {"sticker", "spray"}) {
+				List<Cases.Case> caps = Cases.capsules(k);
+				Map<String, Integer> sources = new HashMap<>();
+				double sum = 0;
+				int tiers = 0;
+				for (Cases.Case c : caps)
+					for (var list : c.guns().values()) {
+						sum += list.size();
+						tiers++;
+						for (Cases.Entry e : list) sources.merge(e.kit(), 1, Integer::sum);
+					}
+				double avg = tiers == 0 ? 1 : sum / tiers;
+				for (Cases.Case c : caps)
+					for (var list : c.guns().values())
+						for (Cases.Entry e : list)
+							out.merge(k + "|" + e.kit(), Math.sqrt(list.size() / avg) / Math.sqrt(sources.get(e.kit())), Math::max);
+			}
+			capsuleScarcity = out;
+		}
+		return capsuleScarcity.getOrDefault(kind + "|" + id, 1.0);
+	}
+
+	private static double ladder(double highGrade, SkinWraps.Rarity r) {
+		return highGrade * Math.pow(5, r.ordinal() - SkinWraps.Rarity.RARE.ordinal());
+	}
 	/** item|kit -> scarcity of a case's rare special item (gloves): (specials in its case / AVG_SPECIALS) / sqrt(cases holding it). */
 	private static Map<String, Double> specials;
 
@@ -114,10 +151,14 @@ public final class Worth {
 			wear = SkinWrapItem.wear(s);
 			hasWear = true;
 		} else if (s.getItem() instanceof GloveItem g) base = SPECIAL * specialScarcity(g.kind.id, g.kit(s)); // Factory New for now
-		else if (s.getItem() instanceof SprayItem) { // sealed graffiti: half its grade's price; unsealed ones have none
+		else if (s.getItem() instanceof SprayItem) { // sealed graffiti: by grade and how rare in the graffiti boxes; unsealed ones have none
 			Sprays.Spray sp = Sprays.get(SprayItem.spray(s));
 			if (sp == null || !SprayItem.sealed(s)) return -1;
-			base = GRADE[Math.min(GRADE.length - 1, sp.rarity().ordinal())] * GRAFFITI_SHARE;
+			base = ladder(GRAFFITI, sp.rarity()) * capsuleScarcity("spray", sp.id());
+		} else if (s.getItem() instanceof StickerItem) {
+			Stickers.Sticker st = Stickers.get(StickerItem.sticker(s));
+			if (st == null) return -1;
+			base = ladder(STICKER, st.rarity()) * capsuleScarcity("sticker", st.id());
 		} else return -1;
 		if (hasWear) base *= wearFactor(wear);
 		if (StatTrak.kills(s) >= 0) base *= STATTRAK;
@@ -132,6 +173,25 @@ public final class Worth {
 		double[] b = Wear.bandBounds(band);
 		double pos = Math.max(0, Math.min(1, (wear - b[0]) / (b[1] - b[0])));
 		return f * (1 + BEST_FLOAT_BONUS * (1 - pos));
+	}
+
+	/**
+	 * What opening a sticker capsule / graffiti box gives on average: CS2's case odds by tier (High Grade 79.92%, Remarkable
+	 * 15.98%, Exotic 3.2%, Extraordinary the rest), a tier it lacks falling to the next lower one it has, as Cases.roll does.
+	 */
+	public static double capsuleOpening(Cases.Case c) {
+		double[] odds = {0.7992, 0.1598, 0.032, 0.0064 + 0.0026};
+		double ev = 0;
+		for (int t = 0; t < odds.length; t++)
+			for (int k = SkinWraps.Rarity.RARE.ordinal() + t; k >= 0; k--) {
+				var list = c.guns().get(SkinWraps.Rarity.values()[k]);
+				if (list == null || list.isEmpty()) continue;
+				double sum = 0;
+				for (Cases.Entry e : list) sum += Math.max(0, of(Cases.stack(e, 0)));
+				ev += odds[t] * sum / list.size();
+				break;
+			}
+		return ev;
 	}
 
 	/** "$1,234.56". */

@@ -169,7 +169,7 @@ public final class CaseScreen extends Screen {
 		var p = Minecraft.getInstance().player;
 		if (p == null) return 0;
 		if (p.getAbilities().instabuild) return 5;
-		int cases = 0, keys = dev.strafemc.weapon.CaseKeys.count(p, c.key()).total(); // its own and Universal Keys, storage units too
+		int cases = 0, keys = c.needsKey() ? dev.strafemc.weapon.CaseKeys.count(p, c.key()).total() : 5; // its own and Universal Keys, storage units too; capsules need none
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
@@ -259,7 +259,7 @@ public final class CaseScreen extends Screen {
 	/** Red over each unlock button that would use Universal Keys: how many ("2xuK"); the case's own keys go first. */
 	private void universalKeys(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
 		var p = Minecraft.getInstance().player;
-		if (p == null || p.getAbilities().instabuild || spins != null || unlocking) return;
+		if (p == null || p.getAbilities().instabuild || spins != null || unlocking || !c.needsKey()) return;
 		var keys = dev.strafemc.weapon.CaseKeys.count(p, c.key());
 		for (int i = 0; i < unlocks.size(); i++) {
 			Button b = unlocks.get(i);
@@ -277,7 +277,9 @@ public final class CaseScreen extends Screen {
 			int x = x0 + (i % cols) * (TILE + 8), ty = y + (i / cols) * (TILE + 6);
 			Tile t = contents.get(i);
 			tile(g, font, t, x, ty, TILE, TILE);
-			if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null) { // full name, and the exteriors it comes in
+			if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null && c.capsule())
+				g.setTooltipForNextFrame(font, java.util.List.of(Component.literal(TileText.clean(t.name())).withColor(t.color())), java.util.Optional.empty(), mx, my);
+			else if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null) { // full name, and the exteriors it comes in
 				double[] r = dev.strafemc.weapon.Wear.range(t.entry().kit());
 				String lo = dev.strafemc.weapon.Wear.exterior((float) r[0]), hi = dev.strafemc.weapon.Wear.exterior((float) Math.max(r[0], r[1] - 1e-4));
 				g.setTooltipForNextFrame(font, java.util.List.of(Component.literal(TileText.clean(t.name())).withColor(t.color()),
@@ -297,7 +299,7 @@ public final class CaseScreen extends Screen {
 		// CS2's picture of the gun in its skin, 4:3 above the name; the item's own icon until it's loaded
 		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
 		if (pic != null) {
-			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
+			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = t.entry().sticker() ? ph : ph * 4 / 3, px = x + (w - pw) / 2; // stickers are square
 			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 2, 0, 0, pw, ph, pw, ph);
 		} else if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
 		TileText.draw(g, font, t.name(), x + w / 2, y + h - 4 - TileText.HEIGHT, w - 4, 0xFFE0E0E0); // weapon / finish, never cut off
@@ -356,7 +358,19 @@ public final class CaseScreen extends Screen {
 		// a gun or knife: its model in this finish, turned by dragging; gloves (and until the model's baked): CS2's picture
 		Cases.Entry e = s.result().entry();
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
-		if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
+		if (e.sticker() || e.spray()) { // a sticker's square picture, or the graffiti's icon, big in the middle
+			var pic = CaseImages.get(e);
+			int side = ch - 16;
+			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, width / 2 - side / 2, py + 8, 0, 0, side, side, side, side);
+			else {
+				var pose0 = g.pose();
+				pose0.pushMatrix();
+				pose0.translate(width / 2f - side / 2f, py + 8);
+				pose0.scale(side / 16f, side / 16f);
+				g.item(s.result().stack(), 0, 0);
+				pose0.popMatrix();
+			}
+		} else if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
 			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.finish(), yaw, pitch, zoom);
 		else {
 			var pic = CaseImages.get(e);
@@ -369,6 +383,8 @@ public final class CaseScreen extends Screen {
 		g.text(font, s.result().name(), -font.width(s.result().name()) / 2, 0, s.result().color(), true);
 		pose.popMatrix();
 		String grade = s.rarity() < 0 ? "★ Rare Special Item" : SkinWraps.Rarity.values()[s.rarity()].weaponName;
+		if (e.sticker() && s.rarity() >= 0) grade = dev.strafemc.weapon.Stickers.grade(SkinWraps.Rarity.values()[s.rarity()]) + " Sticker";
+		else if (e.spray() && s.rarity() >= 0) grade = SkinWraps.Rarity.values()[s.rarity()].weaponName.replace(" Grade", "") + " Graffiti";
 		if (s.wear() >= 0) grade += "  |  " + dev.strafemc.weapon.Wear.exterior(s.wear()) + " " + String.format(java.util.Locale.ROOT, "%.8f", s.wear());
 		if (s.pattern() >= 0) grade += "  |  Pattern template " + s.pattern();
 		g.text(font, grade, width / 2 - font.width(grade) / 2, py + ch + 34, 0xFFB0B0B0, true);

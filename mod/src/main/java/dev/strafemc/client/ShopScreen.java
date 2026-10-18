@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * The shop (strafeMC menu, new offers every 30 minutes of play): your balance and the time to the next rotation at the top, skins to sell on the left
- * (inventory, then each Storage Unit, foldable; 75% of their worth), and this rotation's eight offers on the right.
+ * (inventory, then each Storage Unit, foldable; 75% of their worth), and this rotation's ten offers on the right.
  */
 public final class ShopScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, LIST_TOP = 44;
@@ -171,8 +171,11 @@ public final class ShopScreen extends Screen {
 
 	// ---------------------------------------------------------------- the offers grid
 
+	/** Offers per row: the ten in two rows. */
+	private static final int COLS = 5;
+
 	private int tileW() {
-		return Math.max(60, Math.min(120, offersW() / 4 - 6));
+		return Math.max(60, Math.min(120, offersW() / COLS - 6));
 	}
 
 	private int tileH() {
@@ -180,8 +183,8 @@ public final class ShopScreen extends Screen {
 	}
 
 	private int[] tilePos(int i) {
-		int w = tileW(), h = tileH(), x0 = offersX() + (offersW() - 4 * (w + 6) + 6) / 2;
-		return new int[] {x0 + (i % 4) * (w + 6), LIST_TOP + (i / 4) * (h + 6)};
+		int w = tileW(), h = tileH(), x0 = offersX() + (offersW() - COLS * (w + 6) + 6) / 2;
+		return new int[] {x0 + (i % COLS) * (w + 6), LIST_TOP + (i / COLS) * (h + 6)};
 	}
 
 	@Override
