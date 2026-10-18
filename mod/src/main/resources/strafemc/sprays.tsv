@@ -1,0 +1,148 @@
+# strafeMC sprays (from CS2 items_game sticker_kits spray_*): id TAB English name TAB material (materials/decals/sprays/<it>.vtex) TAB rarity TAB tintable
+spray_std_axes_crossed	X-Axes	default/axes_crossed	common	1
+spray_std_bubble_dead	Death Sentence	default/bubble_dead	common	1
+spray_std_chess_king	Chess King	default/chess_king	common	1
+spray_std_crown	King Me	default/crown	common	1
+spray_std_dollar	Keep the Change	default/dollar	common	1
+spray_std_double_kill	Double	default/double_kill	common	1
+spray_std_eco_pistol	Eco	default/eco_pistol	common	1
+spray_std_emo_angry	Tilt	default/emo_angry	common	1
+spray_std_emo_brainless	Speechless	default/emo_brainless	common	1
+spray_std_emo_despair	QQ	default/emo_despair	common	1
+spray_std_emo_happy	Mr. Teeth	default/emo_happy	common	1
+spray_std_emo_ninja	Ninja	default/emo_ninja	common	1
+spray_std_emo_worry	Worry	default/emo_worry	common	1
+spray_std_evil_eye	Rage Mode	default/evil_eye	common	1
+spray_std_eyeball	Eye Spy	default/eyeball	common	1
+spray_std_gg_01	GGEZ	default/gg_01	common	1
+spray_std_gg_02	GGWP	default/gg_02	common	1
+spray_std_glhf	GLHF	default/glhf	common	1
+spray_std_gunsmoke	Quickdraw	default/gunsmoke	common	1
+spray_std_hand_butterfly	Backstab	default/hand_butterfly	common	1
+spray_std_hand_loser	Loser	default/hand_loser	common	1
+spray_std_hat_sherif	Sheriff	default/hat_sherif	common	1
+spray_std_headstone_rip	Tombstone	default/headstone_rip	common	1
+spray_std_heart	Heart	default/heart	common	1
+spray_std_hl_eightball	8-Ball	default/hl_eightball	common	1
+spray_std_hl_lambda	Lambda	default/hl_lambda	common	1
+spray_std_hl_smiley	Still Happy	default/hl_smiley	common	1
+spray_std_jump_shot	Jump Shot	default/jump_shot	common	1
+spray_std_karambit	Karambit	default/karambit	common	1
+spray_std_knives_crossed	X-Knives	default/knives_crossed	common	1
+spray_std_moly	Toasted	default/moly	common	1
+spray_std_necklace_dollar	Bling	default/necklace_dollar	common	1
+spray_std_no_scope	Noscope	default/no_scope	common	1
+spray_std_piggles	Piggles	default/piggles	common	1
+spray_std_popdog	Popdog	default/popdog	common	1
+spray_std_rooster	Cocky	default/rooster	common	1
+spray_std_salty	NaCl	default/salty	common	1
+spray_std_sorry	Sorry	default/sorry	common	1
+spray_std_tongue	Eat It	default/tongue	common	1
+spray_std_wings	Take Flight	default/wings	common	1
+spray_std_gtg	GTG	default/gtg	common	1
+spray_blood_boiler	Blood Boiler	community_mix01/blood_boiler	legendary	0
+spray_chicken	Chabo	community_mix01/chicken	rare	0
+spray_drugwarveteran	Drug War Veteran	community_mix01/drugwarveteran	legendary	0
+spray_flickshot	Flickshot	community_mix01/flickshot	rare	0
+spray_hamster_hawk	Hamster Hawk	community_mix01/hamster_hawk	mythical	0
+spray_ivette	Ivette	community_mix01/ivette	rare	0
+spray_kawaiikiller_ct	Kawaii Killer CT	community_mix01/kawaiikiller	mythical	0
+spray_kawaiikiller_t	Kawaii Killer Terrorist	community_mix01/kawaiikiller_t	mythical	0
+spray_martha	Martha	community_mix01/martha	mythical	0
+spray_oldschool	Old School	community_mix01/oldschool	rare	0
+spray_pocket_bbq	Pocket BBQ	community_mix01/pocket_bbq	rare	0
+spray_rekt	Rekt	community_mix01/rekt	legendary	0
+spray_shave_master	Shave Master	community_mix01/shave_master	rare	0
+spray_shootingstar	Shooting Star Return	community_mix01/shootingstar	rare	0
+spray_skull	Rising Skull	community_mix01/skull	mythical	0
+spray_tamara	Tamara	community_mix01/tamara	mythical	0
+spray_unicorn	Unicorn	community_mix01/unicorn	rare	0
+spray_winged_defuser	Winged Defuser	community_mix01/winged_defuser	rare	0
+spray_vcap1_ace_01	Ace	valve_sprays/ace_01	rare	0
+spray_vcap1_banana	Banana	valve_sprays/banana	rare	0
+spray_vcap1_cerberus	Cerberus	valve_sprays/cerberus	mythical	0
+spray_vcap1_clutch_01	Clutch King	valve_sprays/clutch_01	legendary	0
+spray_vcap1_crown	Crown	valve_sprays/crown	mythical	0
+spray_vcap1_ct	Guardian	valve_sprays/ct	rare	0
+spray_vcap1_ez_02	EZ	valve_sprays/ez_02	mythical	0
+spray_vcap1_fireserpent	Fire Serpent	valve_sprays/fireserpent	legendary	0
+spray_vcap1_howling_dawn	Howling Dawn	valve_sprays/howling_dawn	legendary	0
+spray_vcap1_kisses	Kisses	valve_sprays/kisses	mythical	0
+spray_vcap1_lemon_squeeze	Easy Peasy	valve_sprays/lemon_squeeze	rare	0
+spray_vcap1_nice_shot_color	Nice Shot	valve_sprays/nice_shot_color	rare	0
+spray_vcap1_phoenix	Phoenix	valve_sprays/phoenix	rare	0
+spray_vcap1_realmvp_02	Real MVP	valve_sprays/realmvp_02	mythical	0
+spray_vcap1_ripip	R.I.P.I.P.	valve_sprays/ripip	mythical	0
+spray_vcap1_target_02	Skull n' Crosshairs	valve_sprays/target_02	rare	0
+spray_vcap1_welcome_clutch	Welcome to the Clutch	valve_sprays/welcome_clutch	rare	0
+spray_vcap1_wings	Wings	valve_sprays/wings	rare	0
+spray_illuminate1_cheongsam_1	Water Gun	illuminate_capsule/cheongsam_1	mythical	0
+spray_illuminate1_cheongsam_2	Cheongsam	illuminate_capsule/cheongsam_2	mythical	0
+spray_illuminate1_chinese_dragon	Guardian Dragon	illuminate_capsule/chinese_dragon_nodrips	legendary	0
+spray_illuminate1_fury	Rage	illuminate_capsule/fury	mythical	0
+spray_illuminate1_god_of_fortune	God of Fortune	illuminate_capsule/god_of_fortune	rare	0
+spray_illuminate1_hotpot	Hotpot	illuminate_capsule/hotpot	rare	0
+spray_illuminate1_koi_2	Fancy Koi	illuminate_capsule/koi_2	legendary	0
+spray_illuminate1_longevity	Longevity	illuminate_capsule/longevity	legendary	0
+spray_illuminate1_nezha	Nezha	illuminate_capsule/nezha	mythical	0
+spray_illuminate1_noodles	Noodles	illuminate_capsule/noodles	rare	0
+spray_illuminate1_panda	Non-Veg	illuminate_capsule/panda	rare	0
+spray_illuminate1_pixiu	Pixiu	illuminate_capsule/pixiu	mythical	0
+spray_illuminate1_red_koi	Twin Koi	illuminate_capsule/red_koi	mythical	0
+spray_illuminate1_rice	Rice Bomb	illuminate_capsule/rice	rare	0
+spray_illuminate1_rice_pudding	Terror Rice	illuminate_capsule/rice_pudding	rare	0
+spray_illuminate1_shaolin_1	Shaolin	illuminate_capsule/shaolin_1	rare	0
+spray_illuminate1_toytiger	Toy Tiger	illuminate_capsule/toytiger	rare	0
+spray_illuminate1_zombie	Zombie Hop	illuminate_capsule/zombie_nodrips	rare	0
+spray_std2_1g	1G	default2019/1g	common	0
+spray_std2_200iq	200 IQ	default2019/200iq	common	0
+spray_std2_applause	Applause	default2019/applause	common	0
+spray_std2_beep	BEEP	default2019/beep	common	0
+spray_std2_boom	BOOM	default2019/boom	common	0
+spray_std2_brightstar	Shining Star	default2019/brightstar	common	0
+spray_std2_brokenheart	Broken Heart	default2019/brokenheart	common	0
+spray_std2_bubble_denied	Denied	default2019/bubble_denied	common	0
+spray_std2_bubble_question	Question Mark	default2019/bubble_question	common	0
+spray_std2_chef_kiss	Chef Kiss	default2019/chef_kiss	common	0
+spray_std2_chick	Little Bock	default2019/chick	common	0
+spray_std2_choke	Choke	default2019/choke	common	0
+spray_std2_chunkychicken	Bock Bock	default2019/chunkychicken	common	0
+spray_std2_dead_now	Dead Now	default2019/dead_now	common	0
+spray_std2_fart	Fart	default2019/fart	common	0
+spray_std2_goofy	Goofy	default2019/goofy	common	0
+spray_std2_grimace	Grimace	default2019/grimace	common	0
+spray_std2_happy_cat	Happy Cat	default2019/happy_cat	common	0
+spray_std2_hop	Hop	default2019/hop	common	0
+spray_std2_kiss	Kiss	default2019/kiss	common	0
+spray_std2_lightbulb	Lightbulb	default2019/lightbulb	common	0
+spray_std2_little_crown	Little Crown	default2019/little_crown	common	0
+spray_std2_little_ez	Little EZ	default2019/little_ez	common	0
+spray_std2_littlebirds	Dizzy	default2019/littlebirds	common	0
+spray_std2_nt	NT	default2019/nt	common	0
+spray_std2_okay	Okay	default2019/okay	common	0
+spray_std2_omg	OMG	default2019/omg	common	0
+spray_std2_oops	Oops	default2019/oops	common	0
+spray_std2_puke	Puke	default2019/puke	common	0
+spray_std2_rly	Rly	default2019/rly	common	0
+spray_std2_silverbullet	Silver Bullet	default2019/silverbullet	common	0
+spray_std2_smarm	Smarmy	default2019/smarm	common	0
+spray_std2_smirk	Smirk	default2019/smirk	common	0
+spray_std2_smooch	Smooch	default2019/smooch	common	0
+spray_std2_thoughtfull	Thoughtfull	default2019/thoughtfull	common	0
+spray_std2_uhoh	Uh Oh	default2019/uhoh	common	0
+spray_std3_ak47	Recoil AK-47	default2020/ak47	common	0
+spray_std3_aug	Recoil AUG	default2020/aug	common	0
+spray_std3_awp	Recoil AWP	default2020/awp	common	0
+spray_std3_bizon	Recoil PP-Bizon	default2020/bizon	common	0
+spray_std3_cz	Recoil CZ-75	default2020/cz	common	0
+spray_std3_famas	Recoil FAMAS	default2020/famas	common	0
+spray_std3_galil	Recoil Galil AR	default2020/galil	common	0
+spray_std3_m4a1	Recoil M4A1-S	default2020/m4a1	common	0
+spray_std3_m4a4	Recoil M4A4	default2020/m4a4	common	0
+spray_std3_mac10	Recoil MAC-10	default2020/mac10	common	0
+spray_std3_mp7	Recoil MP7	default2020/mp7	common	0
+spray_std3_mp9	Recoil MP9	default2020/mp9	common	0
+spray_std3_p90	Recoil P90	default2020/p90	common	0
+spray_std3_sg553	Recoil SG 553	default2020/sg553	common	0
+spray_std3_ump	Recoil UMP-45	default2020/ump	common	0
+spray_std3_xm1014	Recoil XM1014	default2020/xm1014	common	0

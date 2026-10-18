@@ -31,13 +31,15 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> WEAR;
 	/** A StatTrak wrap's Confirmed Kills (StatTrak). Absent = not StatTrak. */
 	public static DataComponentType<Integer> STATTRAK;
+	/** A standard graffiti's tint (CS2 graffiti_tints id). Absent: none. */
+	public static DataComponentType<Integer> TINT;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -56,6 +58,7 @@ public final class WeaponItems {
 		PATTERN = component("pattern");
 		WEAR = component("wear");
 		STATTRAK = component("stattrak");
+		TINT = component("tint");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));
@@ -81,6 +84,7 @@ public final class WeaponItems {
 		MAG_POUCH = item("mag_pouch", MagPouchItem::new);
 		MagPouchItem.register();
 		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1)));
+		SPRAY = item("spray", p -> new SprayItem(p.stacksTo(1)));
 		StorageUnitItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
@@ -146,6 +150,9 @@ public final class WeaponItems {
 			for (Cases.Case c : Cases.all()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
 			e.accept(CaseKeys.universal());
 			for (Cases.Key k : Cases.keys()) e.accept(KeyItem.stack(CASE_KEY, k.id()));
+		});
+		tab("sprays", () -> SprayItem.stack(SPRAY, "spray_std_axes_crossed", 2), e -> {
+			for (Sprays.Spray s : Sprays.all()) e.accept(SprayItem.stack(SPRAY, s.id(), s.tintable() ? 2 : 0));
 		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });

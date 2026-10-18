@@ -144,6 +144,27 @@ public final class StrafePayloads {
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** Cases opened (1-5 at once): per drop its kit on an item, rarity ordinal (-1: rare special item), name, pattern (-1: none). */
+	/** Server -> everyone in the level: a graffiti sprayed (where, which face, the sprayer's yaw for floors, who). */
+	public record SprayPlaced(String spray, int tint, double x, double y, double z, int face, long block, float yaw, java.util.UUID owner) implements CustomPacketPayload {
+		public static final Type<SprayPlaced> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "spray_placed"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, SprayPlaced> CODEC = StreamCodec.of((b, v) -> {
+			b.writeUtf(v.spray(), 96);
+			b.writeVarInt(v.tint());
+			b.writeDouble(v.x());
+			b.writeDouble(v.y());
+			b.writeDouble(v.z());
+			b.writeVarInt(v.face());
+			b.writeLong(v.block());
+			b.writeFloat(v.yaw());
+			b.writeUUID(v.owner());
+		}, b -> new SprayPlaced(b.readUtf(96), b.readVarInt(), b.readDouble(), b.readDouble(), b.readDouble(), b.readVarInt(), b.readLong(), b.readFloat(), b.readUUID()));
+
+		@Override
+		public Type<SprayPlaced> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: what a trade up contract gave. */
 	public record TradeUpResult(net.minecraft.world.item.ItemStack item) implements CustomPacketPayload {
 		public static final Type<TradeUpResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "tradeup_result"));

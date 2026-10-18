@@ -140,6 +140,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.CaseResult.TYPE, (msg, ctx) -> CaseScreen.result(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE, (msg, ctx) -> UpgraderScreen.result(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, (msg, ctx) -> TradeUpScreen.result(msg));
+		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE, (msg, ctx) -> dev.strafemc.client.impact.SprayDecals.placed(msg));
 		dev.strafemc.weapon.CaseItem.clientOpen = CaseScreen::open;
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> {
 			DeathNotices.clear();
@@ -155,6 +156,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.BulletImpact.TYPE,
 				(msg, ctx) -> dev.strafemc.client.impact.BulletHoles.onImpact(msg));
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.BulletHoles::render);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.SprayDecals::render);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.particle.Effects::renderWorld);
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.particle.Effects.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.impact.BulletHoles.clear());

@@ -149,5 +149,7 @@
 	"key.strafemc.inspect": "Inspect weapon",
 	"item.strafemc.gun_base": "Gun Base",
 	"item.strafemc.mag_pouch": "Mag Pouch",
-	"item.strafemc.storage_unit": "Storage Unit"
+	"item.strafemc.storage_unit": "Storage Unit",
+	"item.strafemc.spray": "Graffiti",
+	"itemGroup.strafemc.sprays": "strafeMC Graffiti"
 }
