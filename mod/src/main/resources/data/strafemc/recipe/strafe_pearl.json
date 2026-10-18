@@ -1,0 +1,9 @@
+{
+ "type": "minecraft:crafting_shapeless",
+ "category": "misc",
+ "ingredients": ["minecraft:ender_pearl", "minecraft:feather", "minecraft:prismarine_crystals"],
+ "result": {
+  "id": "strafemc:strafe_pearl",
+  "count": 1
+ }
+}

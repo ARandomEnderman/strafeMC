@@ -43,6 +43,7 @@ public final class WeaponItems {
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
+	public static Item STRAFE_PEARL;
 	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
@@ -89,6 +90,7 @@ public final class WeaponItems {
 		CASE_KEY = item("case_key", p -> new KeyItem(p.stacksTo(64)));
 		MAG_POUCH = item("mag_pouch", MagPouchItem::new);
 		MagPouchItem.register();
+		STRAFE_PEARL = item("strafe_pearl", p -> new StrafePearlItem(p.stacksTo(16)));
 		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1).fireResistant())); // never burns: it holds your skins
 		SPRAY = item("spray", p -> new SprayItem(p.stacksTo(1)));
 		VOUCHER_ITEM = item("voucher", p -> new VoucherItem(p.stacksTo(64)));
@@ -100,6 +102,10 @@ public final class WeaponItems {
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
 						.sized(0.1f, 0.1f).clientTrackingRange(8).updateInterval(1).noSummon().noSave().build(grenadeKey));
+		ResourceKey<net.minecraft.world.entity.EntityType<?>> pearlKey = ResourceKey.create(Registries.ENTITY_TYPE, id("strafe_pearl"));
+		StrafePearlEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, pearlKey,
+				net.minecraft.world.entity.EntityType.Builder.<StrafePearlEntity>of(StrafePearlEntity::new, net.minecraft.world.entity.MobCategory.MISC)
+						.sized(0.25f, 0.25f).clientTrackingRange(4).updateInterval(10).noSave().build(pearlKey));
 		ResourceKey<net.minecraft.world.level.block.Block> rampKey = ResourceKey.create(Registries.BLOCK, id("surf_ramp"));
 		SURF_RAMP = Registry.register(BuiltInRegistries.BLOCK, rampKey, new dev.strafemc.world.SurfRampBlock(
 				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(rampKey).strength(1.5f)
@@ -149,6 +155,7 @@ public final class WeaponItems {
 			e.accept(SURF_SLOPE_ITEM);
 			e.accept(SURF_RAMP_LYING_ITEM);
 			e.accept(SPAWN_POINT_ITEM);
+			e.accept(STRAFE_PEARL);
 		});
 		// a tab each for gloves, knife wraps and gun wraps (agents get theirs when they exist)
 		tab("gloves", () -> GloveItem.stack(GLOVES.get(GloveItem.Kind.SPORT), GloveSkins.of(GloveItem.Kind.SPORT).get(0).kit()),
