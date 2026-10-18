@@ -246,6 +246,8 @@ public final class GunClient {
 			emptied = false;
 			int left = g.clip(held);
 			if (predictedClip >= 0 && now - lastShot < sec(0.5)) left = Math.min(left, predictedClip);
+			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] auto reload {}: clip {} predicted {} -> {}", g.weaponClass, g.clip(held), predictedClip,
+					left <= 0 && infiniteAmmo() != 1 ? "reload" : "not empty");
 			if (left <= 0 && infiniteAmmo() != 1) reload(false);
 		}
 		// a sniper goes back to its zoom once the bolt is worked (unless reloading or empty)
@@ -928,8 +930,16 @@ public final class GunClient {
 		}
 		if (w == null) return;
 		long now = System.nanoTime();
-		if (reload != null || now < deployUntil || now < silencerUntil || g.clip(p.getMainHandItem()) >= w.clip()) return;
-		if (infiniteAmmo() != 2 && !hasMagazine(p, g)) return;
+		if (reload != null || now < deployUntil || now < silencerUntil || g.clip(p.getMainHandItem()) >= w.clip()) {
+			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] reload {} refused: reloading {}, deploying {}, silencer {}, clip {}/{}", g.weaponClass,
+					reload != null, now < deployUntil, now < silencerUntil, g.clip(p.getMainHandItem()), w.clip());
+			return;
+		}
+		if (infiniteAmmo() != 2 && !hasMagazine(p, g)) {
+			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] reload {} refused: no magazine found (carried: {})", g.weaponClass,
+					magazineCount(p, g));
+			return;
+		}
 		reloadKeyHeld = byKey;
 		if (zoom > 0 || resumeZoom > 0) { // reloading takes the scope off
 			resumeZoom = 0;
