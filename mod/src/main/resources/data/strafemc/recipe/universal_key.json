@@ -3,7 +3,9 @@
  "category": "misc",
  "ingredients": [
   "minecraft:redstone",
-  "minecraft:gold_ingot"
+  "minecraft:gold_nugget",
+  "minecraft:gold_nugget",
+  "minecraft:gold_nugget"
  ],
  "result": {
   "id": "strafemc:case_key",
