@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:open_case",
+  "display": {
+    "icon": {
+      "id": "minecraft:paper"
+    },
+    "title": "Contract Signed",
+    "description": "Complete a trade up contract",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

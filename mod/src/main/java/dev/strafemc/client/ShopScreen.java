@@ -27,7 +27,8 @@ import java.util.List;
 public final class ShopScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, LIST_TOP = 44;
 	private final Screen parent;
-	private final List<Integer> selling = new ArrayList<>();
+	/** What's being sold: ref -> how many of that stack (left click adds one, right click takes one off). */
+	private final java.util.Map<Integer, Integer> selling = new java.util.LinkedHashMap<>();
 	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
 	private int listHeight;
@@ -87,9 +88,9 @@ public final class ShopScreen extends Screen {
 
 	private long sellValue() {
 		long c = 0;
-		for (int ref : selling) {
-			ItemStack s = Upgrader.at(minecraft.player, ref);
-			if (Shop.sellable(s)) c += Shop.sellCents(s);
+		for (var e : selling.entrySet()) {
+			ItemStack s = Upgrader.at(minecraft.player, e.getKey());
+			if (Shop.sellable(s)) c += Shop.sellCents(s.copyWithCount(Math.min(s.getCount(), e.getValue())));
 		}
 		return c;
 	}
@@ -97,7 +98,7 @@ public final class ShopScreen extends Screen {
 	private void sell() {
 		if (selling.isEmpty()) return;
 		StringBuilder b = new StringBuilder();
-		for (int ref : selling) b.append(ref).append(' ');
+		for (var e : selling.entrySet()) b.append(e.getKey()).append(':').append(e.getValue()).append(' ');
 		send("shop_sell", b.toString().trim());
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
 		selling.clear();
@@ -115,7 +116,8 @@ public final class ShopScreen extends Screen {
 	@Override
 	public void tick() {
 		super.tick();
-		selling.removeIf(ref -> !Shop.sellable(Upgrader.at(minecraft.player, ref)));
+		selling.entrySet().removeIf(e -> !Shop.sellable(Upgrader.at(minecraft.player, e.getKey())));
+		selling.replaceAll((ref, n) -> Math.min(n, Upgrader.at(minecraft.player, ref).getCount()));
 		sell.active = !selling.isEmpty();
 		long want;
 		try {
@@ -232,7 +234,15 @@ public final class ShopScreen extends Screen {
 				@Override
 				public void item(int ref, int x, int y) {
 					if (done[0] || mx < x || mx >= x + 18 || my < y || my >= y + 18) return;
-					if (!selling.remove(Integer.valueOf(ref))) selling.add(ref);
+					int have = Upgrader.at(minecraft.player, ref).getCount();
+					Integer n = selling.get(ref);
+					if (e.button() == 1) { // right click: one fewer
+						if (n == null) return;
+						if (n <= 1) selling.remove(ref);
+						else selling.put(ref, n - 1);
+					} else if (n == null) selling.put(ref, 1); // left click: one more of the stack each click
+					else if (have <= 1) selling.remove(ref); // a single item: a second click unpicks it
+					else selling.put(ref, Math.min(have, n + 1));
 					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
 					done[0] = true;
 				}
@@ -291,10 +301,21 @@ public final class ShopScreen extends Screen {
 			@Override
 			public void item(int ref, int x, int y) {
 				ItemStack st = Upgrader.at(minecraft.player, ref);
-				boolean in = selling.contains(ref);
+				Integer n = selling.get(ref);
+				boolean in = n != null;
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
 				g.item(st, x, y);
+				// how many there are, and while selling some of a stack, how many of them
+				String c = in && st.getCount() > 1 ? n + "/" + st.getCount() : st.getCount() > 1 ? String.valueOf(st.getCount()) : null;
+				if (c != null) {
+					var pose = g.pose();
+					pose.pushMatrix();
+					pose.translate(x + 17, y + 11);
+					pose.scale(0.75f, 0.75f);
+					g.text(font, c, -font.width(c), 0, in ? GOLD : 0xFFFFFFFF, true);
+					pose.popMatrix();
+				}
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = st;
 			}
 		});

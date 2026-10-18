@@ -47,6 +47,25 @@ public final class Upgrader {
 		return place < in.size() ? in.get(place) : ItemStack.EMPTY;
 	}
 
+	/** Takes this many of the items at each ref (inventory slots or storage unit places; all of a stack empties it). */
+	static void take(net.minecraft.world.entity.player.Player p, java.util.Map<Integer, Integer> refs) {
+		var inv = p.getInventory();
+		java.util.Map<Integer, List<ItemStack>> units = new java.util.HashMap<>();
+		for (var e : refs.entrySet()) {
+			int ref = e.getKey();
+			if (ref < UNIT) {
+				inv.getItem(ref).shrink(e.getValue());
+				continue;
+			}
+			int slot = (ref - UNIT) / 1000, place = (ref - UNIT) % 1000;
+			List<ItemStack> all = units.computeIfAbsent(slot, s -> StorageUnitItem.contents(inv.getItem(s)));
+			ItemStack left = all.get(place).copy();
+			left.shrink(e.getValue());
+			all.set(place, left.isEmpty() ? ItemStack.EMPTY : left);
+		}
+		for (var e : units.entrySet()) StorageUnitItem.store(inv.getItem(e.getKey()), e.getValue());
+	}
+
 	/** Takes the staked skins out (inventory slots emptied, storage unit places cleared). */
 	static void take(net.minecraft.world.entity.player.Player p, List<Integer> refs) {
 		var inv = p.getInventory();
@@ -83,13 +102,16 @@ public final class Upgrader {
 		// the skin the player picked on their screen must be the server's offer too, or nothing happens
 		String got = key(o);
 		if (expect != null && !expect.equals(got)) {
-			p.sendSystemMessage(net.minecraft.network.chat.Component.literal("The upgrader's offers changed. Nothing was staked; pick again."));
+			dev.strafemc.server.Toasts.warn(p, "The upgrader's offers changed. Nothing was staked; pick again.");
 			dev.strafemc.StrafeMc.LOG.warn("[strafemc] upgrader: {} picked {} but the server's offer {} is {}", p.getScoreboardName(), expect, offer, got);
 			return null;
 		}
 		take(p, refs); // the stake is gone either way
 		boolean win = p.getRandom().nextDouble() < o.chance();
-		if (win) hold(p, o.item().copy()); // handed over when the needle lands (or the upgrader closes), like a case
+		if (win) {
+			hold(p, o.item().copy());
+			Advancements.award(p, "upgrade_win");
+		} // handed over when the needle lands (or the upgrader closes), like a case
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] upgrader: {} staked ${} for {} (${}, {}%): {}", p.getScoreboardName(), String.format("%.2f", worth(stake)),
 				o.item().getHoverName().getString(), String.format("%.2f", o.worth()), Math.round(o.chance() * 100), win ? "won" : "lost");
 		return win;

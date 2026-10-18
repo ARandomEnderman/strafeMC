@@ -150,6 +150,7 @@ public final class TradeUp {
 		if (StatTrak.kills(in.get(0)) >= 0 && !pick.entry().gloves()) result.set(WeaponItems.STATTRAK, 0);
 		Upgrader.take(p, refs);
 		if (!p.getInventory().add(result.copy())) p.drop(result.copy(), false);
+		Advancements.award(p, "trade_up");
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] trade up: {} got {}", p.getScoreboardName(), result.getHoverName().getString());
 		return result;
 	}

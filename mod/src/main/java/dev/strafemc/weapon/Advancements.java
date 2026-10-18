@@ -38,6 +38,9 @@ public final class Advancements {
 		if (assister != null && (flags & KillFeed.FLASH_ASSIST) != 0) award(assister, "flash_assist");
 		if (victim == p) return;
 		award(p, "first_kill");
+		int kills = Stats.add(p, Stats.KILLS, 1);
+		if (kills >= 100) award(p, "kills_100");
+		if (kills >= 1000) award(p, "kills_1000");
 		if ((flags & KillFeed.HEADSHOT) != 0) award(p, "headshot");
 		if ((flags & KillFeed.PENETRATE) != 0) award(p, "wallbang");
 		if ((flags & KillFeed.NOSCOPE) != 0) award(p, "noscope");
@@ -68,6 +71,10 @@ public final class Advancements {
 	/** An unboxed item (CaseOpening): the case itself, then what came out. rarity null: a rare special item. */
 	static void unboxed(ServerPlayer p, net.minecraft.world.item.ItemStack s, SkinWraps.Rarity rarity) {
 		award(p, "open_case");
+		int n = Stats.add(p, Stats.OPENED, 1);
+		if (n >= 10) award(p, "cases_10");
+		if (n >= 100) award(p, "cases_100");
+		if (n >= 1000) award(p, "cases_1000");
 		if (rarity == null) award(p, "rare_special");
 		else if (rarity.ordinal() >= SkinWraps.Rarity.ANCIENT.ordinal()) award(p, "covert");
 		if (StatTrak.kills(s) >= 0) award(p, "stattrak");

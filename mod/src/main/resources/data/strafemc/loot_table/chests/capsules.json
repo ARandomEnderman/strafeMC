@@ -1,0 +1,784 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack01"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack02"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_community01"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_enfu_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_pinups_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_slid3_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_team_roles_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_sugarface_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_bestiary_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_illuminate_capsule_01"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_illuminate_capsule_02"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_comm2018_01_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_skillgroup_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_feral_predators_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_chicken_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_shattered_web"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_halo_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_cs20_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_hlalyx_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_warhammer"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_broken_fang"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_recoil"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_poorly_drawn"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_riptide_surfshop"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_community2021_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_bf2042_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_op_riptide_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_spring2022_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_csgo10_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_community2022_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_community_2024_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_warhammer_traitor_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_warhammer_adeptus_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_warhammer_imperium_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_warhammer_xenos_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sticker_pack_jackass_capsule"
+        ],
+        "mode": "replace_all"
+       }
+      },
+      {
+       "function": "minecraft:set_count",
+       "count": 2
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sprays_community_1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sprays_vcap1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "crate_sprays_illuminate1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "selfopeningitem_crate_spray_std2_1"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "selfopeningitem_crate_spray_std2_2"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:weapon_case",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "selfopeningitem_crate_spray_std3"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

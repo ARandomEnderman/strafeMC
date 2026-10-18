@@ -1,0 +1,25 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "strafemc:case_key",
+     "functions": [
+      {
+       "function": "minecraft:set_custom_model_data",
+       "strings": {
+        "values": [
+         "universal"
+        ],
+        "mode": "replace_all"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

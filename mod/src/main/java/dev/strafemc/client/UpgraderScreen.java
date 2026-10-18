@@ -253,6 +253,15 @@ public final class UpgraderScreen extends Screen {
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
 				g.item(s, x, y);
+				if (s.getCount() > 1) { // a stack (stickers, graffiti): staked whole, its worth counts each one
+					String c = String.valueOf(s.getCount());
+					var pose = g.pose();
+					pose.pushMatrix();
+					pose.translate(x + 17, y + 11);
+					pose.scale(0.75f, 0.75f);
+					g.text(font, c, -font.width(c), 0, 0xFFFFFFFF, true);
+					pose.popMatrix();
+				}
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = s;
 			}
 		});

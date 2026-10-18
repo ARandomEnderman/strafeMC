@@ -24,6 +24,8 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.weapon.Loadout.register();
 		dev.strafemc.weapon.CarePackage.register();
 		dev.strafemc.weapon.Shop.register();
+		dev.strafemc.weapon.SprayLog.register();
+		dev.strafemc.weapon.Stats.register();
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof net.minecraft.server.level.ServerPlayer p) {
 				dev.strafemc.weapon.Loadout.onDeath(p);
@@ -116,6 +118,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE, dev.strafemc.net.StrafePayloads.UpgradeResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, dev.strafemc.net.StrafePayloads.TradeUpResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE, dev.strafemc.net.StrafePayloads.SprayPlaced.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Toast.TYPE, dev.strafemc.net.StrafePayloads.Toast.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.DeathInfo.TYPE, dev.strafemc.net.StrafePayloads.DeathInfo.CODEC);
 		// a player's CS2 footsteps / jump / landing, passed on to the players near them (not back to them)
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, (msg, ctx) -> {

@@ -641,6 +641,12 @@ public final class SourceMovement {
 		} else {
 			stepMove(p, w, dt);
 		}
+		// Source swims with no ground at all; Minecraft needs it for mining speed (5x slower off the ground) and falls:
+		// standing on the bottom (not rising) counts as on the ground, without snapping to it
+		if (vy <= Unexposed.NON_JUMP_VELOCITY) {
+			HullTrace.Result g = w.trace(x, y, z, HULL_HALF_WIDTH, hullHeight(), 0, -Unexposed.GROUND_PROBE, 0);
+			onGround = g.hit && g.ny >= p.standableNormal;
+		}
 		updateEye(dt);
 	}
 

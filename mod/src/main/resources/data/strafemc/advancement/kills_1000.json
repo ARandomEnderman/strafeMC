@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:kills_100",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_awp"
+    },
+    "title": "Veteran",
+    "description": "Get 1,000 kills with CS weapons",
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

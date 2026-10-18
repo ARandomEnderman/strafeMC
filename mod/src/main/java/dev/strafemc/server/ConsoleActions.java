@@ -235,10 +235,13 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
-			case "shop_sell" -> { // "ref ref ...": Upgrader refs
-				java.util.List<Integer> refs = new java.util.ArrayList<>();
+			case "shop_sell" -> { // "ref:count ref:count ...": Upgrader refs, how many of each (no count: all of it)
+				java.util.Map<Integer, Integer> refs = new java.util.LinkedHashMap<>();
 				try {
-					for (String a : arg.trim().split(" ")) refs.add(Integer.parseInt(a));
+					for (String a : arg.trim().split(" ")) {
+						int c = a.indexOf(':'), ref = Integer.parseInt(c < 0 ? a : a.substring(0, c));
+						refs.put(ref, c < 0 ? dev.strafemc.weapon.Upgrader.at(p, ref).getCount() : Integer.parseInt(a.substring(c + 1)));
+					}
 				} catch (NumberFormatException e) {
 					break;
 				}
@@ -295,7 +298,7 @@ public final class ConsoleActions {
 				}
 				if (!creative && (cases < n || keys < n)) {
 					var k = dev.strafemc.weapon.Cases.key(c.key());
-					p.sendOverlayMessage(Component.literal(cases < n ? "You need " + n + " of these cases." : "You need " + n + " " + (k != null ? k.name() : "key")
+					Toasts.warn(p, (cases < n ? "You need " + n + " of these cases." : "You need " + n + " " + (k != null ? k.name() : "key")
 							+ (n > 1 ? "s" : "") + " to unlock " + (n > 1 ? "them." : "this case.")));
 					break;
 				}

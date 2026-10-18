@@ -150,9 +150,11 @@ public final class CarePackage {
 		State n = new State(s.items(), s.claimed(), s.balance(), s.queued() + (drops ? ranks : 0), xp);
 		p.setAttached(DATA, n);
 		if (ranks > 0) {
+			if (n.rank() >= 10) Advancements.award(p, "rank_10");
+			if (n.rank() >= MAX_RANK) Advancements.award(p, "rank_40");
 			String name = rankName(n.rank());
-			p.sendSystemMessage(Component.literal("Rank up! " + (name.isEmpty() ? "" : name + " ") + "(" + n.rank() + ")." + (drops ? " You've earned "
-					+ (ranks == 1 ? "a Care Package" : ranks + " Care Packages") + ": redeem it in the strafeMC menu." : "")).withColor(0xEABE54));
+			dev.strafemc.server.Toasts.send(p, "Rank up! " + (name.isEmpty() ? "" : name + " ") + "(" + n.rank() + ")." + (drops ? " You've earned "
+					+ (ranks == 1 ? "a Care Package" : ranks + " Care Packages") + ": redeem it in the strafeMC menu." : ""), dev.strafemc.server.Toasts.GOOD);
 		}
 	}
 
@@ -171,8 +173,8 @@ public final class CarePackage {
 	public static void queue(ServerPlayer p, int n) {
 		State s = get(p);
 		p.setAttached(DATA, new State(s.items(), s.claimed(), s.balance(), s.queued() + n, s.xp()));
-		p.sendSystemMessage(Component.literal((n == 1 ? "You've earned a Care Package." : "You've earned " + n + " Care Packages.")
-				+ " Redeem it in the strafeMC menu.").withColor(0xEABE54));
+		dev.strafemc.server.Toasts.send(p, (n == 1 ? "You've earned a Care Package." : "You've earned " + n + " Care Packages.")
+				+ " Redeem it in the strafeMC menu.", dev.strafemc.server.Toasts.GOOD);
 	}
 
 	/** Opens the next queued package (replacing a fully claimed one): four fresh items and a full balance. */

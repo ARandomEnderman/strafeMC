@@ -23,7 +23,7 @@ public final class ConsoleKeys {
 			while (CONSOLE.consumeClick()) {
 				if (mc.screen != null || mc.player == null) continue;
 				if (!allowed(mc)) {
-					mc.player.sendOverlayMessage(Component.literal("§cThe CS2 console needs operator permission"));
+					dev.strafemc.client.StrafeToasts.show("The CS2 console needs operator permission", 0xFFE04040);
 					continue;
 				}
 				mc.setScreen(new ConsoleScreen());

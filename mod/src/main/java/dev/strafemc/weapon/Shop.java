@@ -91,7 +91,7 @@ public final class Shop {
 			if (progress >= ROTATION) {
 				p.setAttached(PROGRESS, 0);
 				p.setAttached(DATA, new State(s.cents(), s.rotation() + 1, 0, 0));
-				p.sendSystemMessage(Component.literal("The shop has new items.").withColor(0xEABE54));
+				dev.strafemc.server.Toasts.info(p, "The shop has new items.");
 			} else {
 				p.setAttached(PROGRESS, progress);
 				if (progress % 1200 == 0) sync(p);
@@ -187,14 +187,17 @@ public final class Shop {
 		return Math.round(Worth.of(s) * s.getCount() * SELL_RATE * 100);
 	}
 
-	/** Sells the items at these refs (inventory slots or storage unit places, Upgrader refs): skins at SELL_RATE, vouchers at full value. */
-	public static void sell(ServerPlayer p, List<Integer> refs) {
-		if (refs.isEmpty() || new java.util.HashSet<>(refs).size() != refs.size()) return;
+	/**
+	 * Sells this many of the items at each ref (inventory slots or storage unit places, Upgrader refs): skins at
+	 * SELL_RATE, vouchers at full value.
+	 */
+	public static void sell(ServerPlayer p, java.util.Map<Integer, Integer> refs) {
+		if (refs.isEmpty()) return;
 		long cents = 0;
-		for (int ref : refs) {
-			ItemStack s = Upgrader.at(p, ref);
-			if (!sellable(s)) return;
-			cents += sellCents(s);
+		for (var e : refs.entrySet()) {
+			ItemStack s = Upgrader.at(p, e.getKey());
+			if (!sellable(s) || e.getValue() < 1 || e.getValue() > s.getCount()) return;
+			cents += sellCents(s.copyWithCount(e.getValue()));
 		}
 		Upgrader.take(p, refs);
 		State s = get(p);
@@ -206,7 +209,7 @@ public final class Shop {
 	public static void withdraw(ServerPlayer p, int dollars) {
 		State s = get(p);
 		if (dollars < 1 || s.cents() < dollars * 100L) {
-			p.sendOverlayMessage(Component.literal("Not enough balance."));
+			dev.strafemc.server.Toasts.warn(p, "Not enough balance.");
 			return;
 		}
 		p.setAttached(DATA, new State(s.cents() - dollars * 100L, s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
@@ -237,7 +240,7 @@ public final class Shop {
 		if (i < 0 || i >= offers.size() || s.bought(i) >= offers.get(i).stock()) return;
 		Offer o = offers.get(i);
 		if (s.cents() < o.cents()) {
-			p.sendOverlayMessage(Component.literal("Not enough balance."));
+			dev.strafemc.server.Toasts.warn(p, "Not enough balance.");
 			return;
 		}
 		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1 << 3 * i), p.getAttachedOrElse(PROGRESS, 0)));

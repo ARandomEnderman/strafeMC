@@ -1,0 +1,26 @@
+{
+  "parent": "strafemc:cases_10",
+  "display": {
+    "icon": {
+      "id": "strafemc:weapon_case",
+      "components": {
+        "minecraft:custom_model_data": {
+          "strings": [
+            "crate_valve_1"
+          ]
+        }
+      }
+    },
+    "title": "Hooked",
+    "description": "Open 100 cases, capsules or boxes",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

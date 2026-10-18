@@ -543,14 +543,15 @@ public final class GunServer {
 	}
 
 	/**
-	 * The client's part, if the hit agrees with it: a head needs the hit in the box's top half, legs in its bottom two
-	 * thirds (the ray meets the box before the model, so the heights differ a little). Else the height bands.
+	 * The client's part, if the hit agrees with it: a head needs the hit in the box's top half on players and bots (a
+	 * cheat check), anywhere but the bottom 15% on mobs (a grazing sheep's, a turtle's head is low); legs in its bottom
+	 * two thirds (the ray meets the box before the model, so the heights differ a little). Else the height bands.
 	 */
-	private static String group(AABB box, double eyeHeight, Vec3 at, String claimed) {
+	private static String group(AABB box, double eyeHeight, Vec3 at, String claimed, boolean player) {
 		double rel = (at.y - box.minY) / Math.max(1e-3, box.getYsize());
 		if (claimed != null) {
 			boolean ok = switch (claimed) {
-				case "head" -> rel >= 0.5;
+				case "head" -> rel >= (player ? 0.5 : 0.15);
 				case "legs" -> rel <= 0.67;
 				default -> true;
 			};
@@ -567,8 +568,9 @@ public final class GunServer {
 			hurtOther(p, e, (float) (dmg * StrafeConfig.hpScale));
 			return;
 		}
-		String group = rewound != null ? group(rewound.box(), rewound.eyeHeight(), at, claimed)
-				: group(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at, claimed);
+		boolean player = target instanceof net.minecraft.world.entity.player.Player || Bots.isBot(target);
+		String group = rewound != null ? group(rewound.box(), rewound.eyeHeight(), at, claimed, player)
+				: group(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at, claimed, player);
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
 			case "stomach" -> STOMACH_MULT;

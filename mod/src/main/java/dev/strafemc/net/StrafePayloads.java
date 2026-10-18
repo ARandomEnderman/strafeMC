@@ -173,7 +173,23 @@ public final class StrafePayloads {
 	}
 
 	/** Server -> everyone in the level: a graffiti sprayed (where, which face, the sprayer's yaw for floors, who). */
-	public record SprayPlaced(String spray, int tint, double x, double y, double z, int face, long block, float yaw, java.util.UUID owner) implements CustomPacketPayload {
+	/** Server -> client: a strafeMC notice for the bottom-left toasts (color: its edge, ARGB). */
+	public record Toast(String text, int color) implements CustomPacketPayload {
+		public static final Type<Toast> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "toast"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Toast> CODEC = StreamCodec.of((b, v) -> {
+			b.writeUtf(v.text(), 512);
+			b.writeInt(v.color());
+		}, b -> new Toast(b.readUtf(512), b.readInt()));
+
+		@Override
+		public Type<Toast> type() {
+			return TYPE;
+		}
+	}
+
+	/** ageS: how long ago it was sprayed (0 when new; more for the ones a joining player is sent). */
+	public record SprayPlaced(String spray, int tint, double x, double y, double z, int face, long block, float yaw, java.util.UUID owner, int ageS)
+			implements CustomPacketPayload {
 		public static final Type<SprayPlaced> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "spray_placed"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, SprayPlaced> CODEC = StreamCodec.of((b, v) -> {
 			b.writeUtf(v.spray(), 96);
@@ -185,7 +201,9 @@ public final class StrafePayloads {
 			b.writeLong(v.block());
 			b.writeFloat(v.yaw());
 			b.writeUUID(v.owner());
-		}, b -> new SprayPlaced(b.readUtf(96), b.readVarInt(), b.readDouble(), b.readDouble(), b.readDouble(), b.readVarInt(), b.readLong(), b.readFloat(), b.readUUID()));
+			b.writeVarInt(v.ageS());
+		}, b -> new SprayPlaced(b.readUtf(96), b.readVarInt(), b.readDouble(), b.readDouble(), b.readDouble(), b.readVarInt(), b.readLong(), b.readFloat(), b.readUUID(),
+				b.readVarInt()));
 
 		@Override
 		public Type<SprayPlaced> type() {

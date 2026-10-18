@@ -40,7 +40,7 @@ public final class SprayDecals {
 	/** At most this many at once (the oldest go first); they fade away anyway (LIFE_S). FLAGGED ours. */
 	private static final int MAX = 256;
 	/** A graffiti stays this long, fading out over the last FADE_S (asked for: longer than CS2's per-round life). FLAGGED ours. */
-	private static final double LIFE_S = 15 * 60, FADE_S = 2 * 60;
+	private static final double LIFE_S = dev.strafemc.weapon.SprayLog.LIFE_S, FADE_S = 2 * 60;
 
 	private record Placed(String material, int color, Vec3 at, Direction face, BlockPos block, BlockState state, Vec3 forward, java.util.UUID owner,
 						  long placedAt, double lift) {}
@@ -62,13 +62,14 @@ public final class SprayDecals {
 			double yaw = Math.toRadians(m.yaw());
 			Vec3 at = new Vec3(m.x(), m.y(), m.z());
 			Direction face = Direction.from3DDataValue(m.face());
+			for (Placed q : ALL) if (q.at().equals(at) && q.owner().equals(m.owner()) && q.material().equals(sp.material())) return; // already up (sent again on join)
 			// over every graffiti it overlaps on the same surface: a little further out than the highest of them
 			double lift = LIFT;
 			for (Placed q : ALL)
 				if (q.face() == face && Math.abs(q.at().subtract(at).dot(Vec3.atLowerCornerOf(face.getUnitVec3i()))) < 0.01 && q.at().distanceTo(at) < 2 * HALF * 1.42)
 					lift = Math.max(lift, q.lift() + STACK);
 			Placed p = new Placed(sp.material(), t != null ? 0xFF000000 | t.color() : -1, at, face, block,
-					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner(), System.nanoTime(), lift);
+					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner(), System.nanoTime() - m.ageS() * 1_000_000_000L, lift);
 			while (ALL.size() >= MAX) ALL.remove(0);
 			ALL.add(p);
 			texture(sp.material());
@@ -111,7 +112,8 @@ public final class SprayDecals {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null || ALL.isEmpty()) return;
 		long now = System.nanoTime();
-		ALL.removeIf(p -> mc.level.getBlockState(p.block()) != p.state() || (now - p.placedAt()) / 1e9 >= LIFE_S); // block changed, or faded away
+		// block changed (only where it's loaded: right after joining, or far away, the chunk isn't), or faded away
+		ALL.removeIf(p -> mc.level.hasChunkAt(p.block()) && mc.level.getBlockState(p.block()) != p.state() || (now - p.placedAt()) / 1e9 >= LIFE_S);
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		PoseStack ps = ctx.poseStack();
 		for (Placed p : ALL.toArray(new Placed[0])) {

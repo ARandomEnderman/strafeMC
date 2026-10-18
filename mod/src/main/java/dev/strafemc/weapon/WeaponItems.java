@@ -89,7 +89,7 @@ public final class WeaponItems {
 		CASE_KEY = item("case_key", p -> new KeyItem(p.stacksTo(64)));
 		MAG_POUCH = item("mag_pouch", MagPouchItem::new);
 		MagPouchItem.register();
-		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1)));
+		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1).fireResistant())); // never burns: it holds your skins
 		SPRAY = item("spray", p -> new SprayItem(p.stacksTo(1)));
 		VOUCHER_ITEM = item("voucher", p -> new VoucherItem(p.stacksTo(64)));
 		STICKER = item("sticker", p -> new StickerItem(p.stacksTo(64)));

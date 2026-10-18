@@ -33,6 +33,8 @@ public final class StatTrak {
 		wrap = wrap.copy();
 		wrap.set(WeaponItems.STATTRAK, k + 1);
 		Loadout.set(p, slot, wrap);
+		if (k + 1 >= 10) Advancements.award(p, "stattrak_10");
 		if (k + 1 >= 100) Advancements.award(p, "century");
+		if (k + 1 >= 1000) Advancements.award(p, "stattrak_1000");
 	}
 }

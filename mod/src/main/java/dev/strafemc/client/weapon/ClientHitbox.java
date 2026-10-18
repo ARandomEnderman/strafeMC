@@ -20,6 +20,31 @@ import org.joml.Vector4f;
 public final class ClientHitbox {
 	private ClientHitbox() {}
 
+	/** A SubmitNodeCollector that keeps nothing (every call returns a default; order() returns itself). */
+	private static final net.minecraft.client.renderer.SubmitNodeCollector NOOP = noop(net.minecraft.client.renderer.SubmitNodeCollector.class);
+
+	@SuppressWarnings("unchecked")
+	private static <T> T noop(Class<T> iface) {
+		Object[] self = new Object[1];
+		self[0] = java.lang.reflect.Proxy.newProxyInstance(ClientHitbox.class.getClassLoader(), new Class<?>[] {iface}, (proxy, m, args) -> {
+			Class<?> rt = m.getReturnType();
+			if (m.getDeclaringClass() == Object.class) return switch (m.getName()) {
+				case "hashCode" -> System.identityHashCode(proxy);
+				case "equals" -> proxy == args[0];
+				default -> "strafemc no-op collector";
+			};
+			if (rt.isInstance(proxy)) return proxy;
+			if (rt == boolean.class) return false;
+			if (rt == int.class || rt == short.class || rt == byte.class) return 0;
+			if (rt == long.class) return 0L;
+			if (rt == float.class) return 0f;
+			if (rt == double.class) return 0d;
+			if (rt == char.class) return (char) 0;
+			return null;
+		});
+		return (T) self[0];
+	}
+
 	/** The hitgroup along eye + t dir (t up to maxT blocks) on e's model, or null if the ray misses every cube. */
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public static String part(LivingEntity e, Vec3 eye, Vec3 dir, double maxT) {
@@ -29,6 +54,10 @@ public final class ClientHitbox {
 			if (!(r instanceof LivingEntityRenderer lr)) return null;
 			float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
 			LivingEntityRenderState st = (LivingEntityRenderState) ((EntityRenderer) lr).createRenderState(e, pt);
+			try { // baby and variant models (a calf, a cold pig): the renderer picks its model while drawing, so let it, drawing nothing
+				lr.submit(st, new PoseStack(), NOOP, new net.minecraft.client.renderer.state.level.CameraRenderState());
+			} catch (RuntimeException ignored) { // then the model it drew last
+			}
 			var model = lr.getModel();
 			model.setupAnim(st);
 			// the renderer's own steps (LivingEntityRenderer.submit), in world space
@@ -84,7 +113,8 @@ public final class ClientHitbox {
 	static String group(String path, float yInCube) {
 		String p = path.toLowerCase(java.util.Locale.ROOT);
 		String last = p.substring(p.lastIndexOf('/') + 1);
-		for (String h : new String[] {"head", "hat", "beak", "nose", "jaw", "mouth", "ear", "horn", "bill", "skull", "snout", "face", "hood"})
+		for (String h : new String[] {"head", "hat", "beak", "nose", "jaw", "mouth", "ear", "horn", "bill", "skull", "snout", "face", "hood", "antenna",
+				"eye", "muzzle", "crest", "wattle", "red_thing"})
 			if (last.contains(h) || p.contains("/" + h + "/")) return "head";
 		if (last.contains("arm") || last.contains("sleeve") || last.contains("hand")) return "arms";
 		if (last.contains("leg") || last.contains("pants") || last.contains("foot") || last.contains("feet")) return "legs";

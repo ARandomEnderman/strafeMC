@@ -58,7 +58,7 @@ public final class BuyMenu {
 	public static void refund(ServerPlayer p, String what) {
 		String no = refusal(p);
 		if (no != null) {
-			p.sendSystemMessage(Component.literal(no));
+			dev.strafemc.server.Toasts.warn(p, no);
 			return;
 		}
 		var list = BOUGHT.get(p.getUUID());
@@ -113,7 +113,7 @@ public final class BuyMenu {
 	public static void buy(ServerPlayer p, String what) {
 		String no = refusal(p);
 		if (no != null) {
-			p.sendSystemMessage(Component.literal(no));
+			dev.strafemc.server.Toasts.warn(p, no);
 			return;
 		}
 		List<ItemStack> given = new java.util.ArrayList<>();
@@ -151,7 +151,7 @@ public final class BuyMenu {
 				for (Grenade x : Grenade.values()) total += count(p, x);
 				int limit = g == Grenade.FLASHBANG ? cvar("ammo_grenade_limit_flashbang", 2) : cvar("ammo_grenade_limit_default", 1);
 				if (have >= limit || total >= cvar("ammo_grenade_limit_total", 4)) {
-					p.sendSystemMessage(Component.literal("You cannot carry any more"));
+					dev.strafemc.server.Toasts.warn(p, "You cannot carry any more");
 					return;
 				}
 				give(p, new ItemStack(WeaponItems.GRENADES.get(g)), given);

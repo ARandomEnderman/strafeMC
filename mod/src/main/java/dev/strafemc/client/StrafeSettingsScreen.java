@@ -390,7 +390,7 @@ public final class StrafeSettingsScreen extends Screen {
 			StrafeMc.LOG.info("[strafemc] setup reset: done, restart Minecraft");
 			net.minecraft.client.Minecraft.getInstance().execute(() -> {
 				var p = net.minecraft.client.Minecraft.getInstance().player;
-				if (p != null) p.sendOverlayMessage(Component.literal("Setup reset. Restart Minecraft to run it again."));
+				if (p != null) StrafeToasts.show("Setup reset. Restart Minecraft to run it again.", 0xFFEABE54);
 			});
 		}, "strafemc-setup-reset");
 		t.setDaemon(true);

@@ -120,11 +120,12 @@ public class SprayItem extends Item {
 		long now = System.currentTimeMillis();
 		Long last = LAST.get(p.getUUID());
 		if (last != null && now - last < COOLDOWN_MS) {
-			p.sendOverlayMessage(Component.literal("You can spray again in " + (COOLDOWN_MS - (now - last) + 999) / 1000 + " s"));
+			dev.strafemc.server.Toasts.warn(p, "You can spray again in " + (COOLDOWN_MS - (now - last) + 999) / 1000 + " s");
 			return false;
 		}
 		LAST.put(p.getUUID(), now);
-		var msg = new dev.strafemc.net.StrafePayloads.SprayPlaced(sp.id(), tint(s), hit.x, hit.y, hit.z, face.get3DDataValue(), pos.asLong(), p.getYRot(), p.getUUID());
+		var msg = new dev.strafemc.net.StrafePayloads.SprayPlaced(sp.id(), tint(s), hit.x, hit.y, hit.z, face.get3DDataValue(), pos.asLong(), p.getYRot(), p.getUUID(), 0);
+		SprayLog.add(p.level(), msg); // for players who join later
 		for (ServerPlayer o : p.level().players())
 			if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE))
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
@@ -143,7 +144,7 @@ public class SprayItem extends Item {
 		if (!(s.getItem() instanceof SprayItem) || sealed(s)) return;
 		var hit = p.pick(p.blockInteractionRange(), 1f, false);
 		if (!(hit instanceof net.minecraft.world.phys.BlockHitResult b) || hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
-			p.sendOverlayMessage(Component.literal("Too far away to spray"));
+			dev.strafemc.server.Toasts.warn(p, "Too far away to spray");
 			return;
 		}
 		if (!spray(p, s, b.getLocation(), b.getDirection(), b.getBlockPos())) return;
