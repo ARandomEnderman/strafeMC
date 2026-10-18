@@ -33,8 +33,11 @@ public final class Shop {
 	private static final double PRICE_MIN = 0.8, PRICE_SPAN = 0.3;
 	/** CS2's key price (US store), for the Universal Key. */
 	private static final double KEY_PRICE = 2.49;
-	/** A case costs this share of what opening one is worth on average (it still needs a key). FLAGGED ours. */
-	private static final double CASE_SHARE = 0.1;
+	/**
+	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
+	 * lose on average (about $6 for a typical case). FLAGGED ours.
+	 */
+	private static final double CASE_SHARE = 1.6;
 
 	/** cents: the balance; rotation: which shop; bought: bit per offer; progress: ticks into the rotation (synced each minute). */
 	public record State(long cents, int rotation, int bought, int progress) {
@@ -132,7 +135,7 @@ public final class Shop {
 		return Math.max(1, Math.round(dollars * (PRICE_MIN + rng.nextDouble() * PRICE_SPAN) * 100));
 	}
 
-	/** A case's price base: what one opening is worth on average (its tiers' odds x their skins' average Field-Tested worth), x CASE_SHARE. */
+	/** A case's price base: what one opening is worth on average (its tiers' odds x their skins' average Field-Tested worth) x CASE_SHARE. */
 	static double caseWorth(Cases.Case c) {
 		double[] odds = {0.7992, 0.1598, 0.032, 0.0064};
 		SkinWraps.Rarity[] tiers = {SkinWraps.Rarity.RARE, SkinWraps.Rarity.MYTHICAL, SkinWraps.Rarity.LEGENDARY, SkinWraps.Rarity.ANCIENT};
