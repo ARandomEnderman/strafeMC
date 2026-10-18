@@ -332,6 +332,12 @@ public final class ConsoleActions {
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
+			case "spray_slot" -> { // the graffiti wheel let go on one of the loadout's graffiti
+				try {
+					dev.strafemc.weapon.SprayItem.sprayFromLoadout(p, Integer.parseInt(arg.trim()));
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change spawn blocks."));

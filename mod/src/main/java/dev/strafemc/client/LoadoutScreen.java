@@ -59,11 +59,17 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			g.text(font, font.plainSubstrByWidth(sub, Loadout.Menu.TILE_W - 30), x + 26, y + 13, in.isEmpty() ? 0xFF808080 : 0xFFB8B8B8, false);
 		}
 		g.text(font, "GUN WRAPS", leftPos + Loadout.Menu.GUNS_X, topPos + Loadout.Menu.GUNS_Y - 11, 0xFFB0B0B0, false);
+		g.text(font, "GRAFFITI", leftPos + Loadout.Menu.TILES_X, topPos + Loadout.Menu.GUNS_Y - 11, 0xFFB0B0B0, false);
+		for (int k = 0; k < 60; k++) { // the graffiti wheel's ring, as in CS2
+			double a = k * Math.PI * 2 / 60;
+			int x = leftPos + Loadout.Menu.RING_X + (int) Math.round(Math.cos(a) * Loadout.Menu.RING_R), y = topPos + Loadout.Menu.RING_Y + (int) Math.round(Math.sin(a) * Loadout.Menu.RING_R);
+			g.fill(x, y, x + 1, y + 1, 0x50FFFFFF);
+		}
 		for (int i = 3; i < defs.size(); i++) { // the guns: a slot each, the gun's picture faded in while it's empty
 			int x = leftPos + Loadout.Menu.slotX(i), y = topPos + Loadout.Menu.slotY(i);
 			g.fill(x - 1, y - 1, x + 17, y + 17, i == previewSlot ? ACCENT : SLOT);
 			if (i == previewSlot) g.fill(x, y, x + 16, y + 16, SLOT);
-			if (menu.getSlot(i).getItem().isEmpty()) {
+			if (menu.getSlot(i).getItem().isEmpty() && defs.get(i).weapon() != null) {
 				var gun = dev.strafemc.weapon.WeaponItems.GUNS.get(defs.get(i).weapon());
 				if (gun != null) {
 					g.item(new ItemStack(gun), x, y);
@@ -94,10 +100,15 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		if (d.kind() == Loadout.Kind.GLOVES) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, null);
 		else if (d.kind() == Loadout.Kind.KNIFE) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, previewKnife());
 		else if (d.weapon() != null) LoadoutPreview.draw(g, px + 4, top + 20, px + pw - 4, top + 104, d.weapon());
+		else if (d.kind() == Loadout.Kind.SPRAY) CaseImages.draw(g, s, px + 4, top + 20, pw - 8, 84); // the graffiti itself
 		int y = top + 110;
 		if (s.isEmpty()) {
-			g.text(font, d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves" : d.kind() == Loadout.Kind.AGENT ? "Agents aren't in strafeMC yet"
-					: "No wrap: the plain weapon", px + 8, y, 0xFF909090, false);
+			String empty = d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves" : d.kind() == Loadout.Kind.AGENT ? "Agents aren't in strafeMC yet"
+					: d.kind() == Loadout.Kind.SPRAY ? "Put an unsealed graffiti here; hold " + SprayKey.name() + " to spray" : "No wrap: the plain weapon";
+			for (var line : font.split(Component.literal(empty), pw - 16)) {
+				g.text(font, line, px + 8, y, 0xFF909090, false);
+				y += 10;
+			}
 			return;
 		}
 		for (var line : font.split(s.getHoverName(), pw - 16)) {
@@ -109,6 +120,8 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			String on = w.knife() ? "On every knife" : wrap == null ? "" : "On every " + d.label();
 			g.text(font, on, px + 8, y + 4, 0xFFB0B0B0, false);
 		} else if (s.getItem() instanceof GloveItem) g.text(font, "Factory New", px + 8, y + 4, 0xFFB0B0B0, false);
+		else if (s.getItem() instanceof dev.strafemc.weapon.SprayItem)
+			g.text(font, s.getOrDefault(dev.strafemc.weapon.WeaponItems.OPENED, dev.strafemc.weapon.SprayItem.USES) + " sprays left", px + 8, y + 4, 0xFFB0B0B0, false);
 	}
 
 	/**

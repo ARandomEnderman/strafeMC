@@ -106,25 +106,51 @@ public class SprayItem extends Item {
 			return InteractionResult.SUCCESS;
 		}
 		if (!(c.getPlayer() instanceof ServerPlayer p)) return InteractionResult.SUCCESS;
-		Sprays.Spray sp = Sprays.get(spray(s));
-		if (sp == null) return InteractionResult.FAIL;
-		long now = System.currentTimeMillis();
-		Long last = LAST.get(p.getUUID());
-		if (last != null && now - last < COOLDOWN_MS) {
-			p.sendOverlayMessage(Component.literal("You can spray again in " + (COOLDOWN_MS - (now - last) + 999) / 1000 + " s"));
-			return InteractionResult.FAIL;
-		}
-		LAST.put(p.getUUID(), now);
-		var hit = c.getClickLocation();
-		var msg = new dev.strafemc.net.StrafePayloads.SprayPlaced(sp.id(), tint(s), hit.x, hit.y, hit.z, c.getClickedFace().get3DDataValue(),
-				c.getClickedPos().asLong(), p.getYRot(), p.getUUID());
-		for (ServerPlayer o : p.level().players())
-			if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE))
-				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
-		GunServer.soundAt(p.level(), "SprayCan.Paint", hit, p);
+		if (!spray(p, s, c.getClickLocation(), c.getClickedFace(), c.getClickedPos())) return InteractionResult.FAIL;
 		int left = s.getOrDefault(WeaponItems.OPENED, USES) - 1; // a spray used up; the last one takes the graffiti
 		if (left <= 0) s.shrink(1);
 		else s.set(WeaponItems.OPENED, left);
 		return InteractionResult.SUCCESS;
+	}
+
+	/** Sprays this graffiti on a block face for everyone (with the can's sound), unless it's too soon after the last. True if sprayed. */
+	static boolean spray(ServerPlayer p, ItemStack s, net.minecraft.world.phys.Vec3 hit, net.minecraft.core.Direction face, net.minecraft.core.BlockPos pos) {
+		Sprays.Spray sp = Sprays.get(spray(s));
+		if (sp == null) return false;
+		long now = System.currentTimeMillis();
+		Long last = LAST.get(p.getUUID());
+		if (last != null && now - last < COOLDOWN_MS) {
+			p.sendOverlayMessage(Component.literal("You can spray again in " + (COOLDOWN_MS - (now - last) + 999) / 1000 + " s"));
+			return false;
+		}
+		LAST.put(p.getUUID(), now);
+		var msg = new dev.strafemc.net.StrafePayloads.SprayPlaced(sp.id(), tint(s), hit.x, hit.y, hit.z, face.get3DDataValue(), pos.asLong(), p.getYRot(), p.getUUID());
+		for (ServerPlayer o : p.level().players())
+			if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE))
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
+		GunServer.soundAt(p.level(), "SprayCan.Paint", hit, p);
+		return true;
+	}
+
+	/**
+	 * The graffiti wheel let go on loadout graffiti n: sprayed on the block you're looking at, within your reach (CS2's
+	 * graffiti also go only on what's near); a spray used up, the last one empties the slot.
+	 */
+	public static void sprayFromLoadout(ServerPlayer p, int n) {
+		if (n < 0 || n >= Loadout.SPRAYS) return;
+		String slot = Loadout.sprayId(n);
+		ItemStack s = Loadout.get(p, slot);
+		if (!(s.getItem() instanceof SprayItem) || sealed(s)) return;
+		var hit = p.pick(p.blockInteractionRange(), 1f, false);
+		if (!(hit instanceof net.minecraft.world.phys.BlockHitResult b) || hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+			p.sendOverlayMessage(Component.literal("Too far away to spray"));
+			return;
+		}
+		if (!spray(p, s, b.getLocation(), b.getDirection(), b.getBlockPos())) return;
+		ItemStack after = s.copy();
+		int left = after.getOrDefault(WeaponItems.OPENED, USES) - 1;
+		if (left <= 0) after = ItemStack.EMPTY;
+		else after.set(WeaponItems.OPENED, left);
+		Loadout.set(p, slot, after);
 	}
 }

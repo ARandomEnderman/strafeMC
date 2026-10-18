@@ -37,7 +37,14 @@ public final class Loadout {
 	private Loadout() {}
 
 	/** What a slot takes: GLOVES any gloves, AGENT nothing yet, KNIFE knife wraps, GUN wraps that exist for {@link Def#weapon}. */
-	public enum Kind {GLOVES, AGENT, KNIFE, GUN}
+	public enum Kind {GLOVES, AGENT, KNIFE, GUN, SPRAY}
+
+	/** CS2's graffiti wheel has six: loadout slots spray0..spray5, each an unsealed graffiti (its sprays get used up). */
+	public static final int SPRAYS = 6;
+
+	public static String sprayId(int i) {
+		return "spray" + i;
+	}
 
 	public record Def(String id, Kind kind, String weapon, String label) {}
 
@@ -55,6 +62,7 @@ public final class Loadout {
 			guns.sort(java.util.Comparator.comparingInt((WeaponTable.Entry e) -> e.slot() == null ? 9 : e.slot().startsWith("secondary") ? 0
 					: e.slot().startsWith("smg") ? 1 : e.slot().startsWith("rifle") ? 2 : 3).thenComparing(e -> e.slot() == null ? "" : e.slot()));
 			for (WeaponTable.Entry e : guns) d.add(new Def(e.cls(), Kind.GUN, e.cls(), WeaponTable.name(e.cls())));
+			for (int i = 0; i < SPRAYS; i++) d.add(new Def(sprayId(i), Kind.SPRAY, null, "Graffiti " + (i + 1)));
 			defs = List.copyOf(d);
 		}
 		return defs;
@@ -93,6 +101,7 @@ public final class Loadout {
 			case AGENT -> false;
 			case KNIFE -> s.getItem() instanceof SkinWrapItem w && w.knife() && SkinWraps.get(SkinWrapItem.skin(s)) != null;
 			case GUN -> s.getItem() instanceof SkinWrapItem w && !w.knife() && SkinWraps.fits(SkinWrapItem.skin(s), d.weapon);
+			case SPRAY -> s.getItem() instanceof SprayItem && !SprayItem.sealed(s); // sealed ones are unsealed first
 		};
 	}
 
@@ -177,12 +186,25 @@ public final class Loadout {
 		public static final int WIDTH = 320, TILE_W = 98, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = 66, INV_X = 79;
 		public static final int INV_Y = GUNS_Y + 18 * ((WeaponTable.guns().size() + 8) / 9) + 22, HEIGHT = INV_Y + 84;
 
-		/** Top-left of loadout slot i (the item, inside its tile for the first three). */
+		/** The graffiti ring, left of the gun grid: its centre and radius. */
+		public static final int RING_X = 39, RING_Y = GUNS_Y + 34, RING_R = 23;
+
+		/** Which graffiti slot loadout slot i is (0-5), or -1. */
+		public static int spray(int i) {
+			int first = 3 + WeaponTable.guns().size();
+			return i >= first && i < first + SPRAYS ? i - first : -1;
+		}
+
+		/** Top-left of loadout slot i (the item, inside its tile for the first three; the graffiti in a ring). */
 		public static int slotX(int i) {
+			int sp = spray(i);
+			if (sp >= 0) return RING_X - 8 + (int) Math.round(Math.cos(-Math.PI / 2 + sp * 2 * Math.PI / SPRAYS) * RING_R);
 			return i < 3 ? TILES_X + i * (TILE_W + 8) + 4 : GUNS_X + ((i - 3) % 9) * 18;
 		}
 
 		public static int slotY(int i) {
+			int sp = spray(i);
+			if (sp >= 0) return RING_Y - 8 + (int) Math.round(Math.sin(-Math.PI / 2 + sp * 2 * Math.PI / SPRAYS) * RING_R);
 			return i < 3 ? TILES_Y + 4 : GUNS_Y + ((i - 3) / 9) * 18;
 		}
 
