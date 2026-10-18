@@ -231,6 +231,7 @@ public final class ShopScreen extends Screen {
 		int cw = colW();
 		g.text(font, "SELL (" + Math.round(Shop.SELL_RATE * 100) + "%)", 20, 30, GOLD, false);
 		ItemStack[] hover = {ItemStack.EMPTY};
+		boolean[] offerHover = {false};
 		g.enableScissor(0, LIST_TOP, 20 + cw + 4, listBottom());
 		layout(new Visit() {
 			@Override
@@ -279,10 +280,17 @@ public final class ShopScreen extends Screen {
 				g.fill(p[0], p[1], p[0] + w, p[1] + h, 0xB0101317);
 				g.text(font, "SOLD", p[0] + w / 2 - font.width("SOLD") / 2, p[1] + h / 2 - 4, GOLD, true);
 			}
-			if (over) hover[0] = o.item();
+			if (over) {
+				hover[0] = o.item();
+				offerHover[0] = true;
+			}
 		}
 		super.extractRenderState(g, mx, my, delta);
-		if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
+		if (!hover[0].isEmpty() && offerHover[0]) { // an offer: its tooltip without its worth (the price's roll stays hidden)
+			List<Component> lines = new ArrayList<>(getTooltipFromItem(minecraft, hover[0]));
+			lines.removeIf(l -> l.getString().startsWith("Worth:"));
+			g.setTooltipForNextFrame(font, lines, java.util.Optional.empty(), mx, my);
+		} else if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
 	}
 
 	@Override
