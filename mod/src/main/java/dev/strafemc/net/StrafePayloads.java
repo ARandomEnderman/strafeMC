@@ -386,6 +386,12 @@ public final class StrafePayloads {
 	public record Fire(float yaw, float pitch, int shot, float inaccuracy, float punchPitch, float punchYaw, float viewTick, int claim, int flags, float eye)
 			implements CustomPacketPayload {
 		public static final int ZOOM_MASK = 3, ALT = 4;
+		/**
+		 * The body part the shooter's client saw the bullet hit on the claimed entity's animated model (ClientHitbox), in
+		 * bits 4-6: 0 none, then GROUPS' index + 1. The server checks it against the hit.
+		 */
+		public static final int GROUP_SHIFT = 4, GROUP_MASK = 7 << GROUP_SHIFT;
+		public static final String[] GROUPS = {"head", "chest", "stomach", "arms", "legs"};
 		public static final Type<Fire> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "fire"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Fire> CODEC = StreamCodec.of((b, v) -> {
 			b.writeFloat(v.yaw);

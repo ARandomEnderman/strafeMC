@@ -6,6 +6,7 @@
     "PlayerTravelMixin",
     "KeyPriorityMixin",
     "DeathScreenDelayMixin",
+    "LivingEntityRendererInvoker",
     "LivingEntityJumpMixin",
     "EntityEyeHeightMixin",
     "LocalPlayerSprintMixin",

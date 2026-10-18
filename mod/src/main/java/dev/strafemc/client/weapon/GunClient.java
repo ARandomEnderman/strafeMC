@@ -691,7 +691,7 @@ public final class GunClient {
 		Vec3 d = dev.strafemc.weapon.ShotMath.direction(p.getXRot(), p.getYRot(), aimPunch.angle[0], aimPunch.angle[1], penalty, w.spread(), shotSeed, shot);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Fire.TYPE))
 			ClientPlayNetworking.send(new StrafePayloads.Fire(p.getYRot(), p.getXRot(), shot, (float) penalty, (float) aimPunch.angle[0], (float) aimPunch.angle[1],
-					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0),
+					dev.strafemc.client.LagClock.viewTick(), claim(p, w, d), Math.min(zoom, 3) | (alt ? StrafePayloads.Fire.ALT : 0) | claimedGroup << StrafePayloads.Fire.GROUP_SHIFT,
 						(float) p.getEyeHeight()));
 		if (inspectUntil != 0) { // a shot cancels the inspect: its remaining foley too, and F works again right away
 			inspectUntil = 0;
@@ -792,15 +792,27 @@ public final class GunClient {
 
 	private static final java.util.Random IMPACT_RNG = new java.util.Random();
 
-	/** The entity this shot hits on this screen (what the player saw), or -1: the server checks it against its history. */
+	/** The body part claim() saw on the hit entity's model (Fire.GROUPS index + 1, 0 none). */
+	private static int claimedGroup;
+
+	/**
+	 * The entity this shot hits on this screen (what the player saw), or -1: the server checks it against its history.
+	 * Also measures which body part the bullet meets on its real model (ClientHitbox) into claimedGroup.
+	 */
 	private static int claim(LocalPlayer p, WeaponStats w, Vec3 dir) {
+		claimedGroup = 0;
 		Vec3 eye = eye(p), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var block = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
 		if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = block.getLocation();
 		var ent = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(p, eye, end, new net.minecraft.world.phys.AABB(eye, end).inflate(1),
 				e -> e != p && e.isPickable() && !e.isSpectator(), eye.distanceToSqr(end));
-		return ent == null ? -1 : ent.getEntity().getId();
+		if (ent == null) return -1;
+		if (ent.getEntity() instanceof net.minecraft.world.entity.LivingEntity le) {
+			String g = ClientHitbox.part(le, eye, dir, eye.distanceTo(end) + 2);
+			if (g != null) claimedGroup = java.util.Arrays.asList(StrafePayloads.Fire.GROUPS).indexOf(g) + 1;
+		}
+		return ent.getEntity().getId();
 	}
 
 	/** The shooter's own bullet impact, shown immediately (as CS predicts it) instead of after the server round trip. */

@@ -470,29 +470,54 @@ public final class GunServer {
 		return acc != null && w.q().altSoundThreshold() > 0 && inaccuracy < w.q().altSoundThreshold() ? acc : w.shootSound();
 	}
 
-	/** One bullet (or pellet) of a shot: traced through up to 4 thin surfaces, hurting what it hits. predicted: the shooter's client drew it. */
+	/**
+	 * One bullet (or pellet) of a shot: traced through up to 4 thin surfaces (walls and bodies), hurting everything it
+	 * hits, losing damage in each. predicted: the shooter's client drew it.
+	 */
 	private static void bullet(ServerPlayer p, WeaponStats w, dev.strafemc.net.StrafePayloads.Fire f, ServerShots.Result shot, Vec3 dir, Vec3 eye, boolean predicted) {
 		double units = StrafeConfig.unitsPerBlock;
-		// the bullet's path: through up to 4 thin surfaces (wallbangs), losing damage in each (see penetrate)
 		boolean lag = dev.strafemc.server.StrafeSettings.lagComp();
 		Vec3 from = eye;
-		double dmg = w.damage(), left = w.range() / units, travelled = 0; // dmg: CS2's current damage, worn down by range and walls
+		double dmg = w.damage(), left = w.range() / units, travelled = 0; // dmg: CS2's current damage, worn down by range, walls and bodies
 		int walls = 0;
-		EntityHitResult hit = null;
-		dev.strafemc.server.LagHistory.Hit rewound = null;
+		java.util.Set<Entity> done = new java.util.HashSet<>();
+		boolean first = true;
 		for (int pen = 0; pen <= 4 && left > 0; pen++) {
 			Vec3 end = from.add(dir.scale(left));
 			HitResult block = p.level().clip(new ClipContext(from, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
 			if (block.getType() != HitResult.Type.MISS) end = block.getLocation();
 			// living targets: rewound to what the shooter saw (lag compensation); everything else (crystals, dragon parts) as it is now
 			Vec3 segFrom = from, segEnd = end;
-			hit = ProjectileUtil.getEntityHitResult(p, segFrom, segEnd, new AABB(segFrom, segEnd).inflate(1.0),
-					e -> e != p && e.isPickable() && !e.isSpectator() && !(lag && e instanceof LivingEntity), segFrom.distanceToSqr(segEnd));
-			rewound = lag ? rewound(p, segFrom, segEnd, f.viewTick(), f.claim(), 0.05) : null;
+			EntityHitResult hit = ProjectileUtil.getEntityHitResult(p, segFrom, segEnd, new AABB(segFrom, segEnd).inflate(1.0),
+					e -> e != p && !done.contains(e) && e.isPickable() && !e.isSpectator() && !(lag && e instanceof LivingEntity), segFrom.distanceToSqr(segEnd));
+			dev.strafemc.server.LagHistory.Hit rewound = lag ? rewound(p, segFrom, segEnd, f.viewTick(), first ? f.claim() : -1, 0.05) : null;
+			if (rewound != null && done.contains(rewound.entity())) rewound = null;
 			if (rewound != null && (hit == null || rewound.at().distanceToSqr(segFrom) < hit.getLocation().distanceToSqr(segFrom)))
 				hit = new EntityHitResult(rewound.entity(), rewound.at());
 			else rewound = null;
-			if (hit != null || !(block instanceof net.minecraft.world.phys.BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) break;
+			if (hit != null) { // a body: hurt it, then the bullet goes on through it (CS2 penetrates players too)
+				Vec3 at = hit.getLocation();
+				dmg *= Math.pow(w.rangeModifier(), at.distanceTo(from) * units / FALLOFF_UNITS);
+				travelled += at.distanceTo(from) * units;
+				Entity e = hit.getEntity();
+				done.add(e);
+				AABB box = rewound != null ? rewound.box() : e.getBoundingBox();
+				hitEntity(p, w, f, eye, e, at, dmg, walls, rewound, first ? claimedGroup(f) : null);
+				first = false;
+				// out the far side of its box: CS2's formula with the body as a surface of modifier 1 over the distance through
+				// it (FLAGGED: CS2's surfaceproperties gives flesh no penetration numbers; its engine treats players specially)
+				Vec3 far = box.clip(at.add(dir.scale(box.getSize() * 2 + 1)), at).orElse(at);
+				double t = far.distanceTo(at) * units;
+				double lost = dmg * 0.16 + Math.max(0, 3 / Math.max(1e-3, w.penetration()) * 1.25) * 3 + t * t / 24;
+				dmg -= Math.max(0, lost);
+				if (dmg < 1 || w.penetration() <= 0) return;
+				travelled += t;
+				left -= far.add(dir.scale(0.02)).distanceTo(from);
+				from = far.add(dir.scale(0.02));
+				walls++;
+				continue;
+			}
+			if (!(block instanceof net.minecraft.world.phys.BlockHitResult bh) || bh.getType() != HitResult.Type.BLOCK) return;
 			if (pen == 0 && predicted) impact(p, bh);
 			else impactAll(p, bh); // past a wallbang, or a later pellet: the shooter's own client didn't predict this one
 			if (pen == 0 && predicted && shot.corrected() && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.BulletImpact.TYPE))
@@ -501,7 +526,7 @@ public final class GunServer {
 			dmg *= Math.pow(w.rangeModifier(), seg / FALLOFF_UNITS); // range falloff up to the wall (CS2 applies it before penetrating)
 			travelled += seg;
 			double[] through = penetrate(p, bh, dir, w.penetration(), dmg, travelled);
-			if (through == null) break;
+			if (through == null) return;
 			Vec3 exit = new Vec3(through[0], through[1], through[2]);
 			dmg = through[3];
 			travelled += exit.distanceTo(bh.getLocation()) * units;
@@ -509,23 +534,48 @@ public final class GunServer {
 			from = exit.add(dir.scale(0.01));
 			walls++;
 		}
-		if (hit == null) return;
-		Vec3 at = hit.getLocation();
-		double distUnits = at.distanceTo(eye) * units;
-		dmg *= Math.pow(w.rangeModifier(), at.distanceTo(from) * units / FALLOFF_UNITS);
-		if (!(hit.getEntity() instanceof LivingEntity target)) { // dragon body parts, end crystals, boats...: Minecraft's own damage path
-			hurtOther(p, hit.getEntity(), (float) (dmg * StrafeConfig.hpScale));
+	}
+
+	/** The body part the shooter's client measured on the model (ClientHitbox), or null. */
+	private static String claimedGroup(dev.strafemc.net.StrafePayloads.Fire f) {
+		int g = (f.flags() & dev.strafemc.net.StrafePayloads.Fire.GROUP_MASK) >> dev.strafemc.net.StrafePayloads.Fire.GROUP_SHIFT;
+		return g >= 1 && g <= dev.strafemc.net.StrafePayloads.Fire.GROUPS.length ? dev.strafemc.net.StrafePayloads.Fire.GROUPS[g - 1] : null;
+	}
+
+	/**
+	 * The client's part, if the hit agrees with it: a head needs the hit in the box's top half, legs in its bottom two
+	 * thirds (the ray meets the box before the model, so the heights differ a little). Else the height bands.
+	 */
+	private static String group(AABB box, double eyeHeight, Vec3 at, String claimed) {
+		double rel = (at.y - box.minY) / Math.max(1e-3, box.getYsize());
+		if (claimed != null) {
+			boolean ok = switch (claimed) {
+				case "head" -> rel >= 0.5;
+				case "legs" -> rel <= 0.67;
+				default -> true;
+			};
+			if (ok) return claimed;
+		}
+		return hitgroup(box, eyeHeight, at);
+	}
+
+	/** One body hit along a bullet: CS2 damage by hitgroup and armor, sounds, the killfeed. */
+	private static void hitEntity(ServerPlayer p, WeaponStats w, dev.strafemc.net.StrafePayloads.Fire f, Vec3 eye, Entity e, Vec3 at, double dmg, int walls,
+								  dev.strafemc.server.LagHistory.Hit rewound, String claimed) {
+		double units = StrafeConfig.unitsPerBlock;
+		if (!(e instanceof LivingEntity target)) { // dragon body parts, end crystals, boats...: Minecraft's own damage path
+			hurtOther(p, e, (float) (dmg * StrafeConfig.hpScale));
 			return;
 		}
-		String group = rewound != null ? hitgroup(rewound.box(), rewound.eyeHeight(), at)
-				: hitgroup(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at);
+		String group = rewound != null ? group(rewound.box(), rewound.eyeHeight(), at, claimed)
+				: group(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at, claimed);
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
 			case "stomach" -> STOMACH_MULT;
 			case "legs" -> LEG_MULT;
 			default -> 1.0;
 		};
-		boolean armored = CsArmor.protects(CsArmor.of(target), group);
+		boolean armored = CsArmor.protects(target, group); // Kevlar, or Minecraft armor on that part (the armored hit sounds)
 		dmg = CsArmor.apply(target, dmg, w.armorRatio(), group);
 		float mc = (float) (dmg * StrafeConfig.hpScale);
 		target.invulnerableTime = 0; // 600 RPM: every bullet counts, like CS
@@ -540,8 +590,8 @@ public final class GunServer {
 			StatTrak.kill(p, w.cls());
 		}
 		if (StrafeConfig.debug)
-			StrafeMc.LOG.info("[strafemc] {} hit {} ({}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
-					String.format("%.0f", distUnits), String.format("%.1f", dmg), String.format("%.2f", mc));
+			StrafeMc.LOG.info("[strafemc] {} hit {} ({}{}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
+					claimed != null ? ", model said " + claimed : "", String.format("%.0f", at.distanceTo(eye) * units), String.format("%.1f", dmg), String.format("%.2f", mc));
 	}
 
 	/**
@@ -739,13 +789,18 @@ public final class GunServer {
 	 * the server's "Minecraft knockback" setting the target isn't pushed back (its motion is kept and no motion packet is
 	 * sent); a hit player gets CS2 tagging instead: their client slows them by the weapon's flinch modifiers.
 	 */
+	/** Our damage type for CS weapon hits (data/strafemc/damage_type/bullet.json, in the bypasses_armor tag). */
+	static final net.minecraft.resources.ResourceKey<net.minecraft.world.damagesource.DamageType> BULLET = net.minecraft.resources.ResourceKey.create(
+			net.minecraft.core.registries.Registries.DAMAGE_TYPE, net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "bullet"));
+
 	static void hurtCs(ServerPlayer p, LivingEntity target, float amount, String cls) {
 		Vec3 motion = target.getDeltaMovement();
 		boolean marked = target.hurtMarked;
 		var src = target instanceof net.minecraft.world.entity.monster.EnderMan
 				? new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
 						.getOrThrow(net.minecraft.world.damagesource.DamageTypes.ARROW), p, p)
-				: p.damageSources().playerAttack(p);
+				: new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+						.getOrThrow(BULLET), p, p); // skips vanilla armor: CsArmor applies Kevlar and Minecraft armor by body part instead
 		KillFeed.damaged(p, target, Math.min(amount, target.getHealth()) / StrafeConfig.hpScale);
 		// a Zeus kill cooks: the mob burns for the hit, so its loot drops cooked meat (like a molotov kill); a survivor isn't left burning
 		boolean cook = cls.equals(ZeusRecharge.CLS) && !(target instanceof net.minecraft.world.entity.player.Player);

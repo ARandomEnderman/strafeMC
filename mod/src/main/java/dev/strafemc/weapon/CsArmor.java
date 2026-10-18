@@ -38,6 +38,15 @@ public final class CsArmor {
 	}
 
 	/** Is this hit group covered (CS: head only with a helmet, legs never)? */
+	/** Kevlar (players), else a Minecraft armor piece on that part. */
+	public static boolean protects(LivingEntity target, String group) {
+		if (target instanceof ServerPlayer p && protects(of(p), group)) return true;
+		net.minecraft.world.entity.EquipmentSlot slot = group.equals("head") ? net.minecraft.world.entity.EquipmentSlot.HEAD
+				: group.equals("legs") ? net.minecraft.world.entity.EquipmentSlot.LEGS : net.minecraft.world.entity.EquipmentSlot.CHEST;
+		var piece = target.getItemBySlot(slot);
+		return !piece.isEmpty() && piece.has(net.minecraft.core.component.DataComponents.EQUIPPABLE);
+	}
+
 	public static boolean protects(Armor a, String group) {
 		if (a.value() <= 0) return false;
 		return switch (group) {
@@ -49,9 +58,8 @@ public final class CsArmor {
 
 	/** CS damage after armor for a hit on `group` (and the armor worn down); unprotected hits come back unchanged. */
 	public static double apply(LivingEntity target, double damage, double armorRatio, String group) {
-		if (!(target instanceof ServerPlayer p)) return damage;
+		if (!(target instanceof ServerPlayer p) || !protects(of(p), group)) return minecraftArmor(target, damage, armorRatio, group);
 		Armor a = of(p);
-		if (!protects(a, group)) return damage;
 		double health = damage * armorRatio * 0.5, toArmor = (damage - health) * ARMOR_BONUS;
 		int left = a.value();
 		if (toArmor > left) {
@@ -61,6 +69,25 @@ public final class CsArmor {
 		ARMOR.put(p.getUUID(), new Armor(left, a.helmet()));
 		sync(p);
 		return health;
+	}
+
+	/**
+	 * Minecraft armor against CS weapons, by body part like Kevlar (CS damage to health = damage x armor ratio x 0.5): the
+	 * helmet covers the head, the chestplate the chest, stomach and arms, the leggings the legs. What it soaks up wears
+	 * the piece (1 durability per 2 damage, as Kevlar's points). Vanilla's own armor maths is skipped for these hits
+	 * (strafemc:bullet bypasses armor). FLAGGED ours: CS2 has no Minecraft armor.
+	 */
+	static double minecraftArmor(LivingEntity target, double damage, double armorRatio, String group) {
+		net.minecraft.world.entity.EquipmentSlot slot = switch (group) {
+			case "head" -> net.minecraft.world.entity.EquipmentSlot.HEAD;
+			case "legs" -> net.minecraft.world.entity.EquipmentSlot.LEGS;
+			default -> net.minecraft.world.entity.EquipmentSlot.CHEST;
+		};
+		net.minecraft.world.item.ItemStack piece = target.getItemBySlot(slot);
+		if (piece.isEmpty() || !piece.has(net.minecraft.core.component.DataComponents.EQUIPPABLE)) return damage;
+		double health = damage * armorRatio * 0.5, toArmor = (damage - health) * ARMOR_BONUS;
+		if (target.level() instanceof net.minecraft.server.level.ServerLevel) piece.hurtAndBreak(Math.max(1, (int) Math.round(toArmor)), target, slot);
+		return Math.min(damage, health);
 	}
 
 	/** Armor is lost on death (checked every tick). */
