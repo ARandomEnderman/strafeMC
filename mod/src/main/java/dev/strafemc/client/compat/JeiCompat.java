@@ -134,6 +134,13 @@ public final class JeiCompat implements IModPlugin {
 				return java.util.List.of(new net.minecraft.client.renderer.Rect2i(0, 0, screen.width, screen.height));
 			}
 		});
+		// the Storage Unit's screen too (its preview panel sits where JEI's list would)
+		r.addGuiContainerHandler(dev.strafemc.client.StorageUnitScreen.class, new mezz.jei.api.gui.handlers.IGuiContainerHandler<dev.strafemc.client.StorageUnitScreen>() {
+			@Override
+			public java.util.List<net.minecraft.client.renderer.Rect2i> getGuiExtraAreas(dev.strafemc.client.StorageUnitScreen screen) {
+				return java.util.List.of(new net.minecraft.client.renderer.Rect2i(0, 0, screen.width, screen.height));
+			}
+		});
 		r.addGuiScreenHandler(dev.strafemc.client.CaseScreen.class, screen -> null);
 	}
 }
