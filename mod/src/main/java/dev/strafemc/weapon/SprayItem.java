@@ -84,6 +84,8 @@ public class SprayItem extends Item {
 		Sprays.Spray sp = Sprays.get(spray(stack));
 		if (sp != null) out.accept(Component.literal("§7" + sp.rarity().weaponName.replace(" Grade", "") + " Graffiti"));
 		if (!sealed(stack)) out.accept(Component.literal("§7" + stack.get(WeaponItems.OPENED) + " uses left"));
+		double worth = Worth.of(stack);
+		if (worth >= 0) out.accept(Component.literal("§7Worth: §a" + Worth.format(worth)));
 	}
 
 	/** Sealed: right-click (in the air or on a block) opens the unseal screen. */

@@ -174,24 +174,7 @@ public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnit
 		} else if (s.getItem() instanceof GunItem gun && !(gun instanceof dev.strafemc.weapon.GrenadeItem)) {
 			LoadoutPreview.draw(g, bx0, by0, bx1, by1, gun.weaponClass);
 		} else {
-			net.minecraft.resources.Identifier pic = null;
-			if (s.getItem() instanceof CaseItem) {
-				Cases.Case c = Cases.get(CaseItem.caseId(s));
-				if (c != null) pic = CaseImages.image("panorama/images/" + c.image() + "_png");
-			} else if (s.getItem() instanceof dev.strafemc.weapon.KeyItem) {
-				Cases.Key k = Cases.key(dev.strafemc.weapon.KeyItem.keyId(s));
-				if (k != null && !k.image().isEmpty()) pic = CaseImages.image("panorama/images/" + k.image() + "_png");
-			}
-			int ph = by1 - by0, pwid = Math.min(bx1 - bx0, ph * 4 / 3), cx = (bx0 + bx1) / 2;
-			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, cx - pwid / 2, by0, 0, 0, pwid, pwid * 3 / 4, pwid, pwid * 3 / 4);
-			else { // gloves and the rest: the item itself, large
-				var pose = g.pose();
-				pose.pushMatrix();
-				pose.translate(cx - 32, (by0 + by1) / 2f - 32);
-				pose.scale(4, 4);
-				g.item(s, 0, 0);
-				pose.popMatrix();
-			}
+			CaseImages.draw(g, s, bx0, by0, bx1 - bx0, by1 - by0); // cases, keys, gloves, stickers, graffiti; the rest as a big icon
 		}
 		int y = by1 + 6;
 		for (Component line : getTooltipFromItem(minecraft, s))

@@ -230,7 +230,8 @@ public final class ConsoleActions {
 			}
 			case "shop_buy" -> {
 				try {
-					dev.strafemc.weapon.Shop.buy(p, Integer.parseInt(arg.trim()));
+					String[] a = arg.trim().split(" "); // offer, how many
+					dev.strafemc.weapon.Shop.buy(p, Integer.parseInt(a[0]), a.length > 1 ? Integer.parseInt(a[1]) : 1);
 				} catch (NumberFormatException ignored) {
 				}
 			}

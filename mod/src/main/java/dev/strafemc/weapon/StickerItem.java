@@ -38,5 +38,7 @@ public class StickerItem extends Item {
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		Stickers.Sticker st = Stickers.get(sticker(stack));
 		if (st != null) out.accept(Component.literal("§7" + Stickers.grade(st.rarity()) + " Sticker"));
+		double worth = Worth.of(stack);
+		if (worth >= 0) out.accept(Component.literal("§7Worth: §a" + Worth.format(worth)));
 	}
 }

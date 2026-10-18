@@ -30,7 +30,8 @@ public final class ShopScreen extends Screen {
 	private final List<Integer> selling = new ArrayList<>();
 	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
-	private int listHeight, chosen = -1;
+	/** chosen: the offer picked (-1: none); qty: how many of it to buy (left click again for one more, right click one less). */
+	private int listHeight, chosen = -1, qty = 1;
 	private Button sell, buy, withdraw;
 	/** Dollars to take off the balance as a money voucher. */
 	private net.minecraft.client.gui.components.EditBox amount;
@@ -103,7 +104,7 @@ public final class ShopScreen extends Screen {
 
 	private void buy() {
 		if (chosen < 0) return;
-		send("shop_buy", String.valueOf(chosen));
+		send("shop_buy", chosen + " " + qty);
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
 		chosen = -1;
 	}
@@ -123,7 +124,10 @@ public final class ShopScreen extends Screen {
 		sell.setMessage(Component.literal(selling.isEmpty() ? "Sell" : "Sell for " + Shop.money(sellValue())));
 		List<Shop.Offer> offers = offers();
 		Shop.State s = state();
-		buy.active = chosen >= 0 && chosen < offers.size() && s.bought(chosen) < offers.get(chosen).stock() && s.cents() >= offers.get(chosen).cents();
+		if (chosen >= 0 && chosen < offers.size()) qty = Math.max(1, Math.min(qty, offers.get(chosen).stock() - s.bought(chosen)));
+		buy.active = chosen >= 0 && chosen < offers.size() && s.bought(chosen) < offers.get(chosen).stock() && s.cents() >= offers.get(chosen).cents() * qty;
+		buy.setMessage(Component.literal(chosen < 0 || chosen >= offers.size() ? "Buy" : qty > 1 ? "Buy " + qty + " for " + Shop.money(offers.get(chosen).cents() * qty)
+				: "Buy for " + Shop.money(offers.get(chosen).cents())));
 	}
 
 	// ---------------------------------------------------------------- the sell list (as the upgrader's)
@@ -224,8 +228,19 @@ public final class ShopScreen extends Screen {
 		List<Shop.Offer> offers = offers();
 		for (int i = 0; i < offers.size(); i++) {
 			int[] p = tilePos(i);
-			if (mx >= p[0] && mx < p[0] + tileW() && my >= p[1] && my < p[1] + tileH() && state().bought(i) < offers.get(i).stock()) {
-				chosen = chosen == i ? -1 : i;
+			int left = offers.get(i).stock() - state().bought(i);
+			if (mx >= p[0] && mx < p[0] + tileW() && my >= p[1] && my < p[1] + tileH() && left > 0) {
+				if (e.button() == 1) { // right click: one fewer (none: not picked)
+					if (chosen != i) return true;
+					if (--qty <= 0) {
+						chosen = -1;
+						qty = 1;
+					}
+				} else if (chosen != i) { // left click: pick it, then one more each click (as many as are in stock); one in stock: unpick
+					chosen = i;
+					qty = 1;
+				} else if (left == 1) chosen = -1;
+				else qty = Math.min(left, qty + 1);
 				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/premier_deselectmap", 0.4f);
 				return true;
 			}
@@ -284,16 +299,12 @@ public final class ShopScreen extends Screen {
 			g.fill(p[0], p[1], p[0] + w, p[1] + h, over && !sold ? 0xFF2A313A : 0xFF22272E);
 			g.fill(p[0], p[1] + h - 3, p[0] + w, p[1] + h, color(o.item()));
 			if (i == chosen) g.outline(p[0] - 1, p[1] - 1, w + 2, h + 2, GOLD);
-			Identifier pic = picture(o.item());
-			int ph = w * 3 / 4 - 6, pw = ph * 4 / 3;
-			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, p[0] + (w - pw) / 2, p[1] + 2, 0, 0, pw, ph, pw, ph);
-			else {
-				pose.pushMatrix();
-				pose.translate(p[0] + w / 2f - 16, p[1] + ph / 2f - 14);
-				pose.scale(2, 2);
-				g.item(o.item(), 0, 0);
-				pose.popMatrix();
+			if (i == chosen && qty > 1) { // how many you're buying, in the corner
+				String q = qty + "x";
+				g.fill(p[0] + w - font.width(q) - 6, p[1] + 2, p[0] + w - 2, p[1] + 13, GOLD);
+				g.text(font, q, p[0] + w - font.width(q) - 4, p[1] + 4, 0xFF101317, false);
 			}
+			CaseImages.draw(g, o.item(), p[0] + 3, p[1] + 2, w - 6, w * 3 / 4 - 6); // CS2's picture (graffiti: their decal), as big as fits
 			TileText.draw(g, font, o.item().getHoverName().getString(), p[0] + w / 2, p[1] + h - 30, w - 6, 0xFFE0E0E0);
 			String price = Shop.money(o.cents());
 			g.text(font, price, p[0] + w / 2 - font.width(price) / 2, p[1] + h - 13, s.cents() >= o.cents() ? 0xFF55FF55 : 0xFFE04040, false);
@@ -329,8 +340,7 @@ public final class ShopScreen extends Screen {
 	}
 
 	private static int color(ItemStack s) {
-		SkinWraps.Wrap w = SkinWraps.get(SkinWrapItem.skin(s));
-		return w != null && w.rarity() != null ? 0xFF000000 | w.rarity().color : 0xFFB0C3D9;
+		return CaseImages.rarityColor(s, 0xFFB0C3D9);
 	}
 
 	private static Identifier picture(ItemStack s) {

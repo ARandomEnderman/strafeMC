@@ -27,7 +27,7 @@ public final class CaseImages {
 
 	private CaseImages() {}
 
-	/** A sticker's picture is square (econ/stickers/<material>); graffiti have none here (their item icon is used). */
+	/** A sticker's picture (econ/stickers/<material>, 4:3 like the guns'); graffiti have none here (draw() uses their decal). */
 	private static String base(Cases.Entry e) {
 		if (e.sticker()) {
 			var st = dev.strafemc.weapon.Stickers.get(e.kit());
@@ -85,6 +85,78 @@ public final class CaseImages {
 		}, "strafemc-case-images");
 		t.setDaemon(true);
 		t.start();
+	}
+
+	/** CS2's inventory picture for an item (a case or capsule, key, gun / knife wrap, gloves, sticker; all 4:3), or null. */
+	public static Identifier picture(net.minecraft.world.item.ItemStack s) {
+		if (s.getItem() instanceof dev.strafemc.weapon.CaseItem) {
+			Cases.Case c = Cases.get(dev.strafemc.weapon.CaseItem.caseId(s));
+			return c == null ? null : image("panorama/images/" + c.image() + "_png");
+		}
+		if (s.getItem() instanceof dev.strafemc.weapon.KeyItem) {
+			Cases.Key k = Cases.key(dev.strafemc.weapon.KeyItem.keyId(s));
+			return k == null || k.image().isEmpty() ? null : image("panorama/images/" + k.image() + "_png");
+		}
+		if (s.getItem() instanceof dev.strafemc.weapon.GloveItem g) return get(new Cases.Entry(g.kit(s), g.kind.id));
+		if (s.getItem() instanceof dev.strafemc.weapon.StickerItem) {
+			String id = dev.strafemc.weapon.StickerItem.sticker(s);
+			return id == null ? null : get(new Cases.Entry(id, "sticker"));
+		}
+		if (s.getItem() instanceof dev.strafemc.weapon.SkinWrapItem) {
+			var w = dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(s));
+			if (w == null || w.kits().isEmpty()) return null;
+			var e = w.kits().entrySet().iterator().next();
+			return get(new Cases.Entry(e.getValue(), e.getKey()));
+		}
+		return null;
+	}
+
+	/**
+	 * Draws an item's picture as large as fits the box (x, y, w, h) without stretching it, centred: CS2's 4:3 pictures,
+	 * graffiti square in their own tint; anything else (or a picture still loading) as its item icon, scaled up.
+	 */
+	public static void draw(net.minecraft.client.gui.GuiGraphicsExtractor g, net.minecraft.world.item.ItemStack s, int x, int y, int w, int h) {
+		if (s.isEmpty() || w <= 0 || h <= 0) return;
+		var pipe = net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED;
+		if (s.getItem() instanceof dev.strafemc.weapon.SprayItem) {
+			var sp = dev.strafemc.weapon.Sprays.get(dev.strafemc.weapon.SprayItem.spray(s));
+			Identifier tex = sp == null ? null : dev.strafemc.client.impact.SprayDecals.texture(sp.material());
+			if (tex != null) {
+				var t = sp.tintable() ? dev.strafemc.weapon.Sprays.tint(dev.strafemc.weapon.SprayItem.tint(s)) : null;
+				int side = Math.min(w, h);
+				g.blit(pipe, tex, x + (w - side) / 2, y + (h - side) / 2, 0, 0, side, side, side, side, side, side, t != null ? 0xFF000000 | t.color() : -1);
+				return;
+			}
+		}
+		Identifier pic = picture(s);
+		if (pic != null) {
+			int pw = Math.min(w, h * 4 / 3), ph = pw * 3 / 4;
+			g.blit(pipe, pic, x + (w - pw) / 2, y + (h - ph) / 2, 0, 0, pw, ph, pw, ph);
+			return;
+		}
+		float sc = Math.max(1, Math.min(4, Math.min(w, h) / 16f));
+		var pose = g.pose();
+		pose.pushMatrix();
+		pose.translate(x + w / 2f - 8 * sc, y + h / 2f - 8 * sc);
+		pose.scale(sc, sc);
+		g.item(s, 0, 0);
+		pose.popMatrix();
+	}
+
+	/** The rarity colour under an item's tile (wraps, stickers, graffiti), else the fallback. */
+	public static int rarityColor(net.minecraft.world.item.ItemStack s, int fallback) {
+		dev.strafemc.weapon.SkinWraps.Rarity r = null;
+		if (s.getItem() instanceof dev.strafemc.weapon.SkinWrapItem) {
+			var w = dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(s));
+			r = w == null ? null : w.rarity();
+		} else if (s.getItem() instanceof dev.strafemc.weapon.StickerItem) {
+			var st = dev.strafemc.weapon.Stickers.get(dev.strafemc.weapon.StickerItem.sticker(s));
+			r = st == null ? null : st.rarity();
+		} else if (s.getItem() instanceof dev.strafemc.weapon.SprayItem) {
+			var sp = dev.strafemc.weapon.Sprays.get(dev.strafemc.weapon.SprayItem.spray(s));
+			r = sp == null ? null : sp.rarity();
+		}
+		return r == null ? fallback : 0xFF000000 | r.color;
 	}
 
 	private static Path png(String base) {

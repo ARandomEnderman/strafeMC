@@ -298,8 +298,10 @@ public final class CaseScreen extends Screen {
 		g.fill(x, y + h - 3, x + w, y + h, t.color());
 		// CS2's picture of the gun in its skin, 4:3 above the name; the item's own icon until it's loaded
 		var pic = t.entry() == null ? null : CaseImages.get(t.entry());
-		if (pic != null) {
-			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = t.entry().sticker() ? ph : ph * 4 / 3, px = x + (w - pw) / 2; // stickers are square
+		if (t.entry() != null && (t.entry().sticker() || t.entry().spray()))
+			CaseImages.draw(g, t.stack(), x + 2, y + 2, w - 4, Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4)); // stickers 4:3, graffiti their decal
+		else if (pic != null) {
+			int ph = Math.min(h - 6 - TileText.HEIGHT, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
 			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 2, 0, 0, pw, ph, pw, ph);
 		} else if (!t.stack().isEmpty()) g.item(t.stack(), x + w / 2 - 8, y + 4);
 		TileText.draw(g, font, t.name(), x + w / 2, y + h - 4 - TileText.HEIGHT, w - 4, 0xFFE0E0E0); // weapon / finish, never cut off
@@ -358,19 +360,8 @@ public final class CaseScreen extends Screen {
 		// a gun or knife: its model in this finish, turned by dragging; gloves (and until the model's baked): CS2's picture
 		Cases.Entry e = s.result().entry();
 		var vm = dev.strafemc.client.viewmodel.Viewmodel.INSTANCE;
-		if (e.sticker() || e.spray()) { // a sticker's square picture, or the graffiti's icon, big in the middle
-			var pic = CaseImages.get(e);
-			int side = ch - 16;
-			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, width / 2 - side / 2, py + 8, 0, 0, side, side, side, side);
-			else {
-				var pose0 = g.pose();
-				pose0.pushMatrix();
-				pose0.translate(width / 2f - side / 2f, py + 8);
-				pose0.scale(side / 16f, side / 16f);
-				g.item(s.result().stack(), 0, 0);
-				pose0.popMatrix();
-			}
-		} else if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
+		if (e.sticker() || e.spray()) CaseImages.draw(g, s.result().stack(), px + 8, py + 8, cw - 16, ch - 16); // the sticker's picture, the graffiti's decal
+		else if (!e.gloves() && vm.previewReady(e.item(), e.kit(), s.finish()))
 			LoadoutPreview.drawTurned(g, px, py, px + cw, py + ch, e.item(), e.kit(), s.finish(), yaw, pitch, zoom);
 		else {
 			var pic = CaseImages.get(e);

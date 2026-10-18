@@ -30,18 +30,20 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Sprayed graffiti (SprayItem): CS2's decal picture (materials/decals/sprays/<material>, converted from the player's own
  * CS2 files the first time) on the sprayed face, tinted for standard graffiti, upright on walls and turned the sprayer's
- * way on floors and ceilings. The last few per player are kept for 15 minutes, fading out over the last 2; a changed
- * block takes its graffiti away.
+ * way on floors and ceilings. Each stays 15 minutes, fading out over the last 2 (a newer one sits
+ * on top of the ones it covers); a changed block takes its graffiti away.
  */
 public final class SprayDecals {
 	/** Half the decal's size in blocks: 2 across (CS2's pictures fill about the middle half, so the art is about a block). FLAGGED ours. */
-	private static final double HALF = 1.0, LIFT = 0.003;
-	private static final int PER_PLAYER = 3;
+	/** LIFT off the surface, and STACK more for each graffiti it overlaps there, so the newest is on top (no z-fighting). */
+	private static final double HALF = 1.0, LIFT = 0.002, STACK = 0.0005;
+	/** At most this many at once (the oldest go first); they fade away anyway (LIFE_S). FLAGGED ours. */
+	private static final int MAX = 256;
 	/** A graffiti stays this long, fading out over the last FADE_S (asked for: longer than CS2's per-round life). FLAGGED ours. */
 	private static final double LIFE_S = 15 * 60, FADE_S = 2 * 60;
 
 	private record Placed(String material, int color, Vec3 at, Direction face, BlockPos block, BlockState state, Vec3 forward, java.util.UUID owner,
-						  long placedAt) {}
+						  long placedAt, double lift) {}
 
 	private static final List<Placed> ALL = new ArrayList<>();
 	private static final Map<String, Identifier> TEXTURES = new ConcurrentHashMap<>();
@@ -58,12 +60,16 @@ public final class SprayDecals {
 			Sprays.Tint t = sp.tintable() ? Sprays.tint(m.tint()) : null;
 			BlockPos block = BlockPos.of(m.block());
 			double yaw = Math.toRadians(m.yaw());
-			Placed p = new Placed(sp.material(), t != null ? 0xFF000000 | t.color() : -1, new Vec3(m.x(), m.y(), m.z()), Direction.from3DDataValue(m.face()), block,
-					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner(), System.nanoTime());
-			// the sprayer's oldest goes once they have more than PER_PLAYER
-			List<Placed> mine = new ArrayList<>();
-			for (Placed q : ALL) if (q.owner().equals(m.owner())) mine.add(q);
-			while (mine.size() >= PER_PLAYER) ALL.remove(mine.remove(0));
+			Vec3 at = new Vec3(m.x(), m.y(), m.z());
+			Direction face = Direction.from3DDataValue(m.face());
+			// over every graffiti it overlaps on the same surface: a little further out than the highest of them
+			double lift = LIFT;
+			for (Placed q : ALL)
+				if (q.face() == face && Math.abs(q.at().subtract(at).dot(Vec3.atLowerCornerOf(face.getUnitVec3i()))) < 0.01 && q.at().distanceTo(at) < 2 * HALF * 1.42)
+					lift = Math.max(lift, q.lift() + STACK);
+			Placed p = new Placed(sp.material(), t != null ? 0xFF000000 | t.color() : -1, at, face, block,
+					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner(), System.nanoTime(), lift);
+			while (ALL.size() >= MAX) ALL.remove(0);
 			ALL.add(p);
 			texture(sp.material());
 		});
@@ -121,7 +127,7 @@ public final class SprayDecals {
 				up = new Vec3(0, 1, 0);
 				right = n.cross(up);
 			}
-			Vec3 c = p.at().add(n.scale(LIFT));
+			Vec3 c = p.at().add(n.scale(p.lift()));
 			Vec3 tl = c.subtract(right.scale(HALF)).add(up.scale(HALF)), tr = c.add(right.scale(HALF)).add(up.scale(HALF)),
 					br = c.add(right.scale(HALF)).subtract(up.scale(HALF)), bl = c.subtract(right.scale(HALF)).subtract(up.scale(HALF));
 			int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(c.add(n.scale(0.3))));

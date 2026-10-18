@@ -223,27 +223,41 @@ public final class CarePackage {
 	/** A finish slot is a graffiti this often (CS2's drops include graffiti). FLAGGED ours. */
 	static final double GRAFFITI_SHARE = 0.2;
 
-	/** A random graffiti, the standard ones in a random CS2 tint. */
+	/**
+	 * A graffiti at the same grade odds as the drop's finishes (GRADE_ODDS: Base Grade like Consumer, High Grade like
+	 * Mil-Spec, and so on; a grade with no graffiti falls to the next lower one), the standard ones in a random CS2 tint.
+	 */
 	private static ItemStack graffiti(Random rng) {
 		List<Sprays.Spray> all = Sprays.all();
 		if (all.isEmpty()) return ItemStack.EMPTY;
-		Sprays.Spray sp = all.get(rng.nextInt(all.size()));
+		double x = rng.nextDouble();
+		int grade = 0;
+		for (double acc = GRADE_ODDS[0]; grade < GRADE_ODDS.length - 1 && x >= acc; acc += GRADE_ODDS[++grade]) ;
+		List<Sprays.Spray> pick = new ArrayList<>();
+		for (int g = grade; g >= 0 && pick.isEmpty(); g--)
+			for (Sprays.Spray s : all) if (s.rarity().ordinal() == g) pick.add(s);
+		if (pick.isEmpty()) pick = all;
+		Sprays.Spray sp = pick.get(rng.nextInt(pick.size()));
 		List<Sprays.Tint> tints = Sprays.tints();
 		return SprayItem.stack(WeaponItems.SPRAY, sp.id(), tints.isEmpty() ? 0 : tints.get(rng.nextInt(tints.size())).id());
 	}
 
 	/** The case slot is two sticker capsules this often instead (asked for: capsules from drops, 2x). FLAGGED ours. */
 	static final double CAPSULE_SHARE = 0.25;
+	/** Any other slot is two sticker capsules this often (asked for: not just the case slot). FLAGGED ours. */
+	static final double CAPSULE_SLOT_SHARE = 0.15;
 
 	/** A package: CASES weapon cases (now and then two sticker capsules) and finishes for the rest, in random order. */
 	private static List<ItemStack> roll(Random rng) {
 		List<Cases.Case> cases = Cases.all();
 		List<ItemStack> items = new ArrayList<>();
 		for (int i = 0; i < OFFERED; i++) {
-			ItemStack s = i < CASES || pool().stream().allMatch(List::isEmpty) ? ItemStack.EMPTY
-					: rng.nextDouble() < GRAFFITI_SHARE ? graffiti(rng) : dropWrap(rng);
 			List<Cases.Case> capsules = Cases.capsules("sticker");
-			if (s.isEmpty() && !capsules.isEmpty() && rng.nextDouble() < CAPSULE_SHARE) {
+			// the case slot: a case, or two sticker capsules; the rest: two capsules, a graffiti or a finish
+			boolean caseSlot = i < CASES || pool().stream().allMatch(List::isEmpty);
+			double x = rng.nextDouble();
+			ItemStack s = caseSlot || x < CAPSULE_SLOT_SHARE ? ItemStack.EMPTY : x < CAPSULE_SLOT_SHARE + GRAFFITI_SHARE ? graffiti(rng) : dropWrap(rng);
+			if (s.isEmpty() && !capsules.isEmpty() && (!caseSlot || rng.nextDouble() < CAPSULE_SHARE)) {
 				s = CaseItem.stack(WeaponItems.WEAPON_CASE, capsules.get(rng.nextInt(capsules.size())).id());
 				s.setCount(2);
 			}

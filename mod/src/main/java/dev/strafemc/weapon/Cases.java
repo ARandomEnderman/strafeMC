@@ -179,10 +179,17 @@ public final class Cases {
 				: x < MIL_SPEC + RESTRICTED + CLASSIFIED ? SkinWraps.Rarity.LEGENDARY : x < MIL_SPEC + RESTRICTED + CLASSIFIED + COVERT ? SkinWraps.Rarity.ANCIENT : null;
 		int pattern = rng.nextInt(1001);
 		if (tier == null && !c.special().isEmpty()) {
-			// knives and gloves: one of the case's at random
-			List<Entry> pool = new ArrayList<>(c.special());
-			Collections.shuffle(pool, rng);
-			for (Entry e : pool) {
+			// knives and gloves: one of the case's at random, the Doppler gems rarer (specialWeight)
+			List<Entry> pool = new ArrayList<>(c.special()), order = new ArrayList<>();
+			while (!pool.isEmpty()) {
+				double total = 0;
+				for (Entry e : pool) total += specialWeight(e.kit());
+				double r = rng.nextDouble() * total;
+				int i = 0;
+				for (; i < pool.size() - 1; i++) if ((r -= specialWeight(pool.get(i).kit())) < 0) break;
+				order.add(pool.remove(i));
+			}
+			for (Entry e : order) {
 				ItemStack s = stack(e, pattern, dev.strafemc.server.StrafeSettings.wearFor((SkinWraps.Rarity) null) ? Wear.roll(e.kit(), rng) : 0);
 				if (!s.isEmpty()) return new Drop(e, null, statTrak(e, s, rng));
 			}
@@ -206,6 +213,19 @@ public final class Cases {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * How likely a case's special item is against its others: CS2 lists each Doppler phase as its own knife finish, but
+	 * the gems come out much less often than a phase (Valve's servers decide it). FLAGGED ours: Ruby, Sapphire and
+	 * Emerald 1/5 of a phase, Black Pearl 1/10.
+	 */
+	public static double specialWeight(String kit) {
+		return switch (kit) {
+			case "am_ruby_marbleized", "am_sapphire_marbleized", "am_emerald_marbleized" -> 0.2;
+			case "am_blackpearl_marbleized" -> 0.1;
+			default -> 1;
+		};
 	}
 
 	/** CS2's StatTrak roll on a drop: wraps (guns and knives) only, never gloves. */

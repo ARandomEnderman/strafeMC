@@ -78,34 +78,42 @@ public final class Worth {
 		}
 		return specials.getOrDefault(item + "|" + kit, 1.0);
 	}
-	/** knife finish -> how many case knife entries have it, and the average over all knife finishes. */
-	private static Map<String, Integer> knifeEntries;
+	/** knife finish -> its chance from a knife drop of a random case, and the average over all knife finishes. */
+	private static Map<String, Double> knifeOdds;
 	private static double knifeAvg = 1;
 
 	/**
-	 * A knife finish's scarcity: the square root of (the average finish's entries / this one's), counting each knife in
-	 * each case that comes in it; finishes on fewer knives / cases are rarer. FLAGGED ours.
+	 * A knife finish's scarcity: the average finish's chance / this one's, where its chance is the share it has of a
+	 * case's knife drops (Cases.specialWeight: the Doppler gems rarer), averaged over the cases with knives. So a finish
+	 * in few cases, or beside few others in them, or a gem, is worth more, in proportion. FLAGGED ours.
 	 */
 	private static synchronized double knifeScarcity(SkinWraps.Wrap w) {
-		if (knifeEntries == null) {
-			Map<String, Integer> byKit = new HashMap<>();
-			for (Cases.Case c : Cases.all()) for (Cases.Entry e : c.special()) if (e.knife()) byKit.merge(e.kit(), 1, Integer::sum);
-			Map<String, Integer> out = new HashMap<>();
-			long sum = 0;
+		if (knifeOdds == null) {
+			Map<String, Double> byKit = new HashMap<>();
+			int cases = 0;
+			for (Cases.Case c : Cases.all()) {
+				double total = 0;
+				for (Cases.Entry e : c.special()) if (e.knife()) total += Cases.specialWeight(e.kit());
+				if (total <= 0) continue;
+				cases++;
+				for (Cases.Entry e : c.special()) if (e.knife()) byKit.merge(e.kit(), Cases.specialWeight(e.kit()) / total, Double::sum);
+			}
+			Map<String, Double> out = new HashMap<>();
+			double sum = 0;
 			for (SkinWraps.Wrap k : SkinWraps.all()) {
-				if (!k.knife()) continue;
-				int n = 0;
-				for (String kit : new java.util.HashSet<>(k.kits().values())) n += byKit.getOrDefault(kit, 0);
-				if (n > 0) {
-					out.put(k.id(), n);
-					sum += n;
+				if (!k.knife() || cases == 0) continue;
+				double p = 0;
+				for (String kit : new java.util.HashSet<>(k.kits().values())) p += byKit.getOrDefault(kit, 0.0);
+				if (p > 0) {
+					out.put(k.id(), p / cases);
+					sum += p / cases;
 				}
 			}
-			knifeEntries = out;
-			knifeAvg = out.isEmpty() ? 1 : (double) sum / out.size();
+			knifeOdds = out;
+			knifeAvg = out.isEmpty() ? 1 : sum / out.size();
 		}
-		Integer n = knifeEntries.get(w.id());
-		return n == null ? 1.5 : Math.sqrt(knifeAvg / n); // in no case: as rare as they come
+		Double p = knifeOdds.get(w.id());
+		return p == null ? 1.5 : knifeAvg / p; // in no case: as rare as they come
 	}
 
 	/** weapon|kit -> scarcity factor, from the cases. */

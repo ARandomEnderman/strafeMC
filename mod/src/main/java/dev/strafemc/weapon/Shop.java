@@ -221,6 +221,15 @@ public final class Shop {
 		p.setAttached(DATA, new State(s.cents() + Math.max(0, cents), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
 	}
 
+	/** Buys n of offer i of this rotation (as many as are in stock and the balance covers). */
+	public static void buy(ServerPlayer p, int i, int n) {
+		for (int k = 0; k < Math.max(1, Math.min(8, n)); k++) {
+			State before = get(p);
+			buy(p, i);
+			if (get(p).bought() == before.bought()) return; // out of stock or money
+		}
+	}
+
 	/** Buys offer i of this rotation, once, if the balance covers it. */
 	public static void buy(ServerPlayer p, int i) {
 		State s = get(p);

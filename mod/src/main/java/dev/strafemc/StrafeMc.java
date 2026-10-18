@@ -27,7 +27,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
 			if (entity instanceof net.minecraft.server.level.ServerPlayer p) {
 				dev.strafemc.weapon.Loadout.onDeath(p);
-				dev.strafemc.weapon.DamageReport.died(p);
+				dev.strafemc.weapon.DamageReport.died(p, source);
 			}
 		});
 		// gameplay data lives on the server side (dedicated or integrated): weapons.vdata and the CS2 bridge start here

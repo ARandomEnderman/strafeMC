@@ -135,10 +135,7 @@ public final class CarePackageScreen extends Screen {
 		g.fill(x, y, x + w, y + h, hover ? 0xFF2A313A : 0xFF22272E);
 		g.fill(x, y + h - 3, x + w, y + h, color(s));
 		if (on) g.outline(x - 1, y - 1, w + 2, h + 2, GOLD);
-		Identifier pic = picture(s);
-		int ph = Math.min(h - 42, (w - 4) * 3 / 4), pw = ph * 4 / 3, px = x + (w - pw) / 2;
-		if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px, y + 4, 0, 0, pw, ph, pw, ph);
-		else if (!s.isEmpty()) g.item(s, x + w / 2 - 8, y + 4 + ph / 2 - 8);
+		CaseImages.draw(g, s, x + 2, y + 4, w - 4, Math.min(h - 42, (w - 4) * 3 / 4)); // CS2's picture (graffiti: their decal), as big as fits
 		// the name (weapon / finish, never cut off), then the exterior: what you'd get, before picking it
 		TileText.draw(g, font, s.getHoverName().getString(), x + w / 2, y + h - 34, w - 6, 0xFFE0E0E0);
 		String ext = s.getItem() instanceof SkinWrapItem ? (dev.strafemc.weapon.StatTrak.kills(s) >= 0 ? "StatTrak™ " : "")
@@ -178,11 +175,7 @@ public final class CarePackageScreen extends Screen {
 
 	/** The rarity colour under the tile: a wrap's, a case's base grade grey. */
 	private static int color(ItemStack s) {
-		if (s.getItem() instanceof SkinWrapItem) {
-			SkinWraps.Wrap w = SkinWraps.get(SkinWrapItem.skin(s));
-			if (w != null && w.rarity() != null) return 0xFF000000 | w.rarity().color;
-		}
-		return CASE_GREY;
+		return CaseImages.rarityColor(s, CASE_GREY);
 	}
 
 	@Override

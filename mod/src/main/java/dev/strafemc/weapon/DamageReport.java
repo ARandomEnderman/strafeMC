@@ -53,7 +53,12 @@ public final class DamageReport {
 	/** Deaths to report at the end of the tick: the death event comes inside the killing hit, before the killfeed's line. */
 	private static final java.util.Set<ServerPlayer> DIED = ConcurrentHashMap.newKeySet();
 
-	public static void died(ServerPlayer p) {
+	/** Who killed a player by other means than the killfeed knows (a zombie's hit, a skeleton's arrow): the panel's fallback. */
+	private static final Map<UUID, LivingEntity> FALLBACK = new ConcurrentHashMap<>();
+
+	public static void died(ServerPlayer p, net.minecraft.world.damagesource.DamageSource source) {
+		LivingEntity by = source.getEntity() instanceof LivingEntity le ? le : p.getKillCredit();
+		if (by != null) FALLBACK.put(p.getUUID(), by);
 		DIED.add(p);
 	}
 
@@ -69,6 +74,8 @@ public final class DamageReport {
 	private static void report(ServerPlayer p) {
 		Map<UUID, Rec> given = GIVEN.remove(p.getUUID()), taken = TAKEN.remove(p.getUUID());
 		Killer k = KILLED_BY.remove(p.getUUID());
+		LivingEntity fallback = FALLBACK.remove(p.getUUID());
+		if (k == null && fallback != null) k = new Killer(fallback, null, 0); // not a CS weapon kill: still the panel
 		if (k != null && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.DeathInfo.TYPE)) {
 			Rec g = given == null ? null : given.get(k.who().getUUID()), t = taken == null ? null : taken.get(k.who().getUUID());
 			String[] w = weapon(k);
@@ -84,7 +91,11 @@ public final class DamageReport {
 
 	/** The kill's weapon: {name with the killer's skin, weapon class, paint kit or ""}. */
 	private static String[] weapon(Killer k) {
-		String icon = k.icon() == null ? "" : k.icon();
+		if (k.icon() == null) { // a mob's own attack: what it holds, or its bare hands
+			var held = k.who().getMainHandItem();
+			return new String[] {held.isEmpty() ? "bare hands" : held.getHoverName().getString(), "", ""};
+		}
+		String icon = k.icon();
 		String cls = icon.equals("inferno") ? "weapon_molotov" : "weapon_" + icon;
 		String name = SkinWraps.WEAPON_NAMES.getOrDefault(cls, GRENADE_NAMES.getOrDefault(cls, cls.replace("weapon_", "")));
 		String kit = "";

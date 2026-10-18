@@ -13,9 +13,13 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class DeathCam {
 	private static final double TRAVEL = 0.4, HOLD = 3.0;
+	/** The death screen comes before the server says who killed us (the killfeed line, the death panel): wait this long for it. */
+	private static final double WAIT_KILLER = 0.75;
 	private static int killer = -1;
 	private static boolean headshot;
 	private static long diedAt;
+	/** Seconds after the death when the killer was known (-1: not yet). */
+	private static double killerSince = -1;
 	private static Screen pending;
 	private static float fromYaw, fromPitch;
 	private static boolean released;
@@ -33,7 +37,10 @@ public final class DeathCam {
 	}
 
 	public static void info(StrafePayloads.DeathInfo m) {
-		Minecraft.getInstance().execute(() -> info = m);
+		Minecraft.getInstance().execute(() -> {
+			info = m;
+			if (killer < 0 && !m.self()) killer = m.killerId(); // killed by something the killfeed doesn't show (a zombie)
+		});
 	}
 
 	public static void register() {
@@ -77,7 +84,7 @@ public final class DeathCam {
 		g.text(font, "§7Damage taken:  §f" + m.taken() + " §7in §f" + m.hitsTaken() + (m.hitsTaken() == 1 ? " hit" : " hits"), x + 8, dy, -1, false);
 		g.text(font, "§7Damage given:  §f" + m.given() + " §7in §f" + m.hitsGiven() + (m.hitsGiven() == 1 ? " hit" : " hits"), x + 8, dy + 11, -1, false);
 		// the weapon's picture (in the killer's skin)
-		net.minecraft.resources.Identifier img = m.kit().isEmpty() ? CaseImages.image("panorama/images/econ/weapons/base_weapons/" + m.cls() + "_png")
+		net.minecraft.resources.Identifier img = m.cls().isEmpty() ? null : m.kit().isEmpty() ? CaseImages.image("panorama/images/econ/weapons/base_weapons/" + m.cls() + "_png")
 				: CaseImages.get(new dev.strafemc.weapon.Cases.Entry(m.kit(), m.cls()));
 		if (img != null) {
 			int ph = pic * 3 / 4;
@@ -88,7 +95,7 @@ public final class DeathCam {
 	/** The death screen asked to open: hold it while the camera looks at the killer. True if it was held. */
 	public static boolean hold(Screen deathScreen) {
 		var mc = Minecraft.getInstance();
-		if (released || killer < 0 || mc.level == null || mc.player == null || !(mc.level.getEntity(killer) instanceof Entity)) return false;
+		if (released || mc.level == null || mc.player == null || killer >= 0 && mc.level.getEntity(killer) == null) return false;
 		if (pending == null) {
 			pending = deathScreen;
 			diedAt = System.nanoTime();
@@ -108,11 +115,14 @@ public final class DeathCam {
 			return;
 		}
 		double t = (System.nanoTime() - diedAt) / 1e9;
-		Entity k = mc.level == null ? null : mc.level.getEntity(killer);
+		if (killer < 0 && t < WAIT_KILLER) return; // the server hasn't said who yet
+		if (killer >= 0 && killerSince < 0) killerSince = t; // the camera's turn starts once we know who
+		double since = killerSince < 0 ? 0 : t - killerSince;
+		Entity k = mc.level == null || killer < 0 ? null : mc.level.getEntity(killer);
 		if (k != null && mc.player != null) {
 			Vec3 eye = mc.player.getEyePosition(), to = k.getEyePosition().subtract(eye);
 			float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z)), pitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
-			double travel = headshot ? TRAVEL / 2 : TRAVEL, f = Math.min(1, t / travel);
+			double travel = headshot ? TRAVEL / 2 : TRAVEL, f = Math.min(1, since / travel);
 			f = 1 - Math.pow(1 - f, 3);
 			float dy = net.minecraft.util.Mth.wrapDegrees(yaw - fromYaw);
 			mc.player.setYRot(fromYaw + (float) (dy * f));
@@ -120,9 +130,10 @@ public final class DeathCam {
 			mc.player.yRotO = mc.player.getYRot();
 			mc.player.xRotO = mc.player.getXRot();
 		}
-		if (t >= HOLD || k == null) {
+		if (since >= HOLD || k == null) {
 			Screen s = pending;
 			pending = null;
+			killerSince = -1;
 			released = true;
 			info = null;
 			mc.execute(() -> mc.setScreen(s)); // not from inside the frame being drawn
