@@ -33,13 +33,15 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> STATTRAK;
 	/** A standard graffiti's tint (CS2 graffiti_tints id). Absent: none. */
 	public static DataComponentType<Integer> TINT;
+	/** A money voucher's dollars. Absent: not rolled yet (fresh from a chest). */
+	public static DataComponentType<Integer> VOUCHER;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
 	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -59,6 +61,7 @@ public final class WeaponItems {
 		WEAR = component("wear");
 		STATTRAK = component("stattrak");
 		TINT = component("tint");
+		VOUCHER = component("voucher");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));
@@ -85,6 +88,7 @@ public final class WeaponItems {
 		MagPouchItem.register();
 		STORAGE_UNIT = item("storage_unit", p -> new StorageUnitItem(p.stacksTo(1)));
 		SPRAY = item("spray", p -> new SprayItem(p.stacksTo(1)));
+		VOUCHER_ITEM = item("voucher", p -> new VoucherItem(p.stacksTo(64)));
 		StorageUnitItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
@@ -125,6 +129,7 @@ public final class WeaponItems {
 			e.accept(GUN_BASE);
 			e.accept(MAG_POUCH);
 			e.accept(STORAGE_UNIT);
+			for (int d : new int[] {10, 50, 100, 500, 1000}) e.accept(VoucherItem.stack(VOUCHER_ITEM, d));
 			for (var g : GUNS.entrySet()) {
 				e.accept(g.getValue());
 				if (WeaponStats.of(g.getKey()) == null || WeaponStats.of(g.getKey()).clip() > 1) e.accept(MAGS.get(g.getKey()));

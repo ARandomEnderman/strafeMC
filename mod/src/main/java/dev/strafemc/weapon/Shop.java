@@ -176,6 +176,12 @@ public final class Shop {
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} sold {} item(s) for {}", p.getScoreboardName(), refs.size(), money(cents));
 	}
 
+	/** Adds to the player's balance (a money voucher). */
+	public static void deposit(ServerPlayer p, long cents) {
+		State s = get(p);
+		p.setAttached(DATA, new State(s.cents() + Math.max(0, cents), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
+	}
+
 	/** Buys offer i of this rotation, once, if the balance covers it. */
 	public static void buy(ServerPlayer p, int i) {
 		State s = get(p);

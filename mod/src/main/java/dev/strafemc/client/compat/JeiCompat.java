@@ -77,6 +77,7 @@ public final class JeiCompat implements IModPlugin {
 				dev.strafemc.weapon.WeaponItems.WEAPON_CASE, dev.strafemc.weapon.WeaponItems.CASE_KEY, dev.strafemc.weapon.WeaponItems.SPRAY})
 			r.registerFromDataComponentTypes(item, cmd);
 		for (var gloves : dev.strafemc.weapon.WeaponItems.GLOVES.values()) r.registerFromDataComponentTypes(gloves, cmd);
+		r.registerFromDataComponentTypes(dev.strafemc.weapon.WeaponItems.VOUCHER_ITEM, dev.strafemc.weapon.WeaponItems.VOUCHER);
 	}
 
 	@Override
