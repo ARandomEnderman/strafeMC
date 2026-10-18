@@ -796,7 +796,8 @@ public final class GunServer {
 	static void hurtCs(ServerPlayer p, LivingEntity target, float amount, String cls) {
 		Vec3 motion = target.getDeltaMovement();
 		boolean marked = target.hurtMarked;
-		var src = target instanceof net.minecraft.world.entity.monster.EnderMan
+		// endermen dodge gunfire as they do arrows (teleporting away, unhurt); the Zeus's arc gets them (asked for)
+		var src = target instanceof net.minecraft.world.entity.monster.EnderMan && !cls.equals(ZeusRecharge.CLS)
 				? new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
 						.getOrThrow(net.minecraft.world.damagesource.DamageTypes.ARROW), p, p)
 				: new net.minecraft.world.damagesource.DamageSource(p.level().registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)

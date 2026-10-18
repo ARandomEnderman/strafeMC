@@ -1,0 +1,19 @@
+{
+  "parent": "strafemc:zeus_kill",
+  "display": {
+    "icon": {
+      "id": "minecraft:ender_pearl"
+    },
+    "title": "Short Circuit",
+    "description": "Kill an Enderman with the Zeus x27",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

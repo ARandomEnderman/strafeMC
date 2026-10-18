@@ -45,7 +45,10 @@ public final class Advancements {
 		if ((flags & KillFeed.ATTACKER_BLIND) != 0) award(p, "blind_kill");
 		if ((flags & KillFeed.IN_AIR) != 0) award(p, "air_kill");
 		if (icon.contains("knife") || icon.equals("bayonet")) award(p, "knife_kill");
-		if (icon.equals("taser")) award(p, "zeus_kill");
+		if (icon.equals("taser")) {
+			award(p, "zeus_kill");
+			if (victim instanceof net.minecraft.world.entity.monster.EnderMan) award(p, "zeus_enderman");
+		}
 		if (icon.equals("hegrenade")) award(p, "he_kill");
 		if (icon.equals("inferno")) {
 			award(p, "molotov_kill");
