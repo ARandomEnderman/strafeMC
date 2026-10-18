@@ -69,7 +69,8 @@ public final class SprayDecals {
 		ALL.clear();
 	}
 
-	private static Identifier texture(String material) {
+	/** A graffiti's picture (loading it the first time), or null until it's ready. */
+	public static Identifier texture(String material) {
 		Identifier id = TEXTURES.get(material);
 		if (id != null || !LOADING.add(material)) return id;
 		String base = "materials/decals/sprays/" + material;

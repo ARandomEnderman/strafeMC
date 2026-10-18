@@ -18,12 +18,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * CS2's graffiti: right-click a block to spray it on that face, for everyone to see (never used up, as CS2's graffiti
- * no longer are). Which graffiti is the custom model data string; standard ones carry a tint (WeaponItems.TINT).
+ * CS2's graffiti: new ones are sealed (CS2's "Sealed Graffiti": they have a worth, so they can be sold, upgraded and
+ * stored); right-click opens a small screen to unseal it. Unsealed, right-click a block to spray it on that face for
+ * everyone to see (never used up), and it has no worth any more. Which graffiti is the custom model data string;
+ * standard ones carry a tint (WeaponItems.TINT).
  */
 public class SprayItem extends Item {
 	/** Seconds between sprays. FLAGGED ours (CS2's cooldown isn't in its files). */
 	private static final long COOLDOWN_MS = 4000;
+	/** Sprays an unsealed graffiti has (CS:GO's 50 charges, asked for). */
+	public static final int USES = 50;
 	private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
 
 	public SprayItem(Properties p) {
@@ -43,6 +47,25 @@ public class SprayItem extends Item {
 		return d == null ? null : d.getString(0);
 	}
 
+	public static boolean sealed(ItemStack s) {
+		return !s.has(WeaponItems.OPENED);
+	}
+
+	/** Unseals the held graffiti (server; the unseal screen). */
+	public static void unseal(ServerPlayer p) {
+		for (var hand : net.minecraft.world.InteractionHand.values()) {
+			ItemStack s = p.getItemInHand(hand);
+			if (s.getItem() instanceof SprayItem && sealed(s)) {
+				if (s.getCount() > 1) { // one off a stack
+					ItemStack one = s.split(1);
+					one.set(WeaponItems.OPENED, USES);
+					if (!p.getInventory().add(one)) p.drop(one, false);
+				} else s.set(WeaponItems.OPENED, USES);
+				return;
+			}
+		}
+	}
+
 	public static int tint(ItemStack s) {
 		Integer t = s.get(WeaponItems.TINT);
 		return t == null ? 0 : t;
@@ -53,19 +76,34 @@ public class SprayItem extends Item {
 		Sprays.Spray sp = Sprays.get(spray(stack));
 		if (sp == null) return super.getName(stack);
 		Sprays.Tint t = Sprays.tint(tint(stack));
-		return Component.literal("Graffiti | " + sp.name() + (sp.tintable() && t != null ? " (" + t.label() + ")" : "")).withColor(sp.rarity().color);
+		return Component.literal((sealed(stack) ? "Sealed Graffiti | " : "Graffiti | ") + sp.name() + (sp.tintable() && t != null ? " (" + t.label() + ")" : "")).withColor(sp.rarity().color);
 	}
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		Sprays.Spray sp = Sprays.get(spray(stack));
 		if (sp != null) out.accept(Component.literal("§7" + sp.rarity().weaponName.replace(" Grade", "") + " Graffiti"));
+		if (!sealed(stack)) out.accept(Component.literal("§7" + stack.get(WeaponItems.OPENED) + " uses left"));
+	}
+
+	/** Sealed: right-click (in the air or on a block) opens the unseal screen. */
+	@Override
+	public InteractionResult use(net.minecraft.world.level.Level level, net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand) {
+		if (sealed(player.getItemInHand(hand))) {
+			if (level.isClientSide()) dev.strafemc.StrafeMc.openUnseal.run();
+			return InteractionResult.SUCCESS;
+		}
+		return InteractionResult.PASS;
 	}
 
 	@Override
 	public InteractionResult useOn(UseOnContext c) {
-		if (!(c.getPlayer() instanceof ServerPlayer p)) return InteractionResult.SUCCESS;
 		ItemStack s = c.getItemInHand();
+		if (sealed(s)) {
+			if (c.getLevel().isClientSide()) dev.strafemc.StrafeMc.openUnseal.run();
+			return InteractionResult.SUCCESS;
+		}
+		if (!(c.getPlayer() instanceof ServerPlayer p)) return InteractionResult.SUCCESS;
 		Sprays.Spray sp = Sprays.get(spray(s));
 		if (sp == null) return InteractionResult.FAIL;
 		long now = System.currentTimeMillis();
@@ -82,6 +120,9 @@ public class SprayItem extends Item {
 			if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE))
 				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
 		GunServer.soundAt(p.level(), "SprayCan.Paint", hit, p);
+		int left = s.getOrDefault(WeaponItems.OPENED, USES) - 1; // a spray used up; the last one takes the graffiti
+		if (left <= 0) s.shrink(1);
+		else s.set(WeaponItems.OPENED, left);
 		return InteractionResult.SUCCESS;
 	}
 }

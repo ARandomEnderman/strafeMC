@@ -35,6 +35,8 @@ public final class WeaponItems {
 	public static DataComponentType<Integer> TINT;
 	/** A money voucher's dollars. Absent: not rolled yet (fresh from a chest). */
 	public static DataComponentType<Integer> VOUCHER;
+	/** An unsealed graffiti's sprays left (it starts at SprayItem.USES); absent: still sealed. */
+	public static DataComponentType<Integer> OPENED;
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
@@ -62,6 +64,7 @@ public final class WeaponItems {
 		STATTRAK = component("stattrak");
 		TINT = component("tint");
 		VOUCHER = component("voucher");
+		OPENED = component("opened");
 		for (WeaponTable.Entry e : WeaponTable.guns()) {
 			String mag = "mag_" + e.shortName();
 			GUNS.put(e.cls(), item(e.cls(), p -> new GunItem(p, e.cls(), mag)));

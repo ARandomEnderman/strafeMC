@@ -12,6 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StrafeMc implements ModInitializer {
+	/** Opens the graffiti unseal screen (set by the client; nothing on a dedicated server). */
+	public static Runnable openUnseal = () -> {};
+
 	public static final String MOD_ID = "strafemc";
 	public static final Logger LOG = LoggerFactory.getLogger(MOD_ID);
 
