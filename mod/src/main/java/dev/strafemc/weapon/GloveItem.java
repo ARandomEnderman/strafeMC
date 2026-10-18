@@ -88,5 +88,7 @@ public class GloveItem extends Item {
 		out.accept(Component.literal("§7Factory New"));
 		Integer pattern = stack.get(WeaponItems.PATTERN);
 		if (pattern != null) out.accept(Component.literal("§7Pattern template: " + pattern));
+		double worth = Worth.of(stack);
+		if (worth >= 0) out.accept(Component.literal("§7Worth: §a" + Worth.format(worth)));
 	}
 }

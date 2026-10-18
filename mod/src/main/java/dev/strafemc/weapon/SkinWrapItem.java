@@ -120,5 +120,7 @@ public class SkinWrapItem extends Item {
 		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));
 		int kills = StatTrak.kills(stack);
 		if (kills >= 0) out.accept(Component.literal("StatTrak™ Confirmed Kills: " + kills).withColor(StatTrak.COLOR));
+		double worth = Worth.of(stack);
+		if (worth >= 0) out.accept(Component.literal("§7Worth: §a" + Worth.format(worth)));
 	}
 }
