@@ -30,14 +30,18 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Sprayed graffiti (SprayItem): CS2's decal picture (materials/decals/sprays/<material>, converted from the player's own
  * CS2 files the first time) on the sprayed face, tinted for standard graffiti, upright on walls and turned the sprayer's
- * way on floors and ceilings. The last few per player are kept; a changed block takes its graffiti away.
+ * way on floors and ceilings. The last few per player are kept for 15 minutes, fading out over the last 2; a changed
+ * block takes its graffiti away.
  */
 public final class SprayDecals {
 	/** Half the decal's size in blocks: 2 across (CS2's pictures fill about the middle half, so the art is about a block). FLAGGED ours. */
 	private static final double HALF = 1.0, LIFT = 0.003;
 	private static final int PER_PLAYER = 3;
+	/** A graffiti stays this long, fading out over the last FADE_S (asked for: longer than CS2's per-round life). FLAGGED ours. */
+	private static final double LIFE_S = 15 * 60, FADE_S = 2 * 60;
 
-	private record Placed(String material, int color, Vec3 at, Direction face, BlockPos block, BlockState state, Vec3 forward, java.util.UUID owner) {}
+	private record Placed(String material, int color, Vec3 at, Direction face, BlockPos block, BlockState state, Vec3 forward, java.util.UUID owner,
+						  long placedAt) {}
 
 	private static final List<Placed> ALL = new ArrayList<>();
 	private static final Map<String, Identifier> TEXTURES = new ConcurrentHashMap<>();
@@ -55,7 +59,7 @@ public final class SprayDecals {
 			BlockPos block = BlockPos.of(m.block());
 			double yaw = Math.toRadians(m.yaw());
 			Placed p = new Placed(sp.material(), t != null ? 0xFF000000 | t.color() : -1, new Vec3(m.x(), m.y(), m.z()), Direction.from3DDataValue(m.face()), block,
-					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner());
+					mc.level.getBlockState(block), new Vec3(-Math.sin(yaw), 0, Math.cos(yaw)), m.owner(), System.nanoTime());
 			// the sprayer's oldest goes once they have more than PER_PLAYER
 			List<Placed> mine = new ArrayList<>();
 			for (Placed q : ALL) if (q.owner().equals(m.owner())) mine.add(q);
@@ -100,7 +104,8 @@ public final class SprayDecals {
 	public static void render(LevelRenderContext ctx) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null || ALL.isEmpty()) return;
-		ALL.removeIf(p -> mc.level.getBlockState(p.block()) != p.state()); // block broken or changed
+		long now = System.nanoTime();
+		ALL.removeIf(p -> mc.level.getBlockState(p.block()) != p.state() || (now - p.placedAt()) / 1e9 >= LIFE_S); // block changed, or faded away
 		Vec3 cam = mc.gameRenderer.getMainCamera().position();
 		PoseStack ps = ctx.poseStack();
 		for (Placed p : ALL.toArray(new Placed[0])) {
@@ -120,11 +125,13 @@ public final class SprayDecals {
 			Vec3 tl = c.subtract(right.scale(HALF)).add(up.scale(HALF)), tr = c.add(right.scale(HALF)).add(up.scale(HALF)),
 					br = c.add(right.scale(HALF)).subtract(up.scale(HALF)), bl = c.subtract(right.scale(HALF)).subtract(up.scale(HALF));
 			int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(c.add(n.scale(0.3))));
+			double age = (now - p.placedAt()) / 1e9, a = age < LIFE_S - FADE_S ? 1 : Math.max(0, (LIFE_S - age) / FADE_S);
+			int color = (int) Math.round(((p.color() >>> 24) & 255) * a) << 24 | (p.color() & 0xFFFFFF); // fading out at the end
 			ctx.submitNodeCollector().submitCustomGeometry(ps, RenderTypes.entityTranslucent(tex), (pose, vc) -> {
-				vertex(vc, pose, bl, 0, 1, cam, n, light, p.color());
-				vertex(vc, pose, br, 1, 1, cam, n, light, p.color());
-				vertex(vc, pose, tr, 1, 0, cam, n, light, p.color());
-				vertex(vc, pose, tl, 0, 0, cam, n, light, p.color());
+				vertex(vc, pose, bl, 0, 1, cam, n, light, color);
+				vertex(vc, pose, br, 1, 1, cam, n, light, color);
+				vertex(vc, pose, tr, 1, 0, cam, n, light, color);
+				vertex(vc, pose, tl, 0, 0, cam, n, light, color);
 			});
 		}
 	}
