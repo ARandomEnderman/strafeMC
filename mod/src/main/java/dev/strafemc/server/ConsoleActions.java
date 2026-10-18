@@ -317,7 +317,8 @@ public final class ConsoleActions {
 					Integer pattern = drop.stack().get(dev.strafemc.weapon.WeaponItems.PATTERN);
 					sent.add(new dev.strafemc.net.StrafePayloads.CaseResult.Drop(drop.entry().kit(), drop.entry().item(),
 							drop.rarity() == null ? -1 : drop.rarity().ordinal(), drop.stack().getHoverName().getString(), pattern == null ? -1 : pattern,
-							drop.stack().getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? dev.strafemc.weapon.SkinWrapItem.wear(drop.stack()) : -1));
+							drop.stack().getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? dev.strafemc.weapon.SkinWrapItem.wear(drop.stack())
+									: drop.stack().getItem() instanceof dev.strafemc.weapon.GloveItem ? dev.strafemc.weapon.GloveItem.wear(drop.stack()) : -1));
 				}
 				if (stacks.isEmpty()) break;
 				if (!creative) { // n cases and n keys used up (its own keys first, then Universal Keys)

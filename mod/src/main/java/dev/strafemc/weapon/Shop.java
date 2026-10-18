@@ -130,7 +130,8 @@ public final class Shop {
 			ItemStack s;
 			if (rng.nextDouble() < 0.15 && !GloveSkins.ALL.isEmpty()) { // gloves now and then
 				GloveSkins.Skin g = GloveSkins.ALL.get(rng.nextInt(GloveSkins.ALL.size()));
-				s = GloveItem.stack(WeaponItems.GLOVES.get(g.kind()), g.kit());
+				double[] gr = Wear.range(g.kit());
+				s = GloveItem.stack(WeaponItems.GLOVES.get(g.kind()), g.kit(), (float) (gr[0] + rng.nextDouble() * (gr[1] - gr[0])));
 			} else {
 				SkinWraps.Wrap w = wraps.get(rng.nextInt(wraps.size()));
 				double[] r = Wear.range(w.kits().values().iterator().next());

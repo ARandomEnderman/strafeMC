@@ -9,10 +9,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Bakes a CS2 glove finish into one colour texture in the glove's UV space, Factory New (no wear, damage or grime).
+ * Bakes a CS2 glove finish into one colour texture in the glove's UV space, at a wear (0: Factory New).
  * CS2 composites gloves on the GPU from layered materials; this reads the finish's material parameters and redoes
  * the colour part on the CPU. FLAGGED: our reconstruction from the parameters and textures, not CS2's shader code
- * (wear, roughness, sheen and normals are left out; the detail-texture shading and blend strengths are ours).
+ * (roughness, sheen and normals are left out; the detail-texture shading, blend strengths and how wear shows are ours).
+ * <p>
+ * Wear (older finishes): each textile layer has CS2's damage settings (g_fDamageBrightness / Saturation / Bleaching,
+ * g_fCurvatureWearBoost / Power, g_fGrungeMax and its g_tGrunge). Worn spots are where the material's noise and the
+ * exposed parts (the surface map's occlusion) pass a threshold that falls as the wear rises; there the colour gets the
+ * layer's damage brightness, saturation and bleaching, and grunge darkens the whole layer by up to g_fGrungeMax x wear.
  * <p>
  * Older finishes (csgo_customglove): the layer mask's alpha is a colour-ID map (8 tints); the ID named by
  * g_nPatternReplaceIndex shows the pattern instead, either mapped through the palette (mode 0: base, then the R, G, B
@@ -71,10 +76,41 @@ public final class GloveSkinBaker {
 
 	/** Bakes the finish; images come from {@code tex} by CS2 resource path (".vtex"), null when missing. */
 	public static BufferedImage bake(Params p, Function<String, BufferedImage> tex) {
-		return p.shader.contains("preview") ? bakeNew(p, tex) : bakeOld(p, tex);
+		return bake(p, tex, 0);
 	}
 
-	private static BufferedImage bakeOld(Params p, Function<String, BufferedImage> tex) {
+	public static BufferedImage bake(Params p, Function<String, BufferedImage> tex, double wear) {
+		return p.shader.contains("preview") ? bakeNew(p, tex, wear) : bakeOld(p, tex, wear);
+	}
+
+	private static double smooth(double a, double b, double x) {
+		double t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+		return t * t * (3 - 2 * t);
+	}
+
+	/** How worn a spot is (0-1) at this wear: noise and exposure past a threshold that drops as the wear rises. */
+	private static double damage(double wear, double noise, double exposed, double boost) {
+		if (wear <= 0) return 0;
+		double e = noise * 0.6 + exposed * (0.4 + boost);
+		double t = 1.1 - wear * 1.35;
+		return smooth(t, t + 0.2, e);
+	}
+
+	/** A layer's damage look on a colour: brightness, saturation, bleaching toward a pale grey. */
+	private static double[] damaged(double[] c, double d, double bright, double sat, double bleach) {
+		if (d <= 0) return c;
+		double l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+		double[] o = new double[3];
+		for (int k = 0; k < 3; k++) {
+			double x = l + (c[k] - l) * (1 + sat * d);
+			x *= 1 + bright * d;
+			x += ((l * 0.6 + 0.35) - x) * bleach * d * 0.35;
+			o[k] = Math.max(0, Math.min(1, x));
+		}
+		return o;
+	}
+
+	private static BufferedImage bakeOld(Params p, Function<String, BufferedImage> tex, double wear) {
 		BufferedImage mask = load(tex, p, "g_tLayerMask"), surface = load(tex, p, "g_tSurface"), pattern = load(tex, p, "g_tPattern");
 		BufferedImage[] detail = new BufferedImage[4];
 		double[] detailScale = new double[4], blackPoint = new double[4];
@@ -82,6 +118,18 @@ public final class GloveSkinBaker {
 			detail[i] = load(tex, p, "g_tDetail" + (i + 1));
 			detailScale[i] = p.f("g_fDetailScale" + (i + 1), 1);
 			blackPoint[i] = p.f("g_fDetailBlackPoint" + (i + 1), 0);
+		}
+		BufferedImage noiseTex = wear > 0 ? load(tex, p, "g_tNoise") : null;
+		BufferedImage[] grunge = new BufferedImage[4];
+		double[] dBright = new double[4], dSat = new double[4], dBleach = new double[4], cBoost = new double[4], cPow = new double[4], gMax = new double[4];
+		for (int i = 0; i < 4 && wear > 0; i++) {
+			grunge[i] = load(tex, p, "g_tGrunge" + (i + 1));
+			dBright[i] = p.f("g_fDamageBrightness" + (i + 1), -0.3);
+			dSat[i] = p.f("g_fDamageSaturation" + (i + 1), -0.2);
+			dBleach[i] = p.f("g_fDamageBleaching" + (i + 1), 0);
+			cBoost[i] = p.f("g_fCurvatureWearBoost" + (i + 1), 0);
+			cPow[i] = p.f("g_fCurvaturePower" + (i + 1), 1);
+			gMax[i] = p.f("g_fGrungeMax" + (i + 1), 0.2);
 		}
 		double[][] tint = new double[9][];
 		for (int i = 1; i <= 8; i++) tint[i] = p.v("g_vColorTint" + i, 0.5, 0.5, 0.5);
@@ -116,13 +164,23 @@ public final class GloveSkinBaker {
 					d = Math.max(0, (d - blackPoint[layer]) / Math.max(0.05, 1 - blackPoint[layer]));
 					c = scale(c, 0.55 + 0.9 * d); // detail shading around 1 (its mean is ~0.5)
 				}
-				if (surface != null) c = scale(c, 0.25 + 0.75 * ((sample(surface, u, v) >> 8 & 255) / 255.0));
+				double ao = surface == null ? 1 : (sample(surface, u, v) >> 8 & 255) / 255.0;
+				if (wear > 0) { // worn: the layer's damage on its worn spots, its grunge over all of it
+					double n = noiseTex == null ? 0.5 : (sampleBilinear(noiseTex, u * 2, v * 2) >> 16 & 255) / 255.0;
+					c = damaged(c, damage(wear, n, Math.pow(ao, Math.max(0.1, cPow[layer])), cBoost[layer]), dBright[layer], dSat[layer], dBleach[layer]);
+					if (grunge[layer] != null) {
+						int gc = sampleBilinear(grunge[layer], u, v);
+						double gl = (0.299 * (gc >> 16 & 255) + 0.587 * (gc >> 8 & 255) + 0.114 * (gc & 255)) / 255.0;
+						c = scale(c, 1 - Math.min(1, gMax[layer] * wear * 1.5) * (1 - gl) * (0.5 + 0.5 * (1 - ao)));
+					}
+				}
+				if (surface != null) c = scale(c, 0.25 + 0.75 * ao);
 				out.setRGB(x, y, rgb(c));
 			}
 		return out;
 	}
 
-	private static BufferedImage bakeNew(Params p, Function<String, BufferedImage> tex) {
+	private static BufferedImage bakeNew(Params p, Function<String, BufferedImage> tex, double wear) {
 		BufferedImage layerId = load(tex, p, "g_tLayerId"), tintId = load(tex, p, "g_tTintId"), props = load(tex, p, "g_tObjectProperties"),
 				pattern = load(tex, p, "g_tPattern");
 		BufferedImage[] surf = new BufferedImage[4];
@@ -171,7 +229,13 @@ public final class GloveSkinBaker {
 						c = lerp(c, unpack(pc), a);
 					}
 				}
-				if (props != null) c = scale(c, 0.25 + 0.75 * ((sample(props, u, v) >> 16 & 255) / 255.0)); // occlusion in red here
+				double occ = props == null ? 1 : (sample(props, u, v) >> 16 & 255) / 255.0; // occlusion in red here
+				if (wear > 0) { // newer finishes have no damage settings: darker, duller worn spots (ours)
+					double n = (Math.sin(u * 91.7) * Math.sin(v * 77.3) * 0.5 + 0.5) * 0.5 + ((x * 73856093 ^ y * 19349663) & 1023) / 1023.0 * 0.5;
+					c = damaged(c, damage(wear, n, occ, 0), -0.3, -0.25, 0.3);
+					c = scale(c, 1 - 0.25 * wear * (1 - occ));
+				}
+				if (props != null) c = scale(c, 0.25 + 0.75 * occ);
 				out.setRGB(x, y, rgb(c));
 			}
 		return out;

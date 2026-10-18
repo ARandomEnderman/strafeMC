@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * CS2 gloves (items_game wearables) in every CS2 finish (GloveSkins), always Factory New, worn from the gloves slot of
+ * CS2 gloves (items_game wearables) in every CS2 finish (GloveSkins), with a float like wraps, worn from the gloves slot of
  * your loadout (Loadout): right-click puts them there (the ones worn before come back), sneak + right-click takes them
  * off (your side's default gloves). The finish is the stack's custom model data string, which also picks its picture.
  */
@@ -49,11 +49,26 @@ public class GloveItem extends Item {
 		this.kind = kind;
 	}
 
-	/** These gloves in a finish. */
+	/** These gloves in a finish (Factory New at its best float). */
 	public static ItemStack stack(Item item, String kit) {
 		ItemStack s = new ItemStack(item);
 		s.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(List.of(), List.of(), List.of(kit), List.of()));
 		return s;
+	}
+
+	/** These gloves in a finish at a float (CS2's gloves come in 0.06-0.80). */
+	public static ItemStack stack(Item item, String kit, float wear) {
+		ItemStack s = stack(item, kit);
+		if (wear > 0) s.set(WeaponItems.WEAR, Float.floatToIntBits(wear)); // as wraps keep it
+		return s;
+	}
+
+	/** The gloves' float; ones from before gloves had wear are at their finish's best. */
+	public static float wear(ItemStack s) {
+		Integer w = s.get(WeaponItems.WEAR);
+		if (w != null) return Float.intBitsToFloat(w);
+		CustomModelData d = s.get(DataComponents.CUSTOM_MODEL_DATA);
+		return (float) Wear.range(d == null ? null : d.getString(0))[0];
 	}
 
 	/** The stack's finish; gloves without one (older stacks) wear their first CS2 finish. */
@@ -85,7 +100,8 @@ public class GloveItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
-		out.accept(Component.literal("§7Factory New"));
+		float wear = wear(stack);
+		out.accept(Component.literal("§7Exterior: " + Wear.exterior(wear) + " (" + String.format(java.util.Locale.ROOT, "%.8f", wear) + ")"));
 		Integer pattern = stack.get(WeaponItems.PATTERN);
 		if (pattern != null) out.accept(Component.literal("§7Pattern template: " + pattern));
 		double worth = Worth.of(stack);

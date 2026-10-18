@@ -240,7 +240,7 @@ public final class Cases {
 		return stack(e, pattern, 0);
 	}
 
-	/** The same with a wear (wraps; gloves stay Factory New for now). */
+	/** The same with a wear. */
 	public static ItemStack stack(Entry e, int pattern, float wear) {
 		if (e.sticker()) return Stickers.get(e.kit()) == null ? ItemStack.EMPTY : StickerItem.stack(WeaponItems.STICKER, e.kit());
 		if (e.spray()) {
@@ -249,7 +249,7 @@ public final class Cases {
 		}
 		if (e.gloves()) {
 			var skin = GloveSkins.get(e.kit());
-			return skin == null ? ItemStack.EMPTY : GloveItem.stack(WeaponItems.GLOVES.get(skin.kind()), e.kit());
+			return skin == null ? ItemStack.EMPTY : GloveItem.stack(WeaponItems.GLOVES.get(skin.kind()), e.kit(), wear);
 		}
 		if (e.knife()) {
 			for (SkinWraps.Wrap w : SkinWraps.all())

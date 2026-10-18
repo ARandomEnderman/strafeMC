@@ -25,9 +25,11 @@ public final class GloveChoice {
 		return worn().getItem() instanceof GloveItem g ? g.kind.model : "t".equals(StrafeConfig.team) ? T_DEFAULT : CT_DEFAULT;
 	}
 
-	/** The worn finish (paint kit), empty for the default gloves. */
+	/** The worn finish (paint kit, "kit@band" past Factory New: its exterior's wear), empty for the default gloves. */
 	public static String skin() {
 		ItemStack s = worn();
-		return s.getItem() instanceof GloveItem g ? g.kit(s) : "";
+		if (!(s.getItem() instanceof GloveItem g)) return "";
+		int band = dev.strafemc.weapon.Wear.bandOf(GloveItem.wear(s));
+		return band > 0 ? g.kit(s) + "@" + band : g.kit(s);
 	}
 }

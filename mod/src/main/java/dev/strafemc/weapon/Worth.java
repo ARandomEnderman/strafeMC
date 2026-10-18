@@ -17,7 +17,7 @@ import java.util.Map;
  * exteriors and down for worse (FN x3.3, MW x1.17, FT x1, WW x0.85, BS x0.70), and up to 25% more toward the best float
  * of its exterior;</li>
  * <li>StatTrak x2.5 (its 10% odds would say x10);</li>
- * <li>gloves: $375 times (gloves in their case / 24) over the square root of how many cases hold them;</li>
+ * <li>gloves: $375 times (gloves in their case / 24) over the square root of how many cases hold them, then their wear like wraps;</li>
  * <li>stickers and sealed graffiti: STICKER / GRAFFITI for a High Grade one, 5x per grade (a Base Grade graffiti 1/25),
  * times the square root of (items in its capsule tier / the average tier) over the square root of how many capsules hold
  * it: so a typical sticker capsule's shop price (its average opening x 1.2, as for cases) comes to about $1.20 and a
@@ -158,7 +158,11 @@ public final class Worth {
 			}
 			wear = SkinWrapItem.wear(s);
 			hasWear = true;
-		} else if (s.getItem() instanceof GloveItem g) base = SPECIAL * specialScarcity(g.kind.id, g.kit(s)); // Factory New for now
+		} else if (s.getItem() instanceof GloveItem g) {
+			base = SPECIAL * specialScarcity(g.kind.id, g.kit(s));
+			wear = GloveItem.wear(s);
+			hasWear = true;
+		}
 		else if (s.getItem() instanceof SprayItem) { // sealed graffiti: by grade and how rare in the graffiti boxes; unsealed ones have none
 			Sprays.Spray sp = Sprays.get(SprayItem.spray(s));
 			if (sp == null || !SprayItem.sealed(s)) return -1;

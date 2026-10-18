@@ -26,12 +26,12 @@ public final class Wear {
 	private static final double[] ODDS = {0.03, 0.24, 0.33, 0.24, 0.16};
 
 	/** Which exterior band a float is in (0 Factory New .. 4 Battle-Scarred), its {from, to} and its roll odds (Worth uses these). */
-	static int bandOf(double wear) {
+	public static int bandOf(double wear) {
 		for (int i = 0; i < BOUNDS.length; i++) if (wear < BOUNDS[i]) return i;
 		return BOUNDS.length - 1;
 	}
 
-	static double[] bandBounds(int band) {
+	public static double[] bandBounds(int band) {
 		return new double[] {band == 0 ? 0 : BOUNDS[band - 1], BOUNDS[band]};
 	}
 

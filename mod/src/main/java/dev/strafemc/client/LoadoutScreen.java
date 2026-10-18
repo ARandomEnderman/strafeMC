@@ -119,7 +119,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 			SkinWraps.Wrap wrap = SkinWraps.get(SkinWrapItem.skin(s));
 			String on = w.knife() ? "On every knife" : wrap == null ? "" : "On every " + d.label();
 			g.text(font, on, px + 8, y + 4, 0xFFB0B0B0, false);
-		} else if (s.getItem() instanceof GloveItem) g.text(font, "Factory New", px + 8, y + 4, 0xFFB0B0B0, false);
+		} else if (s.getItem() instanceof GloveItem) g.text(font, dev.strafemc.weapon.Wear.exterior(GloveItem.wear(s)), px + 8, y + 4, 0xFFB0B0B0, false);
 		else if (s.getItem() instanceof dev.strafemc.weapon.SprayItem)
 			g.text(font, s.getOrDefault(dev.strafemc.weapon.WeaponItems.OPENED, dev.strafemc.weapon.SprayItem.USES) + " sprays left", px + 8, y + 4, 0xFFB0B0B0, false);
 	}

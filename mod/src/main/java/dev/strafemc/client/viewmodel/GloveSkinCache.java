@@ -20,24 +20,34 @@ public final class GloveSkinCache {
 
 	private GloveSkinCache() {}
 
-	/** The texture path the viewmodel uses for this finish (its ".vm1024b.png" sibling holds the pixels). */
+	/** The texture path the viewmodel uses for this finish (its ".vm1024b.png" sibling holds the pixels); "kit@band" for a worn one. */
 	public static Path texture(String kit) {
-		return StrafeConfig.cacheDir().resolve("glove_skins/v1/" + kit + ".png");
+		return StrafeConfig.cacheDir().resolve("glove_skins/v1/" + kit.replace('@', '_') + ".png");
 	}
 
-	/** Bakes the finish if it isn't cached; returns texture(kit), or null when it can't be made. */
-	public static Path ensure(String kit) throws Exception {
+	/**
+	 * Bakes the finish if it isn't cached; returns texture(kit), or null when it can't be made. "kit@band" (1-4: MW to
+	 * BS) bakes it worn at the middle of that exterior's floats.
+	 */
+	public static Path ensure(String kitBand) throws Exception {
+		int at = kitBand.indexOf('@');
+		String kit = at < 0 ? kitBand : kitBand.substring(0, at), name = kitBand.replace('@', '_');
+		double wear = 0;
+		if (at >= 0) {
+			double[] b = dev.strafemc.weapon.Wear.bandBounds(Integer.parseInt(kitBand.substring(at + 1)));
+			wear = (b[0] + b[1]) / 2;
+		}
 		GloveSkins.Skin skin = GloveSkins.get(kit);
 		if (skin == null) return null;
-		Path tex = texture(kit), pixels = tex.resolveSibling(kit + ".vm1024b.png");
+		Path tex = texture(kitBand), pixels = tex.resolveSibling(name + ".vm1024b.png");
 		if (Files.exists(pixels)) return tex;
 		// the composite names the finish's material; the material holds the colours, textures and pattern settings
 		Matcher m = MATERIAL.matcher(Files.readString(AssetCache.dataBlock(skin.composite())));
 		if (!m.find()) throw new IllegalStateException("no material in " + skin.composite());
 		var params = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(m.group(1) + "_c")));
-		BufferedImage img = GloveSkinBaker.bake(params, GloveSkinCache::load);
+		BufferedImage img = GloveSkinBaker.bake(params, GloveSkinCache::load, wear);
 		Files.createDirectories(pixels.getParent());
-		Path tmp = pixels.resolveSibling(kit + ".tmp.png");
+		Path tmp = pixels.resolveSibling(name + ".tmp.png");
 		ImageIO.write(img, "png", tmp.toFile());
 		Files.move(tmp, pixels, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		return tex;
