@@ -186,11 +186,16 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	/** Opened from the strafeMC menu: closing goes back to it, like its other screens. */
 	@Override
 	public void onClose() {
-		super.onClose();
-		if (LoadoutKey.fromMenu) {
+		if (LoadoutKey.fromMenu && minecraft.player != null) {
+			// straight back to the menu: tell the server it's closed without dropping to the game first (that grabs and
+			// re-centres the mouse)
 			LoadoutKey.fromMenu = false;
+			minecraft.player.connection.send(new net.minecraft.network.protocol.game.ServerboundContainerClosePacket(menu.containerId));
+			minecraft.player.containerMenu = minecraft.player.inventoryMenu;
 			minecraft.setScreen(new QuickMenuScreen(false));
+			return;
 		}
+		super.onClose();
 	}
 
 	@Override

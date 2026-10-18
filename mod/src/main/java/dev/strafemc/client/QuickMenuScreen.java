@@ -36,7 +36,7 @@ public final class QuickMenuScreen extends Screen {
 	protected void init() {
 		entries = java.util.List.of(
 				new Entry("loadout", "Loadout", "Gloves, knife and gun wraps", () -> {
-					minecraft.setScreen(null);
+					// the wheel stays up until the server's loadout replaces it (closing to the game first re-centres the mouse)
 					LoadoutKey.fromMenu = true; // its Done comes back here
 					LoadoutKey.open();
 				}, true),
