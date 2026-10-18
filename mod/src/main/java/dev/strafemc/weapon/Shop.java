@@ -35,7 +35,7 @@ public final class Shop {
 	private static final double KEY_PRICE = 2.49;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
-	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (asked for: 90% or
+	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (90% or
 	 * under); about $4.30 for a typical case. FLAGGED ours.
 	 */
 	private static final double CASE_SHARE = 1.2;
@@ -112,7 +112,7 @@ public final class Shop {
 		java.util.Collections.shuffle(cases, rng);
 		for (int i = 0; i < 3 && i < cases.size(); i++)
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
-		// a sticker capsule (2-6 of it, asked for) and a graffiti box (1-3): priced like cases, their average opening x CASE_SHARE
+		// a sticker capsule (2-6 of it) and a graffiti box (1-3): priced like cases, their average opening x CASE_SHARE
 		List<Cases.Case> stickers = Cases.capsules("sticker"), boxes = Cases.capsules("spray");
 		if (!stickers.isEmpty()) {
 			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));

@@ -42,7 +42,7 @@ public final class CarePackage {
 
 	/**
 	 * XP from this rank to the next: Minecraft's level curve (2L+7, 5L-38, 9L-158 for level L = rank - 1) scaled so rank
-	 * 1 -> 2 costs 1000. FLAGGED ours: CS2 uses a flat 5000 per rank; the user asked for Minecraft-like growth.
+	 * 1 -> 2 costs 1000. FLAGGED ours: CS2 uses a flat 5000 per rank; this grows like Minecraft's levels.
 	 */
 	public static int need(int rank) {
 		int l = Math.min(rank, MAX_RANK) - 1;
@@ -64,7 +64,7 @@ public final class CarePackage {
 	 * XP for killing a player or bot, per point of Minecraft XP a hostile mob drops (zombie 5 -> 100), the most a mob
 	 * gives, and the multiplier per modifier. FLAGGED ours: CS2's match XP formula lives on Valve's servers.
 	 */
-	/** A 360 kill's XP multiplier (asked for: 3x). */
+	/** A 360 kill's XP multiplier (3x). */
 	static final double SPIN_XP = 3;
 	static final double PLAYER_XP = 100, HOSTILE_PER_MC_XP = 20, MOB_MAX = 2000, MODIFIER = 1.5;
 
@@ -75,9 +75,9 @@ public final class CarePackage {
 	public record State(List<ItemStack> items, int claimed, int balance, int queued, int xp) {
 		public static final State NONE = new State(List.of(), 0, 0, 0, 0);
 
-		/** CS2's rank, 1-40. */
+		/** The level: CS2's ranks 1-40, then on and on, every one past 40 costing what 40 did; its icon and name stay 40's. */
 		public int rank() {
-			return Math.min(MAX_RANK, 1 + ranksBy(xp));
+			return 1 + ranksBy(xp);
 		}
 
 		/** XP into the current rank (past 40: into the next package's worth). */
@@ -166,7 +166,7 @@ public final class CarePackage {
 			"Major General", "Lieutenant General", "General", "Global General"};
 
 	public static String rankName(int rank) {
-		return rank >= 0 && rank < RANK_NAMES.length ? RANK_NAMES[rank] : "";
+		return rank >= 0 ? RANK_NAMES[Math.min(rank, RANK_NAMES.length - 1)] : ""; // past 40: still Global General
 	}
 
 	/** Queues packages for a player (the operators' strafemc_drop / drop_everyone). */
@@ -244,9 +244,9 @@ public final class CarePackage {
 		return SprayItem.stack(WeaponItems.SPRAY, sp.id(), tints.isEmpty() ? 0 : tints.get(rng.nextInt(tints.size())).id());
 	}
 
-	/** The case slot is two sticker capsules this often instead (asked for: capsules from drops, 2x). FLAGGED ours. */
+	/** The case slot is two sticker capsules this often instead. FLAGGED ours. */
 	static final double CAPSULE_SHARE = 0.25;
-	/** Any other slot is two sticker capsules this often (asked for: not just the case slot). FLAGGED ours. */
+	/** Any other slot is two sticker capsules this often. FLAGGED ours. */
 	static final double CAPSULE_SLOT_SHARE = 0.15;
 
 	/** A package: CASES weapon cases (now and then two sticker capsules) and finishes for the rest, in random order. */

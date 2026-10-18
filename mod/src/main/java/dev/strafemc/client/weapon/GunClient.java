@@ -115,7 +115,7 @@ public final class GunClient {
 
 	/**
 	 * The draw clip: knives with two deploys pick by deploy_variation in their CS2 graph: draw2_ is the everyday one,
-	 * draw_ the rare secret pullout (the user, in game, 2026-10-14: the other way round was flipped).
+	 * draw_ the rare secret pullout.
 	 */
 	private String drawClip(GunItem g) {
 		String draw2 = GunServer.clipPath(g.weaponClass, "draw2");

@@ -39,7 +39,7 @@ public final class SprayDecals {
 	private static final double HALF = 1.0, LIFT = 0.002, STACK = 0.0005;
 	/** At most this many at once (the oldest go first); they fade away anyway (LIFE_S). FLAGGED ours. */
 	private static final int MAX = 256;
-	/** A graffiti stays this long, fading out over the last FADE_S (asked for: longer than CS2's per-round life). FLAGGED ours. */
+	/** A graffiti stays this long, fading out over the last FADE_S (longer than CS2's per-round life). FLAGGED ours. */
 	private static final double LIFE_S = dev.strafemc.weapon.SprayLog.LIFE_S, FADE_S = 2 * 60;
 
 	private record Placed(String material, int color, Vec3 at, Direction face, BlockPos block, BlockState state, Vec3 forward, java.util.UUID owner,

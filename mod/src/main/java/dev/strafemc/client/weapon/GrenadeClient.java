@@ -44,7 +44,7 @@ public final class GrenadeClient {
 	/**
 	 * HE grenades blow a hole in smoke that fills back in (CS2 keeps recent HE blasts per smoke on its client).
 	 * FLAGGED: radius and timing are ours: 450 units (3x the first 150), clear for 0.5 s, refilled from the
-	 * edge by 2 s (user-tuned).
+	 * edge by 2 s.
 	 */
 	private record Blast(Vec3 at, long time) {}
 

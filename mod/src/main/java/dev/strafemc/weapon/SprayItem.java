@@ -26,7 +26,7 @@ import java.util.function.Consumer;
 public class SprayItem extends Item {
 	/** Seconds between sprays. FLAGGED ours (CS2's cooldown isn't in its files). */
 	private static final long COOLDOWN_MS = 4000;
-	/** Sprays an unsealed graffiti has (CS:GO's 50 charges, asked for). */
+	/** Sprays an unsealed graffiti has (CS:GO's 50 charges). */
 	public static final int USES = 50;
 	private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
 

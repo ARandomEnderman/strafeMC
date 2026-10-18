@@ -65,7 +65,7 @@ public final class WeaponSkinBaker {
 		double bright = p.f("g_flColorBrightness", 1);
 		boolean ignoreSize = p.f("g_bIgnoreWeaponSizeScale", 0) != 0;
 		// pattern size: the weapon's size scale (composite inputs' g_flUvScale1) for hydrographic, patina and anodized multicolour
-		// (Tiger Tooth / Freehand checked in game by the user); spray paint denser than its raw scale; the rest as they are (FLAGGED)
+		// (Tiger Tooth / Freehand checked in game); spray paint denser than its raw scale; the rest as they are (FLAGGED)
 		// projected (triplanar) only for spray paint and anodized airbrushed: CS2's shader variants for every other style read
 		// the pattern at the transformed mesh UV (its vertex shader: out = (uv, Xform(uv)))
 		boolean projected0 = style == 2 || style == 5;

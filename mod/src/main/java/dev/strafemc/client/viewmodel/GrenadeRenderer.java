@@ -38,7 +38,7 @@ public final class GrenadeRenderer extends ThrownItemRenderer<GrenadeEntity> {
 	 */
 	private record Model(VmModel model, float[][] pos, float[][] nrm, float cx, float cy, float cz, float halfThickness) {}
 
-	/** True CS2 scale (~5 units = 0.125 blocks for the HE) read as half size in game (user): drawn 2x. */
+	/** True CS2 scale (~5 units = 0.125 blocks for the HE) reads as half size in game: drawn 2x. */
 	private static final float WORLD_SCALE = 2f;
 	private static final Map<Grenade, Model> MODELS = new ConcurrentHashMap<>();
 	private static final Set<Grenade> LOADING = ConcurrentHashMap.newKeySet();

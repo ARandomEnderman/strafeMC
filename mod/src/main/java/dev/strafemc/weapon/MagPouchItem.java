@@ -30,7 +30,7 @@ import net.minecraft.world.level.Level;
  */
 public class MagPouchItem extends Item {
 	public static final int SIZE = 27, POWDER_SLOT = SIZE - 1;
-	/** Ticks from an empty magazine being in the pouch to its refill (asked for: 1 s). */
+	/** Ticks from an empty magazine being in the pouch to its refill (1 s). */
 	private static final int REFILL_DELAY = 20;
 	public static MenuType<ChestMenu> MENU;
 

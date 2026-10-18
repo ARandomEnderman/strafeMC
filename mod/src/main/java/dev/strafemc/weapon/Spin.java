@@ -8,11 +8,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 360 kills (ours, asked for): how far each player has turned, tick by tick, over the last WINDOW ticks. A kill is a
+ * 360 kills (ours): how far each player has turned, tick by tick, over the last WINDOW ticks. A kill is a
  * 360 when, looking back from it, the view turned SPIN degrees or more one way (in any stretch ending now).
  */
 public final class Spin {
-	/** The last 2 seconds; 270 degrees or more counts (asked for). */
+	/** The last 2 seconds; 270 degrees or more counts. */
 	static final int WINDOW = 40;
 	static final double SPIN = 270;
 

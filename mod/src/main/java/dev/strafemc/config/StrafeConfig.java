@@ -48,7 +48,7 @@ public final class StrafeConfig {
 	public static double unitsPerBlock = 40.0;
 	/** Minecraft HP per CS HP. 100 CS HP = 20 MC HP. */
 	public static double hpScale = 0.2;
-	/** Bullet-hole size relative to CS2's DecalWorldWidth/Height (user asked for 0.6; CS2 itself = 1.0). */
+	/** Bullet-hole size relative to CS2's DecalWorldWidth/Height (0.6 by default; CS2 itself = 1.0). */
 	public static double bulletHoleScale = 0.6;
 	/** Mouse wheel triggers +jump (CS-style bind) instead of hotbar scrolling. */
 	public static boolean scrollJump = false; // the wheel scrolls the hotbar unless you turn scroll-jump on

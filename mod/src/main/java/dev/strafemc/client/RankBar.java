@@ -18,7 +18,7 @@ public final class RankBar {
 		var font = mc.font;
 		CarePackage.State s = CarePackage.get(mc.player);
 		int rank = s.rank(), icon = 24, x0 = cx - w / 2;
-		var pic = CaseImages.image("panorama/images/icons/xp/level" + rank + "_png");
+		var pic = CaseImages.image("panorama/images/icons/xp/level" + Math.min(rank, CarePackage.MAX_RANK) + "_png"); // past 40: 40's icon
 		if (pic != null) g.blit(RenderPipelines.GUI_TEXTURED, pic, x0 - icon - 6, y, 0, 0, icon, icon, icon, icon);
 		String name = CarePackage.rankName(rank) + "  " + rank;
 		g.text(font, name, x0, y + 2, 0xFFFFFFFF, true);

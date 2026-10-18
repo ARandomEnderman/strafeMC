@@ -30,7 +30,7 @@ public class VoucherItem extends Item {
 
 	/**
 	 * $10-$1000 with value v at odds falling as 10 / v (a power law of 1, cut off at $1000): the median is about $20,
-	 * $100 or more is 9.1%, $500 or more 1%, $1000 one in 20,000. FLAGGED ours (asked for: hard to get good ones).
+	 * $100 or more is 9.1%, $500 or more 1%, $1000 one in 20,000. FLAGGED ours: good ones are hard to get.
 	 */
 	static int roll(net.minecraft.util.RandomSource rng) {
 		double cut = (double) MIN / MAX, u = cut + rng.nextDouble() * (1 - cut);

@@ -26,7 +26,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	static final double GRAVITY_SCALE = 0.4, ELASTICITY = 0.45, STOP_SPEED = 20, STEP = 1 / 64.0;
 	/** The grenade's collision radius in units: its centre stays this far from surfaces (matches the drawn model). */
 	static final double RADIUS = 3.6;
-	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2: 1.6 s, measured by the user). */
+	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2: 1.6 s, measured in CS2). */
 	static final double FUSE = 1.6;
 
 	/** Velocity in blocks per second (Minecraft's delta movement is per tick and only mirrors it for interpolation). */
