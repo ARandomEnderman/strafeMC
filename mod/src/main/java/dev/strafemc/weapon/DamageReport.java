@@ -10,8 +10,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CS2's damage report: when you die, chat lists the CS damage you gave and took this life, per player or mob, in CS2's
- * words (Post_Round_Damage_Report_Given / _Taken: " • Damage Given → {player_name}: {damage} in {num_hits}").
+ * The damage between you and the others this life (CS damage and hits, per player or mob), for CS2's death panel
+ * (DeathCam): when you die it gets the damage given to and taken from your killer. (A chat report was dropped: user.)
  */
 public final class DamageReport {
 	private static final class Rec {
@@ -76,8 +76,6 @@ public final class DamageReport {
 					k.who().getId(), k.who() == p, w[0], w[1], w[2], (int) Math.ceil(Math.max(0, k.who().getHealth()) / dev.strafemc.config.StrafeConfig.hpScale),
 					g == null ? 0 : (int) Math.round(g.damage), g == null ? 0 : g.hits, t == null ? 0 : (int) Math.round(t.damage), t == null ? 0 : t.hits));
 		}
-		if (given != null) for (Rec r : given.values()) line(p, " • Damage Given → ", r);
-		if (taken != null) for (Rec r : taken.values()) line(p, " • Damage Taken ← ", r);
 	}
 
 	/** CS2's grenade names (its weapons have theirs in SkinWraps). */
@@ -105,9 +103,6 @@ public final class DamageReport {
 		return new String[] {name, cls, kit};
 	}
 
-	private static void line(ServerPlayer p, String what, Rec r) {
-		p.sendSystemMessage(Component.literal(what + r.name + ": " + Math.round(r.damage) + " in " + r.hits).withColor(0xA0A0A0));
-	}
 
 	public static void forget(ServerPlayer p) {
 		GIVEN.remove(p.getUUID());
