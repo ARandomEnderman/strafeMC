@@ -727,7 +727,7 @@ public final class Viewmodel {
 					float z = Math.min(-0.01f, sp[i + 2]);
 					sp[i] = sp[i] / -z * f;
 					sp[i + 1] = -sp[i + 1] / -z * f;
-					sp[i + 2] = (z + 0.5f) * 100;
+					sp[i + 2] = -(z + 0.5f) * 100; // nearer is further out of the picture: its PoseStack turns z round (scale z by -1)
 					sn[i + 1] = -sn[i + 1];
 				}
 				var vc = buffers.getBuffer(p.alphaMode.equals("MASK") ? RenderTypes.entityCutout(tex) : VmRender.opaque(tex));
