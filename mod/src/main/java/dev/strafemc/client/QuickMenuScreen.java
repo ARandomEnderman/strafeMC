@@ -14,7 +14,7 @@ import net.minecraft.resources.Identifier;
 public final class QuickMenuScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54;
 	/** Wheel icons: texture name, CS2 panorama image (gui/menu/&lt;name&gt;.png, made by RuntimePack). */
-	public static final String[][] ICONS = {{"loadout", "icons/ui/loadout"}, {"care_package", "icons/care_package"}, {"upgrader", "icons/ui/xpshop_tiles"}, {"shop", "icons/ui/shoppingcart"},
+	public static final String[][] ICONS = {{"loadout", "icons/ui/loadout"}, {"care_package", "icons/care_package"}, {"upgrader", "icons/ui/xpshop_tiles"}, {"shop", "icons/ui/shoppingcart"}, {"tradeup", "icons/ui/trade_up"},
 			{"achievements", "icons/ui/trophy"}, {"settings", "icons/ui/settings"}};
 
 	private record Entry(String icon, String label, String sub, Runnable action, boolean active) {}
@@ -43,6 +43,7 @@ public final class QuickMenuScreen extends Screen {
 				new Entry("care_package", "Care Package", !ClientGameplay.drops() ? "Off on this server" : CarePackageScreen.claimable() ? "Rewards waiting!"
 						: "Free rewards for every rank", () -> minecraft.setScreen(new CarePackageScreen(this)), ClientGameplay.drops()),
 				new Entry("shop", "Shop", "New offers every 30 min; sell skins", () -> minecraft.setScreen(new ShopScreen(this)), true),
+				new Entry("tradeup", "Trade Up", "10 skins for one a quality higher", () -> minecraft.setScreen(new TradeUpScreen(this)), true),
 				new Entry("upgrader", "Upgrader", "Stake skins for a better one", () -> minecraft.setScreen(new UpgraderScreen(this)), true),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));

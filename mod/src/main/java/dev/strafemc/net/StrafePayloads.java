@@ -144,6 +144,18 @@ public final class StrafePayloads {
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** Cases opened (1-5 at once): per drop its kit on an item, rarity ordinal (-1: rare special item), name, pattern (-1: none). */
+	/** Server -> client: what a trade up contract gave. */
+	public record TradeUpResult(net.minecraft.world.item.ItemStack item) implements CustomPacketPayload {
+		public static final Type<TradeUpResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "tradeup_result"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, TradeUpResult> CODEC = StreamCodec.composite(net.minecraft.world.item.ItemStack.STREAM_CODEC,
+				TradeUpResult::item, TradeUpResult::new);
+
+		@Override
+		public Type<TradeUpResult> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client: an upgrade's outcome (which offer, won or not), for the upgrader's needle. */
 	public record UpgradeResult(int offer, boolean win) implements CustomPacketPayload {
 		public static final Type<UpgradeResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "upgrade_result"));

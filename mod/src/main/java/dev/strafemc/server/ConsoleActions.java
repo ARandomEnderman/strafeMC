@@ -209,6 +209,17 @@ public final class ConsoleActions {
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
 			case "storage_rename" -> dev.strafemc.weapon.StorageUnitItem.rename(p, arg);
+			case "tradeup" -> { // "ref x10": a trade up contract (Upgrader refs)
+				java.util.List<Integer> refs = new java.util.ArrayList<>();
+				try {
+					for (String a : arg.trim().split(" ")) refs.add(Integer.parseInt(a));
+				} catch (NumberFormatException e) {
+					break;
+				}
+				var got = dev.strafemc.weapon.TradeUp.sign(p, refs);
+				if (got != null && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE))
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.TradeUpResult(got));
+			}
 			case "shop_buy" -> {
 				try {
 					dev.strafemc.weapon.Shop.buy(p, Integer.parseInt(arg.trim()));
