@@ -5,6 +5,7 @@
   "client": [
     "PlayerTravelMixin",
     "KeyPriorityMixin",
+    "DeathScreenDelayMixin",
     "LivingEntityJumpMixin",
     "EntityEyeHeightMixin",
     "LocalPlayerSprintMixin",
