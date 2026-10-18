@@ -142,7 +142,7 @@ public final class CarePackageScreen extends Screen {
 		// the name (weapon / finish, never cut off), then the exterior: what you'd get, before picking it
 		TileText.draw(g, font, s.getHoverName().getString(), x + w / 2, y + h - 34, w - 6, 0xFFE0E0E0);
 		String ext = s.getItem() instanceof SkinWrapItem ? (dev.strafemc.weapon.StatTrak.kills(s) >= 0 ? "StatTrak™ " : "")
-				+ dev.strafemc.weapon.Wear.exterior(SkinWrapItem.wear(s)) : "Weapon Case";
+				+ dev.strafemc.weapon.Wear.exterior(SkinWrapItem.wear(s)) : s.getItem() instanceof dev.strafemc.weapon.SprayItem ? "Graffiti" : "Weapon Case";
 		g.text(font, font.plainSubstrByWidth(ext, w - 6), x + w / 2 - Math.min(w - 6, font.width(ext)) / 2, y + h - 14, 0xFF909090, false);
 		if (mx >= x && mx < x + w && my >= y && my < y + h && !s.isEmpty()) g.setTooltipForNextFrame(font, s, mx, my); // float, pattern...
 		if (on) { // CS2's check mark in the corner

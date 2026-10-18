@@ -462,6 +462,32 @@ public final class RuntimePack {
 		}
 		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
 				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}}");
+		// graffiti: each one's own decal picture as its icon (one converter run for the missing ones)
+		try {
+			Files.createDirectories(models.resolve("spray"));
+			java.util.List<String> sprayMissing = new java.util.ArrayList<>();
+			for (var sp : dev.strafemc.weapon.Sprays.all())
+				if (!Files.exists(StrafeConfig.cacheDir().resolve("materials/decals/sprays/" + sp.material() + ".png")))
+					sprayMissing.add("materials/decals/sprays/" + sp.material() + ".vtex_c");
+			for (int i = 0; i < sprayMissing.size(); i += 64) AssetCache.decompileAll(sprayMissing.subList(i, Math.min(sprayMissing.size(), i + 64)));
+			StringBuilder sprays = new StringBuilder();
+			for (var sp : dev.strafemc.weapon.Sprays.all()) {
+				String img = "materials/decals/sprays/" + sp.material();
+				Path out = tex.resolve("item/spray/" + sp.id() + ".png");
+				try {
+					icon(img + ".vtex_c", img + ".png", out, 64);
+				} catch (Exception e) {
+					continue;
+				}
+				Files.writeString(models.resolve("spray/" + sp.id() + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/spray/" + sp.id() + "\"}}");
+				if (sprays.length() > 0) sprays.append(',');
+				sprays.append("{\"when\":\"").append(sp.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/spray/").append(sp.id()).append("\"}}");
+			}
+			Files.writeString(items.resolve("spray.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
+					+ "\"index\":0,\"cases\":[" + sprays + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/paper\"}}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] graffiti icons: {}", e.toString());
+		}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {
 			String img = "panorama/images/econ/tools/casket_png";

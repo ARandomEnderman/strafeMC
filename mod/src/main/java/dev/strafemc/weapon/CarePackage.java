@@ -217,12 +217,25 @@ public final class CarePackage {
 		return ItemStack.EMPTY;
 	}
 
+	/** A finish slot is a graffiti this often (CS2's drops include graffiti). FLAGGED ours. */
+	static final double GRAFFITI_SHARE = 0.2;
+
+	/** A random graffiti, the standard ones in a random CS2 tint. */
+	private static ItemStack graffiti(Random rng) {
+		List<Sprays.Spray> all = Sprays.all();
+		if (all.isEmpty()) return ItemStack.EMPTY;
+		Sprays.Spray sp = all.get(rng.nextInt(all.size()));
+		List<Sprays.Tint> tints = Sprays.tints();
+		return SprayItem.stack(WeaponItems.SPRAY, sp.id(), tints.isEmpty() ? 0 : tints.get(rng.nextInt(tints.size())).id());
+	}
+
 	/** A package: CASES weapon cases and finishes for the rest, in random order. */
 	private static List<ItemStack> roll(Random rng) {
 		List<Cases.Case> cases = Cases.all();
 		List<ItemStack> items = new ArrayList<>();
 		for (int i = 0; i < OFFERED; i++) {
-			ItemStack s = i < CASES || pool().stream().allMatch(List::isEmpty) ? ItemStack.EMPTY : dropWrap(rng);
+			ItemStack s = i < CASES || pool().stream().allMatch(List::isEmpty) ? ItemStack.EMPTY
+					: rng.nextDouble() < GRAFFITI_SHARE ? graffiti(rng) : dropWrap(rng);
 			if (s.isEmpty() && !cases.isEmpty()) s = CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(rng.nextInt(cases.size())).id());
 			items.add(s);
 		}
