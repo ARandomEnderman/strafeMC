@@ -35,9 +35,9 @@ public final class Shop {
 	private static final double KEY_PRICE = 2.49;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
-	 * lose on average (about $6 for a typical case). FLAGGED ours.
+	 * lose a little on average even after the 80-110% price roll (about $3-4 for a typical case). FLAGGED ours.
 	 */
-	private static final double CASE_SHARE = 1.6;
+	private static final double CASE_SHARE = 1.1;
 
 	/** cents: the balance; rotation: which shop; bought: bit per offer; progress: ticks into the rotation (synced each minute). */
 	public record State(long cents, int rotation, int bought, int progress) {
