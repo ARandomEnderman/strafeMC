@@ -432,6 +432,7 @@ public final class Bots {
 		Vec3 motion = target.getDeltaMovement();
 		boolean marked = target.hurtMarked, wasAlive = target.isAlive();
 		target.invulnerableTime = 0;
+		DamageReport.hit(b.e, target, Math.min(dmg, target.getHealth() / StrafeConfig.hpScale));
 		target.hurtServer(level, level.damageSources().mobAttack(b.e), (float) (dmg * StrafeConfig.hpScale));
 		if (!StrafeSettings.mcKnockback()) {
 			target.setDeltaMovement(motion);

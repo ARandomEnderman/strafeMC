@@ -106,7 +106,7 @@ public final class ShopScreen extends Screen {
 		sell.setMessage(Component.literal(selling.isEmpty() ? "Sell" : "Sell for " + Shop.money(sellValue())));
 		List<Shop.Offer> offers = offers();
 		Shop.State s = state();
-		buy.active = chosen >= 0 && chosen < offers.size() && !s.bought(chosen) && s.cents() >= offers.get(chosen).cents();
+		buy.active = chosen >= 0 && chosen < offers.size() && s.bought(chosen) < offers.get(chosen).stock() && s.cents() >= offers.get(chosen).cents();
 	}
 
 	// ---------------------------------------------------------------- the sell list (as the upgrader's)
@@ -204,7 +204,7 @@ public final class ShopScreen extends Screen {
 		List<Shop.Offer> offers = offers();
 		for (int i = 0; i < offers.size(); i++) {
 			int[] p = tilePos(i);
-			if (mx >= p[0] && mx < p[0] + tileW() && my >= p[1] && my < p[1] + tileH() && !state().bought(i)) {
+			if (mx >= p[0] && mx < p[0] + tileW() && my >= p[1] && my < p[1] + tileH() && state().bought(i) < offers.get(i).stock()) {
 				chosen = chosen == i ? -1 : i;
 				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/premier_deselectmap", 0.4f);
 				return true;
@@ -259,7 +259,8 @@ public final class ShopScreen extends Screen {
 		for (int i = 0; i < offers.size(); i++) {
 			Shop.Offer o = offers.get(i);
 			int[] p = tilePos(i);
-			boolean sold = s.bought(i), over = mx >= p[0] && mx < p[0] + w && my >= p[1] && my < p[1] + h;
+			int left = o.stock() - s.bought(i);
+			boolean sold = left <= 0, over = mx >= p[0] && mx < p[0] + w && my >= p[1] && my < p[1] + h;
 			g.fill(p[0], p[1], p[0] + w, p[1] + h, over && !sold ? 0xFF2A313A : 0xFF22272E);
 			g.fill(p[0], p[1] + h - 3, p[0] + w, p[1] + h, color(o.item()));
 			if (i == chosen) g.outline(p[0] - 1, p[1] - 1, w + 2, h + 2, GOLD);
@@ -276,6 +277,7 @@ public final class ShopScreen extends Screen {
 			TileText.draw(g, font, o.item().getHoverName().getString(), p[0] + w / 2, p[1] + h - 30, w - 6, 0xFFE0E0E0);
 			String price = Shop.money(o.cents());
 			g.text(font, price, p[0] + w / 2 - font.width(price) / 2, p[1] + h - 13, s.cents() >= o.cents() ? 0xFF55FF55 : 0xFFE04040, false);
+			if (!sold && o.stock() > 1) g.text(font, "x" + left, p[0] + 3, p[1] + 3, 0xFFFFFFFF, true); // stock left
 			if (sold) {
 				g.fill(p[0], p[1], p[0] + w, p[1] + h, 0xB0101317);
 				g.text(font, "SOLD", p[0] + w / 2 - font.width("SOLD") / 2, p[1] + h / 2 - 4, GOLD, true);

@@ -21,8 +21,8 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * The hourly shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and eight offers bought
- * from it, each once, until the shop rotates after half an hour of the player's own play. Every player's offers are their
+ * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and eight offers bought
+ * from it (cases in a stock of 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
@@ -40,7 +40,7 @@ public final class Shop {
 	 */
 	private static final double CASE_SHARE = 1.2;
 
-	/** cents: the balance; rotation: which shop; bought: bit per offer; progress: ticks into the rotation (synced each minute). */
+	/** cents: the balance; rotation: which shop; bought: how many of each offer were bought, 2 bits each; progress: ticks into the rotation (synced each minute). */
 	public record State(long cents, int rotation, int bought, int progress) {
 		public static final State NONE = new State(0, 0, 0, 0);
 
@@ -54,8 +54,9 @@ public final class Shop {
 				ByteBufCodecs.VAR_LONG, State::cents, ByteBufCodecs.VAR_INT, State::rotation, ByteBufCodecs.VAR_INT, State::bought,
 				ByteBufCodecs.VAR_INT, State::progress, State::new);
 
-		public boolean bought(int i) {
-			return (bought >> i & 1) != 0;
+		/** How many of offer i were bought this rotation. */
+		public int bought(int i) {
+			return bought >> 2 * i & 3;
 		}
 	}
 
@@ -64,8 +65,8 @@ public final class Shop {
 	private static final AttachmentType<Integer> PROGRESS = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "shop_progress"),
 			b -> b.persistent(Codec.INT).copyOnDeath().initializer(() -> 0));
 
-	/** item: what you get; cents: its price. */
-	public record Offer(ItemStack item, long cents) {}
+	/** item: what you get; cents: its price; stock: how many can be bought this rotation (cases 1-3, the rest 1). */
+	public record Offer(ItemStack item, long cents, int stock) {}
 
 	private Shop() {}
 
@@ -110,8 +111,8 @@ public final class Shop {
 		List<Cases.Case> cases = new ArrayList<>(Cases.all());
 		java.util.Collections.shuffle(cases, rng);
 		for (int i = 0; i < 3 && i < cases.size(); i++)
-			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng)));
-		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng)));
+			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
+		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1));
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();
 		for (SkinWraps.Wrap w : SkinWraps.all())
 			if (w.knife() || w.kits().size() == 1 && w.rarity() != null && w.rarity().ordinal() >= SkinWraps.Rarity.MYTHICAL.ordinal()) wraps.add(w);
@@ -127,7 +128,7 @@ public final class Shop {
 				s = SkinWrapItem.stack(w.knife() ? WeaponItems.KNIFE_WRAP : WeaponItems.GUN_WRAP, w.id(), rng.nextInt(1001), wear);
 			}
 			double v = Worth.of(s);
-			if (v > 0) out.add(new Offer(s, price(v, rng)));
+			if (v > 0) out.add(new Offer(s, price(v, rng), 1));
 		}
 		return out;
 	}
@@ -179,13 +180,13 @@ public final class Shop {
 	public static void buy(ServerPlayer p, int i) {
 		State s = get(p);
 		List<Offer> offers = offers(p.getUUID(), s.rotation());
-		if (i < 0 || i >= offers.size() || s.bought(i)) return;
+		if (i < 0 || i >= offers.size() || s.bought(i) >= offers.get(i).stock()) return;
 		Offer o = offers.get(i);
 		if (s.cents() < o.cents()) {
 			p.sendOverlayMessage(Component.literal("Not enough balance."));
 			return;
 		}
-		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() | 1 << i, p.getAttachedOrElse(PROGRESS, 0)));
+		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1 << 2 * i), p.getAttachedOrElse(PROGRESS, 0)));
 		ItemStack item = o.item().copy();
 		if (!p.getInventory().add(item)) p.drop(item, false);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} bought {} for {}", p.getScoreboardName(), o.item().getHoverName().getString(), money(o.cents()));

@@ -22,7 +22,10 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.weapon.CarePackage.register();
 		dev.strafemc.weapon.Shop.register();
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-			if (entity instanceof net.minecraft.server.level.ServerPlayer p) dev.strafemc.weapon.Loadout.onDeath(p);
+			if (entity instanceof net.minecraft.server.level.ServerPlayer p) {
+				dev.strafemc.weapon.Loadout.onDeath(p);
+				dev.strafemc.weapon.DamageReport.died(p);
+			}
 		});
 		// gameplay data lives on the server side (dedicated or integrated): weapons.vdata and the CS2 bridge start here
 		dev.strafemc.data.WeaponData.loadAsync();
@@ -46,6 +49,7 @@ public class StrafeMc implements ModInitializer {
 		// buy time counts from joining or respawning (strafemc_buytime)
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.BuyMenu.spawned(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.DamageReport.forget(handler.getPlayer()));
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
 			dev.strafemc.weapon.BuyMenu.spawned(newP);
 			// a random spawn block, if the world has any and they're on

@@ -40,6 +40,7 @@ public final class KillFeed {
 	/** CS damage done to a target, counted for assists. */
 	static void damaged(ServerPlayer attacker, LivingEntity victim, double csDamage) {
 		if (attacker == null || attacker == victim || csDamage <= 0) return;
+		DamageReport.hit(attacker, victim, csDamage);
 		long now = System.currentTimeMillis();
 		DAMAGE.computeIfAbsent(victim.getId(), k -> new ConcurrentHashMap<>()).merge(attacker.getUUID(), csDamage, Double::sum);
 		LAST_HIT.put(victim.getId(), now);
