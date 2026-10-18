@@ -53,7 +53,6 @@ public final class Advancements {
 		}
 		if (victim instanceof ServerPlayer) award(p, "player_kill");
 		if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) award(p, "dragon_kill");
-		if (victim instanceof net.minecraft.world.entity.monster.EnderMan) award(p, "enderman_kill"); // shot ones teleport: knives and grenades count too
 		long now = System.currentTimeMillis();
 		ArrayDeque<Long> recent = RECENT_KILLS.computeIfAbsent(p.getUUID(), k -> new ArrayDeque<>());
 		synchronized (recent) {
