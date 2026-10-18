@@ -288,7 +288,7 @@ public final class ShopScreen extends Screen {
 		super.extractRenderState(g, mx, my, delta);
 		if (!hover[0].isEmpty() && offerHover[0]) { // an offer: its tooltip without its worth (the price's roll stays hidden)
 			List<Component> lines = new ArrayList<>(getTooltipFromItem(minecraft, hover[0]));
-			lines.removeIf(l -> l.getString().startsWith("Worth:"));
+			lines.removeIf(l -> l.getString().contains("Worth:")); // the line carries legacy colour codes (§7), so not startsWith
 			g.setTooltipForNextFrame(font, lines, java.util.Optional.empty(), mx, my);
 		} else if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
 	}
