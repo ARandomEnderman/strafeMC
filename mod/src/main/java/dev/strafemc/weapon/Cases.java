@@ -216,14 +216,15 @@ public final class Cases {
 	}
 
 	/**
-	 * How likely a case's special item is against its others: CS2 lists each Doppler phase as its own knife finish, but
-	 * the gems come out much less often than a phase (Valve's servers decide it). FLAGGED ours: Ruby, Sapphire and
-	 * Emerald 1/5 of a phase, Black Pearl 1/10.
+	 * How likely a case's special item is against its others. CS2 lists each Doppler phase as its own knife finish, and its
+	 * items_game paint_kits_rarity grades them: every Doppler / Gamma Doppler phase Mythical, Ruby, Sapphire and Emerald
+	 * Legendary (one grade up), Black Pearl Ancient (two up). Each grade up is 5x rarer, CS2's own step between case tiers
+	 * (79.92% / 15.98% / 3.2% / 0.64%): a gem 1/5 of a phase, Black Pearl 1/25. Other finishes weigh the same.
 	 */
 	public static double specialWeight(String kit) {
 		return switch (kit) {
-			case "am_ruby_marbleized", "am_sapphire_marbleized", "am_emerald_marbleized" -> 0.2;
-			case "am_blackpearl_marbleized" -> 0.1;
+			case "am_ruby_marbleized", "am_sapphire_marbleized", "am_sapphire_marbleized_b", "am_emerald_marbleized" -> 0.2;
+			case "am_blackpearl_marbleized", "am_blackpearl_marbleized_b" -> 0.04; // the _b ones: the same finish on newer knives
 			default -> 1;
 		};
 	}
