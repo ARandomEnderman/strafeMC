@@ -470,7 +470,11 @@ public final class RuntimePack {
 		}
 	}
 
-	/** The eSports key recoloured: its blue (hue 0.5-0.75, saturated) turned to the same shade of red. FLAGGED: our key, our colour. */
+	/**
+	 * The eSports key recoloured red: its pale steel blue (hue 0.45-0.75, saturation over 0.04) turned to red with the
+	 * saturation pushed up (x4 + 0.35) and a little darker (x0.9), so the bow reads red while the bright blade stays
+	 * metal. FLAGGED: our key, our colour.
+	 */
 	private static BufferedImage redKey(BufferedImage in) {
 		BufferedImage out = new BufferedImage(in.getWidth(), in.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		float[] hsb = new float[3];
@@ -478,7 +482,8 @@ public final class RuntimePack {
 			for (int x = 0; x < in.getWidth(); x++) {
 				int argb = in.getRGB(x, y), a = argb >>> 24;
 				java.awt.Color.RGBtoHSB(argb >> 16 & 255, argb >> 8 & 255, argb & 255, hsb);
-				if (hsb[0] >= 0.5f && hsb[0] <= 0.75f && hsb[1] > 0.2f) argb = a << 24 | (java.awt.Color.HSBtoRGB(0.0f, hsb[1], hsb[2]) & 0xFFFFFF);
+				if (hsb[0] >= 0.45f && hsb[0] <= 0.75f && hsb[1] > 0.04f)
+					argb = a << 24 | (java.awt.Color.HSBtoRGB(0.0f, Math.min(1, hsb[1] * 4 + 0.35f), hsb[2] * 0.9f) & 0xFFFFFF);
 				out.setRGB(x, y, argb);
 			}
 		return out;
