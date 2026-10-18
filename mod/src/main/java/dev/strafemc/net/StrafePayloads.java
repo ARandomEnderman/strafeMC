@@ -144,6 +144,18 @@ public final class StrafePayloads {
 	/** Client -> server: this player's CS side (true = T), from the console quick menu. */
 	/** What the player can still refund (the buy command's items, newest last): sent by the server whenever it changes. */
 	/** Cases opened (1-5 at once): per drop its kit on an item, rarity ordinal (-1: rare special item), name, pattern (-1: none). */
+	/** Server -> client: an upgrade's outcome (which offer, won or not), for the upgrader's needle. */
+	public record UpgradeResult(int offer, boolean win) implements CustomPacketPayload {
+		public static final Type<UpgradeResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "upgrade_result"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, UpgradeResult> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, UpgradeResult::offer,
+				ByteBufCodecs.BOOL, UpgradeResult::win, UpgradeResult::new);
+
+		@Override
+		public Type<UpgradeResult> type() {
+			return TYPE;
+		}
+	}
+
 	public record CaseResult(String caseId, java.util.List<Drop> drops) implements CustomPacketPayload {
 		/** pattern -1: none; wear -1: none (gloves). */
 		public record Drop(String kit, String item, int rarity, String name, int pattern, float wear) {}
