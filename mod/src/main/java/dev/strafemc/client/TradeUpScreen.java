@@ -158,7 +158,11 @@ public final class TradeUpScreen extends Screen {
 				@Override
 				public void item(int ref, int x, int y) {
 					if (done[0] || mx < x || mx >= x + 18 || my < y || my >= y + 18) return;
-					if (!picked.remove(Integer.valueOf(ref)) && picked.size() < TradeUp.INPUTS) picked.add(ref);
+					if (!picked.remove(Integer.valueOf(ref))) {
+						List<ItemStack> next = new ArrayList<>(inputs());
+						next.add(Upgrader.at(minecraft.player, ref));
+						if (picked.size() < TradeUp.needed(next)) picked.add(ref); // 10, or 5 for Covert
+					}
 					got = ItemStack.EMPTY;
 					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
 					done[0] = true;
@@ -218,7 +222,7 @@ public final class TradeUpScreen extends Screen {
 		// the contract: ten slots and what's wrong (or ready)
 		int[] o = slotsOrigin();
 		List<ItemStack> in = inputs();
-		for (int i = 0; i < TradeUp.INPUTS; i++) {
+		for (int i = 0; i < TradeUp.needed(in); i++) {
 			int x = o[0] + (i % 5) * 20, y = o[1] + (i / 5) * 20;
 			g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF0E0F11);
 			if (i < in.size()) {
@@ -251,7 +255,7 @@ public final class TradeUpScreen extends Screen {
 		y = LIST_TOP + 12 - (int) outScroll;
 		for (TradeUp.Outcome oc : outs) {
 			ItemStack s = Cases.stack(oc.entry(), 0, TradeUp.wearFor(oc.entry().kit(), place));
-			g.text(font, font.plainSubstrByWidth(TileText.clean(s.getHoverName().getString()), cw), ox, y, 0xFF000000 | oc.rarity().color, false);
+			g.text(font, font.plainSubstrByWidth(TileText.clean(s.getHoverName().getString()), cw), ox, y, oc.rarity() == null ? 0xFFE4AE39 : 0xFF000000 | oc.rarity().color, false); // knives / gloves: gold
 			String line = String.format(java.util.Locale.ROOT, "%.1f%%  %.4f", oc.chance() * 100, TradeUp.wearFor(oc.entry().kit(), place));
 			g.text(font, line, ox, y + 10, 0xFF909090, false);
 			if (mx >= ox && my >= y && my < y + 20 && my >= LIST_TOP + 12 && my < listBottom()) hover[0] = s;

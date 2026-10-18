@@ -13,10 +13,21 @@ import java.util.Random;
  * StatTrak contract gives StatTrak). Each input is one tenth of the odds for its collection's next-quality skins. Our
  * collections are the cases (the map-collection skins from care packages have no collection here, so they can't go in).
  * The float: each input's place in its own range, averaged, put into the result's range (CS2's 2025 rule, FLAGGED: not
- * in CS2's files, from its patch notes as the community documents them).
+ * in CS2's files, from its patch notes as the community documents them). Covert items go five at a time
+ * (CSGO_Recipe_TradeUpX_Desc, "several items"; CS2's 2025 contract) for one of their cases' knives or gloves; a
+ * StatTrak contract gives a StatTrak knife (gloves are never StatTrak in CS2, so it can't give gloves).
  */
 public final class TradeUp {
-	public static final int INPUTS = 10;
+	public static final int INPUTS = 10, COVERT_INPUTS = 5;
+
+	/** How many this contract takes: 5 when it's Covert items, else 10. */
+	public static int needed(List<ItemStack> in) {
+		for (ItemStack s : in) {
+			Object[] src = source(s);
+			if (src != null) return src[1] == SkinWraps.Rarity.ANCIENT ? COVERT_INPUTS : INPUTS;
+		}
+		return INPUTS;
+	}
 
 	/** One possible result and its odds. */
 	public record Outcome(Cases.Entry entry, SkinWraps.Rarity rarity, double chance) {}
@@ -36,19 +47,21 @@ public final class TradeUp {
 		return null;
 	}
 
-	/** Whether a skin can go into a contract: a case skin below Covert (there's a next grade in its case). */
+	/** Whether a skin can go into a contract: a case skin with a next grade in its case (Covert: the case's knives or gloves). */
 	public static boolean eligible(ItemStack s) {
 		Object[] src = source(s);
 		if (src == null) return false;
 		SkinWraps.Rarity r = (SkinWraps.Rarity) src[1];
-		if (r.ordinal() >= SkinWraps.Rarity.ANCIENT.ordinal()) return false;
+		if (r == SkinWraps.Rarity.ANCIENT) return !((Cases.Case) src[0]).special().isEmpty();
+		if (r.ordinal() > SkinWraps.Rarity.ANCIENT.ordinal()) return false;
 		var next = ((Cases.Case) src[0]).guns().get(SkinWraps.Rarity.values()[r.ordinal() + 1]);
 		return next != null && !next.isEmpty();
 	}
 
 	/** Why these inputs can't be traded up, or null if they can. */
 	public static String problem(List<ItemStack> in) {
-		if (in.size() != INPUTS) return in.size() + " / " + INPUTS + " selected";
+		int need = needed(in);
+		if (in.size() != need) return in.size() + " / " + need + " selected";
 		SkinWraps.Rarity grade = null;
 		Boolean st = null;
 		for (ItemStack s : in) {
@@ -67,11 +80,20 @@ public final class TradeUp {
 	public static List<Outcome> outcomes(List<ItemStack> in) {
 		List<Outcome> out = new ArrayList<>();
 		java.util.Map<String, Integer> at = new java.util.HashMap<>();
+		boolean st = !in.isEmpty() && StatTrak.kills(in.get(0)) >= 0;
 		for (ItemStack s : in) {
 			Object[] src = source(s);
 			if (src == null) continue;
-			SkinWraps.Rarity next = SkinWraps.Rarity.values()[((SkinWraps.Rarity) src[1]).ordinal() + 1];
-			List<Cases.Entry> pool = ((Cases.Case) src[0]).guns().get(next);
+			SkinWraps.Rarity grade = (SkinWraps.Rarity) src[1], next;
+			List<Cases.Entry> pool;
+			if (grade == SkinWraps.Rarity.ANCIENT) { // Covert: the case's rare special items (rarity null), StatTrak: knives only
+				next = null;
+				pool = new ArrayList<>(((Cases.Case) src[0]).special());
+				if (st) pool.removeIf(Cases.Entry::gloves);
+			} else {
+				next = SkinWraps.Rarity.values()[grade.ordinal() + 1];
+				pool = ((Cases.Case) src[0]).guns().get(next);
+			}
 			if (pool == null || pool.isEmpty()) continue;
 			for (Cases.Entry e : pool) {
 				String key = e.item() + "|" + e.kit();
@@ -124,7 +146,8 @@ public final class TradeUp {
 			x -= o.chance();
 		}
 		ItemStack result = Cases.stack(pick.entry(), rng.nextInt(1001), wearFor(pick.entry().kit(), place(in)));
-		if (StatTrak.kills(in.get(0)) >= 0) result.set(WeaponItems.STATTRAK, 0);
+		if (result.isEmpty()) return null; // a vanilla knife we have no wrap for
+		if (StatTrak.kills(in.get(0)) >= 0 && !pick.entry().gloves()) result.set(WeaponItems.STATTRAK, 0);
 		Upgrader.take(p, refs);
 		if (!p.getInventory().add(result.copy())) p.drop(result.copy(), false);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] trade up: {} got {}", p.getScoreboardName(), result.getHoverName().getString());
