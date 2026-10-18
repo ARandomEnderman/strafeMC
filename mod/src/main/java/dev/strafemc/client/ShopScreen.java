@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The hourly shop (strafeMC menu): your balance and the time to the next rotation at the top, skins to sell on the left
+ * The shop (strafeMC menu, new offers every 30 minutes of play): your balance and the time to the next rotation at the top, skins to sell on the left
  * (inventory, then each Storage Unit, foldable; 75% of their worth), and this rotation's eight offers on the right.
  */
 public final class ShopScreen extends Screen {

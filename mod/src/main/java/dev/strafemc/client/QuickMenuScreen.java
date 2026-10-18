@@ -42,7 +42,7 @@ public final class QuickMenuScreen extends Screen {
 				}, true),
 				new Entry("care_package", "Care Package", !ClientGameplay.drops() ? "Off on this server" : CarePackageScreen.claimable() ? "Rewards waiting!"
 						: "Free rewards for every rank", () -> minecraft.setScreen(new CarePackageScreen(this)), ClientGameplay.drops()),
-				new Entry("shop", "Shop", "New offers every hour; sell skins", () -> minecraft.setScreen(new ShopScreen(this)), true),
+				new Entry("shop", "Shop", "New offers every 30 min; sell skins", () -> minecraft.setScreen(new ShopScreen(this)), true),
 				new Entry("upgrader", "Upgrader", "Stake skins for a better one", () -> minecraft.setScreen(new UpgraderScreen(this)), true),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));

@@ -22,11 +22,11 @@ import java.util.UUID;
 
 /**
  * The hourly shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and eight offers bought
- * from it, each once, until the shop rotates after an hour of the player's own play. Every player's offers are their
+ * from it, each once, until the shop rotates after half an hour of the player's own play. Every player's offers are their
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
-	public static final int ROTATION = 72_000, OFFERS = 8;
+	public static final int ROTATION = 36_000, OFFERS = 8; // 30 minutes of play
 	/** Selling pays this share of a skin's worth. */
 	public static final double SELL_RATE = 0.75;
 	/** Offer prices: the item's worth times 80-110%. */
@@ -81,7 +81,7 @@ public final class Shop {
 		return Worth.format(cents / 100.0);
 	}
 
-	/** Every second: an hour of the player's play rotates their shop. The progress is synced each minute (and on join). */
+	/** Every second: half an hour of the player's play rotates their shop. The progress is synced each minute (and on join). */
 	public static void tick(MinecraftServer server) {
 		if (server.getTickCount() % 20 != 0) return;
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
