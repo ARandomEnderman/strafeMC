@@ -6,6 +6,7 @@ import dev.strafemc.weapon.GunItem;
 import dev.strafemc.weapon.SkinWrapItem;
 import dev.strafemc.weapon.SkinWraps;
 import dev.strafemc.weapon.StorageUnitItem;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -14,7 +15,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A Storage Unit open: six rows of its 1,000 places (scroll, or drag the bar), the count, your inventory, and on the
+ * A Storage Unit open (click its name to rename it): six rows of its 1,000 places (scroll, or drag the bar), the count, your inventory, and on the
  * right a preview of the item under the mouse like the loadout's (a wrap on its gun, a gun or knife, a case's picture).
  */
 public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnitItem.Menu> {
@@ -23,6 +24,9 @@ public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnit
 	/** The last storable item under the mouse (the preview keeps showing it). */
 	private ItemStack shown = ItemStack.EMPTY;
 	private boolean dragging;
+	/** The title, clicked: a box to rename the unit (Enter saves, Esc cancels; empty clears the name). */
+	private net.minecraft.client.gui.components.EditBox name;
+	private Component shownTitle;
 
 	public StorageUnitScreen(StorageUnitItem.Menu menu, Inventory inv, Component title) {
 		super(menu, inv, title, 190, 222);
@@ -34,6 +38,10 @@ public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnit
 		int preview = width >= imageWidth + 120 ? Math.min(180, width - imageWidth - 20) : 0; // room for the preview on the right
 		leftPos = (width - imageWidth - preview) / 2;
 		inventoryLabelY = 18 + StorageUnitItem.ROWS * 18 + 3;
+		if (shownTitle == null) shownTitle = title;
+		name = addRenderableWidget(new net.minecraft.client.gui.components.EditBox(font, leftPos + 6, topPos + 3, 120, 12, Component.literal("Name")));
+		name.setMaxLength(50);
+		name.visible = false;
 		if (topPos + imageHeight <= height - 28)
 			addRenderableWidget(net.minecraft.client.gui.components.Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
@@ -62,8 +70,43 @@ public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnit
 		scrollTo((int) Math.round(f * maxRow()));
 	}
 
+	private boolean onTitle(double mx, double my) {
+		return mx >= leftPos + 6 && mx < leftPos + 10 + font.width(shownTitle) && my >= topPos + 4 && my < topPos + 16;
+	}
+
+	private void rename(boolean save) {
+		if (save) {
+			String n = name.getValue().strip();
+			if (ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.Action.TYPE))
+				ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.Action("storage_rename", n));
+			shownTitle = n.isEmpty() ? Component.translatable("item.strafemc.storage_unit") : Component.literal(n);
+		}
+		name.visible = false;
+		name.setFocused(false);
+		setFocused(null);
+	}
+
+	@Override
+	public boolean keyPressed(net.minecraft.client.input.KeyEvent e) {
+		if (name != null && name.visible) { // typing a name: Enter saves, Esc cancels, everything else goes to the box
+			if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER || e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) rename(true);
+			else if (e.key() == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) rename(false);
+			else name.keyPressed(e);
+			return true;
+		}
+		return super.keyPressed(e);
+	}
+
 	@Override
 	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
+		if (name != null && name.visible && !name.isMouseOver(e.x(), e.y())) rename(true); // clicking away saves
+		if (name != null && !name.visible && onTitle(e.x(), e.y())) {
+			name.setValue(shownTitle.getString());
+			name.visible = true;
+			setFocused(name);
+			name.setFocused(true);
+			return true;
+		}
 		if (onBar(e.x(), e.y())) {
 			dragging = true;
 			dragTo(e.y());
@@ -106,7 +149,10 @@ public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnit
 
 	@Override
 	protected void extractLabels(GuiGraphicsExtractor g, int mx, int my) {
-		g.text(font, title, 8, 6, ACCENT, false);
+		if (!name.visible) { // the name; underlined under the mouse: click to rename
+			boolean over = onTitle(mx, my);
+			g.text(font, over ? shownTitle.copy().withStyle(net.minecraft.ChatFormatting.UNDERLINE) : shownTitle, 8, 6, ACCENT, false);
+		}
 		String n = menu.stored() + " / " + StorageUnitItem.CAPACITY;
 		g.text(font, n, imageWidth - 8 - font.width(n), 6, 0xFFB0B0B0, false);
 		g.text(font, playerInventoryTitle, 8, inventoryLabelY, 0xFFB0B0B0, false);

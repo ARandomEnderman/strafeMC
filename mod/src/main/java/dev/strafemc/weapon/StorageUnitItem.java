@@ -55,6 +55,15 @@ public class StorageUnitItem extends Item {
 				new MenuType<>((id, inv) -> new Menu(id, inv, null, inv.getSelectedSlot()), FeatureFlags.VANILLA_SET));
 	}
 
+	/** The open unit's new name (its screen's title, clicked): empty clears it. At most 50 characters, as anvils allow. */
+	public static void rename(ServerPlayer p, String name) {
+		if (!(p.containerMenu instanceof Menu m) || m.unit == null) return;
+		String n = name.strip();
+		if (n.length() > 50) n = n.substring(0, 50);
+		if (n.isEmpty()) m.unit.remove(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+		else m.unit.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal(n));
+	}
+
 	public static boolean storable(ItemStack s) {
 		return !s.isEmpty() && s.is(STORABLE);
 	}

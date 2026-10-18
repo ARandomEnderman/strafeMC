@@ -208,6 +208,7 @@ public final class ConsoleActions {
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
+			case "storage_rename" -> dev.strafemc.weapon.StorageUnitItem.rename(p, arg);
 			case "upgrade" -> { // "offer ref ref ...": stake the skins at those refs (inventory slots or storage unit places, Upgrader.UNIT)
 				String[] a = arg.trim().split(" ");
 				java.util.List<Integer> refs = new java.util.ArrayList<>();
