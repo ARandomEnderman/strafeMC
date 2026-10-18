@@ -66,8 +66,16 @@ public final class CaseScreen extends Screen {
 			zoom = (float) Math.max(0.6, Math.min(4, zoom * Math.pow(1.15, sy)));
 			return true;
 		}
+		if (spins == null) { // the contents, when they don't fit
+			scroll = Math.max(0, Math.min(maxScroll, scroll - sy * (TILE + 6) / 2));
+			return true;
+		}
 		return super.mouseScrolled(mx, my, sx, sy);
 	}
+
+	/** How far the contents are scrolled down (pixels), and how far they can be. */
+	private double scroll;
+	private int maxScroll;
 
 	private CaseScreen(Cases.Case c) {
 		super(Component.literal(c.name()));
@@ -272,11 +280,18 @@ public final class CaseScreen extends Screen {
 
 	/** The contents grid, best first, then the rare special item line. */
 	private void contents(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int mx, int my) {
-		int cols = Math.max(1, Math.min(6, (width - 40) / (TILE + 8))), x0 = width / 2 - cols * (TILE + 8) / 2, y = 32;
+		int cols = Math.max(1, Math.min(6, (width - 40) / (TILE + 8))), x0 = width / 2 - cols * (TILE + 8) / 2, top = 28, bottom = height - 58;
+		int rows0 = (contents.size() + cols - 1) / cols, total = rows0 * (TILE + 6) + (c.special().isEmpty() ? 0 : 20) + 4;
+		maxScroll = Math.max(0, total - (bottom - top));
+		scroll = Math.min(scroll, maxScroll);
+		int y = top + 4 - (int) Math.round(scroll);
+		boolean inList = my >= top && my < bottom;
+		g.enableScissor(0, top, width, bottom); // above the unlock buttons; the wheel scrolls the rest into view
 		for (int i = 0; i < contents.size(); i++) {
 			int x = x0 + (i % cols) * (TILE + 8), ty = y + (i / cols) * (TILE + 6);
 			Tile t = contents.get(i);
 			tile(g, font, t, x, ty, TILE, TILE);
+			if (!inList) continue;
 			if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null && c.capsule())
 				g.setTooltipForNextFrame(font, java.util.List.of(Component.literal(TileText.clean(t.name())).withColor(t.color())), java.util.Optional.empty(), mx, my);
 			else if (mx >= x && mx < x + TILE && my >= ty && my < ty + TILE && t.entry() != null) { // full name, and the exteriors it comes in
@@ -290,6 +305,12 @@ public final class CaseScreen extends Screen {
 		if (!c.special().isEmpty()) {
 			String s = "★ Rare Special Item: " + (c.special().get(0).gloves() ? "gloves" : "knives") + " ★";
 			g.text(font, s, width / 2 - font.width(s) / 2, y + rows * (TILE + 6) + 6, GOLD, true);
+		}
+		g.disableScissor();
+		if (maxScroll > 0) { // a scroll bar on the right
+			int h = bottom - top, bar = Math.max(16, h * h / (h + maxScroll)), by = top + (int) Math.round((h - bar) * scroll / maxScroll);
+			g.fill(width - 6, top, width - 3, bottom, 0x40FFFFFF);
+			g.fill(width - 6, by, width - 3, by + bar, 0xC0FFFFFF);
 		}
 	}
 
