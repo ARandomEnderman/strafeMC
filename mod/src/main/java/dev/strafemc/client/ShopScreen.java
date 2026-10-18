@@ -30,8 +30,9 @@ public final class ShopScreen extends Screen {
 	private final List<Integer> selling = new ArrayList<>();
 	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
-	/** chosen: the offer picked (-1: none); qty: how many of it to buy (left click again for one more, right click one less). */
-	private int listHeight, chosen = -1, qty = 1;
+	private int listHeight;
+	/** The offers picked and how many of each to buy: left click adds one (up to the stock), right click takes one off. */
+	private final java.util.Map<Integer, Integer> picked = new java.util.TreeMap<>();
 	private Button sell, buy, withdraw;
 	/** Dollars to take off the balance as a money voucher. */
 	private net.minecraft.client.gui.components.EditBox amount;
@@ -103,10 +104,12 @@ public final class ShopScreen extends Screen {
 	}
 
 	private void buy() {
-		if (chosen < 0) return;
-		send("shop_buy", chosen + " " + qty);
+		if (picked.isEmpty()) return;
+		StringBuilder arg = new StringBuilder(); // offer and count, for each picked
+		for (var e : picked.entrySet()) arg.append(arg.length() > 0 ? " " : "").append(e.getKey()).append(' ').append(e.getValue());
+		send("shop_buy", arg.toString());
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
-		chosen = -1;
+		picked.clear();
 	}
 
 	@Override
@@ -124,10 +127,21 @@ public final class ShopScreen extends Screen {
 		sell.setMessage(Component.literal(selling.isEmpty() ? "Sell" : "Sell for " + Shop.money(sellValue())));
 		List<Shop.Offer> offers = offers();
 		Shop.State s = state();
-		if (chosen >= 0 && chosen < offers.size()) qty = Math.max(1, Math.min(qty, offers.get(chosen).stock() - s.bought(chosen)));
-		buy.active = chosen >= 0 && chosen < offers.size() && s.bought(chosen) < offers.get(chosen).stock() && s.cents() >= offers.get(chosen).cents() * qty;
-		buy.setMessage(Component.literal(chosen < 0 || chosen >= offers.size() ? "Buy" : qty > 1 ? "Buy " + qty + " for " + Shop.money(offers.get(chosen).cents() * qty)
-				: "Buy for " + Shop.money(offers.get(chosen).cents())));
+		long total = 0;
+		int count = 0;
+		for (var it = picked.entrySet().iterator(); it.hasNext(); ) { // what's still in stock (another rotation: none)
+			var e = it.next();
+			int left = e.getKey() < offers.size() ? offers.get(e.getKey()).stock() - s.bought(e.getKey()) : 0;
+			if (left <= 0) {
+				it.remove();
+				continue;
+			}
+			e.setValue(Math.min(e.getValue(), left));
+			total += offers.get(e.getKey()).cents() * e.getValue();
+			count += e.getValue();
+		}
+		buy.active = count > 0 && s.cents() >= total;
+		buy.setMessage(Component.literal(count == 0 ? "Buy" : count > 1 ? "Buy " + count + " for " + Shop.money(total) : "Buy for " + Shop.money(total)));
 	}
 
 	// ---------------------------------------------------------------- the sell list (as the upgrader's)
@@ -230,17 +244,14 @@ public final class ShopScreen extends Screen {
 			int[] p = tilePos(i);
 			int left = offers.get(i).stock() - state().bought(i);
 			if (mx >= p[0] && mx < p[0] + tileW() && my >= p[1] && my < p[1] + tileH() && left > 0) {
+				Integer n = picked.get(i);
 				if (e.button() == 1) { // right click: one fewer (none: not picked)
-					if (chosen != i) return true;
-					if (--qty <= 0) {
-						chosen = -1;
-						qty = 1;
-					}
-				} else if (chosen != i) { // left click: pick it, then one more each click (as many as are in stock); one in stock: unpick
-					chosen = i;
-					qty = 1;
-				} else if (left == 1) chosen = -1;
-				else qty = Math.min(left, qty + 1);
+					if (n == null) return true;
+					if (n <= 1) picked.remove(i);
+					else picked.put(i, n - 1);
+				} else if (n == null) picked.put(i, 1); // left click: pick it, then one more each click (as many as are in stock)
+				else if (left == 1) picked.remove(i); // only one: a second click unpicks it
+				else picked.put(i, Math.min(left, n + 1));
 				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/premier_deselectmap", 0.4f);
 				return true;
 			}
@@ -298,9 +309,10 @@ public final class ShopScreen extends Screen {
 			boolean sold = left <= 0, over = mx >= p[0] && mx < p[0] + w && my >= p[1] && my < p[1] + h;
 			g.fill(p[0], p[1], p[0] + w, p[1] + h, over && !sold ? 0xFF2A313A : 0xFF22272E);
 			g.fill(p[0], p[1] + h - 3, p[0] + w, p[1] + h, color(o.item()));
-			if (i == chosen) g.outline(p[0] - 1, p[1] - 1, w + 2, h + 2, GOLD);
-			if (i == chosen && qty > 1) { // how many you're buying, in the corner
-				String q = qty + "x";
+			Integer n = picked.get(i);
+			if (n != null) g.outline(p[0] - 1, p[1] - 1, w + 2, h + 2, GOLD);
+			if (n != null && n > 1) { // how many you're buying, in the corner
+				String q = n + "x";
 				g.fill(p[0] + w - font.width(q) - 6, p[1] + 2, p[0] + w - 2, p[1] + 13, GOLD);
 				g.text(font, q, p[0] + w - font.width(q) - 4, p[1] + 4, 0xFF101317, false);
 			}

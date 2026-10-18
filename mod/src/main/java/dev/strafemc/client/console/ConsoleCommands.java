@@ -290,7 +290,9 @@ public final class ConsoleCommands {
 			StrafeConfig.gpuSkinning = bool(a, !StrafeConfig.gpuSkinning);
 			saved("strafemc_gpu_skinning", StrafeConfig.gpuSkinning);
 		});
-		local("switchhands", "Switch hands.", a -> {
+		local("switchhands", "Switch hands (while holding a CS weapon).", a -> {
+			var pl = net.minecraft.client.Minecraft.getInstance().player;
+			if (pl == null || !(pl.getMainHandItem().getItem() instanceof dev.strafemc.weapon.GunItem)) return; // nothing to switch
 			StrafeConfig.rightHand = !StrafeConfig.rightHand;
 			saved("cl_righthand", StrafeConfig.rightHand);
 			dev.strafemc.client.weapon.GunClient.redeploy();

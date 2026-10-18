@@ -110,11 +110,6 @@ public class SkinWrapItem extends Item {
 	public void appendHoverText(ItemStack stack, TooltipContext ctx, TooltipDisplay display, Consumer<Component> out, TooltipFlag flag) {
 		SkinWraps.Wrap w = SkinWraps.get(skin(stack));
 		if (w == null) return;
-		if (!knife) {
-			List<String> guns = new ArrayList<>();
-			for (String cls : w.kits().keySet()) guns.add(SkinWraps.WEAPON_NAMES.getOrDefault(cls, cls));
-			out.accept(Component.literal("§7Fits: " + String.join(", ", guns)));
-		}
 		float wear = wear(stack);
 		out.accept(Component.literal("§7Exterior: " + Wear.exterior(wear) + " (" + String.format(java.util.Locale.ROOT, "%.8f", wear) + ")"));
 		if (w.pattern()) out.accept(Component.literal("§7Pattern template: " + pattern(stack)));
