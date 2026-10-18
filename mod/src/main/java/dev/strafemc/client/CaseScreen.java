@@ -256,7 +256,7 @@ public final class CaseScreen extends Screen {
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float delta) {}
 
-	/** Red over each unlock button that would use Universal Keys: how many ("(2xuK)"); the case's own keys go first. */
+	/** Red over each unlock button that would use Universal Keys: how many ("2xuK"); the case's own keys go first. */
 	private void universalKeys(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
 		var p = Minecraft.getInstance().player;
 		if (p == null || p.getAbilities().instabuild || spins != null || unlocking) return;
@@ -265,7 +265,7 @@ public final class CaseScreen extends Screen {
 			Button b = unlocks.get(i);
 			int u = keys.universalFor(i + 1);
 			if (!b.visible || !b.active || u <= 0) continue;
-			String s = "(" + u + "xuK)";
+			String s = u + "xuK";
 			g.text(font, s, b.getX() + b.getWidth() / 2 - font.width(s) / 2, b.getY() - 10, 0xFFE04040, true);
 		}
 	}
