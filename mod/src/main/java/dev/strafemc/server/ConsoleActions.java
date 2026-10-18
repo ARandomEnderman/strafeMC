@@ -209,6 +209,21 @@ public final class ConsoleActions {
 			case "speed_goal" -> dev.strafemc.weapon.Advancements.speedGoal(p, arg.trim());
 			case "drop_redeem" -> dev.strafemc.weapon.CarePackage.redeem(p);
 			case "storage_rename" -> dev.strafemc.weapon.StorageUnitItem.rename(p, arg);
+			case "shop_buy" -> {
+				try {
+					dev.strafemc.weapon.Shop.buy(p, Integer.parseInt(arg.trim()));
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			case "shop_sell" -> { // "ref ref ...": Upgrader refs
+				java.util.List<Integer> refs = new java.util.ArrayList<>();
+				try {
+					for (String a : arg.trim().split(" ")) refs.add(Integer.parseInt(a));
+				} catch (NumberFormatException e) {
+					break;
+				}
+				dev.strafemc.weapon.Shop.sell(p, refs);
+			}
 			case "upgrade" -> { // "offer ref ref ...": stake the skins at those refs (inventory slots or storage unit places, Upgrader.UNIT)
 				String[] a = arg.trim().split(" ");
 				java.util.List<Integer> refs = new java.util.ArrayList<>();
