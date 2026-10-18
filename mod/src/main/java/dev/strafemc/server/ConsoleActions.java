@@ -339,17 +339,17 @@ public final class ConsoleActions {
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
-			case "sticker_apply" -> { // "stickerSlot target slot": target L:<loadout slot> or I:<inventory slot>
+			case "sticker_apply" -> { // "stickerSlot target slot [u,v,turn]": target L:<loadout slot> or I:<inventory slot>
 				String[] a = arg.trim().split(" ");
 				try {
-					if (a.length == 3) dev.strafemc.weapon.StickerSlots.apply(p, Integer.parseInt(a[0]), a[1], Integer.parseInt(a[2]));
+					if (a.length >= 3) dev.strafemc.weapon.StickerSlots.apply(p, Integer.parseInt(a[0]), a[1], Integer.parseInt(a[2]), a.length > 3 ? nums(a[3]) : null);
 				} catch (NumberFormatException ignored) {
 				}
 			}
-			case "charm_apply" -> { // "charmSlot target"
+			case "charm_apply" -> { // "charmSlot target [x,y,z]"
 				String[] a = arg.trim().split(" ");
 				try {
-					if (a.length == 2) dev.strafemc.weapon.StickerSlots.applyCharm(p, Integer.parseInt(a[0]), a[1]);
+					if (a.length >= 2) dev.strafemc.weapon.StickerSlots.applyCharm(p, Integer.parseInt(a[0]), a[1], a.length > 2 ? nums(a[2]) : null);
 				} catch (NumberFormatException ignored) {
 				}
 			}
@@ -528,5 +528,13 @@ public final class ConsoleActions {
 		} catch (Exception e) {
 			return d;
 		}
+	}
+
+	/** "1.5,2,-3" -> its numbers (a placement). */
+	private static double[] nums(String s) {
+		String[] f = s.split(",");
+		double[] out = new double[f.length];
+		for (int i = 0; i < f.length; i++) out[i] = Double.parseDouble(f[i]);
+		return out;
 	}
 }

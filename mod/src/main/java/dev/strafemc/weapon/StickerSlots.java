@@ -18,9 +18,10 @@ import java.util.Map;
 
 /**
  * Stickers on gun wraps, as in CS2: each gun has its sticker slots (strafemc/sticker_slots.tsv, from CS2's weapon
- * materials: four on most, five on a few), and the wrap keeps which sticker is in which ("" for none). Applying one
- * uses the sticker up; scraping it off destroys it, as in CS2. The viewmodel paints them onto the finish
- * (WeaponSkinCache).
+ * materials: four on most, five on a few), and the wrap keeps which sticker is in which ("" for none) and where it was
+ * put: "id" sits at its slot's place, "id@u,v,turn" where it was placed (sticker space, the turn in radians; the size is
+ * the slot's, as CS2's). Applying one uses the sticker up; scraping it off destroys it, as in CS2. The charm likewise:
+ * "id", or "id@x,y,z" for the model-space point it hangs from; taking it off uses a Charm Detachment and gives it back.
  */
 public final class StickerSlots {
 	public static final int MAX = 5;
@@ -68,7 +69,34 @@ public final class StickerSlots {
 		return gun == null ? 0 : Math.min(MAX, SLOTS.getOrDefault(gun, 4));
 	}
 
-	/** The stickers in each slot ("" for an empty one), always MAX long. */
+	/** A sticker or charm entry's id (before its placement). */
+	public static String idOf(String entry) {
+		int at = entry == null ? -1 : entry.indexOf('@');
+		return entry == null ? "" : at < 0 ? entry : entry.substring(0, at);
+	}
+
+	/** A sticker or charm entry's placement numbers, or null when it sits at its default place. */
+	public static double[] placeOf(String entry) {
+		int at = entry == null ? -1 : entry.indexOf('@');
+		if (at < 0) return null;
+		try {
+			String[] f = entry.substring(at + 1).split(",");
+			double[] out = new double[f.length];
+			for (int i = 0; i < f.length; i++) out[i] = Double.parseDouble(f[i]);
+			return out;
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	private static String entry(String id, double[] place) {
+		if (place == null) return id;
+		StringBuilder b = new StringBuilder(id).append('@');
+		for (int i = 0; i < place.length; i++) b.append(i > 0 ? "," : "").append(String.format(java.util.Locale.ROOT, "%.4f", place[i]));
+		return b.toString();
+	}
+
+	/** The stickers in each slot ("" for an empty one; with their placement), always MAX long. */
 	public static String[] get(ItemStack wrap) {
 		String[] out = new String[MAX];
 		java.util.Arrays.fill(out, "");
@@ -111,8 +139,11 @@ public final class StickerSlots {
 		if (ref.startsWith("L:")) Loadout.set(p, ref.substring(2), wrap);
 	}
 
-	/** Applies the sticker at inventory slot stickerSlot to slot `slot` of the wrap at ref (an empty slot): the sticker is used up. */
-	public static void apply(ServerPlayer p, int stickerSlot, String ref, int slot) {
+	/**
+	 * Applies the sticker at inventory slot stickerSlot to slot `slot` of the wrap at ref (an empty slot), where it was
+	 * placed (place: u, v, turn; null: the slot's place): the sticker is used up.
+	 */
+	public static void apply(ServerPlayer p, int stickerSlot, String ref, int slot, double[] place) {
 		var inv = p.getInventory();
 		if (stickerSlot < 0 || stickerSlot >= inv.getContainerSize()) return;
 		ItemStack sticker = inv.getItem(stickerSlot);
@@ -125,7 +156,8 @@ public final class StickerSlots {
 			dev.strafemc.server.Toasts.warn(p, "That slot already has a sticker. Scrape it off first.");
 			return;
 		}
-		s[slot] = StickerItem.sticker(sticker);
+		if (place != null && (place.length != 3 || place[0] < -0.2 || place[0] > 1.2 || place[1] < -1.5 || place[1] > 1.5)) return;
+		s[slot] = entry(StickerItem.sticker(sticker), place);
 		set(wrap, s);
 		store(p, ref, wrap);
 		sticker.shrink(1);
@@ -152,8 +184,8 @@ public final class StickerSlots {
 		return c == null ? "" : c;
 	}
 
-	/** Hangs the charm at inventory slot charmSlot on the wrap at ref (one with none): the charm goes onto it. */
-	public static void applyCharm(ServerPlayer p, int charmSlot, String ref) {
+	/** Hangs the charm at inventory slot charmSlot on the wrap at ref (one with none) from that point (null: the keychain point). */
+	public static void applyCharm(ServerPlayer p, int charmSlot, String ref, double[] point) {
 		var inv = p.getInventory();
 		if (charmSlot < 0 || charmSlot >= inv.getContainerSize()) return;
 		ItemStack charm = inv.getItem(charmSlot);
@@ -165,17 +197,26 @@ public final class StickerSlots {
 			dev.strafemc.server.Toasts.warn(p, "That wrap already has a charm. Take it off first.");
 			return;
 		}
-		wrap.set(CHARM, CharmItem.charm(charm));
+		if (point != null && (point.length != 3 || Math.abs(point[0]) > 2 || Math.abs(point[1]) > 2 || Math.abs(point[2]) > 2)) return;
+		wrap.set(CHARM, entry(CharmItem.charm(charm), point));
 		store(p, ref, wrap);
 		charm.shrink(1);
 		dev.strafemc.server.Toasts.send(p, "Charm attached.", dev.strafemc.server.Toasts.GOOD);
 	}
 
-	/** Takes the charm off the wrap at ref: it comes back, as in CS2. */
+	/** Takes the charm off the wrap at ref with a Charm Detachment (used up): the charm comes back, as in CS2. */
 	public static void removeCharm(ServerPlayer p, String ref) {
 		ItemStack live = target(p, ref);
-		String id = charm(live);
+		String id = idOf(charm(live));
 		if (id.isEmpty()) return;
+		var inv = p.getInventory();
+		int tool = -1;
+		for (int i = 0; i < inv.getContainerSize() && tool < 0; i++) if (inv.getItem(i).is(WeaponItems.CHARM_DETACHMENT)) tool = i;
+		if (tool < 0 && !p.getAbilities().instabuild) {
+			dev.strafemc.server.Toasts.warn(p, "You need a Charm Detachment (the shop sells them).");
+			return;
+		}
+		if (tool >= 0 && !p.getAbilities().instabuild) inv.getItem(tool).shrink(1);
 		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
 		wrap.remove(CHARM);
 		store(p, ref, wrap);
@@ -187,7 +228,7 @@ public final class StickerSlots {
 	public static List<String> names(ItemStack wrap) {
 		List<String> out = new ArrayList<>();
 		for (String id : get(wrap)) {
-			Stickers.Sticker st = Stickers.get(id);
+			Stickers.Sticker st = Stickers.get(idOf(id));
 			if (st != null) out.add(st.name());
 		}
 		return out;

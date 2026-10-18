@@ -26,13 +26,15 @@ import java.util.UUID;
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
-	public static final int ROTATION = 36_000, OFFERS = 10; // 30 minutes of play
+	public static final int ROTATION = 36_000, OFFERS = 11; // 30 minutes of play
 	/** Selling pays this share of a skin's worth. */
 	public static final double SELL_RATE = 0.75;
 	/** Offer prices: the item's worth times 80-110%. */
 	private static final double PRICE_MIN = 0.8, PRICE_SPAN = 0.3;
 	/** CS2's key price (US store), for the Universal Key. */
 	private static final double KEY_PRICE = 2.49;
+	/** A Charm Detachment's price. FLAGGED ours. */
+	private static final double DETACHMENT_PRICE = 0.5;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
 	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (90% or
@@ -41,22 +43,22 @@ public final class Shop {
 	private static final double CASE_SHARE = 1.2;
 
 	/** cents: the balance; rotation: which shop; bought: how many of each offer were bought, 3 bits each; progress: ticks into the rotation (synced each minute). */
-	public record State(long cents, int rotation, int bought, int progress) {
+	public record State(long cents, int rotation, long bought, int progress) {
 		public static final State NONE = new State(0, 0, 0, 0);
 
 		static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
 				Codec.LONG.optionalFieldOf("cents", 0L).forGetter(State::cents),
 				Codec.INT.optionalFieldOf("rotation", 0).forGetter(State::rotation),
-				Codec.INT.optionalFieldOf("bought", 0).forGetter(State::bought),
+				Codec.LONG.optionalFieldOf("bought", 0L).forGetter(State::bought),
 				Codec.INT.optionalFieldOf("progress", 0).forGetter(State::progress)).apply(i, State::new));
 
 		static final StreamCodec<RegistryFriendlyByteBuf, State> STREAM = StreamCodec.composite(
-				ByteBufCodecs.VAR_LONG, State::cents, ByteBufCodecs.VAR_INT, State::rotation, ByteBufCodecs.VAR_INT, State::bought,
+				ByteBufCodecs.VAR_LONG, State::cents, ByteBufCodecs.VAR_INT, State::rotation, ByteBufCodecs.VAR_LONG, State::bought,
 				ByteBufCodecs.VAR_INT, State::progress, State::new);
 
 		/** How many of offer i were bought this rotation. */
 		public int bought(int i) {
-			return bought >> 3 * i & 7;
+			return (int) (bought >> 3 * i & 7);
 		}
 	}
 
@@ -125,6 +127,7 @@ public final class Shop {
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 1 + rng.nextInt(3)));
 		}
 		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1));
+		out.add(new Offer(new ItemStack(WeaponItems.CHARM_DETACHMENT), price(DETACHMENT_PRICE, rng), 1 + rng.nextInt(3)));
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();
 		for (SkinWraps.Wrap w : SkinWraps.all())
 			if (w.knife() || w.kits().size() == 1 && w.rarity() != null && w.rarity().ordinal() >= SkinWraps.Rarity.MYTHICAL.ordinal()) wraps.add(w);
@@ -246,7 +249,7 @@ public final class Shop {
 			dev.strafemc.server.Toasts.warn(p, "Not enough balance.");
 			return;
 		}
-		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1 << 3 * i), p.getAttachedOrElse(PROGRESS, 0)));
+		p.setAttached(DATA, new State(s.cents() - o.cents(), s.rotation(), s.bought() + (1L << 3 * i), p.getAttachedOrElse(PROGRESS, 0)));
 		ItemStack item = o.item().copy();
 		if (!p.getInventory().add(item)) p.drop(item, false);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] shop: {} bought {} for {}", p.getScoreboardName(), o.item().getHoverName().getString(), money(o.cents()));

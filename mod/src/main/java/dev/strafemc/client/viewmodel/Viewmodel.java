@@ -39,6 +39,25 @@ public final class Viewmodel {
 	/** mesh: the model's mesh node to draw; clips: the animations loaded (files via GunServer.clipPath). */
 	private record Weapon(String cls, String model, String mesh, String[] clips) {}
 
+	/** A weapon's model and mesh filter ({model, mesh}), or null. */
+	static String[] weaponModel(String cls) {
+		Weapon w = WEAPONS.get(cls);
+		return w == null ? null : new String[] {w.model(), w.mesh()};
+	}
+
+	/** Where a model's attachment sits in model space at rest (glb metres), or null: the charm's default spot ("keychain"). */
+	static float[] restPoint(String model, VmModel m, String attachment) {
+		Attachment a = attachments(model).get(attachment);
+		if (a == null) return null;
+		for (VmModel.Skin s : m.skins) {
+			int j = java.util.Arrays.asList(s.joints).indexOf(a.bone());
+			if (j < 0) continue;
+			org.joml.Vector3f p = new Matrix4f(s.inverseBind[j]).invert().transformPosition(new org.joml.Vector3f(a.offset()));
+			return new float[] {p.x, p.y, p.z};
+		}
+		return null;
+	}
+
 	private static final Map<String, Weapon> WEAPONS = withGrenades(fromTable(Map.of(
 			dev.strafemc.weapon.HealthshotItem.CLS, new Weapon(dev.strafemc.weapon.HealthshotItem.CLS, "weapons/models/healthshot/weapon_healthshot.vmdl_c",
 					".healthshot_content_src", new String[] {"draw", "idle", "inject"}))));
@@ -488,11 +507,13 @@ public final class Viewmodel {
 	 */
 	private void charm(Loaded l, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
 		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
-		String id = knife ? null : dev.strafemc.client.WrapChoice.gunCharm(l.cls);
-		if (id == null) return;
+		String entry = knife ? null : dev.strafemc.client.WrapChoice.gunCharm(l.cls);
+		if (entry == null) return;
+		String id = dev.strafemc.weapon.StickerSlots.idOf(entry);
+		double[] point = dev.strafemc.weapon.StickerSlots.placeOf(entry);
 		String kit = dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		String name = kit != null && WeaponSkinCache.legacy(kit) && l.attachments.containsKey("keychain_legacy") ? "keychain_legacy" : "keychain";
-		Matrix4f at = l.attachments.containsKey(name) ? attachmentTransforms.get(name) : null;
+		Matrix4f at = l.attachments.containsKey(name) ? point != null && point.length == 3 ? pointOnGun(l, name, point) : attachmentTransforms.get(name) : null;
 		VmModel m = at == null ? null : charmModel(id);
 		if (m == null) return;
 		var p = net.minecraft.client.Minecraft.getInstance().player;
@@ -585,6 +606,28 @@ public final class Viewmodel {
 			Matrix4f m = new Matrix4f(toView).mul(bone).translate(e.getValue().offset()).rotate(e.getValue().rotation());
 			attachmentTransforms.put(e.getKey(), m);
 		}
+		lastGunSkin = gunSkin;
+		lastToView = new Matrix4f(toView);
+	}
+
+	/** This frame's weapon skinning and view transform (for a charm hung from its own point). */
+	private Matrix4f[][] lastGunSkin;
+	private Matrix4f lastToView;
+
+	/** Camera-space transform of a model-space point (glb metres) on the gun as posed this frame, turned like the attachment. */
+	private Matrix4f pointOnGun(Loaded l, String attachment, double[] p) {
+		Attachment a = l.attachments.get(attachment);
+		if (a == null || lastGunSkin == null || l.gun.parts.isEmpty()) return null;
+		int si = l.gun.parts.get(0).skin;
+		if (si < 0 || si >= l.gun.skins.size() || si >= lastGunSkin.length) return null;
+		VmModel.Skin skin = l.gun.skins.get(si);
+		int j = java.util.Arrays.asList(skin.joints).indexOf(a.bone());
+		if (j < 0) return null;
+		// a rest-pose point follows its bone like the mesh does (skin matrix x point), the turn is the attachment's
+		org.joml.Vector3f at = new Matrix4f(lastGunSkin[si][j]).transformPosition(new org.joml.Vector3f((float) p[0], (float) p[1], (float) p[2]));
+		Matrix4f bone = new Matrix4f(lastGunSkin[si][j]).mul(new Matrix4f(skin.inverseBind[j]).invert());
+		org.joml.Quaternionf turn = bone.getNormalizedRotation(new org.joml.Quaternionf()).mul(a.rotation());
+		return new Matrix4f(lastToView).translate(at).rotate(turn);
 	}
 
 	/** The clip being blended out (CS2 transition), its time when the blend started and how long the blend lasts. */

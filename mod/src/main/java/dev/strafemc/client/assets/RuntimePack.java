@@ -586,6 +586,14 @@ public final class RuntimePack {
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] charm icons: {}", e.toString());
 		}
+		// the Charm Detachment: CS2's picture of it (econ/tools/keychain_remove_tool)
+		try {
+			String img = "panorama/images/econ/tools/keychain_remove_tool_png";
+			icon(img + ".vtex_c", img + ".png", tex.resolve("item/charm_detachment.png"), 128);
+			Files.writeString(models.resolve("charm_detachment.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/charm_detachment\"}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] charm detachment icon: {}", e.toString());
+		}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {
 			String img = "panorama/images/econ/tools/casket_png";

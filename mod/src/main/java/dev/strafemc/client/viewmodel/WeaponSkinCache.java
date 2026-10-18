@@ -327,9 +327,16 @@ public final class WeaponSkinCache {
 			double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
 			double scale = sc[0], rot = wp.f("g_flSticker" + i + "Rotation", 0);
 			if (scale <= 0) continue;
-			BufferedImage art = stickerArt(stickers[i]);
+			BufferedImage art = stickerArt(dev.strafemc.weapon.StickerSlots.idOf(stickers[i]));
 			if (art == null) continue;
-			double cx = 0.5 + off[0], cy = 0.5 + (off.length > 1 ? off[1] : 0), cos = Math.cos(rot), sin = Math.sin(rot);
+			double cx = 0.5 + off[0], cy = 0.5 + (off.length > 1 ? off[1] : 0);
+			double[] placed = dev.strafemc.weapon.StickerSlots.placeOf(stickers[i]); // put somewhere else: its place and turn (the size stays the slot's)
+			if (placed != null && placed.length == 3) {
+				cx = placed[0];
+				cy = placed[1];
+				rot = placed[2];
+			}
+			double cos = Math.cos(rot), sin = Math.sin(rot);
 			for (int y = 0; y < n; y++)
 				for (int x = 0; x < n; x++) {
 					int o = 2 * (y * n + x);
