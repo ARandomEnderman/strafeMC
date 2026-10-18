@@ -372,6 +372,14 @@ public final class CaseScreen extends Screen {
 		if (s.wear() >= 0) grade += "  |  " + dev.strafemc.weapon.Wear.exterior(s.wear()) + " " + String.format(java.util.Locale.ROOT, "%.8f", s.wear());
 		if (s.pattern() >= 0) grade += "  |  Pattern template " + s.pattern();
 		g.text(font, grade, width / 2 - font.width(grade) / 2, py + ch + 34, 0xFFB0B0B0, true);
+		// its worth: the drop rebuilt from what the server sent (finish, pattern, wear, StatTrak by its name)
+		ItemStack got = Cases.stack(e, Math.max(0, s.pattern()), Math.max(0, s.wear()));
+		if (s.result().name().startsWith("StatTrak")) got.set(dev.strafemc.weapon.WeaponItems.STATTRAK, 0);
+		double worth = dev.strafemc.weapon.Worth.of(got);
+		if (worth >= 0) {
+			String w = "Worth: " + dev.strafemc.weapon.Worth.format(worth);
+			g.text(font, w, width / 2 - font.width(w) / 2, py + ch + 46, 0xFF55FF55, true);
+		}
 		if (spins.size() > 1) {
 			String page = (shown + 1) + " / " + spins.size();
 			g.text(font, page, width / 2 - font.width(page) / 2, py - 16, 0xFFFFFFFF, true);
