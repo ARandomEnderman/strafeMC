@@ -38,9 +38,11 @@ public final class CaseOpening {
 			if (!p.getInventory().add(s.copy())) p.drop(s.copy(), false);
 			Advancements.unboxed(p, s, d.rarity().get(i));
 			if (p.level().getServer() == null) continue;
-			// Classified (pink) and up are told to everyone on the server; Covert and the rare special items stand out
+			// Classified (pink) and up are told to everyone on the server, StatTrak ones from Restricted (purple); Covert and
+			// the rare special items stand out
 			SkinWraps.Rarity r = d.rarity().get(i);
-			if (r != null && r.ordinal() < SkinWraps.Rarity.LEGENDARY.ordinal()) continue;
+			SkinWraps.Rarity from = StatTrak.kills(s) >= 0 ? SkinWraps.Rarity.MYTHICAL : SkinWraps.Rarity.LEGENDARY;
+			if (r != null && r.ordinal() < from.ordinal()) continue;
 			boolean big = r == null || r.ordinal() >= SkinWraps.Rarity.ANCIENT.ordinal();
 			var name = net.minecraft.network.chat.Component.literal(p.getScoreboardName());
 			var item = s.getHoverName().copy();
