@@ -15,6 +15,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -258,15 +259,25 @@ public final class StickerScreen extends Screen {
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action(cmd, arg));
 	}
 
-	/** A sticker or charm drawn on the view at (x, y), size s, turned by turn radians. */
-	private void drawOn(GuiGraphicsExtractor g, ItemStack st, double x, double y, double s, double turn, int alpha) {
+	/** A sticker or charm drawn on the view at (x, y), size s, turned by turn radians; a sticker as worn as it is. */
+	private void drawOn(GuiGraphicsExtractor g, ItemStack st, double x, double y, double s, double turn, double wear) {
 		var pose = g.pose();
 		pose.pushMatrix();
 		pose.translate((float) x, (float) y);
 		pose.rotate((float) turn);
-		CaseImages.draw(g, st, (int) Math.round(-s / 2), (int) Math.round(-s / 2), (int) Math.round(s), (int) Math.round(s));
+		drawWorn(g, st, (int) Math.round(-s / 2), (int) Math.round(-s / 2), (int) Math.round(s), (int) Math.round(s), wear);
 		pose.popMatrix();
-		if (alpha < 255) g.fill((int) (x - s / 2), (int) (y - s / 2), (int) (x + s / 2), (int) (y + s / 2), (255 - alpha) << 24 | 0x101317);
+	}
+
+	/** A sticker's picture worn by scraping (CS2's scratches), else the plain picture. */
+	private void drawWorn(GuiGraphicsExtractor g, ItemStack st, int x, int y, int w, int h, double wear) {
+		Identifier worn = wear > 0 && st.getItem() instanceof StickerItem ? StickerWear.texture(StickerItem.sticker(st), wear) : null;
+		if (worn == null) {
+			CaseImages.draw(g, st, x, y, w, h);
+			return;
+		}
+		int pw = Math.min(w, h * 4 / 3), ph = pw * 3 / 4; // CS2's sticker pictures are 4:3
+		g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, worn, x + (w - pw) / 2, y + (h - ph) / 2, 0, 0, pw, ph, pw, ph);
 	}
 
 	@Override
@@ -302,12 +313,29 @@ public final class StickerScreen extends Screen {
 			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, v.texture, vb[0], vb[1], 0, 0, vb[2], vb[3], vb[2], vb[3]);
 			int n = spots(t.stack());
 			String[] in = in(t.stack());
+			int hoverSpot = -1; // a spot under the mouse: its sticker shows how the next scrape leaves it
+			for (int i = 0; i < n; i++) {
+				int[] b = spotBox(i, n, vb);
+				if (mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[2]) hoverSpot = i;
+			}
 			for (int i = 0; i < n; i++) { // what's on it already
 				if (in[i].isEmpty()) continue;
 				double[] p = placeOf(v, in[i], i);
 				if (p == null) continue;
 				double[] s = toScreen(v, vb, p[0], p[1]);
-				drawOn(g, shown(in[i]), s[0], s[1], sizeOf(v, i, vb), charm ? 0 : (p.length > 2 ? p[2] : 0), 255);
+				double size = sizeOf(v, i, vb);
+				if (!charm && hoverSpot < 0 && Math.abs(mx - s[0]) < size / 2 && Math.abs(my - s[1]) < size / 2) hoverSpot = i;
+				boolean preview = !charm && i == hoverSpot;
+				String next = preview ? StickerSlots.scraped(in[i]) : in[i];
+				if (preview && next.isEmpty()) { // the next scrape takes it off: shown faint, outlined red
+					drawOn(g, shown(in[i]), s[0], s[1], size, p.length > 2 ? p[2] : 0, 0.9);
+					g.outline((int) (s[0] - size / 2), (int) (s[1] - size / 2), (int) size, (int) size, 0xFFE04040);
+				} else drawOn(g, shown(in[i]), s[0], s[1], size, charm ? 0 : (p.length > 2 ? p[2] : 0), charm ? 0 : StickerSlots.wearOf(next));
+				if (preview) {
+					String wl = next.isEmpty() ? "Next scrape removes it" : "After a scrape: " + Math.round(StickerSlots.wearOf(next) * 100) + "% worn";
+					g.setTooltipForNextFrame(font, List.of(shown(in[i]).getHoverName(), Component.literal("§7Worn " + Math.round(StickerSlots.wearOf(in[i]) * 100) + "%"),
+							Component.literal("§e" + wl), Component.literal("§8Right-click its slot to scrape")), java.util.Optional.empty(), mx, my);
+				}
 			}
 			if (pendingSlot >= 0) { // the one being placed
 				double[] s = toScreen(v, vb, pu, pv);
@@ -330,9 +358,9 @@ public final class StickerScreen extends Screen {
 					g.text(font, plus, b[0] + b[2] / 2 - font.width(plus) / 2, b[1] + b[2] / 2 - 4, 0xFF909090, false);
 				} else {
 					ItemStack on = shown(in[i]);
-					CaseImages.draw(g, on, b[0] + 2, b[1] + 2, b[2] - 4, b[2] - 4);
-					if (over) g.setTooltipForNextFrame(font, List.of(on.getHoverName(), Component.literal(charm ? "§7Right-click to take it off (uses a Charm Detachment)"
-							: "§7Right-click to scrape it off (it's destroyed)")), java.util.Optional.empty(), mx, my);
+					drawWorn(g, on, b[0] + 2, b[1] + 2, b[2] - 4, b[2] - 4, charm ? 0 : StickerSlots.wearOf(over ? StickerSlots.scraped(in[i]) : in[i]));
+					if (over && charm) g.setTooltipForNextFrame(font, List.of(on.getHoverName(), Component.literal("§7Right-click to take it off (uses a Charm Detachment)")),
+							java.util.Optional.empty(), mx, my);
 				}
 				g.text(font, charm ? "Charm" : String.valueOf(i + 1), b[0] + 3, b[1] + 3, 0xFF707070, false);
 			}

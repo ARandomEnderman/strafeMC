@@ -307,7 +307,8 @@ public final class WeaponSkinCache {
 	 * sticker (g_vStickerNOffset, g_vStickerNScale, g_flStickerNRotation) in the mesh's second UV set, a side view of the
 	 * gun: slot N's sticker covers 1 / scale of it around (0.5 + offset), turned by the rotation, and only where the
 	 * weapon's sticker mask (g_tStickerWepInputs red) allows. The sticker's own art is its material's g_tSticker0.
-	 * FLAGGED ours: CS2's paper / foil / holo looks are left out (the plain art, by its alpha).
+	 * Scraped ones lose their art where CS2's sticker scratches (g_tStickerScratches) are below the wear. FLAGGED ours: CS2's
+	 * paper / foil / holo looks are left out (the plain art, by its alpha).
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
 		Path plain = ensure(cls, material, kit, pattern, parts, base);
@@ -319,7 +320,7 @@ public final class WeaponSkinCache {
 		for (String sfx : new String[] {".vm1024m.png", ".vm1024r.png"}) // metalness and roughness: the finish's
 			if (Files.exists(sibling(plain, sfx))) Files.copy(sibling(plain, sfx), sibling(tex, sfx), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 		var wp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(material + "_c")));
-		BufferedImage mask = image(wp, "g_tStickerWepInputs");
+		BufferedImage mask = image(wp, "g_tStickerWepInputs"), scratches = GloveSkinCache.load(dev.strafemc.client.StickerWear.SCRATCHES_PATH);
 		int n = img.getWidth();
 		float[] side = secondUv(parts, n);
 		for (int i = 0; i < stickers.length; i++) {
@@ -336,7 +337,7 @@ public final class WeaponSkinCache {
 				cy = placed[1];
 				rot = placed[2];
 			}
-			double cos = Math.cos(rot), sin = Math.sin(rot);
+			double cos = Math.cos(rot), sin = Math.sin(rot), wear = dev.strafemc.weapon.StickerSlots.wearOf(stickers[i]);
 			for (int y = 0; y < n; y++)
 				for (int x = 0; x < n; x++) {
 					int o = 2 * (y * n + x);
@@ -347,6 +348,10 @@ public final class WeaponSkinCache {
 					int sc0 = GloveSkinBaker.sampleBilinear(art, su, sv);
 					double a = (sc0 >>> 24) / 255.0;
 					if (mask != null) a *= (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
+					if (wear > 0 && scratches != null) { // scraped: what stays is where the sticker's scratches are above the wear
+						double s = (GloveSkinBaker.sampleBilinear(scratches, su, sv) >> 16 & 255) / 255.0, t = Math.max(0, Math.min(1, (s - wear + 0.05) / 0.1));
+						a *= t * t * (3 - 2 * t);
+					}
 					if (a <= 0.004) continue;
 					int c = img.getRGB(x, y);
 					int r = (int) Math.round((c >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((c >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),

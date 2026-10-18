@@ -20,11 +20,14 @@ import java.util.Map;
  * Stickers on gun wraps, as in CS2: each gun has its sticker slots (strafemc/sticker_slots.tsv, from CS2's weapon
  * materials: four on most, five on a few), and the wrap keeps which sticker is in which ("" for none) and where it was
  * put: "id" sits at its slot's place, "id@u,v,turn" where it was placed (sticker space, the turn in radians; the size is
- * the slot's, as CS2's). Applying one uses the sticker up; scraping it off destroys it, as in CS2. The charm likewise:
+ * the slot's, as CS2's), and "#wear" once scraped. Applying one uses the sticker up; each scrape wears it SCRAPE more
+ * and the one that wears it through takes it off (it's gone), as in CS2. The charm likewise:
  * "id", or "id@x,y,z" for the model-space point it hangs from; taking it off uses a Charm Detachment and gives it back.
  */
 public final class StickerSlots {
 	public static final int MAX = 5;
+	/** How much one scrape wears a sticker. FLAGGED ours (Valve's servers decide CS2's). */
+	public static final double SCRAPE = 0.1;
 	public static DataComponentType<List<String>> STICKERS;
 	/** The charm hanging on a gun wrap (Charms id). */
 	public static DataComponentType<String> CHARM;
@@ -69,18 +72,33 @@ public final class StickerSlots {
 		return gun == null ? 0 : Math.min(MAX, SLOTS.getOrDefault(gun, 4));
 	}
 
-	/** A sticker or charm entry's id (before its placement). */
+	/** A sticker or charm entry's id (before its placement and wear). */
 	public static String idOf(String entry) {
-		int at = entry == null ? -1 : entry.indexOf('@');
-		return entry == null ? "" : at < 0 ? entry : entry.substring(0, at);
+		if (entry == null) return "";
+		int end = entry.length(), at = entry.indexOf('@'), hash = entry.indexOf('#');
+		if (at >= 0) end = Math.min(end, at);
+		if (hash >= 0) end = Math.min(end, hash);
+		return entry.substring(0, end);
+	}
+
+	/** A sticker's wear from scraping (0: as new). */
+	public static double wearOf(String entry) {
+		int hash = entry == null ? -1 : entry.indexOf('#');
+		if (hash < 0) return 0;
+		try {
+			return Math.max(0, Math.min(1, Double.parseDouble(entry.substring(hash + 1))));
+		} catch (NumberFormatException e) {
+			return 0;
+		}
 	}
 
 	/** A sticker or charm entry's placement numbers, or null when it sits at its default place. */
 	public static double[] placeOf(String entry) {
 		int at = entry == null ? -1 : entry.indexOf('@');
 		if (at < 0) return null;
+		int hash = entry.indexOf('#', at);
 		try {
-			String[] f = entry.substring(at + 1).split(",");
+			String[] f = entry.substring(at + 1, hash < 0 ? entry.length() : hash).split(",");
 			double[] out = new double[f.length];
 			for (int i = 0; i < f.length; i++) out[i] = Double.parseDouble(f[i]);
 			return out;
@@ -165,17 +183,25 @@ public final class StickerSlots {
 		Advancements.award(p, "sticker_on");
 	}
 
-	/** Scrapes the sticker off slot `slot` of the wrap at ref: it's gone, as in CS2. */
+	/** The sticker after one more scrape: more worn, or "" when this scrape takes it off. */
+	public static String scraped(String entry) {
+		double w = wearOf(entry) + SCRAPE;
+		if (w >= 1 - 1e-6) return "";
+		String base = entry.indexOf('#') < 0 ? entry : entry.substring(0, entry.indexOf('#'));
+		return base + "#" + String.format(java.util.Locale.ROOT, "%.2f", w);
+	}
+
+	/** Scrapes the sticker in slot `slot` of the wrap at ref once: a bit more worn, the last scrape takes it off (gone), as in CS2. */
 	public static void scrape(ServerPlayer p, String ref, int slot) {
 		ItemStack live = target(p, ref);
 		if (slot < 0 || slot >= MAX || count(live) == 0) return;
 		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
 		String[] s = get(wrap);
 		if (s[slot].isEmpty()) return;
-		s[slot] = "";
+		s[slot] = scraped(s[slot]);
 		set(wrap, s);
 		store(p, ref, wrap);
-		dev.strafemc.server.Toasts.info(p, "Sticker scraped off.");
+		dev.strafemc.server.Toasts.info(p, s[slot].isEmpty() ? "Sticker scraped off." : "Sticker scraped (" + Math.round(wearOf(s[slot]) * 100) + "% worn).");
 	}
 
 	/** The charm on a wrap, or "" for none. */
