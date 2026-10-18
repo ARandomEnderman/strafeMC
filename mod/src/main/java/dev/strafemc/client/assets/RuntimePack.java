@@ -441,17 +441,20 @@ public final class RuntimePack {
 			if (keys.length() > 0) keys.append(',');
 			keys.append("{\"when\":\"").append(k.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/key/").append(k.id()).append("\"}}");
 		}
-		// the Universal Key (ours): CS2's eSports key picture with its blue turned red
+		// the Universal Key (ours): CS2's eSports key with the strafeMC logo as its head
 		try {
 			String img = "panorama/images/econ/tools/weapon_case_key_special_1_png";
-			Path out = tex.resolve("item/key/universal.png");
+			Path out = tex.resolve("item/key/universal_logo.png");
 			if (!Files.exists(out)) {
-				Path tmp = tex.resolve("item/key/universal_src.png");
-				icon(img + ".vtex_c", img + ".png", tmp, 128);
-				write(redKey(ImageIO.read(tmp.toFile())), out);
-				Files.deleteIfExists(tmp);
+				Path src = StrafeConfig.cacheDir().resolve(img + ".png");
+				AssetCache.ensureDecompiled(img + ".vtex_c", src);
+				BufferedImage logo;
+				try (var in = RuntimePack.class.getResourceAsStream("/assets/strafemc/icon.png")) {
+					logo = ImageIO.read(in);
+				}
+				write(squareIcon(logoKey(ImageIO.read(src.toFile()), logo), 128), out);
 			}
-			Files.writeString(models.resolve("key/universal.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/key/universal\"}}");
+			Files.writeString(models.resolve("key/universal.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/key/universal_logo\"}}");
 			if (keys.length() > 0) keys.append(',');
 			keys.append("{\"when\":\"universal\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/key/universal\"}}");
 		} catch (Exception e) {
@@ -471,22 +474,55 @@ public final class RuntimePack {
 	}
 
 	/**
-	 * The eSports key recoloured red: its pale steel blue (hue 0.45-0.75, saturation over 0.04) turned to red with the
-	 * saturation pushed up (x4 + 0.35) and a little darker (x0.9), so the bow reads red while the bright blade stays
-	 * metal. FLAGGED: our key, our colour.
+	 * The Universal Key: the eSports key (256 x 198) with a disc over its head carrying the strafeMC logo, projected onto
+	 * the head's tilted ellipse (centre 180,60, half axes 65 x 47, turned 8 degrees; fitted by eye, FLAGGED) and lit like
+	 * the key: light from the top left, a bevel and dark outline at the rim, the disc's side showing below right. Drawn
+	 * 4x and scaled down.
 	 */
-	private static BufferedImage redKey(BufferedImage in) {
-		BufferedImage out = new BufferedImage(in.getWidth(), in.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		float[] hsb = new float[3];
-		for (int y = 0; y < in.getHeight(); y++)
-			for (int x = 0; x < in.getWidth(); x++) {
-				int argb = in.getRGB(x, y), a = argb >>> 24;
-				java.awt.Color.RGBtoHSB(argb >> 16 & 255, argb >> 8 & 255, argb & 255, hsb);
-				if (hsb[0] >= 0.45f && hsb[0] <= 0.75f && hsb[1] > 0.04f)
-					argb = a << 24 | (java.awt.Color.HSBtoRGB(0.0f, Math.min(1, hsb[1] * 4 + 0.35f), hsb[2] * 0.9f) & 0xFFFFFF);
-				out.setRGB(x, y, argb);
+	private static BufferedImage logoKey(BufferedImage key, BufferedImage logo) {
+		final int ss = 4, w = key.getWidth() * ss, h = key.getHeight() * ss;
+		BufferedImage big = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = big.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.drawImage(key, 0, 0, w, h, null);
+		g.dispose();
+		double cx = 180 * ss, cy = 60 * ss, ax = 65 * ss, ay = 47 * ss, t = Math.toRadians(8), thick = 4 * ss, cos = Math.cos(t), sin = Math.sin(t);
+		int lw = logo.getWidth(), lh = logo.getHeight();
+		for (int y = Math.max(0, (int) (cy - ax - thick - 4)); y < Math.min(h, (int) (cy + ax + thick + 4)); y++)
+			for (int x = Math.max(0, (int) (cx - ax - thick - 4)); x < Math.min(w, (int) (cx + ax + thick + 4)); x++) {
+				double X = x - cx, Y = y - cy, u = (X * cos + Y * sin) / ax, v = (-X * sin + Y * cos) / ay, r = u * u + v * v;
+				double Xs = X - thick * 0.55, Ys = Y - thick * 0.85, us = (Xs * cos + Ys * sin) / ax, vs = (-Xs * sin + Ys * cos) / ay;
+				if (r <= 1) {
+					int c = logo.getRGB((int) ((u * 0.5 + 0.5) * (lw - 1)), (int) ((v * 0.5 + 0.5) * (lh - 1)));
+					int cr = c >> 16 & 255, cg = c >> 8 & 255, cb = c & 255;
+					if ((c >>> 24) < 128) { cr = 70; cg = 80; cb = 90; }
+					double d = Math.sqrt(r), toLight = -u * 0.6 - v * 0.8, light = 0.9 + 0.22 * toLight;
+					if (d > 0.9) light *= 0.75 + 0.25 * (1 - (d - 0.9) / 0.1); // bevel
+					if (d > 0.86 && d < 0.9 && toLight > 0) light *= 1.25; // rim highlight
+					if (d > 0.965) { cr = 40; cg = 44; cb = 48; light = 1; } // outline
+					big.setRGB(x, y, 0xFF000000 | Math.min(255, (int) (cr * light)) << 16 | Math.min(255, (int) (cg * light)) << 8 | Math.min(255, (int) (cb * light)));
+				} else if (us * us + vs * vs <= 1) big.setRGB(x, y, 0xFF30363C); // the disc's side
 			}
+		BufferedImage out = new BufferedImage(key.getWidth(), key.getHeight(), BufferedImage.TYPE_INT_ARGB);
+		g = out.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		g.drawImage(big.getScaledInstance(key.getWidth(), key.getHeight(), java.awt.Image.SCALE_AREA_AVERAGING), 0, 0, null);
+		g.dispose();
 		return out;
+	}
+
+	/** An image centred on a transparent square of this size (as icon() does for converted pictures). */
+	private static BufferedImage squareIcon(BufferedImage in, int size) {
+		BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = img.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+		g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+		double sc = (double) size / Math.max(in.getWidth(), in.getHeight());
+		int w = (int) Math.round(in.getWidth() * sc), h = (int) Math.round(in.getHeight() * sc);
+		g.drawImage(in, (size - w) / 2, (size - h) / 2, w, h, null);
+		g.dispose();
+		return img;
 	}
 
 	/** A CS2 texture as it is (no resizing). */
