@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class KillFeed {
 	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32, FLASH_ASSIST = 64,
-			SUICIDE = 512, VILLAGER = 1024;
+			SUICIDE = 512, VILLAGER = 1024, SPIN = 2048;
 	/** CS:GO's assist: more than this much damage (FLAGGED: CS2 doesn't publish its own). */
 	static final double ASSIST_DAMAGE = 40;
 
@@ -58,7 +58,7 @@ public final class KillFeed {
 
 	/** The usual modifiers about the killer: blind while shooting, off the ground. */
 	static int attackerFlags(ServerPlayer p) {
-		return (blind(p) ? ATTACKER_BLIND : 0) | (!p.onGround() && !p.getAbilities().flying ? IN_AIR : 0);
+		return (blind(p) ? ATTACKER_BLIND : 0) | (!p.onGround() && !p.getAbilities().flying ? IN_AIR : 0) | (Spin.spun(p) ? SPIN : 0);
 	}
 
 	/** Announces a kill (call only for a victim that was alive before the hit and is dead now). */

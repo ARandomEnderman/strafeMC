@@ -7,8 +7,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * A money voucher (ours): sold in the shop for its full dollars (onto the balance), or made there by withdrawing from
  * it, to keep or give away. Found in structure chests; a voucher without a value yet (fresh from a chest) gets one the
- * first time it's in a player's inventory: $10-$1000, higher ones rarer (10 x 100^(u^2): half are $31 or less, one in
- * ten is $440 or more). FLAGGED ours. Not a skin: no worth, so the upgrader and trade ups don't take it.
+ * first time it's in a player's inventory: $10-$1000, higher ones much rarer (roll(): median about $20). Not a skin: no worth, so the upgrader and trade ups don't take it.
  */
 public class VoucherItem extends Item {
 	public static final int MIN = 10, MAX = 1000;
@@ -29,9 +28,13 @@ public class VoucherItem extends Item {
 		return v == null ? 0 : v;
 	}
 
+	/**
+	 * $10-$1000 with value v at odds falling as 10 / v (a power law of 1, cut off at $1000): the median is about $20,
+	 * $100 or more is 9.1%, $500 or more 1%, $1000 one in 20,000. FLAGGED ours (asked for: hard to get good ones).
+	 */
 	static int roll(net.minecraft.util.RandomSource rng) {
-		double u = rng.nextDouble();
-		return (int) Math.round(MIN * Math.pow((double) MAX / MIN, u * u));
+		double cut = (double) MIN / MAX, u = cut + rng.nextDouble() * (1 - cut);
+		return (int) Math.min(MAX, Math.round(MIN / u));
 	}
 
 	@Override

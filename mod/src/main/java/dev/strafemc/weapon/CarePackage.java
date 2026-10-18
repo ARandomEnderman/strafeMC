@@ -64,6 +64,8 @@ public final class CarePackage {
 	 * XP for killing a player or bot, per point of Minecraft XP a hostile mob drops (zombie 5 -> 100), the most a mob
 	 * gives, and the multiplier per modifier. FLAGGED ours: CS2's match XP formula lives on Valve's servers.
 	 */
+	/** A 360 kill's XP multiplier (asked for: 3x). */
+	static final double SPIN_XP = 3;
 	static final double PLAYER_XP = 100, HOSTILE_PER_MC_XP = 20, MOB_MAX = 2000, MODIFIER = 1.5;
 
 	/**
@@ -135,6 +137,7 @@ public final class CarePackage {
 		}
 		int mods = Integer.bitCount(flags & (KillFeed.HEADSHOT | KillFeed.NOSCOPE | KillFeed.IN_AIR | KillFeed.PENETRATE | KillFeed.THROUGH_SMOKE
 				| KillFeed.ATTACKER_BLIND)) + (icon.contains("knife") || icon.equals("bayonet") ? 1 : 0) + (icon.equals("taser") ? 1 : 0);
+		if ((flags & KillFeed.SPIN) != 0) base *= SPIN_XP; // a 360: 3x on top
 		addXp(p, (int) Math.round(base * Math.pow(MODIFIER, mods)));
 	}
 

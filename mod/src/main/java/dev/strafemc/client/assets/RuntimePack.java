@@ -91,6 +91,26 @@ public final class RuntimePack {
 						tex.resolve("gui/deathnotice/" + w + ".png"), 48), tex.resolve("gui/deathnotice/" + w + ".png"), Placeholders.Icon.BULLET, 32);
 			safe(() -> svgH("panorama/images/icons/equipment/flashbang_assist.vsvg_c", "panorama/images/icons/equipment/flashbang_assist.svg",
 					tex.resolve("gui/deathnotice/flashbang_assist.png"), 48), tex.resolve("gui/deathnotice/flashbang_assist.png"), Placeholders.Icon.BULLET, 32);
+			// our 360-kill icon (no CS2 one): a circular arrow, white, 48 px like the modifiers
+			safe(() -> {
+				Path out = tex.resolve("gui/deathnotice/spin.png");
+				if (Files.exists(out)) return;
+				BufferedImage img = new BufferedImage(48, 48, BufferedImage.TYPE_INT_ARGB);
+				Graphics2D g = img.createGraphics();
+				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+				g.setColor(java.awt.Color.WHITE);
+				g.setStroke(new java.awt.BasicStroke(5.5f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+				g.draw(new java.awt.geom.Arc2D.Double(9, 9, 30, 30, 70, 290, java.awt.geom.Arc2D.OPEN));
+				// the arrowhead at the arc's end (0 degrees: the right), pointing up along the turn (a counter-clockwise spin)
+				java.awt.geom.Path2D head = new java.awt.geom.Path2D.Double();
+				head.moveTo(39, 13);
+				head.lineTo(31.5, 25);
+				head.lineTo(46.5, 25);
+				head.closePath();
+				g.fill(head);
+				g.dispose();
+				write(img, out);
+			}, tex.resolve("gui/deathnotice/spin.png"), Placeholders.Icon.BULLET, 32);
 			for (String m : dev.strafemc.client.DeathNotices.MODIFIER_ICONS)
 				safe(() -> svgH("panorama/images/hud/deathnotice/" + m + ".vsvg_c", "panorama/images/hud/deathnotice/" + m + ".svg",
 						tex.resolve("gui/deathnotice/" + m + ".png"), 48), tex.resolve("gui/deathnotice/" + m + ".png"), Placeholders.Icon.BULLET, 32);

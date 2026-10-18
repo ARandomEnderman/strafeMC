@@ -94,6 +94,7 @@ public final class DeathNotices {
 				parts.add(m.assisterT() ? T : CT);
 			}
 			if ((m.flags() & KillFeed.IN_AIR) != 0) parts.add("@inairkill");
+			if ((m.flags() & KillFeed.SPIN) != 0) parts.add("@spin"); // a 360 (ours: RuntimePack draws the icon)
 			if ((m.flags() & KillFeed.SUICIDE) == 0) parts.add("@" + m.icon()); // CS2 hides the weapon on suicides
 			if ((m.flags() & KillFeed.NOSCOPE) != 0) parts.add("@noscope");
 			if ((m.flags() & KillFeed.THROUGH_SMOKE) != 0) parts.add("@smoke_kill");
