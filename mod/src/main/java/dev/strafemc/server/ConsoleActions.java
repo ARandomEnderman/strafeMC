@@ -339,10 +339,11 @@ public final class ConsoleActions {
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
-			case "sticker_apply" -> { // "stickerSlot target slot [u,v,turn]": target L:<loadout slot> or I:<inventory slot>
+			case "sticker_apply" -> { // "stickerSlot target slot [u,v,turn [wear]]": target L:<loadout slot> or I:<inventory slot>
 				String[] a = arg.trim().split(" ");
 				try {
-					if (a.length >= 3) dev.strafemc.weapon.StickerSlots.apply(p, Integer.parseInt(a[0]), a[1], Integer.parseInt(a[2]), a.length > 3 ? nums(a[3]) : null);
+					if (a.length >= 3) dev.strafemc.weapon.StickerSlots.apply(p, Integer.parseInt(a[0]), a[1], Integer.parseInt(a[2]), a.length > 3 ? nums(a[3]) : null,
+							a.length > 4 ? Double.parseDouble(a[4]) : 0);
 				} catch (NumberFormatException ignored) {
 				}
 			}

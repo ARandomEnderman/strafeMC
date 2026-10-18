@@ -161,7 +161,7 @@ public final class StickerSlots {
 	 * Applies the sticker at inventory slot stickerSlot to slot `slot` of the wrap at ref (an empty slot), where it was
 	 * placed (place: u, v, turn; null: the slot's place): the sticker is used up.
 	 */
-	public static void apply(ServerPlayer p, int stickerSlot, String ref, int slot, double[] place) {
+	public static void apply(ServerPlayer p, int stickerSlot, String ref, int slot, double[] place, double wear) {
 		var inv = p.getInventory();
 		if (stickerSlot < 0 || stickerSlot >= inv.getContainerSize()) return;
 		ItemStack sticker = inv.getItem(stickerSlot);
@@ -176,6 +176,8 @@ public final class StickerSlots {
 		}
 		if (place != null && (place.length != 3 || place[0] < -0.2 || place[0] > 1.2 || place[1] < -1.5 || place[1] > 1.5)) return;
 		s[slot] = entry(StickerItem.sticker(sticker), place);
+		wear = Math.max(0, Math.min(1 - SCRAPE, Math.round(wear / SCRAPE) * SCRAPE)); // applied already scraped, in scrape steps (never through)
+		if (wear > 0) s[slot] += "#" + String.format(java.util.Locale.ROOT, "%.2f", wear);
 		set(wrap, s);
 		store(p, ref, wrap);
 		sticker.shrink(1);

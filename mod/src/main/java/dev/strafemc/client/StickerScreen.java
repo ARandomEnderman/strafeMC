@@ -41,6 +41,38 @@ public final class StickerScreen extends Screen {
 	/** Being placed: which slot (-1: none; the charm uses 0), where (sticker space) and its turn (radians). */
 	private int pendingSlot = -1;
 	private double pu, pv, pturn;
+	/** How scraped the sticker being placed goes on (0-90%, by SCRAPE steps). */
+	private double pwear;
+	private ScrapeSlider wearSlider;
+
+	/** The scrape slider for the sticker being placed: as new to 90% scraped, in scrape steps, previewed live. */
+	private final class ScrapeSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
+		ScrapeSlider(int x, int y, int w) {
+			super(x, y, w, 20, Component.empty(), 0);
+			updateMessage();
+		}
+
+		double wear() {
+			int steps = (int) Math.round(1 / StickerSlots.SCRAPE) - 1;
+			return Math.round(value * steps) * StickerSlots.SCRAPE;
+		}
+
+		@Override
+		protected void updateMessage() {
+			setMessage(Component.literal("Scrape: " + Math.round(wear() * 100) + "%"));
+		}
+
+		@Override
+		protected void applyValue() {
+			pwear = wear();
+		}
+
+		void reset() {
+			value = 0;
+			pwear = 0;
+			updateMessage();
+		}
+	}
 	private boolean dragging;
 	private Button apply, cancel;
 
@@ -58,6 +90,7 @@ public final class StickerScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		apply = addRenderableWidget(Button.builder(Component.literal("Apply"), b -> applyPending()).bounds(width - 230, height - 52, 100, 20).build());
 		cancel = addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> pendingSlot = -1).bounds(width - 124, height - 52, 100, 20).build());
+		wearSlider = addRenderableWidget(new ScrapeSlider(width - 230, height - 76, 206));
 	}
 
 	private ItemStack held() {
@@ -172,6 +205,7 @@ public final class StickerScreen extends Screen {
 		pu = p[0];
 		pv = p[1];
 		pturn = p.length > 2 ? p[2] : 0;
+		if (wearSlider != null) wearSlider.reset();
 	}
 
 	private void applyPending() {
@@ -182,7 +216,7 @@ public final class StickerScreen extends Screen {
 			float[] pt = v.pointAt(pu, pv);
 			if (pt == null) return;
 			send("charm_apply", stickerSlot + " " + t.ref() + " " + String.format(java.util.Locale.ROOT, "%.5f,%.5f,%.5f", pt[0], pt[1], pt[2]));
-		} else send("sticker_apply", stickerSlot + " " + t.ref() + " " + pendingSlot + " " + String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f", pu, pv, pturn));
+		} else send("sticker_apply", stickerSlot + " " + t.ref() + " " + pendingSlot + " " + String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f %.2f", pu, pv, pturn, pwear));
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
 		pendingSlot = -1;
 	}
@@ -306,6 +340,7 @@ public final class StickerScreen extends Screen {
 		Target t = target();
 		SideView v = view();
 		apply.visible = cancel.visible = pendingSlot >= 0;
+		wearSlider.visible = pendingSlot >= 0 && !charmMode();
 		if (t != null && v == null) g.text(font, "Loading the gun...", 20 + lw + 30, 50, 0xFF909090, false);
 		if (t != null && v != null) {
 			int[] vb = viewBox(v);
@@ -341,12 +376,13 @@ public final class StickerScreen extends Screen {
 				double[] s = toScreen(v, vb, pu, pv);
 				double size = sizeOf(v, pendingSlot, vb);
 				drawOn(g, charm ? CharmItem.stack(WeaponItems.CHARM, CharmItem.charm(st)) : StickerItem.stack(WeaponItems.STICKER, StickerItem.sticker(st)), s[0], s[1], size,
-						charm ? 0 : pturn, 255);
+						charm ? 0 : pturn, charm ? 0 : pwear);
 				g.outline((int) (s[0] - size / 2) - 1, (int) (s[1] - size / 2) - 1, (int) size + 2, (int) size + 2, GOLD);
 				boolean onGun = v.pointAt(pu, pv) != null;
 				apply.active = !charm || onGun;
-				String help = charm ? (onGun ? "Drag it to where it should hang, then Apply" : "Put it on the gun") : "Drag it into place, scroll to turn it, then Apply";
-				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, height - 66, 0xFF909090, false);
+				String help = charm ? (onGun ? "Drag it to where it should hang, then Apply" : "Put it on the gun")
+						: "Drag it into place, scroll to turn it, pick its scrape, then Apply";
+				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, height - 90, 0xFF909090, false);
 			}
 			for (int i = 0; i < n; i++) { // the spots
 				int[] b = spotBox(i, n, vb);
