@@ -74,6 +74,7 @@
   "strafemc:sticker",
   "strafemc:charm",
   "strafemc:charm_detachment",
-  "strafemc:name_tag"
+  "strafemc:name_tag",
+  "strafemc:stattrak_swap_tool"
  ]
 }

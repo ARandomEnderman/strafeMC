@@ -33,7 +33,8 @@ public final class NameTagScreen extends Screen {
 	private EditBox name;
 	private Button apply, remove;
 
-	private record Row(String header, String ref) {}
+	/** A list row: a section header, or a wrap (by its ref). */
+	record Row(String header, String ref) {}
 
 	private NameTagScreen(int tagSlot) {
 		super(Component.literal("Name Tag"));
@@ -79,34 +80,45 @@ public final class NameTagScreen extends Screen {
 	}
 
 	private ItemStack at(String ref) {
-		var p = minecraft.player;
+		return wrapAt(ref);
+	}
+
+	/** The wrap at a ref ("L:" loadout slot, "I:" inventory slot, "U:" in a Storage Unit), as the client sees it. */
+	static ItemStack wrapAt(String ref) {
+		var p = Minecraft.getInstance().player;
 		if (p == null) return ItemStack.EMPTY;
 		if (ref.startsWith("L:")) return Loadout.get(p, ref.substring(2));
 		int r = Integer.parseInt(ref.substring(2));
 		return ref.startsWith("I:") ? p.getInventory().getItem(r) : Upgrader.at(p, r);
 	}
 
-	/** The wraps in sections, in the loadout's order. */
 	private List<Row> rows() {
+		return wrapRows(s -> true);
+	}
+
+	/** Your gun and knife wraps that keep passes, in sections (loadout, your items, each Storage Unit), in the loadout's order. */
+	static List<Row> wrapRows(java.util.function.Predicate<ItemStack> keep) {
 		List<Row> out = new ArrayList<>();
-		var p = minecraft.player;
+		var p = Minecraft.getInstance().player;
 		if (p == null) return out;
+		java.util.function.Predicate<ItemStack> ok = s -> s.getItem() instanceof SkinWrapItem && keep.test(s);
+		java.util.function.Function<String, ItemStack> at = NameTagScreen::wrapAt;
 		List<String> loadout = new ArrayList<>();
 		for (Loadout.Def d : Loadout.defs())
-			if ((d.kind() == Loadout.Kind.GUN || d.kind() == Loadout.Kind.KNIFE) && Loadout.get(p, d.id()).getItem() instanceof SkinWrapItem) loadout.add("L:" + d.id());
+			if ((d.kind() == Loadout.Kind.GUN || d.kind() == Loadout.Kind.KNIFE) && ok.test(Loadout.get(p, d.id()))) loadout.add("L:" + d.id());
 		section(out, "CURRENT LOADOUT", loadout);
 		var inv = p.getInventory();
 		List<String> loose = new ArrayList<>();
-		for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).getItem() instanceof SkinWrapItem) loose.add("I:" + i);
-		loose.sort(java.util.Comparator.comparingInt((String r) -> SkinWraps.order(at(r))).thenComparing(r -> at(r).getHoverName().getString()));
+		for (int i = 0; i < inv.getContainerSize(); i++) if (ok.test(inv.getItem(i))) loose.add("I:" + i);
+		loose.sort(java.util.Comparator.comparingInt((String r) -> SkinWraps.order(at.apply(r))).thenComparing(r -> at.apply(r).getHoverName().getString()));
 		section(out, "YOUR ITEMS", loose);
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack unit = inv.getItem(i);
 			if (!(unit.getItem() instanceof StorageUnitItem)) continue;
 			List<String> in = new ArrayList<>();
 			List<ItemStack> all = unit.getOrDefault(StorageUnitItem.CONTENTS, List.<ItemStack>of());
-			for (int j = 0; j < all.size(); j++) if (all.get(j).getItem() instanceof SkinWrapItem) in.add("U:" + Upgrader.unitRef(i, j));
-			in.sort(java.util.Comparator.comparingInt((String r) -> SkinWraps.order(at(r))).thenComparing(r -> at(r).getHoverName().getString()));
+			for (int j = 0; j < all.size(); j++) if (ok.test(all.get(j))) in.add("U:" + Upgrader.unitRef(i, j));
+			in.sort(java.util.Comparator.comparingInt((String r) -> SkinWraps.order(at.apply(r))).thenComparing(r -> at.apply(r).getHoverName().getString()));
 			section(out, unit.getHoverName().getString().toUpperCase(), in);
 		}
 		return out;

@@ -83,6 +83,38 @@ public final class StickerSlots {
 		dev.strafemc.server.Toasts.send(p, "Named ''" + clean + "''.", dev.strafemc.server.Toasts.GOOD);
 	}
 
+	/**
+	 * What a StatTrak Swap Tool may swap between: the weapon a wrap counts on (its gun's class, or "knife"), as CS2 swaps
+	 * only between StatTrak items of the same type; null if it isn't a StatTrak wrap.
+	 */
+	public static String statTrakType(ItemStack wrap) {
+		if (StatTrak.kills(wrap) < 0 || !(wrap.getItem() instanceof SkinWrapItem)) return null;
+		SkinWraps.Wrap w = SkinWraps.get(SkinWrapItem.skin(wrap));
+		if (w == null) return null;
+		if (w.knife()) return "knife";
+		return w.kits().isEmpty() ? null : w.kits().keySet().iterator().next();
+	}
+
+	/** Swaps the Confirmed Kills of the StatTrak wraps at refs a and b (same type) with the tool in toolSlot (used up). */
+	public static void swapStatTrak(ServerPlayer p, int toolSlot, String a, String b) {
+		var inv = p.getInventory();
+		if (a.equals(b) || toolSlot < 0 || toolSlot >= inv.getContainerSize() || !inv.getItem(toolSlot).is(WeaponItems.STATTRAK_SWAP)) return;
+		ItemStack la = target(p, a), lb = target(p, b);
+		String ta = statTrakType(la), tb = statTrakType(lb);
+		if (ta == null || !ta.equals(tb)) {
+			dev.strafemc.server.Toasts.warn(p, "Both need to be StatTrak™ wraps of the same weapon.");
+			return;
+		}
+		int ka = StatTrak.kills(la), kb = StatTrak.kills(lb);
+		ItemStack wa = copied(a) ? la.copy() : la, wb = copied(b) ? lb.copy() : lb;
+		wa.set(WeaponItems.STATTRAK, kb);
+		wb.set(WeaponItems.STATTRAK, ka);
+		store(p, a, wa);
+		store(p, b, wb);
+		inv.getItem(toolSlot).shrink(1);
+		dev.strafemc.server.Toasts.send(p, "StatTrak™ counts swapped (" + ka + " ⇄ " + kb + ").", dev.strafemc.server.Toasts.GOOD);
+	}
+
 	/** Takes the name tag off the wrap at ref (free, as in CS2; the tag is gone). */
 	public static void removeNameTag(ServerPlayer p, String ref) {
 		ItemStack live = target(p, ref);

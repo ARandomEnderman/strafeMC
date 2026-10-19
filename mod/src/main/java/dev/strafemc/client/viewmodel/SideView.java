@@ -113,7 +113,10 @@ public final class SideView {
 	private static SideView build(String cls, String kit, int finish) throws Exception {
 		var w = Viewmodel.weaponModel(cls);
 		if (w == null) return null;
-		VmModel m = VmModel.load(Glb.read(AssetCache.exportGlb(w[0], true)), w[1]);
+		// a kit with use_legacy_model is on the legacy mesh (its own UV layout, which the finish is baked for), as in the viewmodel
+		Glb glb = Glb.read(AssetCache.exportGlb(w[0], true));
+		boolean legacy = kit != null && WeaponSkinCache.legacy(kit) && VmModel.hasMesh(glb, ".body_legacy");
+		VmModel m = VmModel.load(glb, legacy ? ".body_legacy" : w[1]);
 		var paint = WeaponSkinCache.paintable(w[0], m.parts);
 		// the finish, where the gun wears one; each part's own texture elsewhere
 		BufferedImage finishImg = null;
