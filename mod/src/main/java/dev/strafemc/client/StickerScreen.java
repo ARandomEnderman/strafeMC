@@ -8,6 +8,8 @@ import dev.strafemc.weapon.SkinWrapItem;
 import dev.strafemc.weapon.SkinWraps;
 import dev.strafemc.weapon.StickerItem;
 import dev.strafemc.weapon.StickerSlots;
+import dev.strafemc.weapon.StorageUnitItem;
+import dev.strafemc.weapon.Upgrader;
 import dev.strafemc.weapon.WeaponItems;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -19,30 +21,36 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Applying a sticker or hanging a charm (right-click one), placed like in CS2: your gun wraps on the left (the
- * loadout's first, then your inventory's); the picked one on the right seen from the side, in CS2's sticker space. For a
- * sticker pick a free slot: it shows at that slot's place, drag it anywhere on the gun and scroll to turn it (its size is
- * the gun's slot size, as in CS2), then Apply. A charm starts at the gun's keychain point; drag it to any point on the gun
- * and Apply. Right-click a sticker to scrape it off (it's destroyed), a charm to take it off (a Charm Detachment).
+ * Applying a sticker or hanging a charm (right-click one), placed like in CS2. Left, as in the strafeMC menu's screens:
+ * the gun wraps that take stickers in your current loadout, then your items, then each Storage Unit you carry, each
+ * foldable. Right, the picked one seen from the side in CS2's sticker space. For a sticker pick a free slot: it shows at
+ * that slot's place; drag it over the gun's sticker area (CS2's sticker mask; elsewhere is dimmed) and scroll to turn it
+ * (its size is the gun's slot size, as in CS2), pick its scrape, then Apply. A charm starts at the gun's keychain point
+ * and can hang from any point on the gun. Pick a slot that has a sticker to Scrape it (a bit more each time, previewed;
+ * scraped through it comes off and is gone), or the charm's spot to Detach it (uses a Charm Detachment, gives it back).
  */
 public final class StickerScreen extends Screen {
-	private static final int GOLD = 0xFFEABE54, ROW = 22;
+	private static final int GOLD = 0xFFEABE54, LIST_TOP = 30;
 	/** The inventory slot of the sticker or charm being applied. */
 	private final int stickerSlot;
 
-	private record Target(String ref, ItemStack stack) {}
+	/** A group of wraps: the loadout, your items, or one Storage Unit (key: -2, -1, its inventory slot). refs: L:, I:, U: targets. */
+	private record Section(String label, int key, List<String> refs) {}
 
-	private final List<Target> targets = new ArrayList<>();
-	private int picked = -1;
-	private double scroll;
-	/** Being placed: which slot (-1: none; the charm uses 0), where (sticker space) and its turn (radians). */
-	private int pendingSlot = -1;
-	private double pu, pv, pturn;
-	/** How scraped the sticker being placed goes on (0-100%, by SCRAPE steps). */
-	private double pwear;
+	private final Set<Integer> folded = new HashSet<>();
+	private double listScroll;
+	private int listHeight;
+	private String picked;
+	/** Being placed: which slot (-1: none; the charm uses 0), where (sticker space) and its turn (radians); the slot picked to scrape. */
+	private int pendingSlot = -1, chosenSpot = -1;
+	private double pu, pv, pturn, pwear;
+	private boolean dragging;
+	private Button apply, cancel, scrape, detach;
 	private ScrapeSlider wearSlider;
 
 	/** The scrape slider for the sticker being placed: as new to fully scraped, in scrape steps, previewed live. */
@@ -73,8 +81,6 @@ public final class StickerScreen extends Screen {
 			updateMessage();
 		}
 	}
-	private boolean dragging;
-	private Button apply, cancel;
 
 	private StickerScreen(int stickerSlot) {
 		super(Component.literal("Apply Sticker"));
@@ -91,6 +97,8 @@ public final class StickerScreen extends Screen {
 		apply = addRenderableWidget(Button.builder(Component.literal("Apply"), b -> applyPending()).bounds(width - 230, height - 52, 100, 20).build());
 		cancel = addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> pendingSlot = -1).bounds(width - 124, height - 52, 100, 20).build());
 		wearSlider = addRenderableWidget(new ScrapeSlider(width - 230, height - 76, 206));
+		scrape = addRenderableWidget(Button.builder(Component.literal("Scrape"), b -> scrapeChosen()).bounds(width - 230, height - 52, 100, 20).build());
+		detach = addRenderableWidget(Button.builder(Component.literal("Detach"), b -> scrapeChosen()).bounds(width - 230, height - 52, 100, 20).build());
 	}
 
 	private ItemStack held() {
@@ -116,48 +124,91 @@ public final class StickerScreen extends Screen {
 		return charmMode() ? CharmItem.stack(WeaponItems.CHARM, id) : StickerItem.stack(WeaponItems.STICKER, id);
 	}
 
-	private void refresh() {
-		String keep = picked >= 0 && picked < targets.size() ? targets.get(picked).ref() : null;
-		targets.clear();
+	/** The wrap at a target ref, as the client sees it. */
+	private ItemStack at(String ref) {
 		var p = minecraft.player;
-		if (p == null) return;
-		for (Loadout.Def d : Loadout.defs()) {
-			if (d.kind() != Loadout.Kind.GUN) continue;
-			ItemStack s = Loadout.get(p, d.id());
-			if (StickerSlots.count(s) > 0) targets.add(new Target("L:" + d.id(), s));
-		}
-		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++)
-			if (inv.getItem(i).getItem() instanceof SkinWrapItem && StickerSlots.count(inv.getItem(i)) > 0) targets.add(new Target("I:" + i, inv.getItem(i)));
-		int was = picked;
-		picked = -1;
-		for (int i = 0; i < targets.size(); i++) if (targets.get(i).ref().equals(keep)) picked = i;
-		if (picked < 0 && !targets.isEmpty()) picked = 0;
-		if (picked != was && was >= 0) pendingSlot = -1;
+		if (p == null) return ItemStack.EMPTY;
+		if (ref.startsWith("L:")) return Loadout.get(p, ref.substring(2));
+		int r = Integer.parseInt(ref.substring(2));
+		return ref.startsWith("I:") ? p.getInventory().getItem(r) : Upgrader.at(p, r);
 	}
 
-	private Target target() {
-		return picked >= 0 && picked < targets.size() ? targets.get(picked) : null;
+	/** Your current loadout's gun wraps, your items' gun wraps, then each Storage Unit's (with its name). */
+	private List<Section> sections() {
+		List<Section> out = new ArrayList<>();
+		var p = minecraft.player;
+		if (p == null) return out;
+		List<String> loadout = new ArrayList<>();
+		for (Loadout.Def d : Loadout.defs())
+			if (d.kind() == Loadout.Kind.GUN && StickerSlots.count(Loadout.get(p, d.id())) > 0) loadout.add("L:" + d.id());
+		out.add(new Section("CURRENT LOADOUT", -2, loadout));
+		var inv = p.getInventory();
+		List<String> loose = new ArrayList<>();
+		for (int i = 0; i < inv.getContainerSize(); i++) if (StickerSlots.count(inv.getItem(i)) > 0) loose.add("I:" + i);
+		out.add(new Section("YOUR ITEMS", -1, loose));
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack unit = inv.getItem(i);
+			if (!(unit.getItem() instanceof StorageUnitItem)) continue;
+			List<String> in = new ArrayList<>();
+			List<ItemStack> all = unit.getOrDefault(StorageUnitItem.CONTENTS, List.<ItemStack>of());
+			for (int j = 0; j < all.size(); j++) if (StickerSlots.count(all.get(j)) > 0) in.add("U:" + Upgrader.unitRef(i, j));
+			out.add(new Section(unit.getHoverName().getString(), i, in));
+		}
+		return out;
+	}
+
+	private interface Visit {
+		void header(Section s, int y);
+
+		void item(String ref, int x, int y);
+	}
+
+	private int colW() {
+		return Math.max(110, Math.min(170, (width - 40) / 3));
+	}
+
+	private int listBottom() {
+		return height - 34;
+	}
+
+	/** Walks the left column's layout (scrolled): each section's header, then its wraps unless it's folded. */
+	private void layout(Visit v) {
+		int per = Math.max(1, (colW() - 4) / 18), y = LIST_TOP - (int) listScroll;
+		for (Section s : sections()) {
+			v.header(s, y);
+			y += 12;
+			if (!folded.contains(s.key())) {
+				for (int i = 0; i < s.refs().size(); i++) v.item(s.refs().get(i), 20 + (i % per) * 18, y + (i / per) * 18);
+				y += Math.max(1, (s.refs().size() + per - 1) / per) * 18;
+			}
+			y += 4;
+		}
+		listHeight = y + (int) listScroll - LIST_TOP;
+	}
+
+	private ItemStack target() {
+		if (picked == null) return ItemStack.EMPTY;
+		try {
+			ItemStack s = at(picked);
+			return StickerSlots.count(s) > 0 ? s : ItemStack.EMPTY;
+		} catch (RuntimeException e) {
+			return ItemStack.EMPTY;
+		}
 	}
 
 	/** The picked wrap's gun seen from the side (null while it's made). */
 	private SideView view() {
-		Target t = target();
-		if (t == null) return null;
-		String gun = StickerSlots.gun(t.stack());
+		ItemStack t = target();
+		String gun = StickerSlots.gun(t);
 		if (gun == null) return null;
-		return SideView.of(gun, SkinWraps.kitFor(SkinWrapItem.skin(t.stack()), gun), SkinWrapItem.finish(t.stack()));
-	}
-
-	private int listW() {
-		return Math.min(220, width / 3);
+		return SideView.of(gun, SkinWraps.kitFor(SkinWrapItem.skin(t), gun), SkinWrapItem.finish(t));
 	}
 
 	/** The side view's box: x, y, width, height (sticker space u 0-1 across its width). */
 	private int[] viewBox(SideView v) {
-		int px = 20 + listW() + 20, pw = width - px - 20;
+		int px = 20 + colW() + 20, pw = width - px - 20;
 		int ph = v == null ? pw / 3 : (int) Math.round(pw * (double) v.h / SideView.W);
-		int maxH = height - 150;
+		int maxH = height - 170;
 		if (ph > maxH) {
 			pw = (int) Math.round(pw * (double) maxH / ph);
 			ph = maxH;
@@ -173,13 +224,13 @@ public final class StickerScreen extends Screen {
 		return new double[] {(x - box[0]) / box[2], v.v0 + (y - box[1]) / box[3] * (v.v1 - v.v0)};
 	}
 
-	/** Spot i's button under the view. */
+	/** Spot i's box under the view. */
 	private int[] spotBox(int i, int n, int[] vb) {
 		int size = 40, total = n * size + (n - 1) * 6, x = vb[0] + (vb[2] - total) / 2 + i * (size + 6), y = vb[1] + vb[3] + 14;
 		return new int[] {x, y, size};
 	}
 
-	/** Where entry sits in sticker space: its own place, or slot i's (a charm: the keychain point / its point). */
+	/** Where entry sits in sticker space: its own place, or slot i's (a charm: its point / the keychain point). */
 	private double[] placeOf(SideView v, String entry, int i) {
 		double[] p = StickerSlots.placeOf(entry);
 		if (charmMode()) {
@@ -200,6 +251,7 @@ public final class StickerScreen extends Screen {
 
 	private void startPending(SideView v, int slot) {
 		pendingSlot = slot;
+		chosenSpot = -1;
 		double[] p = charmMode() ? v.keychain : slot < v.slots.size() ? new double[] {v.slots.get(slot).u(), v.slots.get(slot).v(), v.slots.get(slot).rotation()} : null;
 		if (p == null) p = new double[] {0.5, (v.v0 + v.v1) / 2, 0};
 		pu = p[0];
@@ -208,23 +260,34 @@ public final class StickerScreen extends Screen {
 		if (wearSlider != null) wearSlider.reset();
 	}
 
+	/** Whether the thing being placed may go where it is: a sticker on the gun's sticker area, a charm anywhere on the gun. */
+	private boolean placeable(SideView v) {
+		return charmMode() ? v.pointAt(pu, pv) != null : v.allowedAt(pu, pv);
+	}
+
 	private void applyPending() {
-		Target t = target();
 		SideView v = view();
-		if (t == null || v == null || pendingSlot < 0) return;
+		if (picked == null || v == null || pendingSlot < 0 || !placeable(v)) return;
 		if (charmMode()) {
 			float[] pt = v.pointAt(pu, pv);
 			if (pt == null) return;
-			send("charm_apply", stickerSlot + " " + t.ref() + " " + String.format(java.util.Locale.ROOT, "%.5f,%.5f,%.5f", pt[0], pt[1], pt[2]));
-		} else send("sticker_apply", stickerSlot + " " + t.ref() + " " + pendingSlot + " " + String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f %.2f", pu, pv, pturn, pwear));
+			send("charm_apply", stickerSlot + " " + picked + " " + String.format(java.util.Locale.ROOT, "%.5f,%.5f,%.5f", pt[0], pt[1], pt[2]));
+		} else send("sticker_apply", stickerSlot + " " + picked + " " + pendingSlot + " " + String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f %.2f", pu, pv, pturn, pwear));
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
 		pendingSlot = -1;
 	}
 
+	/** Scrapes the chosen sticker once, or detaches the charm. */
+	private void scrapeChosen() {
+		if (picked == null || chosenSpot < 0) return;
+		send(charmMode() ? "charm_remove" : "sticker_scrape", charmMode() ? picked : picked + " " + chosenSpot);
+		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
+	}
+
 	@Override
 	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-		if (mx < 20 + listW()) {
-			scroll = Math.max(0, Math.min(Math.max(0, targets.size() * ROW - (height - 90)), scroll - sy * ROW));
+		if (mx < 20 + colW()) {
+			listScroll = Math.max(0, Math.min(Math.max(0, listHeight - (listBottom() - LIST_TOP)), listScroll - sy * 18));
 			return true;
 		}
 		if (pendingSlot >= 0 && !charmMode()) { // turn the sticker being placed
@@ -238,18 +301,32 @@ public final class StickerScreen extends Screen {
 	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
 		if (super.mouseClicked(e, doubleClick)) return true;
 		double mx = e.x(), my = e.y();
-		if (mx >= 20 && mx < 20 + listW() && my >= 40 && my < height - 50) {
-			int i = (int) ((my - 40 + scroll) / ROW);
-			if (i >= 0 && i < targets.size()) {
-				picked = i;
-				pendingSlot = -1;
-				dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
-			}
-			return true;
+		if (mx >= 20 && mx < 20 + colW() && my >= LIST_TOP && my < listBottom()) {
+			boolean[] done = {false};
+			layout(new Visit() {
+				@Override
+				public void header(Section s, int y) {
+					if (!done[0] && my >= y && my < y + 11) {
+						if (!folded.remove(s.key())) folded.add(s.key());
+						done[0] = true;
+					}
+				}
+
+				@Override
+				public void item(String ref, int x, int y) {
+					if (done[0] || mx < x || mx >= x + 18 || my < y || my >= y + 18) return;
+					picked = ref;
+					pendingSlot = -1;
+					chosenSpot = -1;
+					dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
+					done[0] = true;
+				}
+			});
+			return done[0];
 		}
-		Target t = target();
+		ItemStack t = target();
 		SideView v = view();
-		if (t == null || v == null) return false;
+		if (t.isEmpty() || v == null) return false;
 		int[] vb = viewBox(v);
 		if (pendingSlot >= 0 && mx >= vb[0] && mx < vb[0] + vb[2] && my >= vb[1] && my < vb[1] + vb[3]) { // grab it (or put it where clicked)
 			double[] s = toSpace(v, vb, mx, my);
@@ -258,13 +335,18 @@ public final class StickerScreen extends Screen {
 			dragging = true;
 			return true;
 		}
-		int n = spots(t.stack());
-		String[] in = in(t.stack());
+		int n = spots(t);
+		String[] in = in(t);
 		for (int i = 0; i < n; i++) {
 			int[] b = spotBox(i, n, vb);
 			if (mx < b[0] || mx >= b[0] + b[2] || my < b[1] || my >= b[1] + b[2]) continue;
-			if (e.button() == 1 && !in[i].isEmpty()) send(charmMode() ? "charm_remove" : "sticker_scrape", charmMode() ? t.ref() : t.ref() + " " + i);
-			else if (e.button() == 0 && in[i].isEmpty() && (charmMode() || held().getItem() instanceof StickerItem)) startPending(v, i);
+			if (in[i].isEmpty()) {
+				if (charmMode() || held().getItem() instanceof StickerItem) startPending(v, i);
+			} else { // a sticker or charm already on: pick it, to scrape or detach it
+				pendingSlot = -1;
+				chosenSpot = chosenSpot == i ? -1 : i;
+			}
+			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
 			return true;
 		}
 		return false;
@@ -316,92 +398,102 @@ public final class StickerScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		refresh();
 		g.fill(0, 0, width, height, StrafeSettingsScreen.BG);
 		var font = minecraft.font;
 		ItemStack st = held();
 		boolean charm = charmMode();
 		String head = st.getItem() instanceof StickerItem || charm ? (charm ? "Hang " : "Apply ") + st.getHoverName().getString() : "Nothing to apply in that slot any more";
 		g.text(font, head, width / 2 - font.width(head) / 2, 10, 0xFFFFFFFF, true);
-		int lw = listW();
-		g.text(font, "Your gun wraps", 20, 26, 0xFFB0B0B0, false);
-		g.enableScissor(20, 40, 20 + lw, height - 50);
-		for (int i = 0; i < targets.size(); i++) {
-			int y = 40 + i * ROW - (int) Math.round(scroll);
-			Target t = targets.get(i);
-			g.fill(20, y, 20 + lw, y + ROW - 2, i == picked ? 0xFF2A313A : 0xFF1C2127);
-			if (i == picked) g.fill(20, y, 22, y + ROW - 2, GOLD);
-			g.item(t.stack(), 24, y + 2);
-			String name = t.stack().getHoverName().getString().replace(" Wrap", "") + (t.ref().startsWith("L:") ? "  (loadout)" : "");
-			g.text(font, font.plainSubstrByWidth(name, lw - 30), 44, y + 6, 0xFFE0E0E0, false);
-		}
+		// left: the wraps that take stickers, by section (click a header to fold it); scrolls
+		int cw = colW();
+		ItemStack[] hover = {ItemStack.EMPTY};
+		g.enableScissor(0, LIST_TOP, 20 + cw + 4, listBottom());
+		layout(new Visit() {
+			@Override
+			public void header(Section s, int y) {
+				boolean fold = folded.contains(s.key());
+				String label = (fold ? "▶ " : "▼ ") + s.label() + "  " + s.refs().size();
+				g.text(font, font.plainSubstrByWidth(label, cw), 20, y + 1, s.key() < 0 ? GOLD : 0xFF9AC8FF, false);
+				if (!fold && s.refs().isEmpty()) g.text(font, "No gun wraps", 30, y + 13, 0xFF707070, false);
+			}
+
+			@Override
+			public void item(String ref, int x, int y) {
+				ItemStack s = at(ref);
+				boolean on = ref.equals(picked);
+				g.fill(x, y, x + 17, y + 17, on ? GOLD : 0xFF0E0F11);
+				if (on) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
+				g.item(s, x, y);
+				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = s;
+			}
+		});
 		g.disableScissor();
-		if (targets.isEmpty()) g.text(font, "No gun wraps (knives don't take stickers or charms)", 24, 44, 0xFF808080, false);
-		Target t = target();
+		if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
+		ItemStack t = target();
 		SideView v = view();
 		apply.visible = cancel.visible = pendingSlot >= 0;
-		wearSlider.visible = pendingSlot >= 0 && !charmMode();
-		if (t != null && v == null) g.text(font, "Loading the gun...", 20 + lw + 30, 50, 0xFF909090, false);
-		if (t != null && v != null) {
+		wearSlider.visible = pendingSlot >= 0 && !charm;
+		String[] in = t.isEmpty() ? new String[0] : in(t);
+		boolean chosen = pendingSlot < 0 && chosenSpot >= 0 && chosenSpot < in.length && !in[chosenSpot].isEmpty();
+		scrape.visible = chosen && !charm;
+		detach.visible = chosen && charm;
+		if (t.isEmpty()) {
+			String s = "Pick a gun wrap on the left";
+			g.text(font, s, 20 + cw + 30, 50, 0xFF909090, false);
+		} else if (v == null) g.text(font, "Loading the gun...", 20 + cw + 30, 50, 0xFF909090, false);
+		if (!t.isEmpty() && v != null) {
 			int[] vb = viewBox(v);
+			boolean placingSticker = pendingSlot >= 0 && !charm;
 			g.fill(vb[0] - 2, vb[1] - 2, vb[0] + vb[2] + 2, vb[1] + vb[3] + 2, 0xFF161A1F);
-			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, v.texture, vb[0], vb[1], 0, 0, vb[2], vb[3], vb[2], vb[3]);
-			int n = spots(t.stack());
-			String[] in = in(t.stack());
-			int hoverSpot = -1; // a spot under the mouse: its sticker shows how the next scrape leaves it
-			for (int i = 0; i < n; i++) {
-				int[] b = spotBox(i, n, vb);
-				if (mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[2]) hoverSpot = i;
-			}
+			g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, placingSticker ? v.allowedTexture : v.texture, vb[0], vb[1], 0, 0, vb[2], vb[3], vb[2], vb[3]);
+			int n = spots(t);
+			boolean previewScrape = scrape.visible && scrape.isHovered();
 			for (int i = 0; i < n; i++) { // what's on it already
 				if (in[i].isEmpty()) continue;
 				double[] p = placeOf(v, in[i], i);
 				if (p == null) continue;
 				double[] s = toScreen(v, vb, p[0], p[1]);
 				double size = sizeOf(v, i, vb);
-				if (!charm && hoverSpot < 0 && Math.abs(mx - s[0]) < size / 2 && Math.abs(my - s[1]) < size / 2) hoverSpot = i;
-				boolean preview = !charm && i == hoverSpot;
-				String next = preview ? StickerSlots.scraped(in[i]) : in[i];
-				if (preview && next.isEmpty()) { // the next scrape takes it off: shown faint, outlined red
-					drawOn(g, shown(in[i]), s[0], s[1], size, p.length > 2 ? p[2] : 0, 0.9);
+				String shownEntry = previewScrape && i == chosenSpot ? StickerSlots.scraped(in[i]) : in[i];
+				if (shownEntry.isEmpty()) { // the next scrape takes it off: faint, outlined red
+					drawOn(g, shown(in[i]), s[0], s[1], size, p.length > 2 ? p[2] : 0, 1);
 					g.outline((int) (s[0] - size / 2), (int) (s[1] - size / 2), (int) size, (int) size, 0xFFE04040);
-				} else drawOn(g, shown(in[i]), s[0], s[1], size, charm ? 0 : (p.length > 2 ? p[2] : 0), charm ? 0 : StickerSlots.wearOf(next));
-				if (preview) {
-					String wl = next.isEmpty() ? "Next scrape removes it" : "After a scrape: " + Math.round(StickerSlots.wearOf(next) * 100) + "% worn";
-					g.setTooltipForNextFrame(font, List.of(shown(in[i]).getHoverName(), Component.literal("§7Worn " + Math.round(StickerSlots.wearOf(in[i]) * 100) + "%"),
-							Component.literal("§e" + wl), Component.literal("§8Right-click its slot to scrape")), java.util.Optional.empty(), mx, my);
-				}
+				} else drawOn(g, shown(in[i]), s[0], s[1], size, charm ? 0 : (p.length > 2 ? p[2] : 0), charm ? 0 : StickerSlots.wearOf(shownEntry));
+				if (i == chosenSpot && pendingSlot < 0)
+					g.outline((int) (s[0] - size / 2) - 1, (int) (s[1] - size / 2) - 1, (int) size + 2, (int) size + 2, GOLD);
 			}
 			if (pendingSlot >= 0) { // the one being placed
 				double[] s = toScreen(v, vb, pu, pv);
 				double size = sizeOf(v, pendingSlot, vb);
+				boolean ok = placeable(v);
 				drawOn(g, charm ? CharmItem.stack(WeaponItems.CHARM, CharmItem.charm(st)) : StickerItem.stack(WeaponItems.STICKER, StickerItem.sticker(st)), s[0], s[1], size,
 						charm ? 0 : pturn, charm ? 0 : pwear);
-				g.outline((int) (s[0] - size / 2) - 1, (int) (s[1] - size / 2) - 1, (int) size + 2, (int) size + 2, GOLD);
-				boolean onGun = v.pointAt(pu, pv) != null;
-				apply.active = !charm || onGun;
-				String help = charm ? (onGun ? "Drag it to where it should hang, then Apply" : "Put it on the gun")
-						: "Drag it into place, scroll to turn it, pick its scrape, then Apply";
-				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, height - 90, 0xFF909090, false);
+				g.outline((int) (s[0] - size / 2) - 1, (int) (s[1] - size / 2) - 1, (int) size + 2, (int) size + 2, ok ? GOLD : 0xFFE04040);
+				apply.active = ok;
+				String help = charm ? (ok ? "Drag it to where it should hang, then Apply" : "Put it on the gun")
+						: ok ? "Drag it over the gun's sticker area, scroll to turn it, pick its scrape, then Apply" : "Stickers only go on the lit part of the gun";
+				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, height - 90, ok ? 0xFF909090 : 0xFFE04040, false);
+			}
+			if (chosen) {
+				String what = in[chosenSpot];
+				String info = charm ? "Detaching uses a Charm Detachment; the charm comes back"
+						: StickerSlots.scraped(what).isEmpty() ? "Scraped through: the next scrape takes it off (it's gone)"
+						: "Worn " + Math.round(StickerSlots.wearOf(what) * 100) + "%  (hover Scrape to preview the next one)";
+				g.text(font, info, vb[0] + vb[2] / 2 - font.width(info) / 2, height - 66, 0xFF909090, false);
 			}
 			for (int i = 0; i < n; i++) { // the spots
 				int[] b = spotBox(i, n, vb);
-				boolean over = mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[2], sel = i == pendingSlot;
+				boolean over = mx >= b[0] && mx < b[0] + b[2] && my >= b[1] && my < b[1] + b[2], sel = i == pendingSlot || i == chosenSpot;
 				g.fill(b[0], b[1], b[0] + b[2], b[1] + b[2], over ? 0xFF2A313A : 0xFF22272E);
 				g.outline(b[0], b[1], b[2], b[2], sel || over ? GOLD : 0xFF3A4048);
 				if (in[i].isEmpty()) {
 					String plus = "+";
 					g.text(font, plus, b[0] + b[2] / 2 - font.width(plus) / 2, b[1] + b[2] / 2 - 4, 0xFF909090, false);
-				} else {
-					ItemStack on = shown(in[i]);
-					drawWorn(g, on, b[0] + 2, b[1] + 2, b[2] - 4, b[2] - 4, charm ? 0 : StickerSlots.wearOf(over ? StickerSlots.scraped(in[i]) : in[i]));
-					if (over && charm) g.setTooltipForNextFrame(font, List.of(on.getHoverName(), Component.literal("§7Right-click to take it off (uses a Charm Detachment)")),
-							java.util.Optional.empty(), mx, my);
-				}
+				} else drawWorn(g, shown(in[i]), b[0] + 2, b[1] + 2, b[2] - 4, b[2] - 4, charm ? 0 : StickerSlots.wearOf(in[i]));
 				g.text(font, charm ? "Charm" : String.valueOf(i + 1), b[0] + 3, b[1] + 3, 0xFF707070, false);
 			}
-			if (pendingSlot < 0) {
-				String help = charm ? "Click the charm spot to place it" : "Click a free slot to place it";
+			if (pendingSlot < 0 && !chosen) {
+				String help = charm ? "Click the charm spot to place it, or the charm to detach it" : "Click a free slot to place it, or a sticker to scrape it";
 				int[] b0 = spotBox(0, Math.max(1, n), vb);
 				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, b0[1] + b0[2] + 8, 0xFF909090, false);
 			}

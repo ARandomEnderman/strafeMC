@@ -149,12 +149,34 @@ public final class StickerSlots {
 				return ItemStack.EMPTY;
 			}
 		}
+		if (ref.startsWith("U:")) { // in a carried Storage Unit (an Upgrader ref)
+			try {
+				int r = Integer.parseInt(ref.substring(2));
+				return r >= Upgrader.UNIT ? Upgrader.at(p, r) : ItemStack.EMPTY;
+			} catch (NumberFormatException e) {
+				return ItemStack.EMPTY;
+			}
+		}
 		return ItemStack.EMPTY;
 	}
 
-	/** Puts the wrap back where it was (the loadout's copy is replaced as a whole, which syncs it). */
+	/** Whether the wrap at ref is changed on a copy and put back (the loadout's, a Storage Unit's) rather than in place. */
+	private static boolean copied(String ref) {
+		return ref.startsWith("L:") || ref.startsWith("U:");
+	}
+
+	/** Puts the wrap back where it was (the loadout's or Storage Unit's copy replaced as a whole, which syncs it). */
 	private static void store(ServerPlayer p, String ref, ItemStack wrap) {
 		if (ref.startsWith("L:")) Loadout.set(p, ref.substring(2), wrap);
+		if (ref.startsWith("U:")) {
+			int r = Integer.parseInt(ref.substring(2)), slot = (r - Upgrader.UNIT) / 1000, place = (r - Upgrader.UNIT) % 1000;
+			ItemStack unit = p.getInventory().getItem(slot);
+			List<ItemStack> all = StorageUnitItem.contents(unit);
+			if (place < all.size()) {
+				all.set(place, wrap);
+				StorageUnitItem.store(unit, all);
+			}
+		}
 	}
 
 	/**
@@ -168,7 +190,7 @@ public final class StickerSlots {
 		if (!(sticker.getItem() instanceof StickerItem) || Stickers.get(StickerItem.sticker(sticker)) == null) return;
 		ItemStack live = target(p, ref);
 		if (slot < 0 || slot >= count(live)) return;
-		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
 		String[] s = get(wrap);
 		if (!s[slot].isEmpty()) {
 			dev.strafemc.server.Toasts.warn(p, "That slot already has a sticker. Scrape it off first.");
@@ -197,7 +219,7 @@ public final class StickerSlots {
 	public static void scrape(ServerPlayer p, String ref, int slot) {
 		ItemStack live = target(p, ref);
 		if (slot < 0 || slot >= MAX || count(live) == 0) return;
-		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
 		String[] s = get(wrap);
 		if (s[slot].isEmpty()) return;
 		s[slot] = scraped(s[slot]);
@@ -220,7 +242,7 @@ public final class StickerSlots {
 		if (!(charm.getItem() instanceof CharmItem) || Charms.get(CharmItem.charm(charm)) == null) return;
 		ItemStack live = target(p, ref);
 		if (count(live) == 0) return; // guns only, as in CS2
-		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
 		if (!charm(wrap).isEmpty()) {
 			dev.strafemc.server.Toasts.warn(p, "That wrap already has a charm. Take it off first.");
 			return;
@@ -245,7 +267,7 @@ public final class StickerSlots {
 			return;
 		}
 		if (tool >= 0 && !p.getAbilities().instabuild) inv.getItem(tool).shrink(1);
-		ItemStack wrap = ref.startsWith("L:") ? live.copy() : live;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
 		wrap.remove(CHARM);
 		store(p, ref, wrap);
 		ItemStack back = CharmItem.stack(WeaponItems.CHARM, id);

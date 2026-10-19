@@ -28,6 +28,10 @@ public final class SideView {
 	public record Slot(double u, double v, double scale, double rotation) {}
 
 	public final Identifier texture;
+	/** The same picture with what CS2's sticker mask doesn't allow dimmed (shown while placing a sticker). */
+	public final Identifier allowedTexture;
+	/** Per pixel: whether a sticker may sit there (the gun's sticker mask, g_tStickerWepInputs red). */
+	private final boolean[] allowed;
 	public final int h;
 	/** The sticker-space v at the picture's top and bottom (u runs 0-1 across). */
 	public final double v0, v1;
@@ -37,8 +41,10 @@ public final class SideView {
 	/** Where the charm hangs by default (the model's keychain point), in sticker space, or null. */
 	public double[] keychain;
 
-	private SideView(Identifier texture, int h, double v0, double v1, float[] pos, List<Slot> slots) {
+	private SideView(Identifier texture, Identifier allowedTexture, boolean[] allowed, int h, double v0, double v1, float[] pos, List<Slot> slots) {
 		this.texture = texture;
+		this.allowedTexture = allowedTexture;
+		this.allowed = allowed;
 		this.h = h;
 		this.v0 = v0;
 		this.v1 = v1;
@@ -58,6 +64,12 @@ public final class SideView {
 					if (!Float.isNaN(pos[o])) return new float[] {pos[o], pos[o + 1], pos[o + 2]};
 				}
 		return null;
+	}
+
+	/** Whether a sticker may be placed at sticker-space (u, v): on the gun, where CS2's sticker mask allows it. */
+	public boolean allowedAt(double u, double v) {
+		int x = (int) Math.floor(u * W), y = (int) Math.floor((v - v0) / (v1 - v0) * h);
+		return x >= 0 && y >= 0 && x < W && y < h && allowed[y * W + x];
 	}
 
 	/** Sticker space (u, v) of the pixel nearest to a model-space point (the charm's default: its keychain attachment). */
@@ -124,6 +136,12 @@ public final class SideView {
 		double side = nx >= 0 ? 1 : -1; // which way the faces drawn in 0-1 look (the nearer side wins)
 		int h = Math.max(16, (int) Math.round((v1 - v0) * W));
 		BufferedImage img = new BufferedImage(W, h, BufferedImage.TYPE_INT_ARGB);
+		boolean[] allowed = new boolean[W * h];
+		BufferedImage stickerMask = null; // where stickers may go, in the gun's texture space
+		if (paint != null) {
+			var mp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(paint.material() + "_c")));
+			stickerMask = WeaponSkinCache.image(mp, "g_tStickerWepInputs");
+		}
 		float[] pos = new float[W * h * 3], depth = new float[W * h];
 		java.util.Arrays.fill(pos, Float.NaN);
 		java.util.Arrays.fill(depth, -Float.MAX_VALUE);
@@ -132,6 +150,7 @@ public final class SideView {
 			BufferedImage tex = paint != null && finishImg != null && p.texture != null && p.texture.getFileName().toString().startsWith(paint.color()) ? finishImg
 					: p.texture == null ? null : ImageIO.read(Viewmodel.downscaledPath(p.texture).toFile());
 			float[] u1 = p.uv1, uv = p.uv;
+			boolean paintPart = paint != null && p.texture != null && p.texture.getFileName().toString().startsWith(paint.color());
 			for (int t = 0; t + 2 < p.idx.length; t += 3) {
 				int a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
 				if (u1[a * 2] < -0.02 || u1[a * 2] > 1.02 || u1[b * 2] < -0.02 || u1[b * 2] > 1.02 || u1[c * 2] < -0.02 || u1[c * 2] > 1.02) continue;
@@ -152,6 +171,10 @@ public final class SideView {
 						if (d < depth[i]) continue;
 						depth[i] = d;
 						for (int k = 0; k < 3; k++) pos[3 * i + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
+						if (paintPart && stickerMask != null) { // the gun's painted body: its sticker mask says where stickers go
+							double mu = wa * uv[a * 2] + wb * uv[b * 2] + wc * uv[c * 2], mv = wa * uv[a * 2 + 1] + wb * uv[b * 2 + 1] + wc * uv[c * 2 + 1];
+							allowed[i] = (GloveSkinBaker.sample(stickerMask, mu - Math.floor(mu), mv - Math.floor(mv)) >> 16 & 255) > 127;
+						} else allowed[i] = false;
 						int col = 0xFF808080;
 						if (tex != null) {
 							double tu = wa * uv[a * 2] + wb * uv[b * 2] + wc * uv[c * 2], tv = wa * uv[a * 2 + 1] + wb * uv[b * 2 + 1] + wc * uv[c * 2 + 1];
@@ -171,17 +194,23 @@ public final class SideView {
 				slots.add(new Slot(0.5 + off[0], 0.5 + (off.length > 1 ? off[1] : 0), sc[0], wp.f("g_flSticker" + i + "Rotation", 0)));
 			}
 		}
-		NativeImage ni = new NativeImage(W, h, false);
+		NativeImage ni = new NativeImage(W, h, false), dim = new NativeImage(W, h, false);
 		for (int y = 0; y < h; y++)
 			for (int x = 0; x < W; x++) {
 				int c = img.getRGB(x, y);
 				ni.setPixel(x, y, c); // ARGB in, as the GUI expects
+				int k = allowed[y * W + x] ? 255 : 90; // where a sticker can't go: dark
+				dim.setPixel(x, y, c & 0xFF000000 | ((c >> 16 & 255) * k / 255) << 16 | ((c >> 8 & 255) * k / 255) << 8 | (c & 255) * k / 255);
 			}
 		Identifier id = Identifier.fromNamespaceAndPath("strafemc", "side_view/" + Integer.toHexString((cls + kit + finish).hashCode()));
-		var result = new SideView(id, h, v0, v1, pos, slots);
+		Identifier dimId = Identifier.fromNamespaceAndPath("strafemc", "side_view/" + Integer.toHexString((cls + kit + finish).hashCode()) + "_allowed");
+		var result = new SideView(id, dimId, allowed, h, v0, v1, pos, slots);
 		float[] kc = Viewmodel.restPoint(w[0], m, "keychain");
 		if (kc != null) result.keychain = result.uvOf(kc[0], kc[1], kc[2]);
-		Minecraft.getInstance().execute(() -> Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "strafemc side view " + cls, ni)));
+		Minecraft.getInstance().execute(() -> {
+			Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "strafemc side view " + cls, ni));
+			Minecraft.getInstance().getTextureManager().register(dimId, new DynamicTexture(() -> "strafemc side view " + cls + " (sticker area)", dim));
+		});
 		return result;
 	}
 }
