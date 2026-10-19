@@ -77,7 +77,7 @@ public final class WrapPictures {
 	}
 
 	private static Path file(String key) {
-		return StrafeConfig.cacheDir().resolve("wrap_pictures/v3/" + Integer.toHexString(key.hashCode()) + "_" + Integer.toHexString(key.length()) + ".png");
+		return StrafeConfig.cacheDir().resolve("wrap_pictures/v4/" + Integer.toHexString(key.hashCode()) + "_" + Integer.toHexString(key.length()) + ".png");
 	}
 
 	private static NativeImage picture(String key, String cls, String kit, int finish, String[] stickers) throws Exception {
@@ -138,12 +138,27 @@ public final class WrapPictures {
 			dev.strafemc.StrafeMc.LOG.warn("[strafemc] wrap picture of {} unposed: {}", cls, e.toString());
 		}
 		java.util.Map<VmModel.Part, float[][]> posed = new java.util.HashMap<>();
-		float[] min = {Float.MAX_VALUE, Float.MAX_VALUE}, max = {-Float.MAX_VALUE, -Float.MAX_VALUE};
 		for (VmModel.Part p : m.parts) {
 			if (p.alphaMode.equals("BLEND") || p.texture == null) continue;
 			Matrix4f[] s = p.skin >= 0 && p.skin < skin.length ? skin[p.skin] : rigid != null ? new Matrix4f[] {rigid} : new Matrix4f[0];
-			float[][] sk = Viewmodel.skinVertices(p, s, view);
-			posed.put(p, sk);
+			posed.put(p, Viewmodel.skinVertices(p, s, view));
+		}
+		// tilted as CS2's own icon of this weapon is (its heavy guns are drawn at an angle, its rifles level): the slope of
+		// the gun's top edge (barrel to stock: what hangs below, like a box magazine, can't skew it) in the icon against
+		// ours, turned in the picture's plane. Knives keep their own lie.
+		double turn = knife ? Double.NaN : iconAngle(cls) - axisAngle(posed.values());
+		if (!Double.isNaN(turn) && Math.abs(turn) > Math.toRadians(1)) {
+			float cosT = (float) Math.cos(turn), sinT = (float) Math.sin(turn);
+			for (float[][] sk : posed.values())
+				for (float[] arr : new float[][] {sk[0], sk[1]})
+					for (int i = 0; i + 2 < arr.length; i += 3) {
+						float x = arr[i], y = arr[i + 1];
+						arr[i] = x * cosT - y * sinT;
+						arr[i + 1] = x * sinT + y * cosT;
+					}
+		}
+		float[] min = {Float.MAX_VALUE, Float.MAX_VALUE}, max = {-Float.MAX_VALUE, -Float.MAX_VALUE};
+		for (float[][] sk : posed.values()) {
 			for (int i = 0; i + 2 < sk[0].length; i += 3) {
 				min[0] = Math.min(min[0], sk[0][i]);
 				max[0] = Math.max(max[0], sk[0][i]);
@@ -230,6 +245,81 @@ public final class WrapPictures {
 				out.setRGB(x, y, (a * 255 / (SS * SS)) << 24 | (r / a) << 16 | (g / a) << 8 | b / a);
 			}
 		return any ? out : null;
+	}
+
+	/** The slope angle (radians, y up) of the top edge of a set of posed vertices in the picture's plane. */
+	private static double axisAngle(java.util.Collection<float[][]> parts) {
+		float lo = Float.MAX_VALUE, hi = -Float.MAX_VALUE;
+		for (float[][] sk : parts) for (int i = 0; i + 2 < sk[0].length; i += 3) {
+			lo = Math.min(lo, sk[0][i]);
+			hi = Math.max(hi, sk[0][i]);
+		}
+		final int bins = 64;
+		double[] top = new double[bins];
+		java.util.Arrays.fill(top, Double.NaN);
+		for (float[][] sk : parts)
+			for (int i = 0; i + 2 < sk[0].length; i += 3) {
+				int b = Math.min(bins - 1, (int) ((sk[0][i] - lo) / Math.max(1e-6, hi - lo) * bins));
+				if (Double.isNaN(top[b]) || sk[0][i + 1] > top[b]) top[b] = sk[0][i + 1];
+			}
+		return topFit(top, (hi - lo) / bins);
+	}
+
+	/**
+	 * The slope angle (radians, y up) of the top edge of CS2's inventory icon of the weapon (its opaque pixels), or NaN
+	 * without it. FLAGGED ours: only the tilt in the picture's plane is matched, not CS2's slight 3/4 view.
+	 */
+	private static double iconAngle(String cls) {
+		java.nio.file.Path icon = StrafeConfig.cacheDir().resolve("panorama/images/econ/weapons/base_weapons/" + cls + "_png.png");
+		try {
+			if (!Files.exists(icon)) return Double.NaN;
+			BufferedImage img = ImageIO.read(icon.toFile());
+			int w = img.getWidth(), h = img.getHeight();
+			double[] top = new double[w];
+			java.util.Arrays.fill(top, Double.NaN);
+			for (int x = 0; x < w; x++)
+				for (int y = 0; y < h; y++)
+					if ((img.getRGB(x, y) >>> 24) > 128) {
+						top[x] = -y; // y up
+						break;
+					}
+			return topFit(top, 1);
+		} catch (Exception e) {
+			return Double.NaN;
+		}
+	}
+
+	/**
+	 * A line fitted (least squares) to a top edge sampled every `step` along x, over the middle 80 % of where there is
+	 * any (the very ends are muzzle and stock tips): its angle in radians.
+	 */
+	private static double topFit(double[] top, double step) {
+		int first = -1, last = -1;
+		for (int i = 0; i < top.length; i++) if (!Double.isNaN(top[i])) {
+			if (first < 0) first = i;
+			last = i;
+		}
+		if (first < 0 || last - first < 4) return Double.NaN;
+		int a = first + (last - first) / 10, b = last - (last - first) / 10;
+		double sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
+		for (int i = a; i <= b; i++) {
+			if (Double.isNaN(top[i])) continue;
+			double x = i * step;
+			sx += x;
+			sy += top[i];
+			sxx += x * x;
+			sxy += x * top[i];
+			n++;
+		}
+		double d = n * sxx - sx * sx;
+		return n < 3 || Math.abs(d) < 1e-12 ? Double.NaN : Math.atan((n * sxy - sx * sy) / d);
+	}
+
+	/** An axis angle folded into -90..90 degrees (an axis has no direction). */
+	private static double fold(double a) {
+		while (a > Math.PI / 2) a -= Math.PI;
+		while (a <= -Math.PI / 2) a += Math.PI;
+		return a;
 	}
 
 	private static int ch(int c, double s) {
