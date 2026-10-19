@@ -208,7 +208,7 @@ public final class StickerScreen extends Screen {
 	private int[] viewBox(SideView v) {
 		int px = 20 + colW() + 20, pw = width - px - 20;
 		int ph = v == null ? pw / 3 : (int) Math.round(pw * (double) v.h / SideView.W);
-		int maxH = height - 170;
+		int maxH = height - 200; // room below for the slots, a help line and the buttons
 		if (ph > maxH) {
 			pw = (int) Math.round(pw * (double) maxH / ph);
 			ph = maxH;
@@ -226,7 +226,7 @@ public final class StickerScreen extends Screen {
 
 	/** Spot i's box under the view. */
 	private int[] spotBox(int i, int n, int[] vb) {
-		int size = 40, total = n * size + (n - 1) * 6, x = vb[0] + (vb[2] - total) / 2 + i * (size + 6), y = vb[1] + vb[3] + 14;
+		int size = 40, total = n * size + (n - 1) * 6, x = vb[0] + (vb[2] - total) / 2 + i * (size + 6), y = vb[1] + vb[3] + 10;
 		return new int[] {x, y, size};
 	}
 
@@ -472,14 +472,14 @@ public final class StickerScreen extends Screen {
 				apply.active = ok;
 				String help = charm ? (ok ? "Drag it to where it should hang, then Apply" : "Put it on the gun")
 						: ok ? "Drag it over the gun's sticker area, scroll to turn it, pick its scrape, then Apply" : "Stickers only go on the lit part of the gun";
-				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, height - 90, ok ? 0xFF909090 : 0xFFE04040, false);
+				helpLine(g, help, vb, ok ? 0xFF909090 : 0xFFE04040);
 			}
 			if (chosen) {
 				String what = in[chosenSpot];
 				String info = charm ? "Detaching uses a Charm Detachment; the charm comes back"
 						: StickerSlots.scraped(what).isEmpty() ? "Scraped through: the next scrape takes it off (it's gone)"
 						: "Worn " + Math.round(StickerSlots.wearOf(what) * 100) + "%  (hover Scrape to preview the next one)";
-				g.text(font, info, vb[0] + vb[2] / 2 - font.width(info) / 2, height - 66, 0xFF909090, false);
+				helpLine(g, info, vb, 0xFF909090);
 			}
 			for (int i = 0; i < n; i++) { // the spots
 				int[] b = spotBox(i, n, vb);
@@ -494,11 +494,21 @@ public final class StickerScreen extends Screen {
 			}
 			if (pendingSlot < 0 && !chosen) {
 				String help = charm ? "Click the charm spot to place it, or the charm to detach it" : "Click a free slot to place it, or a sticker to scrape it";
-				int[] b0 = spotBox(0, Math.max(1, n), vb);
-				g.text(font, help, vb[0] + vb[2] / 2 - font.width(help) / 2, b0[1] + b0[2] + 8, 0xFF909090, false);
+				helpLine(g, help, vb, 0xFF909090);
 			}
 		}
 		super.extractRenderState(g, mx, my, delta);
+	}
+
+	/** The help line under the slots, centred on the right side and wrapped to it, clear of the buttons. */
+	private void helpLine(GuiGraphicsExtractor g, String text, int[] vb, int color) {
+		var font = minecraft.font;
+		int px = 20 + colW() + 20, pw = width - px - 20 - 240, y = vb[1] + vb[3] + 56; // left of the buttons in the corner
+		if (pw < 120) pw = width - px - 20;
+		for (var line : font.split(Component.literal(text), pw)) {
+			g.text(font, line, px + pw / 2 - font.width(line) / 2, y, color, false);
+			y += 10;
+		}
 	}
 
 	@Override
