@@ -307,8 +307,8 @@ public final class WeaponSkinCache {
 	 * sticker (g_vStickerNOffset, g_vStickerNScale, g_flStickerNRotation) in the mesh's second UV set, a side view of the
 	 * gun: slot N's sticker covers 1 / scale of it around (0.5 + offset), turned by the rotation, and only where the
 	 * weapon's sticker mask (g_tStickerWepInputs red) allows. The sticker's own art is its material's g_tSticker0.
-	 * Scraped ones lose their art where CS2's sticker scratches (g_tStickerScratches) are below the wear. FLAGGED ours: CS2's
-	 * paper / foil / holo looks are left out (the plain art, by its alpha).
+	 * The art's alpha is a height (StickerWear): new, all of it shows; scraped, its lower parts go first. FLAGGED ours: CS2's
+	 * paper / foil / holo looks are left out.
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
 		Path plain = ensure(cls, material, kit, pattern, parts, base);
@@ -328,8 +328,9 @@ public final class WeaponSkinCache {
 			double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
 			double scale = sc[0], rot = wp.f("g_flSticker" + i + "Rotation", 0);
 			if (scale <= 0) continue;
-			BufferedImage art = stickerArt(dev.strafemc.weapon.StickerSlots.idOf(stickers[i]));
-			if (art == null) continue;
+			var stArt = dev.strafemc.client.StickerWear.art(dev.strafemc.weapon.StickerSlots.idOf(stickers[i]));
+			if (stArt == null) continue;
+			BufferedImage art = stArt.image();
 			double cx = 0.5 + off[0], cy = 0.5 + (off.length > 1 ? off[1] : 0);
 			double[] placed = dev.strafemc.weapon.StickerSlots.placeOf(stickers[i]); // put somewhere else: its place and turn (the size stays the slot's)
 			if (placed != null && placed.length == 3) {
@@ -346,12 +347,11 @@ public final class WeaponSkinCache {
 					double su = du * cos - dv * sin + 0.5, sv = du * sin + dv * cos + 0.5;
 					if (su < 0 || su > 1 || sv < 0 || sv > 1) continue;
 					int sc0 = GloveSkinBaker.sampleBilinear(art, su, sv);
+					// the art's alpha is a height: all of it shows new, scraping strips the low parts first (CS2's secret scrapes)
+					double s = scratches == null ? 0.5 : (GloveSkinBaker.sampleBilinear(scratches, su, sv) >> 16 & 255) / 255.0;
+					sc0 = dev.strafemc.client.StickerWear.pixel(sc0, s, wear, stArt); // CS2's scrape: ink, paper, or gone
 					double a = (sc0 >>> 24) / 255.0;
 					if (mask != null) a *= (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
-					if (wear > 0 && scratches != null) { // scraped: what stays is where the sticker's scratches are above the wear
-						double s = (GloveSkinBaker.sampleBilinear(scratches, su, sv) >> 16 & 255) / 255.0, t = Math.max(0, Math.min(1, (s - wear + 0.05) / 0.1));
-						a *= t * t * (3 - 2 * t);
-					}
 					if (a <= 0.004) continue;
 					int c = img.getRGB(x, y);
 					int r = (int) Math.round((c >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((c >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),
@@ -361,20 +361,6 @@ public final class WeaponSkinCache {
 		}
 		write(img, pixels);
 		return tex;
-	}
-
-	/** A sticker's art: its material (stickers/<material>.vmat) names it (g_tSticker0). */
-	private static BufferedImage stickerArt(String id) {
-		var st = dev.strafemc.weapon.Stickers.get(id);
-		if (st == null) return null;
-		try {
-			var p = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock("stickers/" + st.material() + ".vmat_c")));
-			String t = p.textures.get("g_tSticker0");
-			return t == null ? null : GloveSkinCache.load(t);
-		} catch (Exception e) {
-			dev.strafemc.StrafeMc.LOG.warn("[strafemc] sticker {} art: {}", id, e.toString());
-			return null;
-		}
 	}
 
 	/** The mesh's second UV set (TEXCOORD_1) per texel of its texture (u, v pairs; NaN where nothing covers it). */

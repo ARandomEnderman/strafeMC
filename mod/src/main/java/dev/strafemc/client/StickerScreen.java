@@ -41,11 +41,11 @@ public final class StickerScreen extends Screen {
 	/** Being placed: which slot (-1: none; the charm uses 0), where (sticker space) and its turn (radians). */
 	private int pendingSlot = -1;
 	private double pu, pv, pturn;
-	/** How scraped the sticker being placed goes on (0-90%, by SCRAPE steps). */
+	/** How scraped the sticker being placed goes on (0-100%, by SCRAPE steps). */
 	private double pwear;
 	private ScrapeSlider wearSlider;
 
-	/** The scrape slider for the sticker being placed: as new to 90% scraped, in scrape steps, previewed live. */
+	/** The scrape slider for the sticker being placed: as new to fully scraped, in scrape steps, previewed live. */
 	private final class ScrapeSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
 		ScrapeSlider(int x, int y, int w) {
 			super(x, y, w, 20, Component.empty(), 0);
@@ -53,7 +53,7 @@ public final class StickerScreen extends Screen {
 		}
 
 		double wear() {
-			int steps = (int) Math.round(1 / StickerSlots.SCRAPE) - 1;
+			int steps = (int) Math.round(1 / StickerSlots.SCRAPE);
 			return Math.round(value * steps) * StickerSlots.SCRAPE;
 		}
 
@@ -303,15 +303,15 @@ public final class StickerScreen extends Screen {
 		pose.popMatrix();
 	}
 
-	/** A sticker's picture worn by scraping (CS2's scratches), else the plain picture. */
+	/** A sticker's own art (square, as it goes on the gun) at its wear, else its inventory picture while that loads; charms their picture. */
 	private void drawWorn(GuiGraphicsExtractor g, ItemStack st, int x, int y, int w, int h, double wear) {
-		Identifier worn = wear > 0 && st.getItem() instanceof StickerItem ? StickerWear.texture(StickerItem.sticker(st), wear) : null;
+		Identifier worn = st.getItem() instanceof StickerItem ? StickerWear.texture(StickerItem.sticker(st), wear) : null;
 		if (worn == null) {
 			CaseImages.draw(g, st, x, y, w, h);
 			return;
 		}
-		int pw = Math.min(w, h * 4 / 3), ph = pw * 3 / 4; // CS2's sticker pictures are 4:3
-		g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, worn, x + (w - pw) / 2, y + (h - ph) / 2, 0, 0, pw, ph, pw, ph);
+		int side = Math.min(w, h);
+		g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, worn, x + (w - side) / 2, y + (h - side) / 2, 0, 0, side, side, side, side);
 	}
 
 	@Override

@@ -170,12 +170,17 @@ public final class WeaponItems {
 			e.accept(CaseKeys.universal());
 			for (Cases.Key k : Cases.keys()) e.accept(KeyItem.stack(CASE_KEY, k.id()));
 		});
+		// each kind with its own containers: graffiti boxes with the graffiti, sticker capsules with the stickers, charm collections with the charms
 		tab("sprays", () -> SprayItem.stack(SPRAY, "spray_std_axes_crossed", 2), e -> {
+			for (Cases.Case c : Cases.capsules("spray")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
 			for (Sprays.Spray s : Sprays.all()) e.accept(SprayItem.stack(SPRAY, s.id(), s.tintable() ? 2 : 0));
 		});
 		tab("stickers", () -> CaseItem.stack(WEAPON_CASE, "crate_sticker_pack01"), e -> {
-			for (Cases.Case c : Cases.capsules()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
+			for (Cases.Case c : Cases.capsules("sticker")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
 			for (Stickers.Sticker s : Stickers.all()) e.accept(StickerItem.stack(STICKER, s.id()));
+		});
+		tab("charms", () -> Charms.all().isEmpty() ? new ItemStack(CHARM_DETACHMENT) : CharmItem.stack(CHARM, Charms.all().get(0).id()), e -> {
+			for (Cases.Case c : Cases.capsules("charm")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
 			for (Charms.Charm c : Charms.all()) e.accept(CharmItem.stack(CHARM, c.id()));
 			e.accept(CHARM_DETACHMENT);
 		});

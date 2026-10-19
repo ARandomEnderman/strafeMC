@@ -20,8 +20,8 @@ import java.util.Map;
  * Stickers on gun wraps, as in CS2: each gun has its sticker slots (strafemc/sticker_slots.tsv, from CS2's weapon
  * materials: four on most, five on a few), and the wrap keeps which sticker is in which ("" for none) and where it was
  * put: "id" sits at its slot's place, "id@u,v,turn" where it was placed (sticker space, the turn in radians; the size is
- * the slot's, as CS2's), and "#wear" once scraped. Applying one uses the sticker up; each scrape wears it SCRAPE more
- * and the one that wears it through takes it off (it's gone), as in CS2. The charm likewise:
+ * the slot's, as CS2's), and "#wear" once scraped. Applying one uses the sticker up; each scrape wears it SCRAPE more,
+ * up to fully scraped, and the scrape after that takes it off (it's gone), as in CS2. The charm likewise:
  * "id", or "id@x,y,z" for the model-space point it hangs from; taking it off uses a Charm Detachment and gives it back.
  */
 public final class StickerSlots {
@@ -176,7 +176,7 @@ public final class StickerSlots {
 		}
 		if (place != null && (place.length != 3 || place[0] < -0.2 || place[0] > 1.2 || place[1] < -1.5 || place[1] > 1.5)) return;
 		s[slot] = entry(StickerItem.sticker(sticker), place);
-		wear = Math.max(0, Math.min(1 - SCRAPE, Math.round(wear / SCRAPE) * SCRAPE)); // applied already scraped, in scrape steps (never through)
+		wear = Math.max(0, Math.min(1, Math.round(wear / SCRAPE) * SCRAPE)); // applied already scraped, in scrape steps (up to fully)
 		if (wear > 0) s[slot] += "#" + String.format(java.util.Locale.ROOT, "%.2f", wear);
 		set(wrap, s);
 		store(p, ref, wrap);
@@ -187,8 +187,8 @@ public final class StickerSlots {
 
 	/** The sticker after one more scrape: more worn, or "" when this scrape takes it off. */
 	public static String scraped(String entry) {
-		double w = wearOf(entry) + SCRAPE;
-		if (w >= 1 - 1e-6) return "";
+		if (wearOf(entry) >= 1 - 1e-6) return ""; // fully scraped already: this one takes it off
+		double w = Math.min(1, wearOf(entry) + SCRAPE);
 		String base = entry.indexOf('#') < 0 ? entry : entry.substring(0, entry.indexOf('#'));
 		return base + "#" + String.format(java.util.Locale.ROOT, "%.2f", w);
 	}
