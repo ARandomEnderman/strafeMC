@@ -31,6 +31,10 @@ public final class StickerSlots {
 	public static DataComponentType<List<String>> STICKERS;
 	/** The charm hanging on a gun wrap (Charms id). */
 	public static DataComponentType<String> CHARM;
+	/** A wrap's Name Tag (the name it shows instead of its own). */
+	public static DataComponentType<String> NAME_TAG;
+	/** CS2's longest name tag. */
+	public static final int NAME_TAG_MAX = 20;
 	private static final Map<String, Integer> SLOTS = load();
 
 	private StickerSlots() {}
@@ -40,6 +44,53 @@ public final class StickerSlots {
 				.persistent(Codec.STRING.listOf()).networkSynchronized(ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list())).build());
 		CHARM = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, WeaponItems.id("charm"), DataComponentType.<String>builder()
 				.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build());
+		NAME_TAG = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, WeaponItems.id("name_tag"), DataComponentType.<String>builder()
+				.persistent(Codec.STRING).networkSynchronized(ByteBufCodecs.STRING_UTF8).build());
+	}
+
+	/** A wrap's name tag, or null. */
+	public static String nameTag(ItemStack wrap) {
+		return wrap.get(NAME_TAG);
+	}
+
+	/** A name as a name tag takes it: no formatting codes or control characters, trimmed, at most NAME_TAG_MAX long; null if empty. */
+	public static String cleanName(String name) {
+		StringBuilder b = new StringBuilder();
+		for (int i = 0; i < name.length(); i++) {
+			char c = name.charAt(i);
+			if (c == '\u00a7') {
+				i++; // a formatting code and its letter
+				continue;
+			}
+			if (!Character.isISOControl(c)) b.append(c);
+		}
+		String s = b.toString().trim().replaceAll("\\s+", " ");
+		if (s.length() > NAME_TAG_MAX) s = s.substring(0, NAME_TAG_MAX).trim();
+		return s.isEmpty() ? null : s;
+	}
+
+	/** Names the wrap (gun or knife) at ref with the Name Tag in tagSlot (used up). */
+	public static void applyNameTag(ServerPlayer p, int tagSlot, String ref, String name) {
+		var inv = p.getInventory();
+		if (tagSlot < 0 || tagSlot >= inv.getContainerSize() || !inv.getItem(tagSlot).is(WeaponItems.NAME_TAG)) return;
+		String clean = cleanName(name);
+		ItemStack live = target(p, ref);
+		if (clean == null || !(live.getItem() instanceof SkinWrapItem)) return;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
+		wrap.set(NAME_TAG, clean);
+		store(p, ref, wrap);
+		inv.getItem(tagSlot).shrink(1);
+		dev.strafemc.server.Toasts.send(p, "Named ''" + clean + "''.", dev.strafemc.server.Toasts.GOOD);
+	}
+
+	/** Takes the name tag off the wrap at ref (free, as in CS2; the tag is gone). */
+	public static void removeNameTag(ServerPlayer p, String ref) {
+		ItemStack live = target(p, ref);
+		if (nameTag(live) == null) return;
+		ItemStack wrap = copied(ref) ? live.copy() : live;
+		wrap.remove(NAME_TAG);
+		store(p, ref, wrap);
+		dev.strafemc.server.Toasts.send(p, "Name tag removed.", dev.strafemc.server.Toasts.GOOD);
 	}
 
 	private static Map<String, Integer> load() {

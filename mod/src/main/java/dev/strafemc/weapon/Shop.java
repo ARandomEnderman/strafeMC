@@ -35,6 +35,8 @@ public final class Shop {
 	private static final double KEY_PRICE = 2.49;
 	/** A Charm Detachment's price. FLAGGED ours. */
 	private static final double DETACHMENT_PRICE = 0.5;
+	/** A Name Tag: CS2's store price (FLAGGED: the market trades it near this). */
+	private static final double NAME_TAG_PRICE = 1.99;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
 	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (90% or
@@ -128,6 +130,7 @@ public final class Shop {
 		}
 		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1));
 		out.add(new Offer(new ItemStack(WeaponItems.CHARM_DETACHMENT), price(DETACHMENT_PRICE, rng), 1 + rng.nextInt(3)));
+		out.add(new Offer(new ItemStack(WeaponItems.NAME_TAG), price(NAME_TAG_PRICE, rng), 1 + rng.nextInt(2)));
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();
 		for (SkinWraps.Wrap w : SkinWraps.all())
 			if (w.knife() || w.kits().size() == 1 && w.rarity() != null && w.rarity().ordinal() >= SkinWraps.Rarity.MYTHICAL.ordinal()) wraps.add(w);

@@ -91,7 +91,9 @@ public class SkinWrapItem extends Item {
 		if (w == null) return super.getName(stack);
 		// the name in CS2's rarity colour
 		var r = w.rarity();
-		var name = Component.literal((StatTrak.kills(stack) >= 0 ? "StatTrak™ " : "") + w.name() + (knife ? " Knife Wrap" : " Wrap"));
+		String tag = StickerSlots.nameTag(stack);
+		var name = Component.literal(tag != null ? "''" + tag + "''" // a name tag shows in quotes, as in CS2
+				: (StatTrak.kills(stack) >= 0 ? "StatTrak™ " : "") + w.name() + (knife ? " Knife Wrap" : " Wrap"));
 		return r == null ? name : name.withColor(r.color);
 	}
 
@@ -111,6 +113,8 @@ public class SkinWrapItem extends Item {
 		SkinWraps.Wrap w = SkinWraps.get(skin(stack));
 		if (w == null) return;
 		var stickers = StickerSlots.names(stack);
+		if (StickerSlots.nameTag(stack) != null) // what it is under the name tag
+			out.accept(Component.literal("§7" + (StatTrak.kills(stack) >= 0 ? "StatTrak™ " : "") + w.name() + (knife ? " Knife Wrap" : " Wrap")));
 		if (!stickers.isEmpty()) out.accept(Component.literal("§7Stickers: " + String.join(", ", stickers)));
 		Charms.Charm charm = Charms.get(StickerSlots.idOf(StickerSlots.charm(stack)));
 		if (charm != null) out.accept(Component.literal("§7Charm: " + charm.name()));

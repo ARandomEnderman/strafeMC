@@ -44,7 +44,7 @@ public final class WeaponItems {
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item STRAFE_PEARL;
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT, NAME_TAG;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -98,6 +98,7 @@ public final class WeaponItems {
 		STICKER = item("sticker", p -> new StickerItem(p.stacksTo(64)));
 		CHARM = item("charm", p -> new CharmItem(p.stacksTo(64)));
 		CHARM_DETACHMENT = item("charm_detachment", p -> new Item(p.stacksTo(64)));
+		NAME_TAG = item("name_tag", p -> new NameTagItem(p.stacksTo(64)));
 		StorageUnitItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
@@ -183,6 +184,7 @@ public final class WeaponItems {
 			for (Cases.Case c : Cases.capsules("charm")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
 			for (Charms.Charm c : Charms.all()) e.accept(CharmItem.stack(CHARM, c.id()));
 			e.accept(CHARM_DETACHMENT);
+			e.accept(NAME_TAG);
 		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });

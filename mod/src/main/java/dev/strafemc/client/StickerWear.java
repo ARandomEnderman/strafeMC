@@ -31,10 +31,11 @@ public final class StickerWear {
 
 	/**
 	 * A sticker's art and its wear settings: scratches strength, wear bias (x, y), paper backing; holo stickers their
-	 * mask (g_tSfxMaskSticker0) and spectrum (g_tHoloSpectrumSticker0), and the spectrum's colour boost.
+	 * mask (g_tSfxMaskSticker0) and spectrum (g_tHoloSpectrumSticker0), and the spectrum's colour boost; metallic (foil)
+	 * stickers (g_bMetallicSticker0) are metal on the gun, the rest matte.
 	 */
 	public record Art(BufferedImage image, double scratches, double biasX, double biasY, boolean paper, BufferedImage holoMask, BufferedImage spectrum,
-					  double sfxBoost) {}
+					  double sfxBoost, boolean metallic) {}
 
 	private StickerWear() {}
 
@@ -55,7 +56,7 @@ public final class StickerWear {
 			BufferedImage mask = holo && mk != null && !mk.startsWith("materials/default/") ? dev.strafemc.client.viewmodel.GloveSkinCache.load(mk) : null;
 			BufferedImage spec = mask != null && sp != null ? dev.strafemc.client.viewmodel.GloveSkinCache.load(sp) : null;
 			a = new Art(img, p.f("g_fWearScratchesSticker0", 0.3), bias[0], bias.length > 1 ? bias[1] : 1, p.f("g_bPaperBackingSticker0", 0) != 0,
-					spec == null ? null : mask, spec, p.f("g_flSfxColorBoostSticker0", 1));
+					spec == null ? null : mask, spec, p.f("g_flSfxColorBoostSticker0", 1), p.f("g_bMetallicSticker0", 0) != 0);
 			ART.put(sticker, a);
 			return a;
 		} catch (Exception e) {

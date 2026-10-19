@@ -152,6 +152,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE, (msg, ctx) -> dev.strafemc.client.impact.SprayDecals.placed(msg));
 		dev.strafemc.weapon.CaseItem.clientOpen = CaseScreen::open;
 		dev.strafemc.weapon.StickerItem.clientOpen = StickerScreen::open;
+		dev.strafemc.weapon.NameTagItem.clientOpen = NameTagScreen::open;
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> {
 			DeathNotices.clear();
 			KillCards.clear();

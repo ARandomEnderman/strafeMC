@@ -73,6 +73,7 @@
   "strafemc:voucher",
   "strafemc:sticker",
   "strafemc:charm",
-  "strafemc:charm_detachment"
+  "strafemc:charm_detachment",
+  "strafemc:name_tag"
  ]
 }

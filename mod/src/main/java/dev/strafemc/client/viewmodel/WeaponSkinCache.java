@@ -313,12 +313,13 @@ public final class WeaponSkinCache {
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
 		Path plain = ensure(cls, material, kit, pattern, parts, base);
 		if (plain == null) return null;
-		String sig = Integer.toHexString(String.join(",", stickers).hashCode());
+		String sig = Integer.toHexString((String.join(",", stickers) + "|m").hashCode()); // "|m": with metalness and roughness
 		Path tex = plain.resolveSibling(plain.getFileName().toString().replace(".png", "_s" + sig + ".png")), pixels = sibling(tex, ".vm1024b.png");
 		if (Files.exists(pixels)) return tex;
 		BufferedImage img = ImageIO.read(sibling(plain, ".vm1024b.png").toFile());
-		for (String sfx : new String[] {".vm1024m.png", ".vm1024r.png"}) // metalness and roughness: the finish's
-			if (Files.exists(sibling(plain, sfx))) Files.copy(sibling(plain, sfx), sibling(tex, sfx), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		// metalness and roughness: the finish's, with the stickers on top (foil stickers metal, the rest matte)
+		BufferedImage metalImg = Files.exists(sibling(plain, ".vm1024m.png")) ? ImageIO.read(sibling(plain, ".vm1024m.png").toFile()) : null;
+		BufferedImage roughImg = Files.exists(sibling(plain, ".vm1024r.png")) ? ImageIO.read(sibling(plain, ".vm1024r.png").toFile()) : null;
 		var wp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(material + "_c")));
 		BufferedImage mask = image(wp, "g_tStickerWepInputs"), scratches = GloveSkinCache.load(dev.strafemc.client.StickerWear.SCRATCHES_PATH);
 		int n = img.getWidth();
@@ -357,8 +358,21 @@ public final class WeaponSkinCache {
 					int r = (int) Math.round((c >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((c >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),
 							b = (int) Math.round((c & 255) * (1 - a) + (sc0 & 255) * a);
 					img.setRGB(x, y, (c & 0xFF000000) | r << 16 | gg << 8 | b);
+					if (metalImg != null && x < metalImg.getWidth() && y < metalImg.getHeight()) {
+						int m = (int) Math.round((metalImg.getRGB(x, y) & 255) * (1 - a) + (stArt.metallic() ? 255 : 0) * a);
+						metalImg.setRGB(x, y, m << 16 | m << 8 | m);
+					}
+					if (roughImg != null && x < roughImg.getWidth() && y < roughImg.getHeight()) {
+						// FLAGGED ours: sticker roughness 0.3 foil / 0.6 paper (CS2 reads it from g_tNormalRoughnessSticker0)
+						int rc = roughImg.getRGB(x, y), rr = rc >> 16 & 255, cv = rc >> 8 & 255;
+						double was = cv > 0 ? rr / 255.0 : (metalImg != null && (metalImg.getRGB(x, y) & 255) >= 128 ? 0.25 : 0.45);
+						double nr = was * (1 - a) + (stArt.metallic() ? 0.3 : 0.6) * a;
+						roughImg.setRGB(x, y, (int) Math.round(nr * 255) << 16 | (int) Math.round(Math.max(cv, a * 255)) << 8);
+					}
 				}
 		}
+		if (metalImg != null) write(metalImg, sibling(tex, ".vm1024m.png"));
+		if (roughImg != null) write(roughImg, sibling(tex, ".vm1024r.png"));
 		write(img, pixels);
 		return tex;
 	}

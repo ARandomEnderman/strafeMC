@@ -355,6 +355,14 @@ public final class ConsoleActions {
 				}
 			}
 			case "charm_remove" -> dev.strafemc.weapon.StickerSlots.removeCharm(p, arg.trim());
+			case "nametag_apply" -> { // "tagSlot target name..."
+				String[] a = arg.trim().split(" ", 3);
+				try {
+					if (a.length == 3) dev.strafemc.weapon.StickerSlots.applyNameTag(p, Integer.parseInt(a[0]), a[1], a[2]);
+				} catch (NumberFormatException ignored) {
+				}
+			}
+			case "nametag_remove" -> dev.strafemc.weapon.StickerSlots.removeNameTag(p, arg.trim());
 			case "sticker_scrape" -> { // "target slot"
 				String[] a = arg.trim().split(" ");
 				try {
