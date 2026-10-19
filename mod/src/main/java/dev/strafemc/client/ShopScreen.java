@@ -305,7 +305,7 @@ public final class ShopScreen extends Screen {
 				boolean in = n != null;
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
-				g.item(st, x, y);
+				CaseImages.icon(g, st, x, y);
 				// how many there are, and while selling some of a stack, how many of them
 				String c = in && st.getCount() > 1 ? n + "/" + st.getCount() : st.getCount() > 1 ? String.valueOf(st.getCount()) : null;
 				if (c != null) {

@@ -197,11 +197,13 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	protected void extractSlot(GuiGraphicsExtractor g, Slot slot, int mx, int my) {
 		var defs = Loadout.defs();
 		int i = menu.slots.indexOf(slot);
-		if (i >= 0 && i < defs.size() && slot.getItem().getItem() instanceof SkinWrapItem) {
+		if (i >= 0 && i < defs.size() && slot.getItem().getItem() instanceof SkinWrapItem) { // equipped only; the inventory keeps item icons
 			Loadout.Def d = defs.get(i);
 			String weapon = d.kind() == Loadout.Kind.KNIFE ? previewKnife() : d.weapon();
 			String kit = weapon == null ? null : SkinWraps.kitFor(SkinWrapItem.skin(slot.getItem()), weapon);
-			var pic = kit == null ? null : CaseImages.get(new dev.strafemc.weapon.Cases.Entry(kit, weapon));
+			// the wrap on this slot's weapon as it is (float, pattern, stickers); CS2's stock picture until that's made
+			var pic = kit == null ? null : dev.strafemc.client.viewmodel.WrapPictures.get(weapon, kit, slot.getItem());
+			if (pic == null && kit != null) pic = CaseImages.get(new dev.strafemc.weapon.Cases.Entry(kit, weapon));
 			if (pic != null) {
 				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, slot.x, slot.y + 2, 0, 0, 16, 12, 16, 12);
 				return;

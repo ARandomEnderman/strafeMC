@@ -428,7 +428,7 @@ public final class StickerScreen extends Screen {
 				boolean on = ref.equals(picked);
 				g.fill(x, y, x + 17, y + 17, on ? GOLD : 0xFF0E0F11);
 				if (on) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
-				g.item(s, x, y);
+				CaseImages.icon(g, s, x, y);
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = s;
 			}
 		});

@@ -111,6 +111,8 @@ public final class CaseImages {
 			return id == null ? null : get(new Cases.Entry(id, "charm"));
 		}
 		if (s.getItem() instanceof dev.strafemc.weapon.SkinWrapItem) {
+			Identifier own = dev.strafemc.client.viewmodel.WrapPictures.get(s); // the wrap itself: its float, pattern and stickers
+			if (own != null) return own;
 			var w = dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(s));
 			if (w == null || w.kits().isEmpty()) return null;
 			var e = w.kits().entrySet().iterator().next();
@@ -149,6 +151,21 @@ public final class CaseImages {
 		pose.scale(sc, sc);
 		g.item(s, 0, 0);
 		pose.popMatrix();
+	}
+
+	/**
+	 * An item in a 16 px inventory cell: a wrap as its picture (the gun in the wrap, as it is), anything else as its
+	 * item icon (counts are the caller's).
+	 */
+	public static void icon(net.minecraft.client.gui.GuiGraphicsExtractor g, net.minecraft.world.item.ItemStack s, int x, int y) {
+		if (s.getItem() instanceof dev.strafemc.weapon.SkinWrapItem) {
+			Identifier pic = picture(s);
+			if (pic != null) {
+				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, x, y + 2, 0, 0, 16, 12, 16, 12);
+				return;
+			}
+		}
+		g.item(s, x, y);
 	}
 
 	/** The rarity colour under an item's tile (wraps, stickers, graffiti), else the fallback. */

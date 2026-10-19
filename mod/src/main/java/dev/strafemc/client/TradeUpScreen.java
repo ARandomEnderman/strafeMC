@@ -214,7 +214,7 @@ public final class TradeUpScreen extends Screen {
 				boolean in = picked.contains(ref);
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
-				g.item(st, x, y);
+				CaseImages.icon(g, st, x, y);
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18 && my >= LIST_TOP && my < listBottom()) hover[0] = st;
 			}
 		});
@@ -226,7 +226,7 @@ public final class TradeUpScreen extends Screen {
 			int x = o[0] + (i % 5) * 20, y = o[1] + (i / 5) * 20;
 			g.fill(x - 1, y - 1, x + 17, y + 17, 0xFF0E0F11);
 			if (i < in.size()) {
-				g.item(in.get(i), x, y);
+				CaseImages.icon(g, in.get(i), x, y);
 				if (mx >= x && mx < x + 18 && my >= y && my < y + 18) hover[0] = in.get(i);
 			}
 		}

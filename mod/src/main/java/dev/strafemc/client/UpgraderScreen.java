@@ -266,7 +266,7 @@ public final class UpgraderScreen extends Screen {
 				boolean in = n != null;
 				g.fill(x, y, x + 17, y + 17, in ? GOLD : 0xFF0E0F11);
 				if (in) g.fill(x + 1, y + 1, x + 16, y + 16, 0xFF2A313A);
-				g.item(s, x, y);
+				CaseImages.icon(g, s, x, y);
 				if (s.getCount() > 1) { // a stack (stickers, graffiti): how many there are, and how many of them are staked
 					String c = in ? n + "/" + s.getCount() : String.valueOf(s.getCount());
 					var pose = g.pose();
