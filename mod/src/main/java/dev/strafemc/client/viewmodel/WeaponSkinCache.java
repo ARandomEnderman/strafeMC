@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v32/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v33/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -201,7 +201,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v32/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v33/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**
@@ -308,7 +308,7 @@ public final class WeaponSkinCache {
 	 * gun: slot N's sticker covers 1 / scale of it around (0.5 + offset), turned by the rotation, and only where the
 	 * weapon's sticker mask (g_tStickerWepInputs red) allows. The sticker's own art is its material's g_tSticker0.
 	 * The art's alpha is a height (StickerWear): new, all of it shows; scraped, its lower parts go first. FLAGGED ours: CS2's
-	 * paper / foil / holo looks are left out.
+	 * foil / glitter looks and the holo's change with the view are left out.
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
 		Path plain = ensure(cls, material, kit, pattern, parts, base);
@@ -349,7 +349,7 @@ public final class WeaponSkinCache {
 					int sc0 = GloveSkinBaker.sampleBilinear(art, su, sv);
 					// the art's alpha is a height: all of it shows new, scraping strips the low parts first (CS2's secret scrapes)
 					double s = scratches == null ? 0.5 : (GloveSkinBaker.sampleBilinear(scratches, su, sv) >> 16 & 255) / 255.0;
-					sc0 = dev.strafemc.client.StickerWear.pixel(sc0, s, wear, stArt); // CS2's scrape: ink, paper, or gone
+					sc0 = dev.strafemc.client.StickerWear.pixel(sc0, s, wear, stArt, su, sv); // CS2's scrape: ink, paper, or gone
 					double a = (sc0 >>> 24) / 255.0;
 					if (mask != null) a *= (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
 					if (a <= 0.004) continue;

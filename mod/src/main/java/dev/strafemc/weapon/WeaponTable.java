@@ -75,6 +75,28 @@ public final class WeaponTable {
 		return cls == null ? null : ALL.get(cls);
 	}
 
+	/** CS2's weapon groups in its buy menu order, each gun in its order within; anything missing goes last. */
+	public static final List<List<String>> GROUPS = List.of(
+			List.of("weapon_glock", "weapon_hkp2000", "weapon_usp_silencer", "weapon_elite", "weapon_p250", "weapon_tec9", "weapon_fiveseven", "weapon_cz75a",
+					"weapon_deagle", "weapon_revolver"),
+			List.of("weapon_mac10", "weapon_mp9", "weapon_mp7", "weapon_mp5sd", "weapon_ump45", "weapon_p90", "weapon_bizon"),
+			List.of("weapon_galilar", "weapon_famas", "weapon_ak47", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_sg556", "weapon_aug", "weapon_ssg08",
+					"weapon_awp", "weapon_g3sg1", "weapon_scar20"),
+			List.of("weapon_nova", "weapon_xm1014", "weapon_sawedoff", "weapon_mag7", "weapon_m249", "weapon_negev", "weapon_taser"));
+	public static final List<String> GROUP_NAMES = List.of("Pistols", "SMGs", "Rifles", "Heavy");
+
+	/** Which group (GROUPS) a gun is in (GROUPS.size() when none). */
+	public static int group(String cls) {
+		for (int g = 0; g < GROUPS.size(); g++) if (GROUPS.get(g).contains(cls)) return g;
+		return GROUPS.size();
+	}
+
+	/** A sort key for a gun: its group, then its place within. */
+	public static int order(String cls) {
+		int g = group(cls);
+		return g * 100 + (g < GROUPS.size() ? GROUPS.get(g).indexOf(cls) : 99);
+	}
+
 	public static List<Entry> guns() {
 		List<Entry> out = new ArrayList<>();
 		for (Entry e : ALL.values()) if (!e.knife) out.add(e);

@@ -12,7 +12,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The loadout (key U, or the strafeMC menu): a full-screen page with a tile per loadout slot (gloves, agent, knife, each gun), your inventory
+ * The loadout (key U, or the strafeMC menu): a full-screen page with tiles for the gloves, the T and CT agents (they open
+ * the agent menu) and the knife, a slot per gun (a row per group, as in CS2's buy menu), your inventory
  * below, and a preview of the slot under the mouse on the right: the worn gloves in 3D, posed like in first person.
  * Drag gloves and skin wraps into their slots; shift-click moves them in and out. FLAGGED: wrap slots preview the item,
  * not yet the skinned 3D weapon (comes with the weapon skin renderer).
@@ -20,6 +21,8 @@ import net.minecraft.world.item.ItemStack;
 public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_EMPTY = 0x80202020, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
 	private int previewSlot = 0; // the gloves until the mouse picks another
+	/** The agent tile last looked at: "t" or "ct". */
+	private String agentSide = "t";
 	/** A wrap in the inventory under the mouse (previewed unequipped), or empty. */
 	private ItemStack hoveredWrap = ItemStack.EMPTY;
 
@@ -46,17 +49,33 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		g.fill(0, 0, width, height, BG);
 		g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
 		var defs = Loadout.defs();
-		for (int i = 0; i < Math.min(3, defs.size()); i++) { // gloves, agent, knife: a tile with text
-			Loadout.Def d = defs.get(i);
-			int x = leftPos + Loadout.Menu.TILES_X + i * (Loadout.Menu.TILE_W + 8), y = topPos + Loadout.Menu.TILES_Y;
-			ItemStack in = menu.getSlot(i).getItem();
-			boolean usable = d.kind() != Loadout.Kind.AGENT;
-			g.fill(x, y, x + Loadout.Menu.TILE_W, y + Loadout.Menu.TILE_H, usable ? TILE : TILE_EMPTY);
-			if (i == previewSlot) g.outline(x, y, Loadout.Menu.TILE_W, Loadout.Menu.TILE_H, ACCENT);
+		for (int col = 0; col < 4; col++) { // gloves, T agent, CT agent, knife: a tile with a slot and text
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y, w = Loadout.Menu.TILE_W;
+			boolean agent = col == 1 || col == 2;
+			int i = col == 0 ? 0 : col == 3 ? 2 : 1;
+			String head, sub;
+			Agents.Agent a = agent ? agent(col == 1 ? "t" : "ct") : null;
+			boolean empty;
+			if (agent) {
+				head = col == 1 ? "T Agent" : "CT Agent";
+				sub = a == null ? "Default" : a.name();
+				empty = a == null;
+			} else {
+				ItemStack in = menu.getSlot(i).getItem();
+				head = defs.get(i).label();
+				sub = in.isEmpty() ? "Empty" : in.getHoverName().getString();
+				empty = in.isEmpty();
+			}
+			boolean sel = agent ? previewSlot == 1 && agentSide.equals(col == 1 ? "t" : "ct") : i == previewSlot;
+			g.fill(x, y, x + w, y + Loadout.Menu.TILE_H, TILE);
+			if (sel) g.outline(x, y, w, Loadout.Menu.TILE_H, ACCENT);
 			g.fill(x + 3, y + 3, x + 21, y + 21, SLOT);
-			g.text(font, d.label(), x + 26, y + 3, usable ? 0xFFFFFFFF : 0xFF707070, false);
-			String sub = !usable ? "Coming later" : in.isEmpty() ? "Empty" : in.getHoverName().getString();
-			g.text(font, font.plainSubstrByWidth(sub, Loadout.Menu.TILE_W - 30), x + 26, y + 13, in.isEmpty() ? 0xFF808080 : 0xFFB8B8B8, false);
+			if (a != null) {
+				var pic = CaseImages.image("panorama/images/" + a.image() + "_png");
+				if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, x + 4, y + 6, 0, 0, 16, 12, 16, 12);
+			}
+			g.text(font, head, x + 25, y + 3, 0xFFFFFFFF, false);
+			scrolling(g, sub, x + 25, y + 13, w - 28, empty ? 0xFF808080 : 0xFFB8B8B8);
 		}
 		g.text(font, "GUN WRAPS", leftPos + Loadout.Menu.GUNS_X, topPos + Loadout.Menu.GUNS_Y - 11, 0xFFB0B0B0, false);
 		g.text(font, "GRAFFITI", leftPos + Loadout.Menu.TILES_X, topPos + Loadout.Menu.GUNS_Y - 11, 0xFFB0B0B0, false);
@@ -94,6 +113,10 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		Loadout.Def d = defs.get(previewSlot);
 		ItemStack s = menu.getSlot(previewSlot).getItem();
 		int top = topPos;
+		if (d.kind() == Loadout.Kind.AGENT) {
+			agentPreview(g, px, pw);
+			return;
+		}
 		g.fill(px, top, px + pw, top + imageHeight, PANEL);
 		g.text(font, d.label().toUpperCase(), px + 8, top + 8, ACCENT, false);
 		// 3D: the worn gloves; the knife you'd use (in the knife wrap); the gun (in its wrap)
@@ -103,7 +126,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		else if (d.kind() == Loadout.Kind.SPRAY) CaseImages.draw(g, s, px + 4, top + 20, pw - 8, 84); // the graffiti itself
 		int y = top + 110;
 		if (s.isEmpty()) {
-			String empty = d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves" : d.kind() == Loadout.Kind.AGENT ? "Agents aren't in strafeMC yet"
+			String empty = d.kind() == Loadout.Kind.GLOVES ? "Your side's default gloves"
 					: d.kind() == Loadout.Kind.SPRAY ? "Put an unsealed graffiti here; hold " + SprayKey.name() + " to spray" : "No wrap: the plain weapon";
 			for (var line : font.split(Component.literal(empty), pw - 16)) {
 				g.text(font, line, px + 8, y, 0xFF909090, false);
@@ -122,6 +145,69 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		} else if (s.getItem() instanceof GloveItem) g.text(font, dev.strafemc.weapon.Wear.exterior(GloveItem.wear(s)), px + 8, y + 4, 0xFFB0B0B0, false);
 		else if (s.getItem() instanceof dev.strafemc.weapon.SprayItem)
 			g.text(font, s.getOrDefault(dev.strafemc.weapon.WeaponItems.OPENED, dev.strafemc.weapon.SprayItem.USES) + " sprays left", px + 8, y + 4, 0xFFB0B0B0, false);
+	}
+
+	/** The agent worn on a side ("t" / "ct"), or null for the side's default. */
+	private static Agents.Agent agent(String side) {
+		return Agents.get(side.equals("t") ? dev.strafemc.config.StrafeConfig.agentT : dev.strafemc.config.StrafeConfig.agentCT);
+	}
+
+	/** The agent tile's side: CS2's picture of the agent worn there, and how to change it. */
+	private void agentPreview(GuiGraphicsExtractor g, int px, int pw) {
+		int top = topPos;
+		g.fill(px, top, px + pw, top + imageHeight, PANEL);
+		g.text(font, agentSide.equals("t") ? "T AGENT" : "CT AGENT", px + 8, top + 8, ACCENT, false);
+		Agents.Agent a = agent(agentSide);
+		int y = top + 110;
+		if (a != null) {
+			var pic = CaseImages.image("panorama/images/" + a.image() + "_png");
+			int w = Math.min(pw - 8, 112);
+			if (pic != null) g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, px + (pw - w) / 2, top + 20, 0, 0, w, w * 3 / 4, w, w * 3 / 4);
+			for (var line : font.split(Component.literal(a.name()), pw - 16)) {
+				g.text(font, line, px + 8, y, 0xFFFFFFFF, false);
+				y += 10;
+			}
+		} else {
+			g.text(font, "The side's default", px + 8, y, 0xFF909090, false);
+			y += 10;
+		}
+		for (var line : font.split(Component.literal("Click to choose an agent; your viewmodel wears their sleeves"), pw - 16)) {
+			g.text(font, line, px + 8, y + 4, 0xFFB0B0B0, false);
+			y += 10;
+		}
+	}
+
+	/** Text that slides back and forth when it's wider than w, so all of it can be read. */
+	private void scrolling(GuiGraphicsExtractor g, String s, int x, int y, int w, int color) {
+		int tw = font.width(s);
+		if (tw <= w) {
+			g.text(font, s, x, y, color, false);
+			return;
+		}
+		double over = tw - w, period = over / 20 + 1.5; // 20 px a second, a short pause at each end
+		double ph = (System.nanoTime() / 1e9) % (2 * period), t = ph < period ? ph : 2 * period - ph;
+		int off = (int) Math.round(Math.max(0, Math.min(over, (t - 0.75) * 20)));
+		g.enableScissor(x, y - 1, x + w, y + 9);
+		g.text(font, s, x - off, y, color, false);
+		g.disableScissor();
+	}
+
+	/** Equipped wraps show CS2's picture of their gun in the wrap (only here); everything else as items. */
+	@Override
+	protected void extractSlot(GuiGraphicsExtractor g, Slot slot, int mx, int my) {
+		var defs = Loadout.defs();
+		int i = menu.slots.indexOf(slot);
+		if (i >= 0 && i < defs.size() && slot.getItem().getItem() instanceof SkinWrapItem) {
+			Loadout.Def d = defs.get(i);
+			String weapon = d.kind() == Loadout.Kind.KNIFE ? previewKnife() : d.weapon();
+			String kit = weapon == null ? null : SkinWraps.kitFor(SkinWrapItem.skin(slot.getItem()), weapon);
+			var pic = kit == null ? null : CaseImages.get(new dev.strafemc.weapon.Cases.Entry(kit, weapon));
+			if (pic != null) {
+				g.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, pic, slot.x, slot.y + 2, 0, 0, 16, 12, 16, 12);
+				return;
+			}
+		}
+		super.extractSlot(g, slot, mx, my);
 	}
 
 	/**
@@ -169,14 +255,17 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
 		// the whole tile (the box with the slot and its text) or the gun's slot picks what the preview shows
 		var defs = Loadout.defs();
-		for (int i = 0; i < defs.size(); i++) {
-			int x = i < 3 ? leftPos + Loadout.Menu.TILES_X + i * (Loadout.Menu.TILE_W + 8) : leftPos + Loadout.Menu.slotX(i) - 1;
-			int y = i < 3 ? topPos + Loadout.Menu.TILES_Y : topPos + Loadout.Menu.slotY(i) - 1;
-			int w = i < 3 ? Loadout.Menu.TILE_W : 18, h = i < 3 ? Loadout.Menu.TILE_H : 18;
-			if (mx >= x && mx < x + w && my >= y && my < y + h) {
-				previewSlot = i;
+		for (int col = 0; col < 4; col++) {
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y;
+			if (mx >= x && mx < x + Loadout.Menu.TILE_W && my >= y && my < y + Loadout.Menu.TILE_H) {
+				previewSlot = col == 0 ? 0 : col == 3 ? 2 : 1;
+				if (col == 1 || col == 2) agentSide = col == 1 ? "t" : "ct";
 				hoveredWrap = ItemStack.EMPTY;
 			}
+		}
+		for (int i = 3; i < defs.size(); i++) {
+			int x = leftPos + Loadout.Menu.slotX(i) - 1, y = topPos + Loadout.Menu.slotY(i) - 1;
+			if (mx >= x && mx < x + 18 && my >= y && my < y + 18) previewSlot = i;
 		}
 		// a wrap in the inventory under the mouse previews instead, while it's hovered
 		ItemStack inv = ItemStack.EMPTY;
@@ -188,6 +277,22 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		hoveredWrap = inv;
 		super.extractRenderState(g, mx, my, delta);
 		extractTooltip(g, mx, my);
+	}
+
+	/** An agent tile opens that side's agents; the loadout comes back when that's closed. */
+	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
+		for (int col = 1; col <= 2; col++) {
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y;
+			if (e.x() >= x && e.x() < x + Loadout.Menu.TILE_W && e.y() >= y && e.y() < y + Loadout.Menu.TILE_H && menu.getCarried().isEmpty()) {
+				String side = col == 1 ? "t" : "ct";
+				minecraft.player.connection.send(new net.minecraft.network.protocol.game.ServerboundContainerClosePacket(menu.containerId));
+				minecraft.player.containerMenu = minecraft.player.inventoryMenu;
+				minecraft.setScreen(new AgentScreen(side, LoadoutKey::open));
+				return true;
+			}
+		}
+		return super.mouseClicked(e, doubleClick);
 	}
 
 	@Override

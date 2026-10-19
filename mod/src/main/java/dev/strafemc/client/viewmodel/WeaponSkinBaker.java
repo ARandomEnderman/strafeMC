@@ -13,7 +13,7 @@ import java.util.function.Function;
  * Paint styles (F_PAINT_STYLE): 0 solid colour, 1 hydrographic (pattern tiled in UV space), 2 spray paint (pattern
  * projected from the side), 3 anodized (metal tinted), 4 anodized multicolour and 5 anodized airbrushed (projected
  * pattern on tinted metal), 6 custom paint job (the pattern is the finished artwork in UV space), 7 patina (pattern
- * colours on the bare metal), 8 gunsmith (artwork over the weapon by its alpha). Palette styles: colour 0 where the
+ * colours on the bare metal), 8 gunsmith (artwork over the weapon, its alpha the paint's durability). Palette styles: colour 0 where the
  * pattern is black, its red / green / blue channels laying colours 1 / 2 / 3 over it.
  * <p>
  * Where it goes (the composite inputs' mask): red marks bare metal, which every style paints; blue marks the rest
@@ -268,6 +268,33 @@ public final class WeaponSkinBaker {
 					cover[y * SIZE + x] = (float) Math.max(k, ovA * ovMat);
 					continue;
 				}
+				if (style == 8) { // gunsmith (csgo_customweapon style 8, decoded)
+					// the artwork's alpha is its durability: below 0.5 it scales how easily the paint breaks, 0.5-1 a band
+					double durable = smooth(0, 0.5, pa), occ = in.ao == null ? 1 : (aoc >> 8 & 255) / 255.0;
+					double brk = ((Math.min(edge, 1 - mr) + wt * cav) * (6 * wearAmt + 1) + band) * durable;
+					double off = mr > 0.99 ? brk : smooth(0.58 - soft * durable, 0.68 + soft * durable, brk);
+					// brightness on mask R, or everywhere with g_nColorAdjustmentMode 1
+					double[] lp = GloveSkinBaker.scale(lin(pt), 1 + (bright - 1) * Math.max(mr, p.f("g_nColorAdjustmentMode", 0)));
+					double[] grimeRgb = GloveSkinBaker.unpack(gc);
+					double gl = Math.max(0, Math.min(1, cav * occ - wearAmt * 0.1)) - Math.max(0, Math.min(1, grimeRgb[0] * grimeRgb[1] * grimeRgb[2])) * 0.23;
+					double clean = smooth(0, 0.15, gl + 0.08), scuff = smooth(0.1, 0.2, wt * occ * cav * cav * wearAmt);
+					// mask R: tinted by colour 1, toward colours 2 / 3 as it wears; scuffs go to colour 0 x brightness
+					double[] tint = GloveSkinBaker.lerp(GloveSkinBaker.lerp(lc[1], lc[3], Math.sqrt(wearAmt)), GloveSkinBaker.lerp(lc[1], lc[2], wearAmt), clean);
+					double luma = 0.2125 * lp[0] + 0.7154 * lp[1] + 0.0721 * lp[2];
+					double[] onR = GloveSkinBaker.lerp(new double[] {tint[0] * lp[0], tint[1] * lp[1], tint[2] * lp[2]}, GloveSkinBaker.scale(lc[0], luma), scuff);
+					double[] c8 = GloveSkinBaker.lerp(lp, onR, mr);
+					double metalLv = p.f("g_flPaintMetalness", 0) + (1 - p.f("g_flPaintMetalness", 0)) * mr;
+					c8 = worn(c8, grime, gm, wearAmt, GloveSkinBaker.lerp(PAINT_LEVELS, METAL_PAINT_LEVELS, metalLv));
+					double k = 1 - off * (1 - mr);
+					double[] fin = GloveSkinBaker.lerp(lin(b), GloveSkinBaker.scale(c8, a), k);
+					if (ovA > 0) fin = overlayBlend(fin, ov, ovA, ovMode);
+					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(fin)));
+					paint[y * SIZE + x] = (float) (k + ((1 - ovMetal) - k) * ovA * ovMat);
+					double r = Math.min(1, paintRough + (1 - grimeA) * wearAmt * wearAmt * 0.5);
+					rough[y * SIZE + x] = (float) (r + (ovRough - r) * ovA * ovMat);
+					cover[y * SIZE + x] = (float) Math.max(k, ovA * ovMat);
+					continue;
+				}
 				double[] c;
 				double alpha = 1;
 				switch (style) {
@@ -276,12 +303,6 @@ public final class WeaponSkinBaker {
 						w = 1 - smooth(0.58 - soft, 0.68 + soft, (we + band) * smooth(0, 0.5, pa));
 					}
 					case 7 -> c = new double[] {pt[0] * col[0][0], pt[1] * col[0][1], pt[2] * col[0][2]};
-					case 8 -> { // gunsmith: the artwork covers the paint mask fully (its alpha is not coverage: Slate, Searing Rage)
-						c = pt;
-						// colour adjustment mode 1: a greyscale artwork in linear light, tinted by colour 0 (Slate's dark polymer; FLAGGED)
-						if (p.f("g_nColorAdjustmentMode", 0) == 1)
-							for (int k = 0; k < 3; k++) c[k] = Math.pow(pt[k], 2.2) * col[0][k];
-					}
 					default -> c = col[0];
 				}
 				// patina tints the metal: it keeps the metal's own light and dark

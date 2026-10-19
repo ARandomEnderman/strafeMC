@@ -15,12 +15,21 @@ import java.util.List;
 public final class AgentScreen extends Screen {
 	private static final int GOLD = 0xFFEABE54, TILE_W = 96, TILE_H = 120;
 	private final Screen parent;
+	/** Instead of going back to parent: what closing does (the loadout reopens). */
+	private Runnable back;
 	private String side = "t".equals(StrafeConfig.team) ? "t" : "ct";
 	private double scroll;
 
 	public AgentScreen(Screen parent) {
 		super(Component.literal("Agents"));
 		this.parent = parent;
+	}
+
+	/** One side's agents, opened from the loadout: closing runs back. */
+	public AgentScreen(String side, Runnable back) {
+		this(null);
+		this.side = side;
+		this.back = back;
 	}
 
 	@Override
@@ -119,6 +128,11 @@ public final class AgentScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		if (back != null) {
+			minecraft.setScreen(null);
+			back.run();
+			return;
+		}
 		minecraft.setScreen(parent);
 	}
 

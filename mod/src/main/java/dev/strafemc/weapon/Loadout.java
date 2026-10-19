@@ -57,10 +57,9 @@ public final class Loadout {
 			d.add(new Def("gloves", Kind.GLOVES, null, "Gloves"));
 			d.add(new Def("agent", Kind.AGENT, null, "Agent"));
 			d.add(new Def("knife", Kind.KNIFE, null, "Knife"));
-			// guns in CS2's buy menu order: pistols, mid-tier, rifles (loadout slot), then the rest (Zeus)
+			// guns in CS2's buy menu order: pistols, SMGs, rifles, heavy (with the Zeus)
 			List<WeaponTable.Entry> guns = new ArrayList<>(WeaponTable.guns());
-			guns.sort(java.util.Comparator.comparingInt((WeaponTable.Entry e) -> e.slot() == null ? 9 : e.slot().startsWith("secondary") ? 0
-					: e.slot().startsWith("smg") ? 1 : e.slot().startsWith("rifle") ? 2 : 3).thenComparing(e -> e.slot() == null ? "" : e.slot()));
+			guns.sort(java.util.Comparator.comparingInt((WeaponTable.Entry e) -> WeaponTable.order(e.cls())));
 			for (WeaponTable.Entry e : guns) d.add(new Def(e.cls(), Kind.GUN, e.cls(), WeaponTable.name(e.cls())));
 			for (int i = 0; i < SPRAYS; i++) d.add(new Def(sprayId(i), Kind.SPRAY, null, "Graffiti " + (i + 1)));
 			defs = List.copyOf(d);
@@ -180,11 +179,14 @@ public final class Loadout {
 	public static final class Menu extends AbstractContainerMenu {
 		/** Layout (also used by the screen): panel size, loadout tiles in two columns, the inventory below. */
 		/**
-		 * Layout (also used by the screen): a row of three tiles (gloves, agent, knife), the gun slots in a grid of 9 per
-		 * row below, the inventory under that.
+		 * Layout (also used by the screen): a row of four tiles (gloves, T agent, CT agent, knife; the agents are the
+		 * client's settings, not items), the gun slots below with a row
+		 * per group (pistols, SMGs, rifles, heavy), the inventory under that.
 		 */
-		public static final int WIDTH = 320, TILE_W = 98, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = 66, INV_X = 79;
-		public static final int INV_Y = GUNS_Y + 18 * ((WeaponTable.guns().size() + 8) / 9) + 22, HEIGHT = INV_Y + 84;
+		/** Gun rows: one per group, plus one for guns in none. */
+		public static final int ROWS = WeaponTable.GROUPS.size() + (WeaponTable.guns().stream().anyMatch(e -> WeaponTable.group(e.cls()) >= WeaponTable.GROUPS.size()) ? 1 : 0);
+		public static final int WIDTH = 320, TILE_W = 73, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = 66, INV_X = 79;
+		public static final int INV_Y = GUNS_Y + 18 * ROWS + 22, HEIGHT = INV_Y + 84;
 
 		/** The graffiti ring, left of the gun grid: its centre and radius. */
 		public static final int RING_X = 39, RING_Y = GUNS_Y + 34, RING_R = 23;
@@ -199,13 +201,27 @@ public final class Loadout {
 		public static int slotX(int i) {
 			int sp = spray(i);
 			if (sp >= 0) return RING_X - 8 + (int) Math.round(Math.cos(-Math.PI / 2 + sp * 2 * Math.PI / SPRAYS) * RING_R);
-			return i < 3 ? TILES_X + i * (TILE_W + 8) + 4 : GUNS_X + ((i - 3) % 9) * 18;
+			if (i == 1) return -10000; // the agent slot holds nothing: the agent tiles open the agent menu
+			return i < 3 ? tileX(i == 0 ? 0 : 3) + 4 : GUNS_X + gunCell(i)[1] * 18;
 		}
 
 		public static int slotY(int i) {
 			int sp = spray(i);
 			if (sp >= 0) return RING_Y - 8 + (int) Math.round(Math.sin(-Math.PI / 2 + sp * 2 * Math.PI / SPRAYS) * RING_R);
-			return i < 3 ? TILES_Y + 4 : GUNS_Y + ((i - 3) / 9) * 18;
+			return i < 3 ? TILES_Y + 4 : GUNS_Y + gunCell(i)[0] * 18;
+		}
+
+		/** Left of tile col (0 gloves, 1 T agent, 2 CT agent, 3 knife). */
+		public static int tileX(int col) {
+			return TILES_X + col * (TILE_W + 4);
+		}
+
+		/** Gun slot i's row (its group) and column (its place in the group). */
+		static int[] gunCell(int i) {
+			String cls = defs().get(i).weapon();
+			int g = WeaponTable.group(cls), col = 0;
+			for (int k = 3; k < i; k++) if (defs().get(k).kind() == Kind.GUN && WeaponTable.group(defs().get(k).weapon()) == g) col++;
+			return new int[] {Math.min(g, ROWS - 1), col};
 		}
 
 		private final Container loadout;

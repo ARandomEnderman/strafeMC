@@ -157,6 +157,11 @@ public final class StickerScreen extends Screen {
 		return out;
 	}
 
+	/** Wraps in the loadout's order: by their gun (pistols, SMGs, rifles, heavy), then by name. */
+	private java.util.Comparator<String> byGun() {
+		return java.util.Comparator.comparingInt((String ref) -> dev.strafemc.weapon.SkinWraps.order(at(ref))).thenComparing(ref -> at(ref).getHoverName().getString());
+	}
+
 	private interface Visit {
 		void header(Section s, int y);
 
@@ -380,7 +385,7 @@ public final class StickerScreen extends Screen {
 		var pose = g.pose();
 		pose.pushMatrix();
 		pose.translate((float) x, (float) y);
-		pose.rotate((float) turn);
+		pose.rotate((float) -turn); // the finish bake reads the art turned by +turn, so it shows turned by -turn
 		drawWorn(g, st, (int) Math.round(-s / 2), (int) Math.round(-s / 2), (int) Math.round(s), (int) Math.round(s), wear);
 		pose.popMatrix();
 	}

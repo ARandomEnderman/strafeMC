@@ -29,8 +29,12 @@ public final class StickerWear {
 	private static final Set<String> BUSY = ConcurrentHashMap.newKeySet();
 	private static final Map<String, Art> ART = new ConcurrentHashMap<>();
 
-	/** A sticker's art and its wear settings: scratches strength, wear bias (x, y), paper backing. */
-	public record Art(BufferedImage image, double scratches, double biasX, double biasY, boolean paper) {}
+	/**
+	 * A sticker's art and its wear settings: scratches strength, wear bias (x, y), paper backing; holo stickers their
+	 * mask (g_tSfxMaskSticker0) and spectrum (g_tHoloSpectrumSticker0), and the spectrum's colour boost.
+	 */
+	public record Art(BufferedImage image, double scratches, double biasX, double biasY, boolean paper, BufferedImage holoMask, BufferedImage spectrum,
+					  double sfxBoost) {}
 
 	private StickerWear() {}
 
@@ -46,7 +50,12 @@ public final class StickerWear {
 			BufferedImage img = t == null ? null : dev.strafemc.client.viewmodel.GloveSkinCache.load(t);
 			if (img == null) return null;
 			double[] bias = p.v("g_vWearBiasSticker0", 1, 1);
-			a = new Art(img, p.f("g_fWearScratchesSticker0", 0.3), bias[0], bias.length > 1 ? bias[1] : 1, p.f("g_bPaperBackingSticker0", 0) != 0);
+			boolean holo = p.f("g_bHolographicSticker0", 0) != 0;
+			String mk = p.textures.get("g_tSfxMaskSticker0"), sp = p.textures.get("g_tHoloSpectrumSticker0");
+			BufferedImage mask = holo && mk != null && !mk.startsWith("materials/default/") ? dev.strafemc.client.viewmodel.GloveSkinCache.load(mk) : null;
+			BufferedImage spec = mask != null && sp != null ? dev.strafemc.client.viewmodel.GloveSkinCache.load(sp) : null;
+			a = new Art(img, p.f("g_fWearScratchesSticker0", 0.3), bias[0], bias.length > 1 ? bias[1] : 1, p.f("g_bPaperBackingSticker0", 0) != 0,
+					spec == null ? null : mask, spec, p.f("g_flSfxColorBoostSticker0", 1));
 			ART.put(sticker, a);
 			return a;
 		} catch (Exception e) {
@@ -64,10 +73,70 @@ public final class StickerWear {
 		return Math.max(0, Math.min(1, v));
 	}
 
-	/** A sticker pixel at a wear (ARGB), CS2's maths: art is the art's ARGB there, scratch the sticker scratches there (0-1). */
+	/** CS2's g_vAlbedoLevels (compiled: 0.045, -log2(0.6), 2 - 1.15), which the holo colours are fitted into. */
+	private static final double[] LEVELS = {0.045, 0.7369656, 0.85};
+
+	private static double lin(double c) {
+		return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+	}
+
+	private static double srgb(double c) {
+		c = clamp(c);
+		return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+	}
+
+	private static int sample(BufferedImage img, double u, double v) {
+		int x = (int) Math.floor((u - Math.floor(u)) * img.getWidth()), y = (int) Math.floor(clamp(v) * (img.getHeight() - 1));
+		return img.getRGB(Math.min(img.getWidth() - 1, x), Math.min(img.getHeight() - 1, y));
+	}
+
+	/**
+	 * A holo sticker's colour at (u, v) (linear rgb in c): CS2's sticker shader reads the mask (R how much is holo, G / B the
+	 * spectrum coordinate), moves along the spectrum by the view (dot(view, normal) + dot(view, light); seen head-on that
+	 * is a whole turn of the repeating spectrum, so none here), and fits the spectrum colour into the albedo levels.
+	 */
+	private static void holo(double[] c, double u, double v, Art st) {
+		int m = sample(st.holoMask(), u, v);
+		double amt = (m >> 16 & 255) / 255.0;
+		if (amt <= 0) return;
+		int sc = sample(st.spectrum(), (m >> 8 & 255) / 255.0, (m & 255) / 255.0);
+		double boost = st.sfxBoost();
+		double[] s = {lin((sc >> 16 & 255) / 255.0), lin((sc >> 8 & 255) / 255.0), lin((sc & 255) / 255.0)};
+		double luma = 0.2125 * clamp(s[0] * boost) + 0.7154 * clamp(s[1] * boost) + 0.0721 * clamp(s[2] * boost);
+		double[] n = {Math.max(3e-4, s[0]), Math.max(3e-4, s[1]), Math.max(3e-4, s[2])};
+		double len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+		for (int i = 0; i < 3; i++) n[i] = n[i] / len * 1.06;
+		double nl = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]), nLuma = 0.2125 * n[0] + 0.7154 * n[1] + 0.0721 * n[2];
+		double smax = Math.max(s[0], Math.max(s[1], s[2]));
+		double lv = LEVELS[0] + (LEVELS[2] - LEVELS[0]) * clamp(Math.pow(Math.max(0, smax * boost), LEVELS[1]));
+		double f = Math.sqrt(smooth(3e-4, LEVELS[0], luma)), extra = Math.max(0, boost - 1);
+		for (int i = 0; i < 3; i++) {
+			double fit = Math.max(n[i] * LEVELS[0] * 1.732 / nl / Math.max(1e-6, nLuma), n[i] * lv);
+			fit += (Math.min(LEVELS[2], fit + luma * boost) - fit) * Math.min(1, extra);
+			double h = LEVELS[0] + (fit - LEVELS[0]) * f;
+			c[i] += (h - c[i]) * amt;
+		}
+	}
+
+	/** pixel without the art's place (no holo). */
 	public static int pixel(int art, double scratch, double wear, Art st) {
+		return pixel(art, scratch, wear, st, -1, -1);
+	}
+
+	/**
+	 * A sticker pixel at a wear (ARGB), CS2's maths: art is the art's ARGB at (u, v) of the sticker (negative: unknown),
+	 * scratch the sticker scratches there (0-1).
+	 */
+	public static int pixel(int art, double scratch, double wear, Art st, double u, double v) {
 		double alpha = (art >>> 24) / 255.0, opacity = clamp(alpha * 12.75), w = clamp(wear);
 		double r = (art >> 16 & 255) / 255.0, g = (art >> 8 & 255) / 255.0, b = (art & 255) / 255.0, a = opacity;
+		if (st.holoMask() != null && u >= 0) {
+			double[] c = {lin(r), lin(g), lin(b)};
+			holo(c, u, v, st);
+			r = srgb(c[0]);
+			g = srgb(c[1]);
+			b = srgb(c[2]);
+		}
 		if (w > 0) {
 			double h = clamp((alpha - 0.0784314) * 1.08511), d = clamp(w - Math.pow(h, st.biasX() * st.biasX()));
 			double s = 1 - Math.min(st.scratches(), scratch), sv = s + (s * 0.5 - s) * w;
@@ -107,7 +176,7 @@ public final class StickerWear {
 					for (int x = 0; x < n; x++) {
 						int c = base.getRGB(x * base.getWidth() / n, y * base.getHeight() / n);
 						double s = scr == null ? 0.5 : (scr.getRGB(x * scr.getWidth() / n, y * scr.getHeight() / n) >> 16 & 255) / 255.0;
-						out.setPixel(x, y, pixel(c, s, w, art));
+						out.setPixel(x, y, pixel(c, s, w, art, (x + 0.5) / n, (y + 0.5) / n));
 					}
 				Identifier tex = Identifier.fromNamespaceAndPath("strafemc", "sticker_wear/" + Integer.toHexString(key.hashCode()));
 				Minecraft.getInstance().execute(() -> {

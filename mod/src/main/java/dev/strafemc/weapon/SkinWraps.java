@@ -148,4 +148,12 @@ public final class SkinWraps {
 	public static String iconKit(Wrap w) {
 		return w.kits.isEmpty() ? null : w.kits.values().iterator().next();
 	}
+
+	/** A wrap's place in the loadout's order: knife wraps first, then by the gun it's for (WeaponTable.order). */
+	public static int order(net.minecraft.world.item.ItemStack s) {
+		Wrap w = s.getItem() instanceof SkinWrapItem ? get(SkinWrapItem.skin(s)) : null;
+		if (w == null) return Integer.MAX_VALUE;
+		if (w.knife()) return -1;
+		return w.kits().isEmpty() ? Integer.MAX_VALUE - 1 : WeaponTable.order(w.kits().keySet().iterator().next());
+	}
 }
