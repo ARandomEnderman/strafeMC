@@ -146,6 +146,17 @@ public final class EffectRenderer {
 	 */
 	public static void submit(PSystem root, Matrix4f toRender, Vector3f camRender, Vector3f camRight, Vector3f camUp, PoseStack ps,
 							  SubmitNodeCollector out, java.util.function.Supplier<Matrix4f> drawPose) {
+		submit(root, toRender, camRender, camRight, camUp, ps, out, null, drawPose);
+	}
+
+	/** Draws a system tree straight into buffers (after the translucent terrain: in front of water, depth-tested against it). */
+	public static void draw(PSystem root, Matrix4f toRender, Vector3f camRender, Vector3f camRight, Vector3f camUp, PoseStack ps,
+							net.minecraft.client.renderer.MultiBufferSource buffers) {
+		submit(root, toRender, camRender, camRight, camUp, ps, null, buffers, null);
+	}
+
+	private static void submit(PSystem root, Matrix4f toRender, Vector3f camRender, Vector3f camRight, Vector3f camUp, PoseStack ps,
+							   SubmitNodeCollector out, net.minecraft.client.renderer.MultiBufferSource buffers, java.util.function.Supplier<Matrix4f> drawPose) {
 		List<PSystem> all = new ArrayList<>();
 		collect(root, all);
 		float unit = toRender.getScale(new Vector3f()).x;
@@ -168,7 +179,7 @@ public final class EffectRenderer {
 				// m_flOverbrightFactor > 1 (muzzle flash 3-4): vertex colours cap at 1, so additive layers are drawn that many times
 				int passes = add ? Math.max(1, Math.min(8, (int) Math.ceil(in.overbright.next(s.state)))) : 1;
 				if (passes > 1) for (float[] q : quads) for (int c = 0; c < 4; c++) for (int k = 5; k < 8; k++) q[c * 9 + k] /= passes;
-				out.submitCustomGeometry(ps, type, (given, vc) -> {
+				SubmitNodeCollector.CustomGeometryRenderer geometry = (given, vc) -> {
 					PoseStack.Pose pose = given;
 					if (drawPose != null) { // viewmodel space: the pose is only known when the features are drawn
 						pose = new PoseStack.Pose();
@@ -178,7 +189,9 @@ public final class EffectRenderer {
 					for (int k = 0; k < passes; k++)
 						for (float[] q : quads)
 							for (int c = 0; c < 4; c++) vertex(vc, pose, q, c * 9, add);
-				});
+				};
+				if (buffers != null) geometry.render(ps.last(), buffers.getBuffer(type));
+				else out.submitCustomGeometry(ps, type, geometry);
 			}
 		}
 	}

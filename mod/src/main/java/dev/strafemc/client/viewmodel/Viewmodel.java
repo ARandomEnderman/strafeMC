@@ -279,7 +279,7 @@ public final class Viewmodel {
 			if (!any) return l.gun;
 			String key = l.cls + "#plain#0#" + String.join(",", stickers);
 			VmModel m = finishes.get(key);
-			if (m != null) return m;
+			if (m != null) return holo(l, m);
 			loadFinish(l, null, 0, key, stickers);
 			return l.gun;
 		}
@@ -291,11 +291,40 @@ public final class Viewmodel {
 		if (stickers == null) return gun(l, kit, pattern);
 		String key = l.cls + "#" + kit + "#" + pattern + "#" + String.join(",", stickers);
 		VmModel m = finishes.get(key);
-		if (m != null) return m;
+		if (m != null) return holo(l, m);
 		loadFinish(l, kit, pattern, key, stickers);
 		VmModel plain = finishes.get(l.cls + "#" + kit + "#" + pattern); // until the stickers are on: the finish without them
 		return plain != null ? plain : l.gun;
 	}
+
+	/** Finishes with holo / lenticular stickers: their pictures along the spectrum (step 0: the finish's own). */
+	private final Map<VmModel, Path[]> holoSteps = new java.util.concurrent.ConcurrentHashMap<>();
+
+	/**
+	 * A finish with holo stickers shows the step of their spectrum that the view picks: CS2 moves along it by
+	 * dot(view, normal) (+ the light's, fixed here), so turning the gun (inspecting, moving) slides holo colours and flips
+	 * lenticular frames. The normal is the gun's sticker side (its model x) as posed last frame; one step per
+	 * 1 / HOLO_STEPS of a turn of the spectrum.
+	 */
+	private VmModel holo(Loaded l, VmModel m) {
+		Path[] steps = holoSteps.get(m);
+		if (steps == null || lastGunSkin == null || lastToView == null || l.gun.parts.isEmpty()) return m;
+		int si = l.gun.parts.get(0).skin;
+		if (si < 0 || si >= lastGunSkin.length || lastGunSkin[si].length == 0) return m;
+		org.joml.Vector3f side = new Matrix4f(lastToView).mul(lastGunSkin[si][0]).transformDirection(new org.joml.Vector3f(1, 0, 0));
+		double along = side.lengthSquared() < 1e-9 ? 0 : side.normalize().z * HOLO_SPEED; // towards the viewer: +z
+		int k = (int) Math.floor((along - Math.floor(along)) * steps.length) % steps.length;
+		for (VmModel.Part p : m.parts)
+			for (Path s : steps)
+				if (s.equals(p.texture)) {
+					p.texture = steps[k];
+					break;
+				}
+		return m;
+	}
+
+	/** How many turns of the spectrum one full swing of the view across the sticker side makes (FLAGGED ours). */
+	private static final double HOLO_SPEED = 1.5;
 
 	/** The weapon in a given finish (baked once, the plain weapon until then). */
 	private VmModel gun(Loaded l, String kit, int pattern) {
@@ -329,6 +358,16 @@ public final class Viewmodel {
 				if (base != null) downscaled(base);
 				Path tex = base == null ? null : stickers != null ? WeaponSkinCache.ensureStickers(l.cls, paintMat.material(), kit, pattern, paintable, base, stickers)
 						: WeaponSkinCache.ensure(l.cls, paintMat.material(), kit, pattern, paintable, base);
+				// holo / lenticular stickers: the finish's steps along their spectrum, shown by the view (holo())
+				Path[] steps = null;
+				if (tex != null && stickers != null && Files.exists(WeaponSkinCache.holoVariant(tex, 1).resolveSibling(
+						WeaponSkinCache.holoVariant(tex, 1).getFileName().toString().replace(".png", ".vm1024b.png")))) {
+					steps = new Path[WeaponSkinCache.HOLO_STEPS];
+					for (int k = 0; k < steps.length; k++) {
+						steps[k] = WeaponSkinCache.holoVariant(tex, k);
+						if (k > 0 && !textures.containsKey(steps[k]) && !decoded.containsKey(steps[k])) decoded.put(steps[k], decode(steps[k], true));
+					}
+				}
 				if (tex == null) { // no finish for this weapon (CS2's default knives have no composite inputs)
 					finishes.put(key, l.gun);
 					return;
@@ -347,6 +386,7 @@ public final class Viewmodel {
 					if (!textures.containsKey(part.texture) && !decoded.containsKey(part.texture))
 						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
 				}
+				if (steps != null) holoSteps.put(m, steps);
 				finishes.put(key, m);
 			} catch (Exception e) {
 				finishes.put(key, l.gun);
@@ -465,6 +505,7 @@ public final class Viewmodel {
 		Thread t = new Thread(() -> {
 			try {
 				VmModel s = VmModel.load(Glb.read(AssetCache.exportGlb(model, true)), ".firstperson_sleeves");
+				for (VmModel.Part part : s.parts) armsOnly(s, part);
 				for (VmModel.Part part : s.parts) {
 					if (part.texture == null) continue;
 					part.metal = metalPerVertex(part);
@@ -482,6 +523,34 @@ public final class Viewmodel {
 		return null;
 	}
 
+	/**
+	 * An agent's sleeves follow the arms only: the mesh is also weighted to body bones (spine, clavicles, shoulder blades)
+	 * that weapon animations don't move, which left cloth hanging by the camera (and across the view when a draw swings
+	 * the arms up). Each vertex's weight goes to its arm, hand and finger bones alone; triangles with a vertex mostly on
+	 * the body are dropped.
+	 */
+	static void armsOnly(VmModel m, VmModel.Part p) {
+		if (p.wts == null || p.jnt == null || p.skin < 0 || p.skin >= m.skins.size()) return;
+		String[] joints = m.skins.get(p.skin).joints;
+		int verts = p.wts.length / 4;
+		boolean[] body = new boolean[verts];
+		for (int v = 0; v < verts; v++) {
+			double arm = 0;
+			for (int q = 0; q < 4; q++) {
+				int j = p.jnt[v * 4 + q];
+				String n = j >= 0 && j < joints.length ? joints[j] : "";
+				if (n.startsWith("arm_") || n.startsWith("hand_") || n.startsWith("finger_")) arm += p.wts[v * 4 + q];
+				else p.wts[v * 4 + q] = 0;
+			}
+			if (arm < 0.5) body[v] = true;
+			if (arm > 1e-6) for (int q = 0; q < 4; q++) p.wts[v * 4 + q] /= arm;
+		}
+		java.util.List<Integer> keep = new java.util.ArrayList<>();
+		for (int i = 0; i + 2 < p.idx.length; i += 3)
+			if (!body[p.idx[i]] && !body[p.idx[i + 1]] && !body[p.idx[i + 2]]) for (int k = 0; k < 3; k++) keep.add(p.idx[i + k]);
+		p.idx = keep.stream().mapToInt(Integer::intValue).toArray();
+	}
+
 	/** Charm models by charm id, loaded in the background on first use. */
 	private final Map<String, VmModel> charmModels = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> charmLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -492,7 +561,11 @@ public final class Viewmodel {
 	private double[] charmBob, charmBobPrev;
 	private long lastSwingNs;
 	/** Pendulum length (blocks), damping per second, the most it swings away from hanging off the gun (radians). FLAGGED ours. */
-	private static final double CHARM_LENGTH = 0.045, CHARM_DAMPING = 2.2, CHARM_MAX_SWING = Math.toRadians(80);
+	private static final double CHARM_LENGTH = 0.045, CHARM_DAMPING = 3.5, CHARM_MAX_SWING = Math.toRadians(80);
+	/** How much of your own movement the charm feels (1: all of it, as a real one would; it swung far too much). FLAGGED ours. */
+	private static final double CHARM_MOVE = 0.25;
+	/** The charm's frame: where the camera was, and where it is for the charm (moving CHARM_MOVE as far). */
+	private double[] charmCamPrev, charmCam;
 
 	private VmModel charmModel(String id) {
 		VmModel m = charmModels.get(id);
@@ -538,6 +611,18 @@ public final class Viewmodel {
 		String kit = l.cls.equals(dev.strafemc.weapon.C4Item.CLS) ? null : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		String name = kit != null && WeaponSkinCache.legacy(kit) && l.attachments.containsKey("keychain_legacy") ? "keychain_legacy" : "keychain";
 		Matrix4f at = l.attachments.containsKey(name) ? point != null && point.length == 3 ? pointOnGun(l, name, point) : attachmentTransforms.get(name) : null;
+		// the C4: its keychain point is inside the bricks; the charm hangs from just outside its front face there, and swings
+		// only on the outside of that face (C4_FACE_OUT: our offset)
+		org.joml.Vector3f limitAxis = null;
+		if (at != null && l.cls.equals(dev.strafemc.weapon.C4Item.CLS) && (point == null || point.length != 3)) {
+			float[] kc = c4Keychain(l);
+			if (kc != null) {
+				at = pointOnGun(l, name, new double[] {kc[0], kc[1], kc[2]});
+				org.joml.Vector3f a0 = at.getTranslation(new org.joml.Vector3f()),
+						a1 = pointOnGun(l, name, new double[] {kc[0], kc[1] + 0.01, kc[2]}).getTranslation(new org.joml.Vector3f());
+				limitAxis = a1.sub(a0).normalize();
+			}
+		}
 		VmModel m = at == null ? null : charmModel(id);
 		if (m == null) return;
 		long now = System.nanoTime();
@@ -546,10 +631,17 @@ public final class Viewmodel {
 		Matrix4f base = new Matrix4f(at).rotate(FROM_GLTF);
 		org.joml.Vector3f pivot = base.getTranslation(new org.joml.Vector3f());
 		org.joml.Vector3f rest = base.transformDirection(new org.joml.Vector3f(0, -1, 0)).normalize(); // hanging straight off the gun
+		org.joml.Vector3f limit = limitAxis != null ? limitAxis : rest; // what it may not swing too far from
 		var camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
 		org.joml.Quaternionf toWorld = new org.joml.Quaternionf(camera.rotation());
-		var cp = camera.position();
-		org.joml.Vector3f pw = toWorld.transform(new org.joml.Vector3f(pivot)), rw = toWorld.transform(new org.joml.Vector3f(rest));
+		var real = camera.position();
+		if (charmCam == null || Math.abs(real.x - charmCamPrev[0]) + Math.abs(real.y - charmCamPrev[1]) + Math.abs(real.z - charmCamPrev[2]) > 2) {
+			charmCam = new double[] {real.x, real.y, real.z}; // first frame, or a teleport
+			charmBob = null;
+		} else for (int i = 0; i < 3; i++) charmCam[i] += ((i == 0 ? real.x : i == 1 ? real.y : real.z) - charmCamPrev[i]) * CHARM_MOVE;
+		charmCamPrev = new double[] {real.x, real.y, real.z};
+		var cp = new net.minecraft.world.phys.Vec3(charmCam[0], charmCam[1], charmCam[2]);
+		org.joml.Vector3f pw = toWorld.transform(new org.joml.Vector3f(pivot)), rw = toWorld.transform(new org.joml.Vector3f(limit));
 		double qx = cp.x + pw.x, qy = cp.y + pw.y, qz = cp.z + pw.z;
 		if (charmBob == null || Math.abs(charmBob[0] - qx) + Math.abs(charmBob[1] - qy) + Math.abs(charmBob[2] - qz) > 1) { // first frame, or a teleport
 			charmBob = new double[] {qx + rw.x * CHARM_LENGTH, qy + rw.y * CHARM_LENGTH, qz + rw.z * CHARM_LENGTH};
@@ -569,6 +661,24 @@ public final class Viewmodel {
 		Matrix4f place = new Matrix4f().translation(pivot).rotate(swing).mul(new Matrix4f(base).setTranslation(0, 0, 0));
 		emit(m, new Matrix4f[0][], place, cam, ps, out, light, new Matrix4f());
 	}
+
+	/** The C4's charm point: its keychain attachment's spot, lifted onto its front face (model space, glb metres), or null. */
+	private float[] c4Keychain(Loaded l) {
+		if (c4Keychain != null) return c4Keychain;
+		Weapon w = WEAPONS.get(l.cls);
+		float[] kc = w == null ? null : restPoint(w.model, l.gun, "keychain");
+		if (kc == null) return null;
+		float top = -Float.MAX_VALUE; // the front face (+y): the bricks' top
+		for (VmModel.Part p : l.gun.parts) {
+			if (p.alphaMode.equals("BLEND")) continue;
+			for (int i = 1; i < p.pos.length; i += 3) top = Math.max(top, p.pos[i]);
+		}
+		return c4Keychain = new float[] {kc[0], top + C4_FACE_OUT, kc[2]};
+	}
+
+	private float[] c4Keychain;
+	/** How far off the C4's front face its charm hangs (m). FLAGGED ours. */
+	private static final float C4_FACE_OUT = 0.004f;
 
 	/** The charm's weight held at its length from the keychain point (q) and within CHARM_MAX_SWING of hanging off the gun (rest). */
 	private static double[] constrainCharm(double[] b, double qx, double qy, double qz, org.joml.Vector3f rest) {

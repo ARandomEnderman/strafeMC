@@ -96,11 +96,11 @@ public final class StickerWear {
 	 * spectrum coordinate), moves along the spectrum by the view (dot(view, normal) + dot(view, light); seen head-on that
 	 * is a whole turn of the repeating spectrum, so none here), and fits the spectrum colour into the albedo levels.
 	 */
-	private static void holo(double[] c, double u, double v, Art st) {
+	private static void holo(double[] c, double u, double v, Art st, double shift) {
 		int m = sample(st.holoMask(), u, v);
 		double amt = (m >> 16 & 255) / 255.0;
 		if (amt <= 0) return;
-		int sc = sample(st.spectrum(), (m >> 8 & 255) / 255.0, (m & 255) / 255.0);
+		int sc = sample(st.spectrum(), (m >> 8 & 255) / 255.0 + shift, (m & 255) / 255.0);
 		double boost = st.sfxBoost();
 		double[] s = {lin((sc >> 16 & 255) / 255.0), lin((sc >> 8 & 255) / 255.0), lin((sc & 255) / 255.0)};
 		double luma = 0.2125 * clamp(s[0] * boost) + 0.7154 * clamp(s[1] * boost) + 0.0721 * clamp(s[2] * boost);
@@ -129,11 +129,24 @@ public final class StickerWear {
 	 * scratch the sticker scratches there (0-1).
 	 */
 	public static int pixel(int art, double scratch, double wear, Art st, double u, double v) {
+		return pixel(art, scratch, wear, st, u, v, 0);
+	}
+
+	/** Whether the sticker has a holo (or lenticular) layer, which moves along its spectrum with the view. */
+	public static boolean holo(Art st) {
+		return st != null && st.holoMask() != null;
+	}
+
+	/**
+	 * pixel with the holo seen from a view: shift moves along the spectrum as CS2's dot(view, normal) + dot(view, light)
+	 * does (the spectrum repeats each 1): holo colours slide, lenticular frames flip.
+	 */
+	public static int pixel(int art, double scratch, double wear, Art st, double u, double v, double shift) {
 		double alpha = (art >>> 24) / 255.0, opacity = clamp(alpha * 12.75), w = clamp(wear);
 		double r = (art >> 16 & 255) / 255.0, g = (art >> 8 & 255) / 255.0, b = (art & 255) / 255.0, a = opacity;
 		if (st.holoMask() != null && u >= 0) {
 			double[] c = {lin(r), lin(g), lin(b)};
-			holo(c, u, v, st);
+			holo(c, u, v, st, shift);
 			r = srgb(c[0]);
 			g = srgb(c[1]);
 			b = srgb(c[2]);
@@ -161,9 +174,21 @@ public final class StickerWear {
 	/** The sticker's art at this wear (0-1) as a GUI texture (square), or null while it's made (or without the CS2 files). */
 	public static Identifier texture(String sticker, double wear) {
 		int tenth = (int) Math.round(Math.max(0, Math.min(1, wear)) * 10);
+		Identifier id = READY.get(sticker + "#" + tenth);
+		if (id != null) return id;
+		// not made yet: make every step of this sticker (the scrape slider moves through them) and meanwhile show the
+		// closest step that's ready, not the unscraped picture
+		for (int k = 0; k <= 10; k++) make(sticker, k);
+		for (int d = 1; d <= 10; d++)
+			for (int k : new int[] {tenth - d, tenth + d})
+				if (k >= 0 && k <= 10 && (id = READY.get(sticker + "#" + k)) != null) return id;
+		return null;
+	}
+
+	/** Starts making the sticker's art at tenth / 10 wear in the background (once). */
+	private static void make(String sticker, int tenth) {
 		String key = sticker + "#" + tenth;
-		Identifier id = READY.get(key);
-		if (id != null || !BUSY.add(key)) return id;
+		if (READY.containsKey(key) || !BUSY.add(key)) return;
 		Thread t = new Thread(() -> {
 			try {
 				Art art = art(sticker);
@@ -190,6 +215,5 @@ public final class StickerWear {
 		}, "strafemc-sticker-wear");
 		t.setDaemon(true);
 		t.start();
-		return null;
 	}
 }

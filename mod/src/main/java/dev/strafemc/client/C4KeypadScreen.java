@@ -12,9 +12,8 @@ import net.minecraft.network.chat.Component;
 /**
  * The C4's keypad (strafemc_c4_keypad): one key lights up; press it (click, or type it) and the next one lights, with
  * the C4's key press sound for each press and a beep for each new key, while the bomb's display fills with stars.
- * Planting, the keys spell CS2's 7355608 and finishing arms the bomb sooner than holding; defusing, they're random and
- * finishing defuses it sooner. A wrong key starts over. The plant or defuse keeps running underneath while it's open;
- * closing it (Esc) stops it.
+ * Planting, the keys spell CS2's 7355608; defusing, they're random (14 keys, 7 with a defuse kit). Finishing them is the
+ * only way to plant or defuse while it's on. A wrong key starts over; closing it (Esc) stops.
  */
 public final class C4KeypadScreen extends Screen {
 	private static final String[] KEYS = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"};
@@ -36,11 +35,13 @@ public final class C4KeypadScreen extends Screen {
 		return new C4KeypadScreen(null, C4Item.CODE);
 	}
 
-	/** Defusing b: a random code of the same length. */
+	/** Defusing b: random keys, twice as many without a defuse kit. */
 	public static C4KeypadScreen defuse(PlantedC4 b) {
 		StringBuilder s = new StringBuilder();
 		var r = new java.util.Random();
-		for (int i = 0; i < C4Item.CODE.length(); i++) s.append(r.nextInt(10));
+		var p = Minecraft.getInstance().player;
+		int n = p != null && PlantedC4.hasKit(p) ? PlantedC4.KEYPAD_KEYS_KIT : PlantedC4.KEYPAD_KEYS;
+		for (int i = 0; i < n; i++) s.append(r.nextInt(10));
 		return new C4KeypadScreen(b, s.toString());
 	}
 

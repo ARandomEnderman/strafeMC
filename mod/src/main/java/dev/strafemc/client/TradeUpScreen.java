@@ -43,7 +43,7 @@ public final class TradeUpScreen extends Screen {
 	@Override
 	protected void init() {
 		open = this;
-		sign = addRenderableWidget(Button.builder(Component.literal("Sign Contract"), b -> sign()).bounds(width / 2 - 75, height - 52, 150, 20).build());
+		sign = addRenderableWidget(Button.builder(Component.literal("Sign Contract"), b -> sign()).bounds(width / 2 - 75, height - 60, 150, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 	}
 
@@ -89,6 +89,10 @@ public final class TradeUpScreen extends Screen {
 	private List<Section> sections() {
 		List<Section> out = new ArrayList<>();
 		var inv = minecraft.player.getInventory();
+		List<Integer> equipped = new ArrayList<>(); // the current loadout's (picking one is warned about)
+		var defs = dev.strafemc.weapon.Loadout.defs();
+		for (int i = 0; i < defs.size(); i++) if (TradeUp.eligible(dev.strafemc.weapon.Loadout.get(minecraft.player, defs.get(i).id()))) equipped.add(Upgrader.loadoutRef(i));
+		if (!equipped.isEmpty()) out.add(new Section("CURRENT LOADOUT", -2, equipped));
 		List<Integer> loose = new ArrayList<>();
 		for (int i = 0; i < inv.getContainerSize(); i++) if (TradeUp.eligible(inv.getItem(i))) loose.add(i);
 		out.add(new Section("YOUR ITEMS", -1, loose));
@@ -262,6 +266,12 @@ public final class TradeUpScreen extends Screen {
 			y += 22;
 		}
 		g.disableScissor();
+		boolean equippedPicked = false; // something from the current loadout is in: say so under the button
+		for (int ref : picked) equippedPicked |= Upgrader.equipped(ref);
+		if (equippedPicked) {
+			String warn = "You chose a currently equipped item";
+			g.text(font, warn, width / 2 - font.width(warn) / 2, height - 37, 0xFFE05050, false);
+		}
 		super.extractRenderState(g, mx, my, delta);
 		if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
 	}

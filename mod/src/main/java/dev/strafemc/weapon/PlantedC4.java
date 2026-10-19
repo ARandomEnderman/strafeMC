@@ -22,13 +22,16 @@ import net.minecraft.world.phys.Vec3;
  * Gaussian falloff over 3.5 x 500 units (sigma = radius / 3, as the HE), only to whoever the blast can see. Defusing is
  * holding use on it: 10 s, 5 s with a defuse kit; the defuser keeps going while their client keeps telling the server
  * (C4Client), so looking away or letting go stops it. FLAGGED (CS:GO's bomb as we know it, not in CS2's data files):
- * the beep rate max(0.1 + 0.9 x fraction left, 0.15) s, the trigger click a second before it blows, the damage falloff.
+ * the beep rate max(0.1 + 0.9 x fraction left, 0.15) s, the warning 1.5 s and the trigger click 1 s before it blows,
+ * the damage falloff.
  */
 public class PlantedC4 extends Entity {
 	public static EntityType<PlantedC4> TYPE;
 	public static final double DAMAGE = 500, RADIUS = DAMAGE * 3.5, DEFUSE = 10, DEFUSE_KIT = 5;
-	/** Keypad mode: the fastest a typed defuse can finish (FLAGGED ours). */
-	public static final double KEYPAD_DEFUSE = 2.0, KEYPAD_DEFUSE_KIT = 1.0;
+	/** Keypad mode: the fastest a typed defuse can finish (FLAGGED ours: only against instant clients). */
+	public static final double KEYPAD_DEFUSE = 0.5;
+	/** Keypad mode: how many keys the defuse takes, without and with a defuse kit (FLAGGED ours). */
+	public static final int KEYPAD_KEYS = 14, KEYPAD_KEYS_KIT = 7;
 	/** Ticks without a defuse message before the defuse stops (the client sends one every 4 ticks while holding). */
 	private static final int DEFUSE_GRACE = 10;
 
@@ -41,9 +44,16 @@ public class PlantedC4 extends Entity {
 	private static final EntityDataAccessor<Boolean> DEFUSED = SynchedEntityData.defineId(PlantedC4.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<ItemStack> ITEM = SynchedEntityData.defineId(PlantedC4.class, EntityDataSerializers.ITEM_STACK);
 
+	/** Client: when it last beeped (System.nanoTime), so its LED blinks. */
+	public long lastBeepNs;
 	private ServerPlayer planter;
 	private double nextBeep;
-	private boolean tripped;
+	private boolean tripped, warned;
+	/**
+	 * Which site's beep it plays: CS2 has a beep for A (C4.PlantSound) and one for B (C4.PlantSoundB). Until bomb sites
+	 * exist, each bomb picks one at random.
+	 */
+	private final boolean siteB = Math.random() < 0.5;
 	private int lastPing, defuseStart, gone = -1;
 
 	public PlantedC4(EntityType<? extends PlantedC4> type, Level level) {
@@ -135,8 +145,15 @@ public class PlantedC4 extends Entity {
 		getEntityData().set(LEFT, Math.max(0, left));
 		double t = tickCount / 20.0, fraction = fractionLeft();
 		if (t >= nextBeep) {
-			GrenadeEffects.event(sl, GrenadeEffects.EV_C4_BEEP, position());
+			boolean last10 = left <= 200; // CS2's _10sec beeps for the last ten seconds
+			GrenadeEffects.event(sl, siteB ? (last10 ? GrenadeEffects.EV_C4_BEEP_B_10 : GrenadeEffects.EV_C4_BEEP_B)
+					: (last10 ? GrenadeEffects.EV_C4_BEEP_10 : GrenadeEffects.EV_C4_BEEP), position());
 			nextBeep = t + Math.max(0.1 + 0.9 * fraction, 0.15);
+		}
+		// the about-to-blow warning (C4.ExplodeWarning, CS2's 1.24 s arm_bomb sound) runs out into the blast (FLAGGED: its start)
+		if (!warned && left <= 30) {
+			warned = true;
+			GunServer.soundAt(sl, "C4.ExplodeWarning", position(), this);
 		}
 		if (!tripped && left <= 20) {
 			tripped = true;
@@ -154,7 +171,8 @@ public class PlantedC4 extends Entity {
 			return;
 		}
 		getEntityData().set(DEFUSE_DONE, tickCount - defuseStart);
-		if (tickCount - defuseStart >= getEntityData().get(DEFUSE_LEN)) defuse(sl, p);
+		// keypad mode: only typing the keys defuses it
+		if (!dev.strafemc.server.StrafeSettings.c4Keypad() && tickCount - defuseStart >= getEntityData().get(DEFUSE_LEN)) defuse(sl, p);
 	}
 
 	private void stopDefuse() {
@@ -181,11 +199,10 @@ public class PlantedC4 extends Entity {
 	/** Keypad mode: p typed the defuse code; it's defused if they've been at it long enough. */
 	public void defuseTyped(ServerPlayer p) {
 		if (!dev.strafemc.server.StrafeSettings.c4Keypad() || defuser() != p.getId() || !(level() instanceof ServerLevel sl)) return;
-		double need = hasKit(p) ? KEYPAD_DEFUSE_KIT : KEYPAD_DEFUSE;
-		if ((tickCount - defuseStart) / 20.0 >= need - 0.25) defuse(sl, p);
+		if ((tickCount - defuseStart) / 20.0 >= KEYPAD_DEFUSE) defuse(sl, p);
 	}
 
-	static boolean hasKit(ServerPlayer p) {
+	public static boolean hasKit(net.minecraft.world.entity.player.Player p) {
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).is(WeaponItems.DEFUSE_KIT)) return true;
 		return false;

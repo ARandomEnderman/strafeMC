@@ -46,7 +46,8 @@ public final class GrenadeEffects {
 			EV_SMOKE_T = 12, // a T's smoke (EV_SMOKE: CT): CS2 tints them differently
 			EV_DECOY_SHOT = 13,
 			EV_C4 = 14, // the planted C4 blows
-			EV_C4_BEEP = 15; // and beeps
+			EV_C4_BEEP = 15, // and beeps: A site, B site, and each in its last 10 seconds (CS2's own beep sounds for each)
+			EV_C4_BEEP_B = 16, EV_C4_BEEP_10 = 17, EV_C4_BEEP_B_10 = 18;
 	/** How far away players still get the effect message (blocks). */
 	private static final double FX_RANGE = 160;
 

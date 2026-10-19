@@ -21,7 +21,7 @@ public final class ConsoleActions {
 		switch (cmd) {
 			case "strafemc_movement_choice" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change who decides Source movement."));
+					ConsoleRelay.reply(p, ("Only operators can change who decides Source movement."));
 					break;
 				}
 				StrafeSettings.setPlayerChoice(!arg.equals("0"));
@@ -32,11 +32,11 @@ public final class ConsoleActions {
 			case "strafemc_movement" -> {
 				if (StrafeSettings.playerChoice()) { // players choose: this only changes your own
 					StrafeSettings.setPersonal(p.getUUID(), !arg.equals("0"));
-					p.sendSystemMessage(Component.literal("Your Source movement: " + (StrafeSettings.sourceMovement(p) ? "ON" : "OFF")));
+					ConsoleRelay.reply(p, ("Your Source movement: " + (StrafeSettings.sourceMovement(p) ? "ON" : "OFF")));
 					break;
 				}
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change Source movement for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change Source movement for the server."));
 					break;
 				}
 				StrafeSettings.setSourceMovement(!arg.equals("0"));
@@ -49,11 +49,11 @@ public final class ConsoleActions {
 				try {
 					n = Math.max(0, Math.min(1000, Integer.parseInt(arg.trim())));
 				} catch (NumberFormatException e) {
-					p.sendSystemMessage(Component.literal("strafemc_pattern <0-1000>"));
+					ConsoleRelay.reply(p, ("strafemc_pattern <0-1000>"));
 					break;
 				}
 				if (!cheat || !p.getAbilities().instabuild) {
-					p.sendSystemMessage(Component.literal("Setting patterns needs sv_cheats 1, operator and creative."));
+					ConsoleRelay.reply(p, ("Setting patterns needs sv_cheats 1, operator and creative."));
 					break;
 				}
 				// the held wrap or glove item itself; a held knife or gun: the wrap in its loadout slot
@@ -62,21 +62,21 @@ public final class ConsoleActions {
 						&& !(g instanceof dev.strafemc.weapon.HealthshotItem) ? g.weaponClass : null;
 				if (held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem || held.getItem() instanceof dev.strafemc.weapon.GloveItem) {
 					held.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
-					p.sendSystemMessage(Component.literal("Pattern template: " + n));
+					ConsoleRelay.reply(p, ("Pattern template: " + n));
 				} else if (slot != null) {
 					var wrap = dev.strafemc.weapon.Loadout.get(p, slot);
-					if (wrap.isEmpty()) p.sendSystemMessage(Component.literal("No wrap on it in your loadout."));
+					if (wrap.isEmpty()) ConsoleRelay.reply(p, ("No wrap on it in your loadout."));
 					else {
 						wrap = wrap.copy();
 						wrap.set(dev.strafemc.weapon.WeaponItems.PATTERN, n);
 						dev.strafemc.weapon.Loadout.set(p, slot, wrap);
-						p.sendSystemMessage(Component.literal("Pattern template: " + n));
+						ConsoleRelay.reply(p, ("Pattern template: " + n));
 					}
-				} else p.sendSystemMessage(Component.literal("Hold a skin wrap, gloves, or a gun / knife with a wrap in your loadout."));
+				} else ConsoleRelay.reply(p, ("Hold a skin wrap, gloves, or a gun / knife with a wrap in your loadout."));
 			}
 			case "strafemc_float" -> { // a skin wrap's float: a cheat like the pattern; within the skin's own range
 				if (!cheat || !p.getAbilities().instabuild) {
-					p.sendSystemMessage(Component.literal("Setting floats needs sv_cheats 1, operator and creative."));
+					ConsoleRelay.reply(p, ("Setting floats needs sv_cheats 1, operator and creative."));
 					break;
 				}
 				var held = p.getMainHandItem();
@@ -86,7 +86,7 @@ public final class ConsoleActions {
 				ItemStack wrap = held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? held : slot != null ? dev.strafemc.weapon.Loadout.get(p, slot).copy() : ItemStack.EMPTY;
 				var w = wrap.isEmpty() ? null : dev.strafemc.weapon.SkinWraps.get(dev.strafemc.weapon.SkinWrapItem.skin(wrap));
 				if (w == null) {
-					p.sendSystemMessage(Component.literal(slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
+					ConsoleRelay.reply(p, (slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
 					break;
 				}
 				double[] range = dev.strafemc.weapon.Wear.range(dev.strafemc.weapon.SkinWraps.iconKit(w));
@@ -95,7 +95,7 @@ public final class ConsoleActions {
 				if (band != null) {
 					double lo = Math.max(band[0], range[0]), hi = Math.min(band[1], range[1]);
 					if (lo > hi || lo >= band[1]) {
-						p.sendSystemMessage(Component.literal(w.name() + " doesn't come in " + arg.trim().toUpperCase() + String.format(java.util.Locale.ROOT, " (its floats: %.2f-%.2f).", range[0], range[1])));
+						ConsoleRelay.reply(p, (w.name() + " doesn't come in " + arg.trim().toUpperCase() + String.format(java.util.Locale.ROOT, " (its floats: %.2f-%.2f).", range[0], range[1])));
 						break;
 					}
 					f = lo + p.getRandom().nextDouble() * (Math.min(hi, band[1] - 1e-6) - lo);
@@ -103,11 +103,11 @@ public final class ConsoleActions {
 					try {
 						f = Double.parseDouble(arg.trim());
 					} catch (NumberFormatException e) {
-						p.sendSystemMessage(Component.literal("strafemc_float <0-1 | FN | MW | FT | WW | BS>"));
+						ConsoleRelay.reply(p, ("strafemc_float <0-1 | FN | MW | FT | WW | BS>"));
 						break;
 					}
 					double clamped = Math.max(range[0], Math.min(range[1], f));
-					if (clamped != f) p.sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT, "%s only comes in %.2f-%.2f.", w.name(), range[0], range[1])));
+					if (clamped != f) ConsoleRelay.reply(p, (String.format(java.util.Locale.ROOT, "%s only comes in %.2f-%.2f.", w.name(), range[0], range[1])));
 					f = clamped;
 				}
 				if (f > 0) wrap.set(dev.strafemc.weapon.WeaponItems.WEAR, Float.floatToIntBits((float) f));
@@ -116,7 +116,7 @@ public final class ConsoleActions {
 			}
 			case "strafemc_stattrak" -> { // makes a wrap StatTrak with this many kills (off: plain again); a cheat like the float
 				if (!cheat || !p.getAbilities().instabuild) {
-					p.sendSystemMessage(Component.literal("StatTrak needs sv_cheats 1, operator and creative."));
+					ConsoleRelay.reply(p, ("StatTrak needs sv_cheats 1, operator and creative."));
 					break;
 				}
 				var held = p.getMainHandItem();
@@ -125,7 +125,7 @@ public final class ConsoleActions {
 						&& !(g instanceof dev.strafemc.weapon.HealthshotItem) ? g.weaponClass : null;
 				ItemStack wrap = held.getItem() instanceof dev.strafemc.weapon.SkinWrapItem ? held : slot != null ? dev.strafemc.weapon.Loadout.get(p, slot).copy() : ItemStack.EMPTY;
 				if (!(wrap.getItem() instanceof dev.strafemc.weapon.SkinWrapItem)) {
-					p.sendSystemMessage(Component.literal(slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
+					ConsoleRelay.reply(p, (slot != null ? "No wrap on it in your loadout." : "Hold a skin wrap, or a gun / knife with a wrap in your loadout."));
 					break;
 				}
 				String a = arg.trim();
@@ -135,7 +135,7 @@ public final class ConsoleActions {
 					try {
 						k = a.isEmpty() ? 0 : Integer.parseInt(a);
 					} catch (NumberFormatException e) {
-						p.sendSystemMessage(Component.literal("strafemc_stattrak <kills | off>"));
+						ConsoleRelay.reply(p, ("strafemc_stattrak <kills | off>"));
 						break;
 					}
 					wrap.set(dev.strafemc.weapon.WeaponItems.STATTRAK, Math.max(0, Math.min(dev.strafemc.weapon.StatTrak.MAX, k)));
@@ -144,11 +144,11 @@ public final class ConsoleActions {
 			}
 			case "strafemc_c4_keypad" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change the C4 keypad."));
+					ConsoleRelay.reply(p, ("Only operators can change the C4 keypad."));
 					break;
 				}
 				StrafeSettings.setC4Keypad(!arg.trim().equals("0"));
-				p.sendSystemMessage(Component.literal("C4 keypad: " + (StrafeSettings.c4Keypad() ? "on" : "off")));
+				ConsoleRelay.reply(p, ("C4 keypad: " + (StrafeSettings.c4Keypad() ? "on" : "off")));
 			}
 			case "c4_plant_start" -> dev.strafemc.weapon.C4Item.start(p);
 			case "c4_plant_cancel" -> dev.strafemc.weapon.C4Item.cancel(p);
@@ -164,7 +164,7 @@ public final class ConsoleActions {
 			}
 			case "strafemc_wear" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change wear on case drops."));
+					ConsoleRelay.reply(p, ("Only operators can change wear on case drops."));
 					break;
 				}
 				String[] a = arg.trim().split(" ");
@@ -174,7 +174,7 @@ public final class ConsoleActions {
 			}
 			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "bot_difficulty", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change bots."));
+					ConsoleRelay.reply(p, ("Only operators can change bots."));
 					break;
 				}
 				var server = p.level().getServer();
@@ -188,7 +188,7 @@ public final class ConsoleActions {
 						try {
 							StrafeSettings.setBotQuota(Integer.parseInt(arg.trim()));
 						} catch (NumberFormatException e) {
-							p.sendSystemMessage(Component.literal("bot_quota <number>"));
+							ConsoleRelay.reply(p, ("bot_quota <number>"));
 							return;
 						}
 						msg = "bot_quota " + StrafeSettings.botQuota();
@@ -197,7 +197,7 @@ public final class ConsoleActions {
 						try {
 							StrafeSettings.setBotDifficulty(Integer.parseInt(arg.trim()));
 						} catch (NumberFormatException e) {
-							p.sendSystemMessage(Component.literal("bot_difficulty <1-10>"));
+							ConsoleRelay.reply(p, ("bot_difficulty <1-10>"));
 							return;
 						}
 						msg = "bot_difficulty " + StrafeSettings.botDifficulty();
@@ -215,7 +215,7 @@ public final class ConsoleActions {
 			}
 			case "strafemc_knockback" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change knockback for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change knockback for the server."));
 					break;
 				}
 				StrafeSettings.setMcKnockback(!arg.equals("0"));
@@ -287,13 +287,13 @@ public final class ConsoleActions {
 					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.UpgradeResult(offer, win));
 			}
 			case "strafemc_drop" -> { // a care package without a new rank: a cheat
-				if (!StrafeSettings.drops()) p.sendSystemMessage(Component.literal("Care packages are off on this server."));
-				else if (!cheat) p.sendSystemMessage(Component.literal("Care packages on demand need sv_cheats 1 and operator."));
+				if (!StrafeSettings.drops()) ConsoleRelay.reply(p, ("Care packages are off on this server."));
+				else if (!cheat) ConsoleRelay.reply(p, ("Care packages on demand need sv_cheats 1 and operator."));
 				else dev.strafemc.weapon.CarePackage.queue(p, 1);
 			}
 			case "drop_everyone" -> { // a care package for every player online
-				if (!StrafeSettings.drops()) p.sendSystemMessage(Component.literal("Care packages are off on this server."));
-				else if (!op) p.sendSystemMessage(Component.literal("Only operators can give everyone a care package."));
+				if (!StrafeSettings.drops()) ConsoleRelay.reply(p, ("Care packages are off on this server."));
+				else if (!op) ConsoleRelay.reply(p, ("Only operators can give everyone a care package."));
 				else for (var o : p.level().getServer().getPlayerList().getPlayers()) dev.strafemc.weapon.CarePackage.queue(o, 1);
 			}
 			case "silencer" -> dev.strafemc.weapon.GunServer.toggleSilencer(p);
@@ -359,6 +359,18 @@ public final class ConsoleActions {
 				else dev.strafemc.weapon.CaseOpening.claim(p); // no reel to wait for
 			}
 			case "case_claim" -> dev.strafemc.weapon.CaseOpening.claim(p);
+			case "bulk_open" -> { // "toolSlot ref:count ...": the bulk opener (Upgrader refs)
+				String[] a = arg.trim().split(" ");
+				try {
+					java.util.Map<Integer, Integer> refs = new java.util.LinkedHashMap<>();
+					for (int i = 1; i < a.length; i++) {
+						String[] rc = a[i].split(":");
+						refs.merge(Integer.parseInt(rc[0]), rc.length > 1 ? Integer.parseInt(rc[1]) : 1, Integer::sum);
+					}
+					if (a.length > 1) dev.strafemc.weapon.BulkOpener.open(p, Integer.parseInt(a[0]), refs);
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "sticker_apply" -> { // "stickerSlot target slot [u,v,turn [wear]]": target L:<loadout slot> or I:<inventory slot>
 				String[] a = arg.trim().split(" ");
 				try {
@@ -405,14 +417,14 @@ public final class ConsoleActions {
 			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change spawn blocks."));
+					ConsoleRelay.reply(p, ("Only operators can change spawn blocks."));
 					break;
 				}
 				StrafeSettings.setSpawnBlocks(!arg.equals("0"));
 			}
 			case "strafemc_drops" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can turn care packages on or off."));
+					ConsoleRelay.reply(p, ("Only operators can turn care packages on or off."));
 					break;
 				}
 				StrafeSettings.setDrops(!arg.equals("0"));
@@ -421,7 +433,7 @@ public final class ConsoleActions {
 			}
 			case "strafemc_loadout_keep" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change whether loadouts drop on death."));
+					ConsoleRelay.reply(p, ("Only operators can change whether loadouts drop on death."));
 					break;
 				}
 				StrafeSettings.setLoadoutKeep(!arg.equals("0"));
@@ -431,7 +443,7 @@ public final class ConsoleActions {
 			case "healthshot" -> dev.strafemc.weapon.HealthshotItem.inject(p);
 			case "strafemc_buymenu" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change buying for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change buying for the server."));
 					break;
 				}
 				int mode;
@@ -446,13 +458,13 @@ public final class ConsoleActions {
 			}
 			case "strafemc_killcards_time" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change the kill card time for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change the kill card time for the server."));
 					break;
 				}
 				try {
 					StrafeSettings.setKillCardTime((int) Math.round(Double.parseDouble(arg.trim())));
 				} catch (NumberFormatException e) {
-					p.sendSystemMessage(Component.literal("strafemc_killcards_time <seconds; 0 = until death>"));
+					ConsoleRelay.reply(p, ("strafemc_killcards_time <seconds; 0 = until death>"));
 					break;
 				}
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Kill card time: "
@@ -460,13 +472,13 @@ public final class ConsoleActions {
 			}
 			case "strafemc_buytime" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change the buy time for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change the buy time for the server."));
 					break;
 				}
 				try {
 					StrafeSettings.setBuyTime((int) Math.round(Double.parseDouble(arg.trim())));
 				} catch (NumberFormatException e) {
-					p.sendSystemMessage(Component.literal("strafemc_buytime <seconds after respawning; 0 = no limit>"));
+					ConsoleRelay.reply(p, ("strafemc_buytime <seconds after respawning; 0 = no limit>"));
 					break;
 				}
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy time: "
@@ -474,7 +486,7 @@ public final class ConsoleActions {
 			}
 			case "strafemc_slabstep" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change stepping up slabs for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change stepping up slabs for the server."));
 					break;
 				}
 				StrafeSettings.setSlabStep(!arg.equals("0"));
@@ -483,14 +495,14 @@ public final class ConsoleActions {
 			}
 			case "strafemc_lagcomp", "strafemc_maxunlag" -> {
 				if (!op) {
-					p.sendSystemMessage(Component.literal("Only operators can change lag compensation for the server."));
+					ConsoleRelay.reply(p, ("Only operators can change lag compensation for the server."));
 					break;
 				}
 				if (cmd.equals("strafemc_lagcomp")) StrafeSettings.setLagComp(!arg.equals("0"));
 				else try {
 					StrafeSettings.setMaxUnlagMs(Integer.parseInt(arg.trim()));
 				} catch (NumberFormatException e) {
-					p.sendSystemMessage(Component.literal("strafemc_maxunlag <milliseconds>"));
+					ConsoleRelay.reply(p, ("strafemc_maxunlag <milliseconds>"));
 					break;
 				}
 				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Lag compensation " + (StrafeSettings.lagComp() ? "ON" : "OFF")
@@ -498,7 +510,7 @@ public final class ConsoleActions {
 			}
 			case "sv_rethrow_last_grenade" -> {
 				if (!cheat) break;
-				if (!dev.strafemc.weapon.GunServer.rethrow(p)) p.sendSystemMessage(Component.literal("No grenade thrown yet."));
+				if (!dev.strafemc.weapon.GunServer.rethrow(p)) ConsoleRelay.reply(p, ("No grenade thrown yet."));
 			}
 			case "kill" -> p.hurtServer(p.level(), p.damageSources().genericKill(), Float.MAX_VALUE);
 			case "explode" -> {
@@ -511,7 +523,7 @@ public final class ConsoleActions {
 				var ab = p.getAbilities();
 				ab.invulnerable = !ab.invulnerable;
 				p.onUpdateAbilities();
-				p.sendSystemMessage(Component.literal("godmode " + (ab.invulnerable ? "ON" : "OFF")));
+				ConsoleRelay.reply(p, ("godmode " + (ab.invulnerable ? "ON" : "OFF")));
 			}
 			case "healme" -> {
 				if (!cheat) break;
@@ -538,7 +550,7 @@ public final class ConsoleActions {
 				var id = net.minecraft.resources.Identifier.tryParse("strafemc:" + arg.trim());
 				var item = id == null ? null : net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(id).orElse(null);
 				ItemStack s = item instanceof dev.strafemc.weapon.GunItem || item instanceof dev.strafemc.weapon.MagazineItem ? new ItemStack(item) : ItemStack.EMPTY;
-				if (s.isEmpty()) p.sendSystemMessage(Component.literal("give: unknown item " + arg));
+				if (s.isEmpty()) ConsoleRelay.reply(p, ("give: unknown item " + arg));
 				else p.getInventory().placeItemBackInInventory(s);
 			}
 			case "impulse" -> {

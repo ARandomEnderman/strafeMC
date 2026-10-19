@@ -33,10 +33,15 @@ public final class CaseScreen extends Screen {
 	}
 
 	private static final int TILE = 64, GOLD = 0xFFE4AE39;
-	private static final double SPIN_SECONDS = 6.5, STAGGER = 0.25;
+	private static final double SPIN_SECONDS = 6.5, STAGGER = 0.25, BULK_STAGGER = 0.08;
 	private static CaseScreen open;
 
 	private final Cases.Case c;
+	/** A bulk opening (the bulk opener): each reel from its own case, many of them, scrolled with the wheel. */
+	private final boolean bulk;
+	/** Bulk: each reel's case, and how far the reels are scrolled down (pixels). */
+	private List<Cases.Case> reelCases;
+	private double reelScroll;
 	private final List<Tile> contents = new ArrayList<>();
 	private final List<Button> unlocks = new ArrayList<>();
 	private List<Spin> spins;
@@ -70,6 +75,10 @@ public final class CaseScreen extends Screen {
 			scroll = Math.max(0, Math.min(maxScroll, scroll - sy * (TILE + 6) / 2));
 			return true;
 		}
+		if (!revealed) { // a bulk opening's reels, when they don't fit
+			reelScroll = Math.max(0, reelScroll - sy * 40);
+			return true;
+		}
 		return super.mouseScrolled(mx, my, sx, sy);
 	}
 
@@ -78,8 +87,14 @@ public final class CaseScreen extends Screen {
 	private int maxScroll;
 
 	private CaseScreen(Cases.Case c) {
+		this(c, false);
+	}
+
+	private CaseScreen(Cases.Case c, boolean bulk) {
 		super(Component.literal(c.name()));
 		this.c = c;
+		this.bulk = bulk;
+		if (bulk) unlocking = true; // already sent: the reels come with the server's rolls
 		for (int t = SkinWraps.Rarity.values().length - 1; t >= 0; t--) {
 			var list = c.guns().get(SkinWraps.Rarity.values()[t]);
 			if (list == null) continue;
@@ -110,6 +125,20 @@ public final class CaseScreen extends Screen {
 			return;
 		}
 		open.spin(r);
+	}
+
+	/** A bulk opening was sent: the screen waits for the server's rolls (first: any of the cases, for its look). */
+	public static void openBulk(Cases.Case first) {
+		Minecraft.getInstance().setScreen(open = new CaseScreen(first, true));
+	}
+
+	/** A bulk opening's rolls: a reel for each, from its own case. */
+	public static void bulkResult(StrafePayloads.BulkCaseResult r) {
+		if (open == null || Minecraft.getInstance().screen != open || !open.bulk) {
+			claim();
+			return;
+		}
+		open.spinBulk(r);
 	}
 
 	/** Tells the server to hand the drops over (the reels landed, or the screen was closed). */
@@ -216,6 +245,27 @@ public final class CaseScreen extends Screen {
 		super.onClose();
 	}
 
+	private void spinBulk(StrafePayloads.BulkCaseResult r) {
+		Random rng = new Random();
+		List<Spin> list = new ArrayList<>();
+		reelCases = new ArrayList<>();
+		for (int k = 0; k < r.drops().size(); k++) {
+			var d = r.drops().get(k);
+			Cases.Case cc = Cases.get(r.caseIds().get(k));
+			reelCases.add(cc != null ? cc : c);
+			List<Tile> tiles = new ArrayList<>();
+			for (int i = 0; i < 60; i++) tiles.add(filler(reelCases.get(k), rng));
+			int landing = 52;
+			Cases.Entry e = new Cases.Entry(d.kit(), d.item());
+			Tile got = new Tile(Cases.stack(e, 0), color(d.rarity()), d.name(), e);
+			tiles.set(landing, got);
+			CaseImages.load(List.of(e));
+			list.add(new Spin(tiles, landing, k * BULK_STAGGER, got, d.rarity(), d.pattern(), d.wear(), 0.05 + rng.nextDouble() * 0.9));
+		}
+		spins = list;
+		spinStart = System.nanoTime();
+	}
+
 	private void spin(StrafePayloads.CaseResult r) {
 		Random rng = new Random();
 		List<Spin> list = new ArrayList<>();
@@ -236,6 +286,10 @@ public final class CaseScreen extends Screen {
 
 	/** A reel tile by the case's odds among its guns: never the gold rare special one (CS2 shows it only when it drops). */
 	private Tile filler(Random rng) {
+		return filler(c, rng);
+	}
+
+	private Tile filler(Cases.Case c, Random rng) {
 		double x = rng.nextDouble() * 0.9974;
 		SkinWraps.Rarity t = x < 0.7992 ? SkinWraps.Rarity.RARE : x < 0.959 ? SkinWraps.Rarity.MYTHICAL : x < 0.991 ? SkinWraps.Rarity.LEGENDARY
 				: SkinWraps.Rarity.ANCIENT;
@@ -246,15 +300,19 @@ public final class CaseScreen extends Screen {
 			ItemStack s = Cases.stack(e, 0);
 			return new Tile(s, color(k), s.getHoverName().getString(), e);
 		}
-		return contents.isEmpty() ? new Tile(ItemStack.EMPTY, GOLD, "", null) : contents.get(rng.nextInt(contents.size()));
+		return c != this.c || contents.isEmpty() ? new Tile(ItemStack.EMPTY, GOLD, "", null) : contents.get(rng.nextInt(contents.size()));
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
 		g.fill(0, 0, width, height, 0xE0101418);
 		var font = Minecraft.getInstance().font;
-		g.text(font, c.name(), width / 2 - font.width(c.name()) / 2, 12, 0xFFFFFFFF, true);
-		if (spins == null) contents(g, font, mx, my);
+		String title = bulk ? "Bulk Unboxer: " + (spins == null ? "opening..." : spins.size() + " containers") : c.name();
+		g.text(font, title, width / 2 - font.width(title) / 2, 12, 0xFFFFFFFF, true);
+		if (spins == null && bulk) {
+			String w = "Waiting for the server...";
+			g.text(font, w, width / 2 - font.width(w) / 2, height / 2, 0xFF909090, true);
+		} else if (spins == null) contents(g, font, mx, my);
 		else if (revealed) preview(g, font);
 		else reels(g, font);
 		super.extractRenderState(g, mx, my, delta);
@@ -332,6 +390,11 @@ public final class CaseScreen extends Screen {
 	private void reels(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font) {
 		int n = spins.size(), size = n <= 2 ? TILE : n <= 3 ? 56 : 48, step = size + 6;
 		int rowH = size + 10, top = Math.max(28, height / 2 - n * rowH / 2);
+		// many reels (a bulk opening): they scroll under the title, the wheel moves them
+		int viewTop = 26, viewBottom = height - 34, maxReel = Math.max(0, n * rowH - (viewBottom - viewTop));
+		reelScroll = Math.min(reelScroll, maxReel);
+		if (maxReel > 0) top = viewTop + 4 - (int) Math.round(reelScroll);
+		g.enableScissor(0, viewTop, width, viewBottom);
 		double elapsed = (System.nanoTime() - spinStart) / 1e9;
 		boolean all = true;
 		for (int r = 0; r < n; r++) {
@@ -353,6 +416,12 @@ public final class CaseScreen extends Screen {
 				tile(g, font, s.tiles().get(i), x, cy, size, size);
 			}
 			g.fill(width / 2 - 1, cy - 3, width / 2 + 1, cy + size + 3, 0xFFFFD040);
+		}
+		g.disableScissor();
+		if (maxReel > 0) { // a scroll bar on the right
+			int h = viewBottom - viewTop, bar = Math.max(16, h * h / (h + maxReel)), by = viewTop + (int) Math.round((h - bar) * reelScroll / maxReel);
+			g.fill(width - 6, viewTop, width - 2, viewBottom, 0x40FFFFFF);
+			g.fill(width - 6, by, width - 2, by + bar, 0xC0FFFFFF);
 		}
 		if (all && !revealed) { // every reel landed: the drops are handed over, CS2's reveal sound for the best one
 			revealed = true;

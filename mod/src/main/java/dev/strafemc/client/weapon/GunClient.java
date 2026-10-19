@@ -119,7 +119,8 @@ public final class GunClient {
 	 */
 	private String drawClip(GunItem g) {
 		String draw2 = GunServer.clipPath(g.weaponClass, "draw2");
-		if (draw2 == null || !draw2.contains("draw2")) return "draw";
+		// only weapons that really have one (the C4's and Medi-Shot's paths are made up from the name: no such clip)
+		if (draw2 == null || !draw2.contains("draw2") || AnimClip.peek(draw2) == null) return "draw";
 		return rng.nextDouble() < RARE_DRAW_CHANCE ? "draw" : "draw2";
 	}
 
@@ -629,7 +630,8 @@ public final class GunClient {
 		planting = true;
 		plantTyped = false;
 		plantStart = now;
-		plantDoneAt = now + sec(dev.strafemc.weapon.C4Item.PLANT_TIME);
+		// keypad mode: only typing the code arms it (plantTyped), holding never does
+		plantDoneAt = dev.strafemc.client.ClientGameplay.c4Keypad() ? Long.MAX_VALUE : now + sec(dev.strafemc.weapon.C4Item.PLANT_TIME);
 		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("plant");
 		schedule(c4, "plant", now);
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("c4_plant_start", ""));
@@ -640,7 +642,7 @@ public final class GunClient {
 	public void plantTyped() {
 		if (!planting) return;
 		plantTyped = true;
-		plantDoneAt = Math.min(plantDoneAt, plantStart + sec(dev.strafemc.weapon.C4Item.KEYPAD_PLANT));
+		plantDoneAt = Math.max(System.nanoTime(), plantStart + sec(dev.strafemc.weapon.C4Item.KEYPAD_PLANT));
 	}
 
 	private void cancelPlant() {

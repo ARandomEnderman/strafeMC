@@ -265,6 +265,38 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** A bulk opening's rolls: each drop with the case it came from (BulkOpener; up to BulkOpener.MAX). */
+	public record BulkCaseResult(java.util.List<String> caseIds, java.util.List<CaseResult.Drop> drops) implements CustomPacketPayload {
+		public static final Type<BulkCaseResult> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "bulk_case_result"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, BulkCaseResult> CODEC = StreamCodec.of((b, v) -> {
+			b.writeVarInt(v.drops().size());
+			for (int k = 0; k < v.drops().size(); k++) {
+				CaseResult.Drop d = v.drops().get(k);
+				b.writeUtf(v.caseIds().get(k), 64);
+				b.writeUtf(d.kit(), 128);
+				b.writeUtf(d.item(), 64);
+				b.writeVarInt(d.rarity() + 1);
+				b.writeUtf(d.name(), 128);
+				b.writeVarInt(d.pattern() + 1);
+				b.writeFloat(d.wear());
+			}
+		}, b -> {
+			int n = Math.min(dev.strafemc.weapon.BulkOpener.MAX, b.readVarInt());
+			java.util.List<String> ids = new java.util.ArrayList<>();
+			java.util.List<CaseResult.Drop> drops = new java.util.ArrayList<>();
+			for (int k = 0; k < n; k++) {
+				ids.add(b.readUtf(64));
+				drops.add(new CaseResult.Drop(b.readUtf(128), b.readUtf(64), b.readVarInt() - 1, b.readUtf(128), b.readVarInt() - 1, b.readFloat()));
+			}
+			return new BulkCaseResult(ids, drops);
+		});
+
+		@Override
+		public Type<BulkCaseResult> type() {
+			return TYPE;
+		}
+	}
+
 	public record Refundable(java.util.List<String> items) implements CustomPacketPayload {
 		public static final Type<Refundable> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "refundable"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, Refundable> CODEC = StreamCodec.composite(

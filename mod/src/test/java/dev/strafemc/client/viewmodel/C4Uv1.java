@@ -28,7 +28,13 @@ public final class C4Uv1 {
 						double wa = ((bx - px) * (cy - py) - (cx - px) * (by - py)) / area, wb = ((cx - px) * (ay - py) - (ax - px) * (cy - py)) / area, wc = 1 - wa - wb;
 						if (wa < 0 || wb < 0 || wc < 0) continue;
 						double tu = wa * p.uv[v[0] * 2] + wb * p.uv[v[1] * 2] + wc * p.uv[v[2] * 2], tv = wa * p.uv[v[0] * 2 + 1] + wb * p.uv[v[1] * 2 + 1] + wc * p.uv[v[2] * 2 + 1];
-						out.setRGB(x, y, 0xFF000000 | GloveSkinBaker.sample(tex, tu - Math.floor(tu), tv - Math.floor(tv)));
+						if (a.length > 1) { // coloured by the facing: +x red, +y green, +z blue (minus: darker)
+							double nx = wa * p.nrm[v[0] * 3] + wb * p.nrm[v[1] * 3] + wc * p.nrm[v[2] * 3], ny = wa * p.nrm[v[0] * 3 + 1] + wb * p.nrm[v[1] * 3 + 1] + wc * p.nrm[v[2] * 3 + 1],
+									nz = wa * p.nrm[v[0] * 3 + 2] + wb * p.nrm[v[1] * 3 + 2] + wc * p.nrm[v[2] * 3 + 2];
+							double ax2 = Math.abs(nx), ay2 = Math.abs(ny), az2 = Math.abs(nz);
+							int col = ax2 >= ay2 && ax2 >= az2 ? (nx > 0 ? 0xFFFF4040 : 0xFF801010) : ay2 >= az2 ? (ny > 0 ? 0xFF40FF40 : 0xFF108010) : (nz > 0 ? 0xFF4040FF : 0xFF101080);
+							out.setRGB(x, y, col);
+						} else out.setRGB(x, y, 0xFF000000 | GloveSkinBaker.sample(tex, tu - Math.floor(tu), tv - Math.floor(tv)));
 					}
 			}
 		}

@@ -11,6 +11,12 @@ public final class C4Check {
 		var mat = GloveSkinBaker.Params.parse(java.nio.file.Files.readAllLines(dev.strafemc.data.AssetCache.dataBlock("weapons/models/c4/materials/weapon_c4.vmat_c")));
 		for (var e : mat.values.entrySet()) if (e.getKey().toLowerCase().contains("sticker")) System.out.println(e.getKey() + " " + java.util.Arrays.toString(e.getValue()));
 		for (var e : mat.textures.entrySet()) System.out.println("tex " + e.getKey() + " " + e.getValue());
+		float[] mn = {9, 9, 9}, mx = {-9, -9, -9};
+		for (VmModel.Part p : m.parts) {
+			if (p.alphaMode.equals("BLEND")) continue;
+			for (int i = 0; i + 2 < p.pos.length; i += 3) for (int k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], p.pos[i + k]); mx[k] = Math.max(mx[k], p.pos[i + k]); }
+		}
+		System.out.println("bounds " + java.util.Arrays.toString(mn) + " .. " + java.util.Arrays.toString(mx));
 		System.out.println("keychain " + java.util.Arrays.toString(Viewmodel.restPoint(model, m, "keychain")));
 	}
 }

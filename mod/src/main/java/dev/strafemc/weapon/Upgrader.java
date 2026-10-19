@@ -37,8 +37,28 @@ public final class Upgrader {
 		return UNIT + unitSlot * 1000 + place;
 	}
 
+	/** A loadout slot's ref (Loadout.defs index i): negative, apart from the inventory's and Storage Units'. */
+	public static int loadoutRef(int i) {
+		return -1 - i;
+	}
+
+	/** Whether a ref is an equipped item (a loadout slot). */
+	public static boolean equipped(int ref) {
+		return ref < 0;
+	}
+
+	private static String loadoutId(int ref) {
+		int i = -1 - ref;
+		var defs = Loadout.defs();
+		return i >= 0 && i < defs.size() ? defs.get(i).id() : null;
+	}
+
 	/** The skin at a ref (the live stack for the inventory, a copy for a storage unit), or empty. */
 	public static ItemStack at(net.minecraft.world.entity.player.Player p, int ref) {
+		if (ref < 0) { // equipped: the loadout's
+			String id = loadoutId(ref);
+			return id == null ? ItemStack.EMPTY : Loadout.get(p, id);
+		}
 		var inv = p.getInventory();
 		if (ref >= 0 && ref < UNIT) return ref < inv.getContainerSize() ? inv.getItem(ref) : ItemStack.EMPTY;
 		int slot = (ref - UNIT) / 1000, place = (ref - UNIT) % 1000;
@@ -53,6 +73,15 @@ public final class Upgrader {
 		java.util.Map<Integer, List<ItemStack>> units = new java.util.HashMap<>();
 		for (var e : refs.entrySet()) {
 			int ref = e.getKey();
+			if (ref < 0) {
+				String id = loadoutId(ref);
+				if (id != null && p instanceof net.minecraft.server.level.ServerPlayer sp) {
+					ItemStack left = Loadout.get(sp, id).copy();
+					left.shrink(e.getValue());
+					Loadout.set(sp, id, left.isEmpty() ? ItemStack.EMPTY : left);
+				}
+				continue;
+			}
 			if (ref < UNIT) {
 				inv.getItem(ref).shrink(e.getValue());
 				continue;
@@ -71,6 +100,11 @@ public final class Upgrader {
 		var inv = p.getInventory();
 		java.util.Map<Integer, List<ItemStack>> units = new java.util.HashMap<>();
 		for (int ref : refs) {
+			if (ref < 0) {
+				String id = loadoutId(ref);
+				if (id != null && p instanceof net.minecraft.server.level.ServerPlayer sp) Loadout.set(sp, id, ItemStack.EMPTY);
+				continue;
+			}
 			if (ref < UNIT) {
 				inv.setItem(ref, ItemStack.EMPTY);
 				continue;

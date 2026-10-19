@@ -115,6 +115,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.MoveSound.TYPE, dev.strafemc.net.StrafePayloads.MoveSound.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.KillNotice.TYPE, dev.strafemc.net.StrafePayloads.KillNotice.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.CaseResult.TYPE, dev.strafemc.net.StrafePayloads.CaseResult.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.BulkCaseResult.TYPE, dev.strafemc.net.StrafePayloads.BulkCaseResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE, dev.strafemc.net.StrafePayloads.UpgradeResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, dev.strafemc.net.StrafePayloads.TradeUpResult.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.SprayPlaced.TYPE, dev.strafemc.net.StrafePayloads.SprayPlaced.CODEC);

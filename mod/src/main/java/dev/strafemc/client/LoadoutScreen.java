@@ -50,7 +50,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		g.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
 		var defs = Loadout.defs();
 		for (int col = 0; col < 4; col++) { // gloves, T agent, CT agent, knife: a tile with a slot and text
-			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y, w = Loadout.Menu.TILE_W;
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.tileY(col), w = Loadout.Menu.TILE_W;
 			boolean agent = col == 1 || col == 2;
 			int i = col == 0 ? 0 : col == 3 ? 2 : 1;
 			String head, sub;
@@ -258,7 +258,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 		// the whole tile (the box with the slot and its text) or the gun's slot picks what the preview shows
 		var defs = Loadout.defs();
 		for (int col = 0; col < 4; col++) {
-			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y;
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.tileY(col);
 			if (mx >= x && mx < x + Loadout.Menu.TILE_W && my >= y && my < y + Loadout.Menu.TILE_H) {
 				previewSlot = col == 0 ? 0 : col == 3 ? 2 : 1;
 				if (col == 1 || col == 2) agentSide = col == 1 ? "t" : "ct";
@@ -285,7 +285,7 @@ public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
 	@Override
 	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent e, boolean doubleClick) {
 		for (int col = 1; col <= 2; col++) {
-			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.TILES_Y;
+			int x = leftPos + Loadout.Menu.tileX(col), y = topPos + Loadout.Menu.tileY(col);
 			if (e.x() >= x && e.x() < x + Loadout.Menu.TILE_W && e.y() >= y && e.y() < y + Loadout.Menu.TILE_H && menu.getCarried().isEmpty()) {
 				String side = col == 1 ? "t" : "ct";
 				minecraft.player.connection.send(new net.minecraft.network.protocol.game.ServerboundContainerClosePacket(menu.containerId));

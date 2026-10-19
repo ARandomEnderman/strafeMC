@@ -105,6 +105,7 @@ public final class CaseImages {
 		if (s.is(dev.strafemc.weapon.WeaponItems.NAME_TAG)) return image("panorama/images/econ/tools/tag_png");
 		if (s.is(dev.strafemc.weapon.WeaponItems.STATTRAK_SWAP)) return image("panorama/images/econ/tools/stattrak_swap_tool_png");
 		if (s.is(dev.strafemc.weapon.WeaponItems.CHARM_DETACHMENT)) return image("panorama/images/econ/tools/keychain_remove_tool_png");
+		if (s.is(dev.strafemc.weapon.WeaponItems.BULK_OPENER)) return Identifier.fromNamespaceAndPath("strafemc", "textures/gui/tools/bulk_opener.png"); // ours, in CS2's tool style
 		if (s.getItem() instanceof dev.strafemc.weapon.GloveItem g) return get(new Cases.Entry(g.kit(s), g.kind.id));
 		if (s.getItem() instanceof dev.strafemc.weapon.StickerItem) {
 			String id = dev.strafemc.weapon.StickerItem.sticker(s);

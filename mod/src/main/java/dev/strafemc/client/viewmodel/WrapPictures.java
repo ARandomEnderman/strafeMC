@@ -77,7 +77,7 @@ public final class WrapPictures {
 	}
 
 	private static Path file(String key) {
-		return StrafeConfig.cacheDir().resolve("wrap_pictures/v2/" + Integer.toHexString(key.hashCode()) + "_" + Integer.toHexString(key.length()) + ".png");
+		return StrafeConfig.cacheDir().resolve("wrap_pictures/v3/" + Integer.toHexString(key.hashCode()) + "_" + Integer.toHexString(key.length()) + ".png");
 	}
 
 	private static NativeImage picture(String key, String cls, String kit, int finish, String[] stickers) throws Exception {
@@ -122,21 +122,18 @@ public final class WrapPictures {
 				if (Files.exists(px)) finishImg = ImageIO.read(px.toFile());
 			}
 		}
-		// posed as in its idle animation's first frame (the bind pose leaves parts like magazines out of place), seen from
-		// the gun's left: muzzle to the left, as CS2's pictures, the side stickers go on
+		// in its rest pose (the bare bind pose leaves parts like magazines out of place), seen from the gun's left: muzzle to
+		// the left, as CS2's pictures, the side stickers go on
 		Matrix4f view = new Matrix4f().rotateY((float) (Math.PI / 2)).mul(Viewmodel.toView());
 		Matrix4f[][] skin = new Matrix4f[0][];
 		Matrix4f rigid = null;
 		var entry = dev.strafemc.weapon.WeaponTable.get(cls);
 		boolean knife = entry != null && entry.knife(); // knives are held turned in their idle: at rest they lie flat
 		if (knife) view = new Matrix4f().rotateZ((float) (Math.PI / 2)).mul(view); // upright at rest: lie it down, blade to the left
-		if (!knife) try {
-			VmClip c = new VmClip("idle", Glb.read(AssetCache.exportGlb(dev.strafemc.weapon.GunServer.clipPath(cls, "idle"), false)));
+		try { // the model's own rest pose (every node at rest): level, parts in place, as CS2 lays it out for its icons
+			VmClip c = new VmClip("rest", glb);
 			Matrix4f[] pose = c.pose(0);
-			Matrix4f wpn = Viewmodel.mount(c, pose);
-			skin = Viewmodel.skins(m, c, pose, wpn);
-			Integer weaponNode = c.node("weapon");
-			rigid = weaponNode != null ? new Matrix4f(wpn).mul(pose[weaponNode]) : null;
+			skin = Viewmodel.skins(m, c, pose, null);
 		} catch (Exception e) {
 			dev.strafemc.StrafeMc.LOG.warn("[strafemc] wrap picture of {} unposed: {}", cls, e.toString());
 		}

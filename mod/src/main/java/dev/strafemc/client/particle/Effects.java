@@ -288,7 +288,10 @@ public final class Effects {
 				in.age += dt;
 				if ((in.heldKey == null && in.age > MAX_AGE) || (in.age > 0.05 && in.sys.finished())) it.remove();
 			}
-			for (Instance in : WORLD) EffectRenderer.submit(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), ctx.submitNodeCollector(), null);
+			// drawn after the translucent terrain (not with the entities): water would otherwise paint over them
+			var buffers = ctx.bufferSource();
+			for (Instance in : WORLD) EffectRenderer.draw(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), buffers);
+			buffers.endBatch();
 		}
 	}
 

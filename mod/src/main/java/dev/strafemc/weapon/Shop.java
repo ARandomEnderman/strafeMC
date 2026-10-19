@@ -26,7 +26,7 @@ import java.util.UUID;
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
-	public static final int ROTATION = 36_000, OFFERS = 11; // 30 minutes of play
+	public static final int ROTATION = 36_000, OFFERS = 10; // 30 minutes of play
 	/** Selling pays this share of a skin's worth. */
 	public static final double SELL_RATE = 0.75;
 	/** Offer prices: the item's worth times 80-110%. */
@@ -39,6 +39,8 @@ public final class Shop {
 	private static final double NAME_TAG_PRICE = 1.99;
 	/** A StatTrak Swap Tool: FLAGGED ours, near what the market trades it at. */
 	private static final double SWAP_TOOL_PRICE = 1.99;
+	/** The Bulk Unboxer (ours, not CS2's): FLAGGED ours. */
+	private static final double BULK_OPENER_PRICE = 2.49;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
 	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (90% or
@@ -118,22 +120,27 @@ public final class Shop {
 		java.util.Collections.shuffle(cases, rng);
 		for (int i = 0; i < 3 && i < cases.size(); i++)
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
-		// a sticker capsule (2-6 of it) and a graffiti box or, half the time, a charm collection (1-3): priced like cases,
-		// their average opening x CASE_SHARE
-		List<Cases.Case> stickers = Cases.capsules("sticker"), charms = Cases.capsules("charm");
-		List<Cases.Case> boxes = !charms.isEmpty() && rng.nextBoolean() ? charms : Cases.capsules("spray");
+		// a sticker capsule (2-6 of it), priced like cases: its average opening x CASE_SHARE
+		List<Cases.Case> stickers = Cases.capsules("sticker"), charms = Cases.capsules("charm"), sprays = Cases.capsules("spray");
 		if (!stickers.isEmpty()) {
 			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 2 + rng.nextInt(5)));
 		}
+		// one slot: a graffiti box, a charm collection or 1-3 universal keys (FLAGGED ours: 40 / 30 / 30 %)
+		double pick = rng.nextDouble();
+		List<Cases.Case> boxes = pick < 0.4 ? sprays : pick < 0.7 ? charms : List.of();
 		if (!boxes.isEmpty()) {
 			Cases.Case c = boxes.get(rng.nextInt(boxes.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 1 + rng.nextInt(3)));
+		} else out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1 + rng.nextInt(3)));
+		// one slot for the tools: a Charm Detachment, a Name Tag, a StatTrak Swap Tool or a Bulk Unboxer
+		switch (rng.nextInt(4)) {
+			case 0 -> out.add(new Offer(new ItemStack(WeaponItems.CHARM_DETACHMENT), price(DETACHMENT_PRICE, rng), 1 + rng.nextInt(3)));
+			case 1 -> out.add(new Offer(new ItemStack(WeaponItems.NAME_TAG), price(NAME_TAG_PRICE, rng), 1 + rng.nextInt(2)));
+			case 2 -> out.add(new Offer(new ItemStack(WeaponItems.STATTRAK_SWAP), price(SWAP_TOOL_PRICE, rng), 1));
+			default -> out.add(new Offer(new ItemStack(WeaponItems.BULK_OPENER), price(BULK_OPENER_PRICE, rng), 1));
 		}
-		out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1));
-		out.add(new Offer(new ItemStack(WeaponItems.CHARM_DETACHMENT), price(DETACHMENT_PRICE, rng), 1 + rng.nextInt(3)));
-		out.add(new Offer(new ItemStack(WeaponItems.NAME_TAG), price(NAME_TAG_PRICE, rng), 1 + rng.nextInt(2)));
-		if (rng.nextBoolean()) out.add(new Offer(new ItemStack(WeaponItems.STATTRAK_SWAP), price(SWAP_TOOL_PRICE, rng), 1)); // now and then
+		// the rest: gun skins, gloves and knife skins
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();
 		for (SkinWraps.Wrap w : SkinWraps.all())
 			if (w.knife() || w.kits().size() == 1 && w.rarity() != null && w.rarity().ordinal() >= SkinWraps.Rarity.MYTHICAL.ordinal()) wraps.add(w);

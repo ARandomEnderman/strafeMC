@@ -179,13 +179,13 @@ public final class Loadout {
 	public static final class Menu extends AbstractContainerMenu {
 		/** Layout (also used by the screen): panel size, loadout tiles in two columns, the inventory below. */
 		/**
-		 * Layout (also used by the screen): a row of four tiles (gloves, T agent, CT agent, knife; the agents are the
+		 * Layout (also used by the screen): four tiles two by two (gloves and knife, then the T and CT agents; the agents are the
 		 * client's settings, not items), the gun slots below with a row
 		 * per group (pistols, SMGs, rifles, heavy), the inventory under that.
 		 */
 		/** Gun rows: one per group, plus one for guns in none. */
 		public static final int ROWS = WeaponTable.GROUPS.size() + (WeaponTable.guns().stream().anyMatch(e -> WeaponTable.group(e.cls()) >= WeaponTable.GROUPS.size()) ? 1 : 0);
-		public static final int WIDTH = 320, TILE_W = 73, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = 66, INV_X = 79;
+		public static final int WIDTH = 320, TILE_W = 149, TILE_H = 24, TILES_X = 8, TILES_Y = 22, GUNS_X = 79, GUNS_Y = TILES_Y + 2 * (TILE_H + 4) + 20, INV_X = 79;
 		public static final int INV_Y = GUNS_Y + 18 * ROWS + 22, HEIGHT = INV_Y + 84;
 
 		/** The graffiti ring, left of the gun grid: its centre and radius. */
@@ -208,12 +208,17 @@ public final class Loadout {
 		public static int slotY(int i) {
 			int sp = spray(i);
 			if (sp >= 0) return RING_Y - 8 + (int) Math.round(Math.sin(-Math.PI / 2 + sp * 2 * Math.PI / SPRAYS) * RING_R);
-			return i < 3 ? TILES_Y + 4 : GUNS_Y + gunCell(i)[0] * 18;
+			return i < 3 ? tileY(i == 0 ? 0 : 3) + 4 : GUNS_Y + gunCell(i)[0] * 18;
 		}
 
-		/** Left of tile col (0 gloves, 1 T agent, 2 CT agent, 3 knife). */
+		/** Left of tile col (0 gloves, 1 T agent, 2 CT agent, 3 knife), two by two: gloves and knife on top, the agents below. */
 		public static int tileX(int col) {
-			return TILES_X + col * (TILE_W + 4);
+			return TILES_X + (col == 2 || col == 3 ? TILE_W + 6 : 0);
+		}
+
+		/** Top of tile col (as tileX). */
+		public static int tileY(int col) {
+			return TILES_Y + (col == 1 || col == 2 ? TILE_H + 4 : 0);
 		}
 
 		/** Gun slot i's row (its group) and column (its place in the group). */

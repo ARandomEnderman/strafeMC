@@ -159,10 +159,11 @@ public final class StickerSlots {
 	/**
 	 * The C4's starting sticker places: u, v in its sticker space (a top-down unfolding of the bricks) and turn. CS2's C4
 	 * supports stickers (its prefab: weapon_supports_stickers, weapon_supports_keychains) but its material's five slots
-	 * have no place or size, so stickers go anywhere its sticker mask (g_tStickerWepInputs) allows; these starting places
-	 * (on the bricks either side of the keypad and the front flap, all inside the mask) are ours.
+	 * have no place or size; in CS2 they go on its front (the keypad side; its mask, g_tStickerWepInputs, also allows the
+	 * sides), so ours go where both allow. These starting places are where a sticker has most of itself on the front
+	 * inside the mask (the C4Slots harness picked them).
 	 */
-	public static final double[][] C4_SLOTS = {{0.11, 0.45, 0}, {0.28, 0.45, 0}, {0.75, 0.45, 0}, {0.92, 0.45, 0}, {0.56, 0.70, 0}};
+	public static final double[][] C4_SLOTS = {{0.463, 0.189, 0}, {0.666, 0.213, 0}, {0.541, 0.307, 0}, {0.463, 0.588, 0}, {0.666, 0.580, 0}};
 	/**
 	 * The C4's sticker size (a sticker covers 1 / scale of its sticker space): a sticker as big on the bomb as on CS2's
 	 * guns. Measured from the meshes (metres per sticker-space unit / slot scale): Deagle 7.1 cm, Glock 4.2, AK-47 7.0,

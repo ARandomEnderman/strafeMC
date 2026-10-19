@@ -18,7 +18,7 @@ public final class CaseOpening {
 	private record Pending(java.util.List<ItemStack> stacks, long dueMs, java.util.List<SkinWraps.Rarity> rarity) {}
 
 	/** Longest reel plus slack: after this the drop is handed out without a claim. */
-	private static final long TIMEOUT_MS = 15_000;
+	private static final long TIMEOUT_MS = 30_000; // a bulk opening's reels run longer
 	private static final Map<UUID, Pending> PENDING = new ConcurrentHashMap<>();
 
 	private CaseOpening() {}

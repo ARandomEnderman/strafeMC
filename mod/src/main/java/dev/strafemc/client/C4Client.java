@@ -66,7 +66,7 @@ public final class C4Client {
 
 	private static void render(GuiGraphicsExtractor g) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || mc.options.hideGui) return;
+		if (mc.player == null || mc.options.hideGui || ClientGameplay.c4Keypad()) return; // the keypad shows its own progress
 		double progress;
 		String label;
 		var gun = dev.strafemc.client.weapon.GunClient.INSTANCE;

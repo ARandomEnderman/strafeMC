@@ -137,6 +137,11 @@ public final class ConsoleRelay {
 		drop();
 	}
 
+	/** A console command's answer, shown in the console (not in chat). */
+	public static void reply(ServerPlayer p, String text) {
+		reply(p, text, 0);
+	}
+
 	/** kind: 0 = output, 1 = ok, 2 = error (ConsoleLog colours). */
 	private static void reply(ServerPlayer p, String text, int kind) {
 		if (ServerPlayNetworking.canSend(p, StrafePayloads.ConsoleReply.TYPE)) ServerPlayNetworking.send(p, new StrafePayloads.ConsoleReply(text, kind));

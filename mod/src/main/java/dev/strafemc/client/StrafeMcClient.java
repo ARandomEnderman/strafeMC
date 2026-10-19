@@ -145,6 +145,7 @@ public class StrafeMcClient implements ClientModInitializer {
 			DeathCam.notice(msg);
 		});
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.CaseResult.TYPE, (msg, ctx) -> CaseScreen.result(msg));
+		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.BulkCaseResult.TYPE, (msg, ctx) -> CaseScreen.bulkResult(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.UpgradeResult.TYPE, (msg, ctx) -> UpgraderScreen.result(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, (msg, ctx) -> TradeUpScreen.result(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.DeathInfo.TYPE, (msg, ctx) -> DeathCam.info(msg));
@@ -157,6 +158,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		dev.strafemc.weapon.StickerItem.clientOpen = StickerScreen::open;
 		dev.strafemc.weapon.NameTagItem.clientOpen = NameTagScreen::open;
 		dev.strafemc.weapon.NameTagItem.clientOpenSwap = StatTrakSwapScreen::open;
+		dev.strafemc.weapon.NameTagItem.clientOpenBulk = BulkOpenScreen::open;
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> {
 			DeathNotices.clear();
 			KillCards.clear();
@@ -173,7 +175,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.BulletHoles::render);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.SprayDecals::render);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> DeathCam.frame(Minecraft.getInstance())); // every frame
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.particle.Effects::renderWorld);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(dev.strafemc.client.particle.Effects::renderWorld);
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.particle.Effects.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.impact.BulletHoles.clear());
 		ClientPlayNetworking.registerGlobalReceiver(NoclipState.TYPE, (msg, ctx) -> {

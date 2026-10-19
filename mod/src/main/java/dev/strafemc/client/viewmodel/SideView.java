@@ -88,6 +88,39 @@ public final class SideView {
 		return out;
 	}
 
+	/**
+	 * The C4's front (the face with the keypad, where CS2 puts its stickers; its mask also allows the sides): the
+	 * area-weighted normal of the faces in the middle of its sticker space. Null for other weapons.
+	 */
+	static float[] front(String cls, java.util.List<VmModel.Part> parts) {
+		if (!dev.strafemc.weapon.C4Item.CLS.equals(cls)) return null;
+		double nx = 0, ny = 0, nz = 0;
+		for (VmModel.Part p : parts) {
+			if (p.uv1 == null || p.alphaMode.equals("BLEND")) continue;
+			for (int t = 0; t + 2 < p.idx.length; t += 3) {
+				int a = p.idx[t], b = p.idx[t + 1], c = p.idx[t + 2];
+				double u = (p.uv1[a * 2] + p.uv1[b * 2] + p.uv1[c * 2]) / 3, v = (p.uv1[a * 2 + 1] + p.uv1[b * 2 + 1] + p.uv1[c * 2 + 1]) / 3;
+				if (u < 0.3 || u > 0.7 || v < 0.2 || v > 0.6) continue;
+				double ex = p.pos[b * 3] - p.pos[a * 3], ey = p.pos[b * 3 + 1] - p.pos[a * 3 + 1], ez = p.pos[b * 3 + 2] - p.pos[a * 3 + 2];
+				double fx = p.pos[c * 3] - p.pos[a * 3], fy = p.pos[c * 3 + 1] - p.pos[a * 3 + 1], fz = p.pos[c * 3 + 2] - p.pos[a * 3 + 2];
+				double area = 0.5 * Math.sqrt(Math.pow(ey * fz - ez * fy, 2) + Math.pow(ez * fx - ex * fz, 2) + Math.pow(ex * fy - ey * fx, 2));
+				for (int k : new int[] {a, b, c}) {
+					nx += p.nrm[k * 3] * area;
+					ny += p.nrm[k * 3 + 1] * area;
+					nz += p.nrm[k * 3 + 2] * area;
+				}
+			}
+		}
+		double l = Math.sqrt(nx * nx + ny * ny + nz * nz);
+		return l < 1e-9 ? null : new float[] {(float) (nx / l), (float) (ny / l), (float) (nz / l)};
+	}
+
+	/** Whether a surface with this normal faces the front (within about 45 degrees). */
+	static boolean facesFront(float[] front, double nx, double ny, double nz) {
+		double l = Math.sqrt(nx * nx + ny * ny + nz * nz);
+		return front == null || l > 1e-9 && (nx * front[0] + ny * front[1] + nz * front[2]) / l > 0.7;
+	}
+
 	private static final Map<String, SideView> READY = new ConcurrentHashMap<>();
 	private static final java.util.Set<String> BUSY = ConcurrentHashMap.newKeySet();
 
@@ -137,6 +170,9 @@ public final class SideView {
 		}
 		if (v0 >= v1) return null;
 		double side = nx >= 0 ? 1 : -1; // which way the faces drawn in 0-1 look (the nearer side wins)
+		// the Dual Berettas are two mirrored pistols side by side in sticker space: the left one (u < 0.5) is turned the
+		// other way, so there the opposite face is its outer side
+		boolean twin = cls.equals("weapon_elite");
 		int h = Math.max(16, (int) Math.round((v1 - v0) * W));
 		BufferedImage img = new BufferedImage(W, h, BufferedImage.TYPE_INT_ARGB);
 		boolean[] allowed = new boolean[W * h];
@@ -145,6 +181,7 @@ public final class SideView {
 			var mp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(paint.material() + "_c")));
 			stickerMask = WeaponSkinCache.image(mp, "g_tStickerWepInputs");
 		}
+		float[] front = front(cls, m.parts); // the C4: stickers only on its front
 		float[] pos = new float[W * h * 3], depth = new float[W * h];
 		java.util.Arrays.fill(pos, Float.NaN);
 		java.util.Arrays.fill(depth, -Float.MAX_VALUE);
@@ -169,14 +206,16 @@ public final class SideView {
 						double wa = ((bx - px) * (cy - py) - (cx - px) * (by - py)) / area, wb = ((cx - px) * (ay - py) - (ax - px) * (cy - py)) / area, wc = 1 - wa - wb;
 						if (wa < -0.001 || wb < -0.001 || wc < -0.001) continue;
 						float px3 = (float) (wa * p.pos[a * 3] + wb * p.pos[b * 3] + wc * p.pos[c * 3]);
-						float d = (float) (px3 * side);
+						float d = (float) (px3 * side * (twin && px < W / 2.0 ? -1 : 1));
 						int i = y * W + x;
 						if (d < depth[i]) continue;
 						depth[i] = d;
 						for (int k = 0; k < 3; k++) pos[3 * i + k] = (float) (wa * p.pos[a * 3 + k] + wb * p.pos[b * 3 + k] + wc * p.pos[c * 3 + k]);
 						if (paintPart && stickerMask != null) { // the gun's painted body: its sticker mask says where stickers go
 							double mu = wa * uv[a * 2] + wb * uv[b * 2] + wc * uv[c * 2], mv = wa * uv[a * 2 + 1] + wb * uv[b * 2 + 1] + wc * uv[c * 2 + 1];
-							allowed[i] = (GloveSkinBaker.sample(stickerMask, mu - Math.floor(mu), mv - Math.floor(mv)) >> 16 & 255) > 127;
+							allowed[i] = (GloveSkinBaker.sample(stickerMask, mu - Math.floor(mu), mv - Math.floor(mv)) >> 16 & 255) > 127
+									&& facesFront(front, wa * p.nrm[a * 3] + wb * p.nrm[b * 3] + wc * p.nrm[c * 3], wa * p.nrm[a * 3 + 1] + wb * p.nrm[b * 3 + 1] + wc * p.nrm[c * 3 + 1],
+									wa * p.nrm[a * 3 + 2] + wb * p.nrm[b * 3 + 2] + wc * p.nrm[c * 3 + 2]);
 						} else allowed[i] = paintPart && stickerMask == null && cls.equals(dev.strafemc.weapon.C4Item.CLS); // the C4 has no mask: anywhere on it
 						int col = 0xFF808080;
 						if (tex != null) {

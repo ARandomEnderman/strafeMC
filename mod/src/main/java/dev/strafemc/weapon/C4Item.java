@@ -14,8 +14,8 @@ import java.util.function.Consumer;
 /**
  * CS2's C4 (weapon_c4): hold left click on the ground to plant it. The plant clip arms it 3.0 s in (its
  * WPN_BLOCK_INSPECT window); letting go, jumping or switching away cancels. Planted, it is a PlantedC4.
- * With strafemc_c4_keypad on, a keypad pops up instead: typing CS2's code arms it as soon as it's typed (at least
- * KEYPAD_PLANT seconds in).
+ * With strafemc_c4_keypad on, a keypad pops up instead and holding alone never arms it: typing CS2's code does (at
+ * least KEYPAD_PLANT seconds in, against instant clients).
  */
 public class C4Item extends GunItem {
 	public static final String CLS = "weapon_c4";
@@ -25,7 +25,7 @@ public class C4Item extends GunItem {
 	/** The keypad's code: the one CS2's C4 shows. */
 	public static final String CODE = "7355608";
 	/** Keypad mode: the fastest a typed plant can arm (FLAGGED ours). */
-	public static final double KEYPAD_PLANT = 1.0;
+	public static final double KEYPAD_PLANT = 0.5;
 	/** Lag allowance on the server's plant timing (s). */
 	private static final double SLACK = 0.25;
 
@@ -55,7 +55,9 @@ public class C4Item extends GunItem {
 		Double at = PLANTING.remove(p.getUUID());
 		ItemStack held = p.getMainHandItem();
 		if (at == null || !(held.getItem() instanceof C4Item) || !p.onGround()) return;
-		double need = typed && dev.strafemc.server.StrafeSettings.c4Keypad() ? KEYPAD_PLANT : PLANT_TIME;
+		boolean keypad = dev.strafemc.server.StrafeSettings.c4Keypad();
+		if (keypad && !typed) return; // keypad mode: only typing the code arms it
+		double need = keypad ? KEYPAD_PLANT : PLANT_TIME;
 		if (now(p) - at < need - SLACK) return;
 		PlantedC4 bomb = new PlantedC4(p.level(), p, held.copyWithCount(1));
 		bomb.setPos(p.getX(), p.getY(), p.getZ());

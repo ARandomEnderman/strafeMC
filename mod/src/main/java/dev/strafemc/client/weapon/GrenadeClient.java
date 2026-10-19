@@ -133,9 +133,12 @@ public final class GrenadeClient {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_EFFECT, at, up);
 				CsSounds.play("c4.explode", at.x, at.y, at.z, 1.0);
 			}
-			case GrenadeEffects.EV_C4_BEEP -> {
+			case GrenadeEffects.EV_C4_BEEP, GrenadeEffects.EV_C4_BEEP_B, GrenadeEffects.EV_C4_BEEP_10, GrenadeEffects.EV_C4_BEEP_B_10 -> {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_LIGHT_EFFECT, at.add(0, 0.1, 0), up);
-				CsSounds.play("C4.PlantSound", at.x, at.y, at.z, 1.0);
+				boolean b = m.kind() == GrenadeEffects.EV_C4_BEEP_B || m.kind() == GrenadeEffects.EV_C4_BEEP_B_10;
+				boolean last10 = m.kind() == GrenadeEffects.EV_C4_BEEP_10 || m.kind() == GrenadeEffects.EV_C4_BEEP_B_10;
+				CsSounds.play("C4.PlantSound" + (b ? "B" : "") + (last10 ? "_10sec" : ""), at.x, at.y, at.z, 1.0);
+				dev.strafemc.client.viewmodel.PlantedC4Renderer.beeped(at); // its LED blinks
 			}
 			case GrenadeEffects.EV_FLASH -> {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.FLASH_EFFECT, at, up);

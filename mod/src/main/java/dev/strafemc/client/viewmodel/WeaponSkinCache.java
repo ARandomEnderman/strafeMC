@@ -307,14 +307,15 @@ public final class WeaponSkinCache {
 	 * sticker (g_vStickerNOffset, g_vStickerNScale, g_flStickerNRotation) in the mesh's second UV set, a side view of the
 	 * gun: slot N's sticker covers 1 / scale of it around (0.5 + offset), turned by the rotation, and only where the
 	 * weapon's sticker mask (g_tStickerWepInputs red) allows. The sticker's own art is its material's g_tSticker0.
-	 * The art's alpha is a height (StickerWear): new, all of it shows; scraped, its lower parts go first. FLAGGED ours: CS2's
-	 * foil / glitter looks and the holo's change with the view are left out.
+	 * The art's alpha is a height (StickerWear): new, all of it shows; scraped, its lower parts go first. Holo and
+	 * lenticular stickers also get HOLO_STEPS pictures along their spectrum, for the view to pick from. FLAGGED ours:
+	 * glitter's sparkle is left out.
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
 		// no finish (the C4): the stickers go on the weapon's own texture
 		Path plain = kit == null ? plainCopy(cls, base) : ensure(cls, material, kit, pattern, parts, base);
 		if (plain == null) return null;
-		String sig = Integer.toHexString((String.join(",", stickers) + "|m").hashCode()); // "|m": with metalness and roughness
+		String sig = Integer.toHexString((String.join(",", stickers) + "|m4").hashCode()); // "|m": with metalness and roughness
 		Path tex = plain.resolveSibling(plain.getFileName().toString().replace(".png", "_s" + sig + ".png")), pixels = sibling(tex, ".vm1024b.png");
 		if (Files.exists(pixels)) return tex;
 		BufferedImage img = ImageIO.read(sibling(plain, ".vm1024b.png").toFile());
@@ -325,6 +326,25 @@ public final class WeaponSkinCache {
 		BufferedImage mask = image(wp, "g_tStickerWepInputs"), scratches = GloveSkinCache.load(dev.strafemc.client.StickerWear.SCRATCHES_PATH);
 		int n = img.getWidth();
 		float[] side = secondUv(parts, n);
+		// the texels by where they are in sticker space (a 64 x 64 grid over it), so each sticker visits only those under it
+		final int g = 64;
+		int[][] cells = new int[g * g][];
+		{
+			int[] count = new int[g * g];
+			for (int i = 0; i < n * n; i++) if (!Float.isNaN(side[2 * i])) count[cell(side[2 * i], side[2 * i + 1], g)]++;
+			for (int k = 0; k < g * g; k++) cells[k] = new int[count[k]];
+			java.util.Arrays.fill(count, 0);
+			for (int i = 0; i < n * n; i++) if (!Float.isNaN(side[2 * i])) {
+				int k = cell(side[2 * i], side[2 * i + 1], g);
+				cells[k][count[k]++] = i;
+			}
+		}
+		// holo texels: what they need to be drawn again with the spectrum shifted (holoVariant)
+		java.util.List<double[]> holo = new java.util.ArrayList<>();
+		java.util.List<dev.strafemc.client.StickerWear.Art> holoArt = new java.util.ArrayList<>();
+		// the C4: stickers only on its front (texel normals from the mesh)
+		float[] front = SideView.front(cls, parts);
+		float[] normals = front == null ? null : WeaponSkinBaker.positions(parts, n).pos();
 		for (int i = 0; i < stickers.length; i++) {
 			if (stickers[i] == null || stickers[i].isEmpty()) continue;
 			double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
@@ -347,21 +367,34 @@ public final class WeaponSkinCache {
 				rot = placed[2];
 			}
 			double cos = Math.cos(rot), sin = Math.sin(rot), wear = dev.strafemc.weapon.StickerSlots.wearOf(stickers[i]);
-			for (int y = 0; y < n; y++)
-				for (int x = 0; x < n; x++) {
-					int o = 2 * (y * n + x);
-					if (Float.isNaN(side[o])) continue;
+			boolean isHolo = dev.strafemc.client.StickerWear.holo(stArt);
+			// the cells the sticker's square (half-diagonal 0.71 / scale) can reach
+			double reach = 0.71 / scale;
+			int c0 = Math.max(0, (int) Math.floor((cx - reach) * g)), c1 = Math.min(g - 1, (int) Math.floor((cx + reach) * g));
+			int r0 = Math.max(0, (int) Math.floor((cy - reach) * g)), r1 = Math.min(g - 1, (int) Math.floor((cy + reach) * g));
+			for (int cr = r0; cr <= r1; cr++)
+				for (int cc = c0; cc <= c1; cc++)
+					for (int ti : cells[cr * g + cc]) {
+						int x = ti % n, y = ti / n, o = 2 * ti;
 					double du = (side[o] - cx) * scale, dv = (side[o + 1] - cy) * scale;
 					double su = du * cos - dv * sin + 0.5, sv = du * sin + dv * cos + 0.5;
 					if (su < 0 || su > 1 || sv < 0 || sv > 1) continue;
-					int sc0 = GloveSkinBaker.sampleBilinear(art, su, sv);
+					int raw = GloveSkinBaker.sampleBilinear(art, su, sv), sc0;
 					// the art's alpha is a height: all of it shows new, scraping strips the low parts first (CS2's secret scrapes)
 					double s = scratches == null ? 0.5 : (GloveSkinBaker.sampleBilinear(scratches, su, sv) >> 16 & 255) / 255.0;
-					sc0 = dev.strafemc.client.StickerWear.pixel(sc0, s, wear, stArt, su, sv); // CS2's scrape: ink, paper, or gone
-					double a = (sc0 >>> 24) / 255.0;
-					if (mask != null) a *= (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
+					sc0 = dev.strafemc.client.StickerWear.pixel(raw, s, wear, stArt, su, sv); // CS2's scrape: ink, paper, or gone
+					double a = (sc0 >>> 24) / 255.0, m0 = 1;
+					if (mask != null) a *= m0 = (GloveSkinBaker.sample(mask, (x + 0.5) / n, (y + 0.5) / n) >> 16 & 255) / 255.0;
+					if (normals != null) {
+						int no = WeaponSkinBaker.Positions.STRIDE * (y * n + x);
+						if (!SideView.facesFront(front, normals[no + 5], normals[no + 6], normals[no + 7])) continue;
+					}
 					if (a <= 0.004) continue;
 					int c = img.getRGB(x, y);
+					if (isHolo) {
+						holo.add(new double[] {ti, raw, s, wear, su, sv, m0, c});
+						holoArt.add(stArt);
+					}
 					int r = (int) Math.round((c >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((c >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),
 							b = (int) Math.round((c & 255) * (1 - a) + (sc0 & 255) * a);
 					img.setRGB(x, y, (c & 0xFF000000) | r << 16 | gg << 8 | b);
@@ -380,8 +413,40 @@ public final class WeaponSkinCache {
 		}
 		if (metalImg != null) write(metalImg, sibling(tex, ".vm1024m.png"));
 		if (roughImg != null) write(roughImg, sibling(tex, ".vm1024r.png"));
+		// holo / lenticular stickers: the same picture with their spectrum shifted a step each, for the viewmodel to show by
+		// the view (HOLO_STEPS of a whole turn; only their texels are drawn again)
+		if (!holo.isEmpty())
+			for (int k = 1; k < HOLO_STEPS; k++) {
+				BufferedImage v = new BufferedImage(n, n, BufferedImage.TYPE_INT_ARGB);
+				v.setData(img.getData());
+				for (int h = 0; h < holo.size(); h++) {
+					double[] e = holo.get(h);
+					int ti = (int) e[0], x = ti % n, y = ti / n, under = (int) (long) e[7];
+					int sc0 = dev.strafemc.client.StickerWear.pixel((int) (long) e[1], e[2], e[3], holoArt.get(h), e[4], e[5], k / (double) HOLO_STEPS);
+					double a = (sc0 >>> 24) / 255.0 * e[6];
+					int r = (int) Math.round((under >> 16 & 255) * (1 - a) + (sc0 >> 16 & 255) * a), gg = (int) Math.round((under >> 8 & 255) * (1 - a) + (sc0 >> 8 & 255) * a),
+							b = (int) Math.round((under & 255) * (1 - a) + (sc0 & 255) * a);
+					v.setRGB(x, y, (under & 0xFF000000) | r << 16 | gg << 8 | b);
+				}
+				Path step = holoVariant(tex, k);
+				write(v, sibling(step, ".vm1024b.png"));
+				for (String sfx : new String[] {".vm1024m.png", ".vm1024r.png"}) // shaded like the finish itself
+					if (Files.exists(sibling(tex, sfx))) Files.copy(sibling(tex, sfx), sibling(step, sfx), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+			}
 		write(img, pixels);
 		return tex;
+	}
+
+	/** How many steps of the holo spectrum's turn are baked (the viewmodel picks one by the view). */
+	public static final int HOLO_STEPS = 6;
+
+	/** Step k (1..HOLO_STEPS-1) of a stickered finish's holo turn (step 0 is the finish itself); exists only with holo stickers. */
+	public static Path holoVariant(Path tex, int k) {
+		return k == 0 ? tex : tex.resolveSibling(tex.getFileName().toString().replace(".png", "_h" + k + ".png"));
+	}
+
+	private static int cell(float u, float v, int g) {
+		return Math.max(0, Math.min(g - 1, (int) Math.floor(v * g))) * g + Math.max(0, Math.min(g - 1, (int) Math.floor(u * g)));
 	}
 
 	/**

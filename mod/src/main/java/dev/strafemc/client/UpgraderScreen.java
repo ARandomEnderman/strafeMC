@@ -58,7 +58,7 @@ public final class UpgraderScreen extends Screen {
 	@Override
 	protected void init() {
 		open = this;
-		go = addRenderableWidget(Button.builder(Component.literal("Upgrade"), b -> upgrade()).bounds(width / 2 - 75, height - 52, 150, 20).build());
+		go = addRenderableWidget(Button.builder(Component.literal("Upgrade"), b -> upgrade()).bounds(width / 2 - 75, height - 60, 150, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		refresh();
 	}
@@ -69,6 +69,10 @@ public final class UpgraderScreen extends Screen {
 		var p = minecraft.player;
 		if (p == null) return out;
 		var inv = p.getInventory();
+		List<Integer> equipped = new ArrayList<>(); // the current loadout's (picking one is warned about)
+		var defs = dev.strafemc.weapon.Loadout.defs();
+		for (int i = 0; i < defs.size(); i++) if (Upgrader.stakeable(dev.strafemc.weapon.Loadout.get(p, defs.get(i).id()))) equipped.add(Upgrader.loadoutRef(i));
+		if (!equipped.isEmpty()) out.add(new Section("CURRENT LOADOUT", -2, equipped));
 		List<Integer> loose = new ArrayList<>();
 		for (int i = 0; i < inv.getContainerSize(); i++) if (Upgrader.stakeable(inv.getItem(i))) loose.add(i);
 		out.add(new Section("YOUR ITEMS", -1, loose));
@@ -318,6 +322,12 @@ public final class UpgraderScreen extends Screen {
 		String mid = chosen >= 0 ? String.format(java.util.Locale.ROOT, "%.1f%%", chance * 100) : "";
 		if (spinStart != 0 && !spinning() && verdict != null) mid = verdict;
 		g.text(font, mid, cx - font.width(mid) / 2, cy + r + 8, verdict != null && !spinning() ? (verdict.equals("Lost") ? LOSE : WIN) : 0xFFFFFFFF, true);
+		boolean equippedPicked = false; // something from the current loadout is in: say so under the button
+		for (int ref : stake.keySet()) equippedPicked |= Upgrader.equipped(ref);
+		if (equippedPicked) {
+			String warn = "You chose a currently equipped item";
+			g.text(font, warn, width / 2 - font.width(warn) / 2, height - 37, 0xFFE05050, false);
+		}
 		super.extractRenderState(g, mx, my, delta);
 		if (!hover[0].isEmpty()) g.setTooltipForNextFrame(font, hover[0], mx, my);
 	}
