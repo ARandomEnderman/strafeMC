@@ -130,8 +130,8 @@ public final class BulkOpenScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
 		g.fill(0, 0, width, height, StrafeSettingsScreen.BG);
 		g.text(font, "BULK UNBOXER", 20, 12, GOLD, false);
-		String hint = "Left click: one more  -  right click: one less  -  shift: all of it";
-		g.text(font, font.plainSubstrByWidth(hint, listW()), 20, 24, 0xFF808080, false);
+		String hint = "Left click +1   Right click -1   Shift: all";
+		g.text(font, font.plainSubstrByWidth(hint, width - 40), 20, 24, 0xFF808080, false);
 		var p = minecraft.player;
 		boolean haveTool = p != null && toolSlot >= 0 && toolSlot < p.getInventory().getContainerSize() && p.getInventory().getItem(toolSlot).is(WeaponItems.BULK_OPENER);
 		picked.entrySet().removeIf(e -> !(Upgrader.at(p, e.getKey()).getItem() instanceof CaseItem) || Upgrader.at(p, e.getKey()).getCount() < e.getValue());
