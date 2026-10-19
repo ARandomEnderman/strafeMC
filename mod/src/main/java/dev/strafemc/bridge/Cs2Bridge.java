@@ -171,8 +171,7 @@ public final class Cs2Bridge {
 				int s2 = arg.indexOf(' ');
 				if (s2 > 0) {
 					String n = arg.substring(0, s2), v = arg.substring(s2 + 1);
-					cvars.put(n, v);
-					bump(n + " = " + v);
+					if (!v.equals(cvars.put(n, v))) bump(n + " = " + v);
 				}
 			}
 			case "pong" -> {
@@ -246,6 +245,7 @@ public final class Cs2Bridge {
 			if (Files.exists(CACHE)) {
 				Map<String, String> m = GSON.fromJson(Files.readString(CACHE), new TypeToken<Map<String, String>>() {}.getType());
 				if (m != null) cvars.putAll(m);
+				version++;
 				StrafeMc.LOG.info("[strafemc] loaded {} cached cvars from {}", cvars.size(), CACHE);
 			} else {
 				StrafeMc.LOG.info("[strafemc] no CS2 server values yet; using CS2's defaults");

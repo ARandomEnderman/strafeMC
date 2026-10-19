@@ -24,7 +24,10 @@ import java.util.function.Supplier;
  * {@link ConsoleCommands}. The gear in the title bar opens a quick menu of toggles.
  */
 public final class ConsoleScreen extends Screen {
-	private static final List<String> HISTORY = new ArrayList<>();
+	/** Kept between game sessions (the newest HISTORY_MAX commands), like CS2's console. */
+	private static final java.nio.file.Path HISTORY_FILE = StrafeConfig.RUNTIME_DIR.resolve("console-history.txt");
+	private static final int HISTORY_MAX = 200;
+	private static final List<String> HISTORY = loadHistory();
 	private static boolean menuOpen;
 
 	private static final int BG = 0xE0202020, TITLE = 0xF0303030, BORDER = 0xFF5A5A5A, LOG_BG = 0xC0101010, SEL = 0xFF3C5A8C;
@@ -255,11 +258,32 @@ public final class ConsoleScreen extends Screen {
 	private void submit() {
 		String v = input.getValue().trim();
 		if (v.isEmpty()) return;
-		if (HISTORY.isEmpty() || !HISTORY.get(HISTORY.size() - 1).equals(v)) HISTORY.add(v);
+		remember(v);
 		historyPos = -1;
 		input.setValue("");
 		scroll = 0;
 		ConsoleCommands.execute(v);
+	}
+
+	private static List<String> loadHistory() {
+		List<String> h = new ArrayList<>();
+		try {
+			if (java.nio.file.Files.exists(HISTORY_FILE))
+				for (String l : java.nio.file.Files.readAllLines(HISTORY_FILE)) if (!l.isBlank()) h.add(l);
+		} catch (Exception ignored) {
+		}
+		return h;
+	}
+
+	/** A run command goes to the end of the history (an older copy of it is dropped) and the file is rewritten. */
+	private static void remember(String v) {
+		HISTORY.remove(v);
+		HISTORY.add(v);
+		while (HISTORY.size() > HISTORY_MAX) HISTORY.remove(0);
+		try { // passwords stay out of the file
+			java.nio.file.Files.write(HISTORY_FILE, HISTORY.stream().filter(c -> !c.toLowerCase(Locale.ROOT).contains("password")).toList());
+		} catch (Exception ignored) {
+		}
 	}
 
 	private void updateSuggestions() {

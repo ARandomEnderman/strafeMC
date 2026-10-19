@@ -50,9 +50,9 @@ public final class Viewmodel {
 		Attachment a = attachments(model).get(attachment);
 		if (a == null) return null;
 		for (VmModel.Skin s : m.skins) {
-			int j = java.util.Arrays.asList(s.joints).indexOf(a.bone());
+			int j = s.indexOf(a.bone());
 			if (j < 0) continue;
-			org.joml.Vector3f p = new Matrix4f(s.inverseBind[j]).invert().transformPosition(new org.joml.Vector3f(a.offset()));
+			org.joml.Vector3f p = s.bind(j).transformPosition(new org.joml.Vector3f(a.offset()));
 			return new float[] {p.x, p.y, p.z};
 		}
 		return null;
@@ -768,10 +768,10 @@ public final class Viewmodel {
 		if (si < 0 || si >= l.gun.skins.size()) return;
 		VmModel.Skin skin = l.gun.skins.get(si);
 		for (var e : l.attachments.entrySet()) {
-			int j = java.util.Arrays.asList(skin.joints).indexOf(e.getValue().bone());
+			int j = skin.indexOf(e.getValue().bone());
 			if (j < 0) continue;
 			// bone world = skin matrix x bind pose (inverse of the inverse bind)
-			Matrix4f bone = new Matrix4f(gunSkin[si][j]).mul(new Matrix4f(skin.inverseBind[j]).invert());
+			Matrix4f bone = new Matrix4f(gunSkin[si][j]).mul(skin.bind(j));
 			Matrix4f m = new Matrix4f(toView).mul(bone).translate(e.getValue().offset()).rotate(e.getValue().rotation());
 			attachmentTransforms.put(e.getKey(), m);
 		}
@@ -790,11 +790,11 @@ public final class Viewmodel {
 		int si = l.gun.parts.get(0).skin;
 		if (si < 0 || si >= l.gun.skins.size() || si >= lastGunSkin.length) return null;
 		VmModel.Skin skin = l.gun.skins.get(si);
-		int j = java.util.Arrays.asList(skin.joints).indexOf(a.bone());
+		int j = skin.indexOf(a.bone());
 		if (j < 0) return null;
 		// a rest-pose point follows its bone like the mesh does (skin matrix x point), the turn is the attachment's
 		org.joml.Vector3f at = new Matrix4f(lastGunSkin[si][j]).transformPosition(new org.joml.Vector3f((float) p[0], (float) p[1], (float) p[2]));
-		Matrix4f bone = new Matrix4f(lastGunSkin[si][j]).mul(new Matrix4f(skin.inverseBind[j]).invert());
+		Matrix4f bone = new Matrix4f(lastGunSkin[si][j]).mul(skin.bind(j));
 		org.joml.Quaternionf turn = bone.getNormalizedRotation(new org.joml.Quaternionf()).mul(a.rotation());
 		return new Matrix4f(lastToView).translate(at).rotate(turn);
 	}
@@ -1136,7 +1136,7 @@ public final class Viewmodel {
 			for (int j = 0; j < sk.joints.length; j++) {
 				if (!sk.joints[j].equals("silencer") || gunSkin[si][j] == null) continue;
 				Matrix4f ibm = sk.inverseBind[j];
-				gunSkin[si][j] = new Matrix4f(gunSkin[si][j]).mul(new Matrix4f(ibm).invert()).scale(0).mul(ibm);
+				gunSkin[si][j] = new Matrix4f(gunSkin[si][j]).mul(sk.bind(j)).scale(0).mul(ibm);
 			}
 		}
 	}
@@ -1193,7 +1193,7 @@ public final class Viewmodel {
 			// fallback: ride rigidly on their bone, with that bone's bind matrix
 			String base = name.substring(0, name.indexOf("_TWIST"));
 			n = c.node(base);
-			int bj = java.util.Arrays.asList(m.joints).indexOf(base);
+			int bj = m.indexOf(base);
 			if (bj >= 0) ibm = m.inverseBind[bj];
 		}
 		if (n == null && mount != null) n = c.node("weapon");
@@ -1216,14 +1216,13 @@ public final class Viewmodel {
 	private static Matrix4f twistJoint(VmModel.Skin m, VmClip c, Matrix4f[] pose, int j, String name) {
 		String base = name.substring(0, name.indexOf("_TWIST"));
 		if (twistOff || !base.startsWith("arm_lower")) return null;
-		java.util.List<String> joints = java.util.Arrays.asList(m.joints);
 		String side = base.substring(base.length() - 1);
-		int jb = joints.indexOf(base), jc = joints.indexOf("hand_" + side), ju = joints.indexOf("arm_upper_" + side);
+		int jb = m.indexOf(base), jc = m.indexOf("hand_" + side), ju = m.indexOf("arm_upper_" + side);
 		Integer nb = c.node(base), nc = c.node("hand_" + side), nu = c.node("arm_upper_" + side);
 		if (jb < 0 || jc < 0 || nb == null || nc == null) return null;
-		Matrix4f bindB = new Matrix4f(m.inverseBind[jb]).invert(), bindT = new Matrix4f(m.inverseBind[j]).invert(),
-				bindC = new Matrix4f(m.inverseBind[jc]).invert();
-		Matrix4f localT = new Matrix4f(bindB).invert().mul(bindT), localC = new Matrix4f(bindB).invert().mul(bindC);
+		Matrix4f bindB = m.bind(jb);
+		// bindB^-1 is the inverse bind itself
+		Matrix4f localT = new Matrix4f(m.inverseBind[jb]).mul(m.bind(j)), localC = new Matrix4f(m.inverseBind[jb]).mul(m.bind(jc));
 		org.joml.Vector3f axis = localC.getTranslation(new org.joml.Vector3f());
 		float len = axis.length();
 		if (len < 1e-5f) return null;
@@ -1234,8 +1233,7 @@ public final class Viewmodel {
 				hBind = localC.getUnnormalizedRotation(new org.joml.Quaternionf()).normalize();
 		float angle = twistAngle(hNow.mul(hBind.invert()), axis) * f;
 		if (ju >= 0 && nu != null) { // the forearm's own roll against the upper arm, undone toward the elbow
-			Matrix4f bindU = new Matrix4f(m.inverseBind[ju]).invert();
-			org.joml.Quaternionf rBind = new Matrix4f(bindU).invert().mul(bindB).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize(),
+			org.joml.Quaternionf rBind = new Matrix4f(m.inverseBind[ju]).mul(bindB).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize(),
 					rNow = new Matrix4f(pose[nu]).invert().mul(pose[nb]).getUnnormalizedRotation(new org.joml.Quaternionf()).normalize();
 			angle -= twistAngle(rBind.invert().mul(rNow), axis) * (1 - f);
 		}

@@ -31,7 +31,7 @@ public final class UpgraderScreen extends Screen {
 	/** The stake: ref -> how many of that stack (left click adds one, right click takes one off). */
 	private final java.util.Map<Integer, Integer> stake = new java.util.LinkedHashMap<>();
 	/** Folded sections (-1 the inventory, else the storage unit's inventory slot), and the left column's scroll. */
-	private final java.util.Set<Integer> folded = new java.util.HashSet<>();
+	private static final java.util.Set<Integer> folded = new java.util.HashSet<>();
 	private double listScroll;
 	private int listHeight;
 

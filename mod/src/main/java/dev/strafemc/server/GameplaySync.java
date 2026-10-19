@@ -54,7 +54,8 @@ public final class GameplaySync {
 	public static void tick(MinecraftServer server) {
 		if (++tick % 10 != 0 || !WeaponData.loaded()) return;
 		// anything players need to see change: the cvars, whether the server's CS2 is up, the server-wide settings
-		String cvars = GSON.toJson(new java.util.TreeMap<>(Cs2Bridge.INSTANCE.cvars())) + Cs2Bridge.INSTANCE.connected()
+		// the bridge counts every cvar change, so this compares a few numbers instead of serialising the cvars
+		String cvars = Cs2Bridge.INSTANCE.version() + ":" + Cs2Bridge.INSTANCE.connected()
 				+ StrafeSettings.sourceMovement() + StrafeSettings.slabStep() + StrafeSettings.playerChoice() + StrafeSettings.personal() + forceSeq;
 		boolean changed = !cvars.equals(lastCvars);
 		if (!changed && PENDING.isEmpty()) return;

@@ -42,7 +42,7 @@ public final class StickerScreen extends Screen {
 	/** A group of wraps: the loadout, your items, or one Storage Unit (key: -2, -1, its inventory slot). refs: L:, I:, U: targets. */
 	private record Section(String label, int key, List<String> refs) {}
 
-	private final Set<Integer> folded = new HashSet<>();
+	private static final Set<Integer> folded = new HashSet<>();
 	private double listScroll;
 	private int listHeight;
 	private String picked;

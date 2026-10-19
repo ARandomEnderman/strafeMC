@@ -36,6 +36,30 @@ public final class VmModel {
 		public Matrix4f[] inverseBind;
 		/** Each joint's parent joint in this skin (-1: none), for joints the clips don't animate (cloth, the molotov rag). */
 		public int[] parent;
+		private Matrix4f[] bind;
+		private java.util.Map<String, Integer> index;
+
+		/** Joint j's bind pose (the inverse of its inverse bind), worked out once; callers must not change it. */
+		public Matrix4f bind(int j) {
+			Matrix4f[] b = bind;
+			if (b == null) {
+				b = new Matrix4f[inverseBind.length];
+				for (int i = 0; i < b.length; i++) b[i] = new Matrix4f(inverseBind[i]).invert();
+				bind = b;
+			}
+			return b[j];
+		}
+
+		/** A joint's index by name, or -1. */
+		public int indexOf(String name) {
+			java.util.Map<String, Integer> m = index;
+			if (m == null) {
+				m = new java.util.HashMap<>();
+				for (int i = joints.length - 1; i >= 0; i--) m.put(joints[i], i); // first one wins, like indexOf
+				index = m;
+			}
+			return m.getOrDefault(name, -1);
+		}
 	}
 
 	public final List<Part> parts = new ArrayList<>();

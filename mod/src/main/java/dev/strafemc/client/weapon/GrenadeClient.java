@@ -32,7 +32,42 @@ import java.util.Random;
 public final class GrenadeClient {
 	private GrenadeClient() {}
 
-	private record Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t) {}
+	private record Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t, Cells cells) {
+		Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t) {
+			this(volume, start, t, new Cells(volume));
+		}
+	}
+
+	/** What doesn't change per frame for a smoke's voxels: centre, density, whether it's inside, and its light (refreshed a few times a second). */
+	private static final class Cells {
+		final Vec3[] center;
+		final double[] density;
+		final boolean[] inner;
+		final int[] light;
+		long lightNs = Long.MIN_VALUE;
+
+		Cells(dev.strafemc.weapon.SmokeVolume v) {
+			int n = v.cells.length, N = dev.strafemc.weapon.SmokeVolume.N;
+			center = new Vec3[n];
+			density = new double[n];
+			inner = new boolean[n];
+			light = new int[n];
+			for (int k = 0; k < n; k++) {
+				int cell = v.cells[k];
+				center[k] = v.center(cell);
+				density[k] = v.density(center[k]);
+				int cx = cell % N, cy = cell / N % N, cz = cell / (N * N);
+				inner[k] = v.filled(cx + 1, cy, cz) && v.filled(cx - 1, cy, cz) && v.filled(cx, cy + 1, cz) && v.filled(cx, cy - 1, cz)
+						&& v.filled(cx, cy, cz + 1) && v.filled(cx, cy, cz - 1);
+			}
+		}
+
+		void refreshLight(net.minecraft.client.multiplayer.ClientLevel level, long now) {
+			if (now - lightNs < 250_000_000L) return;
+			lightNs = now;
+			for (int k = 0; k < center.length; k++) light[k] = LevelRenderer.getLightCoords(level, BlockPos.containing(center[k]));
+		}
+	}
 
 	/**
 	 * CS2's team smoke colours (smoke_grenade_ct_color 75 127 155, smoke_grenade_t_color 180 129 50) and how much of
@@ -52,13 +87,8 @@ public final class GrenadeClient {
 	private static final double BLAST_RADIUS = 450, BLAST_CLEAR = 0.5, BLAST_REFILLED = 2.0, BLAST_EDGE = 20;
 
 	/** How much of the smoke at p survives recent HE blasts (0 inside a fresh hole, 1 untouched). */
-	private static double blastKeep(Vec3 p, long now) {
+	private static double blastKeep(Vec3 p, long now, List<Blast> blasts) {
 		double keep = 1, upb = StrafeConfig.unitsPerBlock;
-		List<Blast> blasts;
-		synchronized (BLASTS) {
-			if (BLASTS.isEmpty()) return 1;
-			blasts = new ArrayList<>(BLASTS);
-		}
 		for (Blast b : blasts) {
 			double t = (now - b.time) / 1e9;
 			double r = BLAST_RADIUS * (1 - smoothstep(BLAST_CLEAR, BLAST_REFILLED, t)); // the hole shrinks as it refills
@@ -326,9 +356,15 @@ public final class GrenadeClient {
 		Vector3f up = new Vector3f(cam.upVector()), right = new Vector3f(cam.forwardVector()).cross(up).normalize();
 		long now = System.nanoTime();
 		List<float[]> quads = new ArrayList<>();
+		List<Blast> blasts;
+		synchronized (BLASTS) {
+			blasts = new ArrayList<>(BLASTS);
+		}
 		for (Smoke s : smokes) {
 			double t = (now - s.start) / 1e9, fade = smoothstep(SMOKE_GONE, SMOKE_OUT0, t);
 			var v = s.volume;
+			Cells cs = s.cells;
+			cs.refreshLight(mc.level, now);
 			float[] tint = s.t ? T_TINT : CT_TINT;
 			double vs = dev.strafemc.weapon.SmokeVolume.VOXEL / StrafeConfig.unitsPerBlock;
 			for (int n = 0; n < v.cells.length; n++) {
@@ -337,19 +373,17 @@ public final class GrenadeClient {
 				double appear = smoothstep(at0, at0 + 0.35, t);
 				if (appear <= 0) continue;
 				int cell = v.cells[n];
-				Vec3 p = v.center(cell);
-				double dens = v.density(p) * blastKeep(p, now);
+				Vec3 p = cs.center[n];
+				double dens = cs.density[n];
+				if (dens > 0 && !blasts.isEmpty()) dens *= blastKeep(p, now, blasts);
 				if (dens <= 0) continue;
 				int h = cell * 0x9E3779B1; // a fixed per-voxel wobble so the puffs don't sit on a grid
 				float jx = ((h >>> 8 & 255) / 255f - 0.5f) * 0.3f, jy = ((h >>> 16 & 255) / 255f - 0.5f) * 0.3f, jz = ((h >>> 24) / 255f - 0.5f) * 0.3f;
 				float x = (float) (p.x + jx * vs - c.x), y = (float) (p.y + jy * vs - c.y), z = (float) (p.z + jz * vs - c.z);
 				float alpha = (float) (0.55 * dens * appear * fade);
-				int cx = cell % dev.strafemc.weapon.SmokeVolume.N, cy = cell / dev.strafemc.weapon.SmokeVolume.N % dev.strafemc.weapon.SmokeVolume.N,
-						cz = cell / (dev.strafemc.weapon.SmokeVolume.N * dev.strafemc.weapon.SmokeVolume.N);
-				boolean inner = v.filled(cx + 1, cy, cz) && v.filled(cx - 1, cy, cz) && v.filled(cx, cy + 1, cz) && v.filled(cx, cy - 1, cz)
-						&& v.filled(cx, cy, cz + 1) && v.filled(cx, cy, cz - 1);
+				boolean inner = cs.inner[n];
 				float depthAlpha = inner && dens > 0.9 ? (float) (appear * fade) : 0; // only the thick inside hides what's behind
-				int light = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(p));
+				int light = cs.light[n];
 				float shade = 0.64f + ((h >>> 4 & 7) - 3.5f) * 0.012f;
 				float r = shade * (1 - TINT) + tint[0] * TINT, g = shade * (1 - TINT) + tint[1] * TINT, b = shade * (1 - TINT) + tint[2] * TINT;
 				// edge voxels (next to a wall or the cloud's end) get small puffs: big ones would hang through the wall
