@@ -594,6 +594,15 @@ public final class RuntimePack {
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] charm detachment icon: {}", e.toString());
 		}
+		// the Name Tag and the StatTrak Swap Tool: CS2's pictures of them (econ/tools/tag, econ/tools/stattrak_swap_tool)
+		for (String[] tool : new String[][] {{"tag", "name_tag"}, {"stattrak_swap_tool", "stattrak_swap_tool"}})
+			try {
+				String img = "panorama/images/econ/tools/" + tool[0] + "_png";
+				icon(img + ".vtex_c", img + ".png", tex.resolve("item/" + tool[1] + ".png"), 128);
+				Files.writeString(models.resolve(tool[1] + ".json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/" + tool[1] + "\"}}");
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] {} icon: {}", tool[1], e.toString());
+			}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {
 			String img = "panorama/images/econ/tools/casket_png";

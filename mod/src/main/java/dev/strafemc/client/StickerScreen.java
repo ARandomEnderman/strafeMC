@@ -249,7 +249,7 @@ public final class StickerScreen extends Screen {
 
 	/** A sticker's size on the view: 1 / its slot's scale of sticker space (a charm: a small fixed size). */
 	private double sizeOf(SideView v, int slot, int[] box) {
-		if (charmMode()) return box[2] * 0.06;
+		if (charmMode()) return box[2] * 0.16; // the charm's picture, big enough to see (it has a margin round it)
 		double sc = slot < v.slots.size() ? v.slots.get(slot).scale() : 10;
 		return box[2] / Math.max(1, sc);
 	}

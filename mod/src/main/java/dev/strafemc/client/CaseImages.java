@@ -101,6 +101,10 @@ public final class CaseImages {
 			Cases.Key k = Cases.key(dev.strafemc.weapon.KeyItem.keyId(s));
 			return k == null || k.image().isEmpty() ? null : image("panorama/images/" + k.image() + "_png");
 		}
+		// CS2's tools: their pictures (econ/tools)
+		if (s.is(dev.strafemc.weapon.WeaponItems.NAME_TAG)) return image("panorama/images/econ/tools/tag_png");
+		if (s.is(dev.strafemc.weapon.WeaponItems.STATTRAK_SWAP)) return image("panorama/images/econ/tools/stattrak_swap_tool_png");
+		if (s.is(dev.strafemc.weapon.WeaponItems.CHARM_DETACHMENT)) return image("panorama/images/econ/tools/keychain_remove_tool_png");
 		if (s.getItem() instanceof dev.strafemc.weapon.GloveItem g) return get(new Cases.Entry(g.kit(s), g.kind.id));
 		if (s.getItem() instanceof dev.strafemc.weapon.StickerItem) {
 			String id = dev.strafemc.weapon.StickerItem.sticker(s);
