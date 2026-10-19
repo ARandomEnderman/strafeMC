@@ -185,12 +185,21 @@ public final class WeaponItems {
 
 	/** A tab laid out in sections, each under its banner (CreativeSections). */
 	private static void sectioned(String name, java.util.function.Supplier<ItemStack> icon, List<CreativeSections.Section> sections) {
-		tab(name, icon, e -> CreativeSections.fill(name, sections, e::accept));
+		tab(name, icon, e -> CreativeSections.fill(name, tabId(name), sections, e::accept));
+	}
+
+	/** The tabs left to right, then the next row: Fabric places modded tabs by their ids, so each id leads with its place. */
+	private static final List<String> TAB_ORDER = List.of("guns", "knives", "cases", "utility", "gloves", "charms", "knife_wraps", "gun_wraps",
+			"stickers", "sprays");
+
+	private static net.minecraft.resources.Identifier tabId(String name) {
+		int i = TAB_ORDER.indexOf(name);
+		return id(String.format(java.util.Locale.ROOT, "%02d_%s", i < 0 ? 99 : i + 1, name));
 	}
 
 	private static void tab(String name, java.util.function.Supplier<ItemStack> icon,
 			java.util.function.Consumer<net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTabOutput> fill) {
-		ResourceKey<CreativeModeTab> key = ResourceKey.create(Registries.CREATIVE_MODE_TAB, id(name));
+		ResourceKey<CreativeModeTab> key = ResourceKey.create(Registries.CREATIVE_MODE_TAB, tabId(name));
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, key, net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab.builder()
 				.title(Component.translatable("itemGroup.strafemc." + name)).icon(icon).build());
 		net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(key).register(fill::accept);

@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * strafeMC's creative tabs in sections (CreativeSections): once a tab's items are in the picker, they're laid out with
- * two empty rows before each section, and its banner is drawn over those rows.
+ * an empty row before each section, and its banner is drawn over that row.
  */
 @Mixin(CreativeModeInventoryScreen.class)
 public abstract class CreativeSectionsMixin extends AbstractContainerScreen<CreativeModeInventoryScreen.ItemPickerMenu> {

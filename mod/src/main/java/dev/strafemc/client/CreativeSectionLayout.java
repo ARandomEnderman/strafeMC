@@ -15,11 +15,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Lays a sectioned creative tab out (CreativeSections) and draws its banners: each section starts on a new row after
- * two empty rows, where its banner goes (its texture, else a plain bar with the title).
+ * an empty row, where its banner goes (its texture, else a plain bar with the title).
  */
 public final class CreativeSectionLayout {
 	private static final int ROW = 9;
-	/** The current tab's banners: the first of the two rows each takes, and its section. */
+	/** The current tab's banners: the row each takes, and its section. */
 	private static List<Banner> banners = List.of();
 	private static final Map<Identifier, Boolean> HAS_TEXTURE = new ConcurrentHashMap<>();
 
@@ -43,7 +43,7 @@ public final class CreativeSectionLayout {
 		for (CreativeSections.Filled s : sections) {
 			if (s.count() == 0) continue;
 			b.add(new Banner(out.size() / ROW, s));
-			for (int i = 0; i < 2 * ROW; i++) out.add(ItemStack.EMPTY);
+			for (int i = 0; i < ROW; i++) out.add(ItemStack.EMPTY); // the banner's row
 			out.addAll(flat.subList(at, at + s.count()));
 			at += s.count();
 			while (out.size() % ROW != 0) out.add(ItemStack.EMPTY);
@@ -71,7 +71,7 @@ public final class CreativeSectionLayout {
 			g.fill(x, by, x + CreativeSections.BANNER_W, by + CreativeSections.BANNER_H, 0xFF2B2F36);
 			g.outline(x, by, CreativeSections.BANNER_W, CreativeSections.BANNER_H, 0xFF4A505A);
 			g.fill(x + 1, by + 1, x + 3, by + CreativeSections.BANNER_H - 1, 0xFFEABE54);
-			g.text(font, b.section().title(), x + 9, by + (CreativeSections.BANNER_H - 8) / 2, 0xFFFFFFFF, true);
+			g.text(font, b.section().title(), x + 7, by + (CreativeSections.BANNER_H - 8) / 2 + 1, 0xFFFFFFFF, true);
 		}
 		g.disableScissor();
 	}
