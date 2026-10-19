@@ -1,1 +1,1 @@
-{"parent": "minecraft:item/generated", "textures": {"layer0": "minecraft:item/shears"}}
+{"parent": "minecraft:item/generated", "textures": {"layer0": "strafemc:item/placeholder"}}

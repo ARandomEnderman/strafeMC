@@ -13,6 +13,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.List;
 import java.util.function.Function;
 
 /** CS2 weapon items and their magazines. Numbers come from weapons.vdata at runtime; nothing about Valve's assets is bundled. */
@@ -139,58 +140,52 @@ public final class WeaponItems {
 		ResourceKey<Item> spawnItem = ResourceKey.create(Registries.ITEM, id("spawn_point"));
 		SPAWN_POINT_ITEM = Registry.register(BuiltInRegistries.ITEM, spawnItem,
 				new net.minecraft.world.item.BlockItem(SPAWN_POINT, new Item.Properties().setId(spawnItem).useBlockDescriptionPrefix()));
-		// guns (with their magazines), knives, utility and blocks: a tab each
-		tab("guns", () -> new ItemStack(AK47), e -> {
-			e.accept(GUN_BASE);
-			e.accept(MAG_POUCH);
-			e.accept(STORAGE_UNIT);
-			for (int d : new int[] {10, 50, 100, 500, 1000}) e.accept(VoucherItem.stack(VOUCHER_ITEM, d));
-			for (var g : GUNS.entrySet()) {
-				e.accept(g.getValue());
-				if (WeaponStats.of(g.getKey()) == null || WeaponStats.of(g.getKey()).clip() > 1) e.accept(MAGS.get(g.getKey()));
-			}
-		});
+		// the tabs, in order; tabs with sections show each under a banner (CreativeSections)
+		sectioned("guns", () -> new ItemStack(AK47), List.of(
+				new CreativeSections.Section("utility", "Utility", l -> {
+					l.add(new ItemStack(MAG_POUCH));
+					l.add(new ItemStack(GUN_BASE));
+				}),
+				new CreativeSections.Section("guns", "Guns", l -> { for (Item g : GUNS.values()) l.add(new ItemStack(g)); }),
+				new CreativeSections.Section("mags", "Magazines", l -> {
+					for (var g : GUNS.keySet())
+						if (WeaponStats.of(g) == null || WeaponStats.of(g).clip() > 1) l.add(new ItemStack(MAGS.get(g)));
+				})));
 		tab("knives", () -> new ItemStack(KNIVES.get("weapon_knife_karambit")), e -> { for (Item k : KNIVES.values()) e.accept(k); });
-		tab("utility", () -> new ItemStack(GRENADES.get(Grenade.SMOKE)), e -> {
-			for (Item g : GRENADES.values()) e.accept(g);
-			e.accept(KEVLAR);
-			e.accept(ASSAULTSUIT);
-			e.accept(HEALTHSHOT);
-			e.accept(SURF_RAMP_ITEM);
-			e.accept(SURF_SLOPE_ITEM);
-			e.accept(SURF_RAMP_LYING_ITEM);
-			e.accept(SPAWN_POINT_ITEM);
-			e.accept(STRAFE_PEARL);
-			// CS2's tools
-			e.accept(NAME_TAG);
-			e.accept(CHARM_DETACHMENT);
-			e.accept(STATTRAK_SWAP);
-		});
-		// a tab each for gloves, knife wraps and gun wraps (agents get theirs when they exist)
+		sectioned("cases", () -> CaseItem.stack(WEAPON_CASE, "crate_valve_1"), List.of(
+				new CreativeSections.Section("weapon_cases", "Weapon Cases", l -> { for (Cases.Case c : Cases.all()) l.add(CaseItem.stack(WEAPON_CASE, c.id())); }),
+				new CreativeSections.Section("keys", "Weapon Case Keys", l -> {
+					l.add(CaseKeys.universal());
+					for (Cases.Key k : Cases.keys()) l.add(KeyItem.stack(CASE_KEY, k.id()));
+				}),
+				new CreativeSections.Section("capsules", "Capsules", l -> { for (Cases.Case c : Cases.capsules("sticker")) l.add(CaseItem.stack(WEAPON_CASE, c.id())); }),
+				new CreativeSections.Section("graffiti_boxes", "Graffiti Boxes", l -> { for (Cases.Case c : Cases.capsules("spray")) l.add(CaseItem.stack(WEAPON_CASE, c.id())); }),
+				new CreativeSections.Section("collections", "Collections", l -> { for (Cases.Case c : Cases.capsules("charm")) l.add(CaseItem.stack(WEAPON_CASE, c.id())); })));
+		sectioned("utility", () -> new ItemStack(GRENADES.get(Grenade.SMOKE)), List.of(
+				new CreativeSections.Section("grenades", "Grenades", l -> { for (Item g : GRENADES.values()) l.add(new ItemStack(g)); }),
+				new CreativeSections.Section("other", "Other", l -> {
+					for (Item i : new Item[] {KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP,
+							SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM})
+						l.add(new ItemStack(i));
+					for (int d : new int[] {10, 50, 100, 500, 1000}) l.add(VoucherItem.stack(VOUCHER_ITEM, d));
+				})));
 		tab("gloves", () -> GloveItem.stack(GLOVES.get(GloveItem.Kind.SPORT), GloveSkins.of(GloveItem.Kind.SPORT).get(0).kit()),
 				e -> { for (GloveSkins.Skin s : GloveSkins.ALL) e.accept(GloveItem.stack(GLOVES.get(s.kind()), s.kit())); });
 		tab("knife_wraps", () -> SkinWrapItem.stack(KNIFE_WRAP, "knife:fade"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (w.knife()) e.accept(SkinWrapItem.stack(KNIFE_WRAP, w.id())); });
-		tab("cases", () -> CaseItem.stack(WEAPON_CASE, "crate_valve_1"), e -> {
-			for (Cases.Case c : Cases.all()) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
-			e.accept(CaseKeys.universal());
-			for (Cases.Key k : Cases.keys()) e.accept(KeyItem.stack(CASE_KEY, k.id()));
-		});
-		// each kind with its own containers: graffiti boxes with the graffiti, sticker capsules with the stickers, charm collections with the charms
-		tab("sprays", () -> SprayItem.stack(SPRAY, "spray_std_axes_crossed", 2), e -> {
-			for (Cases.Case c : Cases.capsules("spray")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
-			for (Sprays.Spray s : Sprays.all()) e.accept(SprayItem.stack(SPRAY, s.id(), s.tintable() ? 2 : 0));
-		});
-		tab("stickers", () -> CaseItem.stack(WEAPON_CASE, "crate_sticker_pack01"), e -> {
-			for (Cases.Case c : Cases.capsules("sticker")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
-			for (Stickers.Sticker s : Stickers.all()) e.accept(StickerItem.stack(STICKER, s.id()));
-		});
-		tab("charms", () -> Charms.all().isEmpty() ? new ItemStack(CHARM_DETACHMENT) : CharmItem.stack(CHARM, Charms.all().get(0).id()), e -> {
-			for (Cases.Case c : Cases.capsules("charm")) e.accept(CaseItem.stack(WEAPON_CASE, c.id()));
-			for (Charms.Charm c : Charms.all()) e.accept(CharmItem.stack(CHARM, c.id()));
-		});
 		tab("gun_wraps", () -> SkinWrapItem.stack(GUN_WRAP, "gun:asiimov.ak47"),
 				e -> { for (SkinWraps.Wrap w : SkinWraps.all()) if (!w.knife()) e.accept(SkinWrapItem.stack(GUN_WRAP, w.id())); });
+		tab("stickers", () -> Stickers.all().isEmpty() ? new ItemStack(STICKER) : StickerItem.stack(STICKER, Stickers.all().get(0).id()),
+				e -> { for (Stickers.Sticker s : Stickers.all()) e.accept(StickerItem.stack(STICKER, s.id())); });
+		tab("sprays", () -> SprayItem.stack(SPRAY, "spray_std_axes_crossed", 2),
+				e -> { for (Sprays.Spray s : Sprays.all()) e.accept(SprayItem.stack(SPRAY, s.id(), s.tintable() ? 2 : 0)); });
+		tab("charms", () -> Charms.all().isEmpty() ? new ItemStack(CHARM) : CharmItem.stack(CHARM, Charms.all().get(0).id()),
+				e -> { for (Charms.Charm c : Charms.all()) e.accept(CharmItem.stack(CHARM, c.id())); });
+	}
+
+	/** A tab laid out in sections, each under its banner (CreativeSections). */
+	private static void sectioned(String name, java.util.function.Supplier<ItemStack> icon, List<CreativeSections.Section> sections) {
+		tab(name, icon, e -> CreativeSections.fill(name, sections, e::accept));
 	}
 
 	private static void tab(String name, java.util.function.Supplier<ItemStack> icon,

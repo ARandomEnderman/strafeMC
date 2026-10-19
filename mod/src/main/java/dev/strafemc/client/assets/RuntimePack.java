@@ -469,7 +469,7 @@ public final class RuntimePack {
 			cases.append("{\"when\":\"").append(c.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/case/").append(c.id()).append("\"}}");
 		}
 		Files.writeString(items.resolve("weapon_case.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-				+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/chest\"}}}");
+				+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/placeholder\"}}}");
 		// each case's own key: CS2's key picture (econ/tools/...), picked by the key's custom model data string
 		Files.createDirectories(models.resolve("key"));
 		java.util.List<String> keyMissing = new java.util.ArrayList<>();
@@ -510,7 +510,7 @@ public final class RuntimePack {
 			StrafeMc.LOG.warn("[strafemc] universal key icon: {}", e.toString());
 		}
 		Files.writeString(items.resolve("case_key.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/trial_key\"}}}");
+				+ "\"index\":0,\"cases\":[" + keys + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/placeholder\"}}}");
 		// graffiti: each one's own decal picture as its icon (one converter run for the missing ones)
 		try {
 			Files.createDirectories(models.resolve("spray"));
@@ -533,7 +533,7 @@ public final class RuntimePack {
 				sprays.append("{\"when\":\"").append(sp.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/spray/").append(sp.id()).append("\"}}");
 			}
 			Files.writeString(items.resolve("spray.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-					+ "\"index\":0,\"cases\":[" + sprays + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/paper\"}}}");
+					+ "\"index\":0,\"cases\":[" + sprays + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/placeholder\"}}}");
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] graffiti icons: {}", e.toString());
 		}
@@ -558,7 +558,7 @@ public final class RuntimePack {
 				stickers.append("{\"when\":\"").append(st.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/sticker/").append(st.id()).append("\"}}");
 			}
 			Files.writeString(items.resolve("sticker.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-					+ "\"index\":0,\"cases\":[" + stickers + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/paper\"}}}");
+					+ "\"index\":0,\"cases\":[" + stickers + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/placeholder\"}}}");
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] sticker icons: {}", e.toString());
 		}
@@ -582,7 +582,7 @@ public final class RuntimePack {
 				charms.append("{\"when\":\"").append(c.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/charm/").append(c.id()).append("\"}}");
 			}
 			Files.writeString(items.resolve("charm.json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-					+ "\"index\":0,\"cases\":[" + charms + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"minecraft:item/tripwire_hook\"}}}");
+					+ "\"index\":0,\"cases\":[" + charms + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/placeholder\"}}}");
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafemc] charm icons: {}", e.toString());
 		}
