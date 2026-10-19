@@ -101,7 +101,7 @@ public final class NameTagScreen extends Screen {
 		List<Row> out = new ArrayList<>();
 		var p = Minecraft.getInstance().player;
 		if (p == null) return out;
-		java.util.function.Predicate<ItemStack> ok = s -> s.getItem() instanceof SkinWrapItem && keep.test(s);
+		java.util.function.Predicate<ItemStack> ok = s -> (s.getItem() instanceof SkinWrapItem || s.getItem() instanceof dev.strafemc.weapon.C4Item) && keep.test(s);
 		java.util.function.Function<String, ItemStack> at = NameTagScreen::wrapAt;
 		List<String> loadout = new ArrayList<>();
 		for (Loadout.Def d : Loadout.defs())

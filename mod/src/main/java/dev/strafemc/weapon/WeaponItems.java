@@ -45,7 +45,7 @@ public final class WeaponItems {
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item STRAFE_PEARL;
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT, NAME_TAG, STATTRAK_SWAP;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT, NAME_TAG, STATTRAK_SWAP, C4, DEFUSE_KIT;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -101,6 +101,8 @@ public final class WeaponItems {
 		CHARM_DETACHMENT = item("charm_detachment", p -> new Item(p.stacksTo(64)));
 		NAME_TAG = item("name_tag", p -> new NameTagItem(p.stacksTo(64)));
 		STATTRAK_SWAP = item("stattrak_swap_tool", p -> new NameTagItem(p.stacksTo(64), true));
+		C4 = item(C4Item.CLS, p -> new C4Item(p.stacksTo(1)));
+		DEFUSE_KIT = item("defuse_kit", p -> new Item(p.stacksTo(1)));
 		StorageUnitItem.register();
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("case_key"), CaseKeyRecipe.SERIALIZER);
 		Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("magazine"), MagazineRecipe.SERIALIZER);
@@ -108,6 +110,10 @@ public final class WeaponItems {
 		GrenadeEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, grenadeKey,
 				net.minecraft.world.entity.EntityType.Builder.<GrenadeEntity>of(GrenadeEntity::new, net.minecraft.world.entity.MobCategory.MISC)
 						.sized(0.1f, 0.1f).clientTrackingRange(8).updateInterval(1).noSummon().noSave().build(grenadeKey));
+		ResourceKey<net.minecraft.world.entity.EntityType<?>> c4Key = ResourceKey.create(Registries.ENTITY_TYPE, id("planted_c4"));
+		PlantedC4.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, c4Key,
+				net.minecraft.world.entity.EntityType.Builder.<PlantedC4>of(PlantedC4::new, net.minecraft.world.entity.MobCategory.MISC)
+						.sized(0.45f, 0.15f).clientTrackingRange(10).updateInterval(2).noSummon().noSave().build(c4Key));
 		ResourceKey<net.minecraft.world.entity.EntityType<?>> pearlKey = ResourceKey.create(Registries.ENTITY_TYPE, id("strafe_pearl"));
 		StrafePearlEntity.TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, pearlKey,
 				net.minecraft.world.entity.EntityType.Builder.<StrafePearlEntity>of(StrafePearlEntity::new, net.minecraft.world.entity.MobCategory.MISC)
@@ -164,7 +170,7 @@ public final class WeaponItems {
 		sectioned("utility", () -> new ItemStack(GRENADES.get(Grenade.SMOKE)), List.of(
 				new CreativeSections.Section("grenades", "Grenades", l -> { for (Item g : GRENADES.values()) l.add(new ItemStack(g)); }),
 				new CreativeSections.Section("other", "Other", l -> {
-					for (Item i : new Item[] {KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP,
+					for (Item i : new Item[] {C4, DEFUSE_KIT, KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP,
 							SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM})
 						l.add(new ItemStack(i));
 					for (int d : new int[] {10, 50, 100, 500, 1000}) l.add(VoucherItem.stack(VOUCHER_ITEM, d));

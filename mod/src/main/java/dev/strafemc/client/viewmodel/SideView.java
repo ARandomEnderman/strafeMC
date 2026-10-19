@@ -117,7 +117,7 @@ public final class SideView {
 		Glb glb = Glb.read(AssetCache.exportGlb(w[0], true));
 		boolean legacy = kit != null && WeaponSkinCache.legacy(kit) && VmModel.hasMesh(glb, ".body_legacy");
 		VmModel m = VmModel.load(glb, legacy ? ".body_legacy" : w[1]);
-		var paint = WeaponSkinCache.paintable(w[0], m.parts);
+		var paint = WeaponSkinCache.stickerable(cls, w[0], m.parts);
 		// the finish, where the gun wears one; each part's own texture elsewhere
 		BufferedImage finishImg = null;
 		if (kit != null && paint != null) {
@@ -177,7 +177,7 @@ public final class SideView {
 						if (paintPart && stickerMask != null) { // the gun's painted body: its sticker mask says where stickers go
 							double mu = wa * uv[a * 2] + wb * uv[b * 2] + wc * uv[c * 2], mv = wa * uv[a * 2 + 1] + wb * uv[b * 2 + 1] + wc * uv[c * 2 + 1];
 							allowed[i] = (GloveSkinBaker.sample(stickerMask, mu - Math.floor(mu), mv - Math.floor(mv)) >> 16 & 255) > 127;
-						} else allowed[i] = false;
+						} else allowed[i] = paintPart && stickerMask == null && cls.equals(dev.strafemc.weapon.C4Item.CLS); // the C4 has no mask: anywhere on it
 						int col = 0xFF808080;
 						if (tex != null) {
 							double tu = wa * uv[a * 2] + wb * uv[b * 2] + wc * uv[c * 2], tv = wa * uv[a * 2 + 1] + wb * uv[b * 2 + 1] + wc * uv[c * 2 + 1];
@@ -193,7 +193,12 @@ public final class SideView {
 			var wp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(paint.material() + "_c")));
 			for (int i = 0; i < dev.strafemc.weapon.StickerSlots.MAX; i++) {
 				double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
-				if (sc[0] <= 0) break;
+				if (sc[0] <= 0) {
+					if (!cls.equals(dev.strafemc.weapon.C4Item.CLS) || i >= dev.strafemc.weapon.StickerSlots.C4_SLOTS.length) break;
+					double[] c4 = dev.strafemc.weapon.StickerSlots.C4_SLOTS[i]; // the C4's places are ours
+					slots.add(new Slot(c4[0], c4[1], dev.strafemc.weapon.StickerSlots.C4_SCALE, c4[2]));
+					continue;
+				}
 				slots.add(new Slot(0.5 + off[0], 0.5 + (off.length > 1 ? off[1] : 0), sc[0], wp.f("g_flSticker" + i + "Rotation", 0)));
 			}
 		}

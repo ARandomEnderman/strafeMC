@@ -196,6 +196,7 @@ public final class GunClient {
 			}
 		}
 		lastHeld = held;
+		if (planting && !(held.getItem() instanceof dev.strafemc.weapon.C4Item)) cancelPlant(); // put away mid-plant
 		// CS2: inspect held while the weapon comes out inspects it straight away (over the draw)
 		if (equipped && INSPECT.isDown()) inspect();
 		playDue(p, now);
@@ -211,6 +212,10 @@ public final class GunClient {
 		}
 		if (held.getItem() instanceof dev.strafemc.weapon.HealthshotItem hs) {
 			healthshotFrame(mc, hs, now);
+			return;
+		}
+		if (held.getItem() instanceof dev.strafemc.weapon.C4Item c4) {
+			c4Frame(mc, p, c4, now);
 			return;
 		}
 		if (!(held.getItem() instanceof GunItem g)) return;
@@ -584,6 +589,67 @@ public final class GunClient {
 		schedule(hs, "inject", now);
 		injectAt = now + sec(dev.strafemc.weapon.HealthshotItem.INJECT_AT);
 		injectDoneAt = now + sec(clipSeconds(hs, "inject", 1.9));
+	}
+
+	/** C4: planting since plantStart, armed at plantDoneAt (sooner when its code was typed on the keypad). */
+	private boolean planting, plantTyped;
+	private long plantStart, plantDoneAt;
+
+	/** Planting the C4 right now (movement is held still, as in CS2). */
+	public boolean planting() {
+		return planting;
+	}
+
+	/** How far the plant is (0-1), 0 when not planting. */
+	public double plantProgress() {
+		if (!planting) return 0;
+		long now = System.nanoTime();
+		return Math.min(1, (now - plantStart) / (double) Math.max(1, plantDoneAt - plantStart));
+	}
+
+	/**
+	 * Hold left click on the ground to plant: the plant clip (its own sounds), armed PLANT_TIME in; letting go (with the
+	 * keypad: closing it), leaving the ground or putting it away cancels.
+	 */
+	private void c4Frame(Minecraft mc, LocalPlayer p, dev.strafemc.weapon.C4Item c4, long now) {
+		if (planting) {
+			boolean holding = mc.screen instanceof dev.strafemc.client.C4KeypadScreen || mc.screen == null && mc.options.keyAttack.isDown();
+			if (!holding || !p.onGround()) {
+				cancelPlant();
+				return;
+			}
+			if (now >= plantDoneAt) {
+				planting = false;
+				if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("c4_plant", plantTyped ? "typed" : ""));
+				if (mc.screen instanceof dev.strafemc.client.C4KeypadScreen) mc.setScreen(null);
+			}
+			return;
+		}
+		if (now < deployUntil || mc.screen != null || !mc.options.keyAttack.isDown() || !p.onGround()) return;
+		planting = true;
+		plantTyped = false;
+		plantStart = now;
+		plantDoneAt = now + sec(dev.strafemc.weapon.C4Item.PLANT_TIME);
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("plant");
+		schedule(c4, "plant", now);
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("c4_plant_start", ""));
+		if (dev.strafemc.client.ClientGameplay.c4Keypad()) mc.setScreen(dev.strafemc.client.C4KeypadScreen.plant());
+	}
+
+	/** The keypad's code was typed: the plant arms now, or once the keypad's shortest plant has passed. */
+	public void plantTyped() {
+		if (!planting) return;
+		plantTyped = true;
+		plantDoneAt = Math.min(plantDoneAt, plantStart + sec(dev.strafemc.weapon.C4Item.KEYPAD_PLANT));
+	}
+
+	private void cancelPlant() {
+		if (!planting) return;
+		planting = false;
+		sounds.clear();
+		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("c4_plant_cancel", ""));
+		if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getMainHandItem().getItem() instanceof dev.strafemc.weapon.C4Item)
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("idle");
 	}
 
 	/** CS2's burning rag on a lit molotov (the throwcharge clip's particle event at attachment molotov_particle). */

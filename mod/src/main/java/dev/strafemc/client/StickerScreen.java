@@ -206,6 +206,7 @@ public final class StickerScreen extends Screen {
 		ItemStack t = target();
 		String gun = StickerSlots.gun(t);
 		if (gun == null) return null;
+		if (gun.equals(dev.strafemc.weapon.C4Item.CLS)) return SideView.of(gun, null, 0); // the C4 wears no finish
 		return SideView.of(gun, SkinWraps.kitFor(SkinWrapItem.skin(t), gun), SkinWrapItem.finish(t));
 	}
 

@@ -109,6 +109,7 @@ public final class GameplaySync {
 		root.put("buyTime", StrafeSettings.buyTime());
 		root.put("killCardTime", StrafeSettings.killCardTime());
 		root.put("loadoutKeep", StrafeSettings.loadoutKeep());
+		root.put("c4Keypad", StrafeSettings.c4Keypad());
 		root.put("drops", StrafeSettings.drops());
 		root.put("movementPersonal", StrafeSettings.personal());
 		String json = GSON.toJson(root);

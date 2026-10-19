@@ -35,6 +35,8 @@ public final class StrafeSettings {
 	private static volatile int killCardTime = 0;
 	/** strafemc_loadout_keep: loadout items (gloves, wraps) stay with you when you die (default) or drop like the inventory. */
 	private static volatile boolean loadoutKeep = true;
+	/** strafemc_c4_keypad: a keypad pops up to plant and defuse the C4; typing its code is quicker than holding (off by default). */
+	private static volatile boolean c4Keypad = false;
 	/** Care packages on this server (rank ups queue them, players redeem them). */
 	private static volatile boolean drops = true;
 	/** strafemc_spawnblocks: players who die respawn on a random spawn block (when the world has any). */
@@ -195,6 +197,16 @@ public final class StrafeSettings {
 		save();
 	}
 
+	public static boolean c4Keypad() {
+		return c4Keypad;
+	}
+
+	public static void setC4Keypad(boolean on) {
+		c4Keypad = on;
+		save();
+		GameplaySync.resendAll();
+	}
+
 	public static boolean loadoutKeep() {
 		return loadoutKeep;
 	}
@@ -297,6 +309,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("killCardTime")) killCardTime = o.get("killCardTime").getAsInt();
 				if (o != null && o.has("loadoutKeep")) loadoutKeep = o.get("loadoutKeep").getAsBoolean();
 				if (o != null && o.has("drops")) drops = o.get("drops").getAsBoolean();
+				if (o != null && o.has("c4Keypad")) c4Keypad = o.get("c4Keypad").getAsBoolean();
 				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
 				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
 				if (o != null && o.has("botQuota")) botQuota = o.get("botQuota").getAsInt();
@@ -330,6 +343,7 @@ public final class StrafeSettings {
 		o.addProperty("killCardTime", killCardTime);
 		o.addProperty("loadoutKeep", loadoutKeep);
 		o.addProperty("drops", drops);
+		o.addProperty("c4Keypad", c4Keypad);
 		o.addProperty("spawnBlocks", spawnBlocks);
 		o.addProperty("wear", wear);
 		o.addProperty("botQuota", botQuota);

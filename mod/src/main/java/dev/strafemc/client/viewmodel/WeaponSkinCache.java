@@ -311,7 +311,8 @@ public final class WeaponSkinCache {
 	 * foil / glitter looks and the holo's change with the view are left out.
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
-		Path plain = ensure(cls, material, kit, pattern, parts, base);
+		// no finish (the C4): the stickers go on the weapon's own texture
+		Path plain = kit == null ? plainCopy(cls, base) : ensure(cls, material, kit, pattern, parts, base);
 		if (plain == null) return null;
 		String sig = Integer.toHexString((String.join(",", stickers) + "|m").hashCode()); // "|m": with metalness and roughness
 		Path tex = plain.resolveSibling(plain.getFileName().toString().replace(".png", "_s" + sig + ".png")), pixels = sibling(tex, ".vm1024b.png");
@@ -328,6 +329,12 @@ public final class WeaponSkinCache {
 			if (stickers[i] == null || stickers[i].isEmpty()) continue;
 			double[] off = wp.v("g_vSticker" + i + "Offset", 0, 0), sc = wp.v("g_vSticker" + i + "Scale", 0, 0);
 			double scale = sc[0], rot = wp.f("g_flSticker" + i + "Rotation", 0);
+			if (scale <= 0 && cls.equals(dev.strafemc.weapon.C4Item.CLS) && i < dev.strafemc.weapon.StickerSlots.C4_SLOTS.length) { // the C4's places are ours
+				double[] c4 = dev.strafemc.weapon.StickerSlots.C4_SLOTS[i];
+				off = new double[] {c4[0] - 0.5, c4[1] - 0.5};
+				scale = dev.strafemc.weapon.StickerSlots.C4_SCALE;
+				rot = c4[2];
+			}
 			if (scale <= 0) continue;
 			var stArt = dev.strafemc.client.StickerWear.art(dev.strafemc.weapon.StickerSlots.idOf(stickers[i]));
 			if (stArt == null) continue;
@@ -375,6 +382,31 @@ public final class WeaponSkinCache {
 		if (roughImg != null) write(roughImg, sibling(tex, ".vm1024r.png"));
 		write(img, pixels);
 		return tex;
+	}
+
+	/**
+	 * A weapon's own texture (its 1024 colour, metalness) copied as a "finish" to put stickers on, for a weapon that
+	 * wears no finish (the C4); null without the converted texture.
+	 */
+	private static Path plainCopy(String cls, Path base) throws Exception {
+		Path colour = Viewmodel.downscaledPath(base);
+		if (!Files.exists(colour)) return null;
+		Path tex = texture(cls, "plain", 0), pixels = sibling(tex, ".vm1024b.png");
+		Files.createDirectories(tex.getParent());
+		if (!Files.exists(pixels)) Files.copy(colour, pixels, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		Path metal = sibling(base, ".vm1024m.png");
+		if (Files.exists(metal) && !Files.exists(sibling(tex, ".vm1024m.png"))) Files.copy(metal, sibling(tex, ".vm1024m.png"));
+		return tex;
+	}
+
+	/** The material stickers go through for a weapon: its finish material, or the C4's own (it has no finish). */
+	public static Paintable stickerable(String cls, String model, List<VmModel.Part> parts) throws Exception {
+		Paintable p = paintable(model, parts);
+		if (p != null || !cls.equals(dev.strafemc.weapon.C4Item.CLS)) return p;
+		for (VmModel.Part part : parts)
+			if (part.texture != null && part.texture.getFileName().toString().startsWith("c4_color"))
+				return new Paintable("weapons/models/c4/materials/weapon_c4.vmat", "c4_color");
+		return null;
 	}
 
 	/** The mesh's second UV set (TEXCOORD_1) per texel of its texture (u, v pairs; NaN where nothing covers it). */

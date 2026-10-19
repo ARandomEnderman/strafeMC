@@ -31,17 +31,22 @@ public final class GrenadeEffects {
 			MOLOTOV_HELD_EFFECT = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf",
 			// a decoy lying on the ground: sparks and smoke while it lies there (CS2's client), a burst with each fake shot (server)
 			DECOY_GROUND_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect.vpcf",
-			DECOY_SHOT_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect_shot.vpcf";
+			DECOY_SHOT_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect_shot.vpcf",
+			// the planted C4: its blast and the light that blinks with each beep
+			C4_EFFECT = "particles/explosions_fx/explosion_c4_500.vpcf",
+			C4_LIGHT_EFFECT = "particles/explosions_fx/c4_light_pulse_single_light.vpcf";
 	/** Every CS2 effect the grenades use (the setup converts these). */
 	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT,
 			MOLOTOV_FLAME_EFFECT, INCENDIARY_FLAME_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT,
-			DECOY_GROUND_EFFECT, DECOY_SHOT_EFFECT};
+			DECOY_GROUND_EFFECT, DECOY_SHOT_EFFECT, C4_EFFECT, C4_LIGHT_EFFECT};
 
 	/** What happened, for the clients (GrenadeFx.kind). */
 	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,
 			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9, EV_FLAME = 10, EV_FLAME_INC = 11,
 			EV_SMOKE_T = 12, // a T's smoke (EV_SMOKE: CT): CS2 tints them differently
-			EV_DECOY_SHOT = 13;
+			EV_DECOY_SHOT = 13,
+			EV_C4 = 14, // the planted C4 blows
+			EV_C4_BEEP = 15; // and beeps
 	/** How far away players still get the effect message (blocks). */
 	private static final double FX_RANGE = 160;
 

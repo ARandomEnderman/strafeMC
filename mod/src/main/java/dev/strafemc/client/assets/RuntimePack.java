@@ -603,6 +603,16 @@ public final class RuntimePack {
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] {} icon: {}", tool[1], e.toString());
 			}
+		// the C4 (CS2's inventory picture) and the defuse kit (CS2's equipment icon)
+		try {
+			String img = "panorama/images/econ/weapons/base_weapons/weapon_c4_png";
+			icon(img + ".vtex_c", img + ".png", tex.resolve("item/weapon_c4.png"), 128);
+			Files.writeString(models.resolve("weapon_c4.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/weapon_c4\"}}");
+			svg("panorama/images/icons/equipment/defuser.vsvg_c", "panorama/images/icons/equipment/defuser.svg", tex.resolve("item/defuse_kit.png"), 32);
+			Files.writeString(models.resolve("defuse_kit.json"), "{\"parent\":\"minecraft:item/generated\",\"textures\":{\"layer0\":\"strafemc:item/defuse_kit\"}}");
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] C4 / defuse kit icons: {}", e.toString());
+		}
 		// the Storage Unit: CS2's picture of it (econ/tools/casket)
 		try {
 			String img = "panorama/images/econ/tools/casket_png";

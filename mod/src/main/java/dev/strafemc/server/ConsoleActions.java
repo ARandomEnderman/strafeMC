@@ -142,6 +142,26 @@ public final class ConsoleActions {
 				}
 				if (wrap != held) dev.strafemc.weapon.Loadout.set(p, slot, wrap);
 			}
+			case "strafemc_c4_keypad" -> {
+				if (!op) {
+					p.sendSystemMessage(Component.literal("Only operators can change the C4 keypad."));
+					break;
+				}
+				StrafeSettings.setC4Keypad(!arg.trim().equals("0"));
+				p.sendSystemMessage(Component.literal("C4 keypad: " + (StrafeSettings.c4Keypad() ? "on" : "off")));
+			}
+			case "c4_plant_start" -> dev.strafemc.weapon.C4Item.start(p);
+			case "c4_plant_cancel" -> dev.strafemc.weapon.C4Item.cancel(p);
+			case "c4_plant" -> dev.strafemc.weapon.C4Item.plant(p, arg.trim().equals("typed"));
+			case "c4_defuse", "c4_defuse_typed" -> { // "entity id": holding use on the bomb (sent every 4 ticks), or its code typed
+				try {
+					if (p.level().getEntity(Integer.parseInt(arg.trim())) instanceof dev.strafemc.weapon.PlantedC4 bomb) {
+						if (cmd.equals("c4_defuse")) bomb.defusePing(p);
+						else bomb.defuseTyped(p);
+					}
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "strafemc_wear" -> {
 				if (!op) {
 					p.sendSystemMessage(Component.literal("Only operators can change wear on case drops."));

@@ -55,6 +55,9 @@ public class StrafeMcClient implements ClientModInitializer {
 				net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
 		net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(dev.strafemc.weapon.GrenadeEntity.TYPE,
 				dev.strafemc.client.viewmodel.GrenadeRenderer::new);
+		net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(dev.strafemc.weapon.PlantedC4.TYPE,
+				dev.strafemc.client.viewmodel.PlantedC4Renderer::new);
+		C4Client.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ServerTick.TYPE,
 				(msg, ctx) -> LagClock.onServerTick(msg.tick()));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> LagClock.reset());

@@ -129,6 +129,14 @@ public final class GrenadeClient {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.HE_EFFECT, at, up);
 				CsSounds.play("BaseGrenade.Explode", at.x, at.y, at.z, 1.0);
 			}
+			case GrenadeEffects.EV_C4 -> {
+				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_EFFECT, at, up);
+				CsSounds.play("c4.explode", at.x, at.y, at.z, 1.0);
+			}
+			case GrenadeEffects.EV_C4_BEEP -> {
+				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_LIGHT_EFFECT, at.add(0, 0.1, 0), up);
+				CsSounds.play("C4.PlantSound", at.x, at.y, at.z, 1.0);
+			}
 			case GrenadeEffects.EV_FLASH -> {
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.FLASH_EFFECT, at, up);
 				CsSounds.play("Flashbang.Explode", at.x, at.y, at.z, 1.0);

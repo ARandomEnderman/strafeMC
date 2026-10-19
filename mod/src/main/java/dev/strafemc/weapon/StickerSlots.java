@@ -75,7 +75,7 @@ public final class StickerSlots {
 		if (tagSlot < 0 || tagSlot >= inv.getContainerSize() || !inv.getItem(tagSlot).is(WeaponItems.NAME_TAG)) return;
 		String clean = cleanName(name);
 		ItemStack live = target(p, ref);
-		if (clean == null || !(live.getItem() instanceof SkinWrapItem)) return;
+		if (clean == null || !(live.getItem() instanceof SkinWrapItem || live.getItem() instanceof C4Item)) return; // CS2's C4 is nameable too
 		ItemStack wrap = copied(ref) ? live.copy() : live;
 		wrap.set(NAME_TAG, clean);
 		store(p, ref, wrap);
@@ -144,6 +144,7 @@ public final class StickerSlots {
 
 	/** The gun a wrap is for (one gun per wrap), or null for knives and older multi-gun wraps. */
 	public static String gun(ItemStack wrap) {
+		if (wrap.getItem() instanceof C4Item) return C4Item.CLS;
 		if (!(wrap.getItem() instanceof SkinWrapItem w) || w.knife()) return null;
 		SkinWraps.Wrap s = SkinWraps.get(SkinWrapItem.skin(wrap));
 		return s == null || s.kits().size() != 1 ? null : s.kits().keySet().iterator().next();
@@ -152,8 +153,22 @@ public final class StickerSlots {
 	/** How many sticker slots this wrap's gun has (0: none, knives). */
 	public static int count(ItemStack wrap) {
 		String gun = gun(wrap);
-		return gun == null ? 0 : Math.min(MAX, SLOTS.getOrDefault(gun, 4));
+		return gun == null ? 0 : gun.equals(C4Item.CLS) ? C4_SLOTS.length : Math.min(MAX, SLOTS.getOrDefault(gun, 4));
 	}
+
+	/**
+	 * The C4's starting sticker places: u, v in its sticker space (a top-down unfolding of the bricks) and turn. CS2's C4
+	 * supports stickers (its prefab: weapon_supports_stickers, weapon_supports_keychains) but its material's five slots
+	 * have no place or size, so stickers go anywhere its sticker mask (g_tStickerWepInputs) allows; these starting places
+	 * (on the bricks either side of the keypad and the front flap, all inside the mask) are ours.
+	 */
+	public static final double[][] C4_SLOTS = {{0.11, 0.45, 0}, {0.28, 0.45, 0}, {0.75, 0.45, 0}, {0.92, 0.45, 0}, {0.56, 0.70, 0}};
+	/**
+	 * The C4's sticker size (a sticker covers 1 / scale of its sticker space): a sticker as big on the bomb as on CS2's
+	 * guns. Measured from the meshes (metres per sticker-space unit / slot scale): Deagle 7.1 cm, Glock 4.2, AK-47 7.0,
+	 * AWP 7.5, MP9 6.5, P250 4.8, median 6.7 cm; the C4 has 0.471 m per unit, so 0.471 / 0.067 = 7.0.
+	 */
+	public static final double C4_SCALE = 7.0;
 
 	/** A sticker or charm entry's id (before its placement and wear). */
 	public static String idOf(String entry) {
@@ -355,6 +370,14 @@ public final class StickerSlots {
 		store(p, ref, wrap);
 		ItemStack back = CharmItem.stack(WeaponItems.CHARM, id);
 		if (!p.getInventory().add(back)) p.drop(back, false);
+	}
+
+	/** Tooltip lines for an item's stickers and charm (the C4's; wraps write their own). */
+	public static void tooltip(ItemStack s, java.util.function.Consumer<net.minecraft.network.chat.Component> out) {
+		List<String> st = names(s);
+		if (!st.isEmpty()) out.accept(net.minecraft.network.chat.Component.literal("§7Stickers: " + String.join(", ", st)));
+		Charms.Charm c = Charms.get(idOf(charm(s)));
+		if (c != null) out.accept(net.minecraft.network.chat.Component.literal("§7Charm: " + c.name()));
 	}
 
 	/** Lines for a wrap's tooltip: its stickers' names. */

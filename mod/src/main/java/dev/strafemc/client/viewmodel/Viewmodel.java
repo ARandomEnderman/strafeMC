@@ -60,7 +60,9 @@ public final class Viewmodel {
 
 	private static final Map<String, Weapon> WEAPONS = withGrenades(fromTable(Map.of(
 			dev.strafemc.weapon.HealthshotItem.CLS, new Weapon(dev.strafemc.weapon.HealthshotItem.CLS, "weapons/models/healthshot/weapon_healthshot.vmdl_c",
-					".healthshot_content_src", new String[] {"draw", "idle", "inject"}))));
+					".healthshot_content_src", new String[] {"draw", "idle", "inject"}),
+			dev.strafemc.weapon.C4Item.CLS, new Weapon(dev.strafemc.weapon.C4Item.CLS, dev.strafemc.weapon.C4Item.MODEL, VmModel.AUTO_MESH,
+					new String[] {"draw", "idle", "plant", "lookat01"}))));
 
 	/** Every gun and knife of the weapon table: its model (mesh picked by VmModel, "auto") and every clip it names. */
 	private static Map<String, Weapon> fromTable(Map<String, Weapon> base) {
@@ -269,6 +271,18 @@ public final class Viewmodel {
 
 	/** The weapon model to draw: in its loadout wrap's finish once baked, the plain weapon until then (and without one). */
 	private VmModel gun(Loaded l) {
+		if (l.cls.equals(dev.strafemc.weapon.C4Item.CLS)) { // the C4 wears no finish: its stickers are on the one in your hand
+			var p = net.minecraft.client.Minecraft.getInstance().player;
+			String[] stickers = p == null ? null : dev.strafemc.weapon.StickerSlots.get(p.getMainHandItem());
+			boolean any = false;
+			if (stickers != null) for (String s : stickers) any |= !s.isEmpty();
+			if (!any) return l.gun;
+			String key = l.cls + "#plain#0#" + String.join(",", stickers);
+			VmModel m = finishes.get(key);
+			if (m != null) return m;
+			loadFinish(l, null, 0, key, stickers);
+			return l.gun;
+		}
 		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
 		String kit = knife ? dev.strafemc.client.WrapChoice.knifeKit(l.cls) : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		if (kit == null) return l.gun;
@@ -302,9 +316,9 @@ public final class Viewmodel {
 			try {
 				// a paint kit with use_legacy_model puts the weapon on its legacy mesh (with that mesh's own material and inputs)
 				Glb glb = Glb.read(AssetCache.exportGlb(w.model, true));
-				boolean legacy = WeaponSkinCache.legacy(kit) && VmModel.hasMesh(glb, ".body_legacy");
+				boolean legacy = kit != null && WeaponSkinCache.legacy(kit) && VmModel.hasMesh(glb, ".body_legacy");
 				VmModel m = VmModel.load(glb, legacy ? ".body_legacy" : w.mesh);
-				var paintMat = WeaponSkinCache.paintable(w.model, m.parts);
+				var paintMat = WeaponSkinCache.stickerable(l.cls, w.model, m.parts);
 				java.util.List<VmModel.Part> paintable = new java.util.ArrayList<>();
 				Path base = null;
 				for (VmModel.Part part : m.parts)
@@ -319,7 +333,7 @@ public final class Viewmodel {
 					finishes.put(key, l.gun);
 					return;
 				}
-				float pearl = (float) WeaponSkinCache.paintParams(kit).f("g_flPearlescentScale", 0);
+				float pearl = kit == null ? 0 : (float) WeaponSkinCache.paintParams(kit).f("g_flPearlescentScale", 0);
 				for (VmModel.Part part : m.parts) {
 					if (paintable.contains(part)) {
 						part.texture = tex;
@@ -471,9 +485,14 @@ public final class Viewmodel {
 	/** Charm models by charm id, loaded in the background on first use. */
 	private final Map<String, VmModel> charmModels = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> charmLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
-	/** The charm's swing: angle (radians) about the attachment's two sideways axes and how fast, driven by the view turning. */
-	private float swingX, swingZ, swingVX, swingVZ, lastYaw = Float.NaN, lastPitch;
+	/**
+	 * The charm's pendulum in the world (blocks): where its weight is now and was a step ago (Verlet), and when it was
+	 * last stepped. Null: hanging at rest from the next frame.
+	 */
+	private double[] charmBob, charmBobPrev;
 	private long lastSwingNs;
+	/** Pendulum length (blocks), damping per second, the most it swings away from hanging off the gun (radians). FLAGGED ours. */
+	private static final double CHARM_LENGTH = 0.045, CHARM_DAMPING = 2.2, CHARM_MAX_SWING = Math.toRadians(80);
 
 	private VmModel charmModel(String id) {
 		VmModel m = charmModels.get(id);
@@ -501,41 +520,81 @@ public final class Viewmodel {
 	}
 
 	/**
-	 * The charm on the gun's wrap, hanging from the weapon's "keychain" attachment ("keychain_legacy" on a legacy-model
-	 * finish) and swinging as you turn: a damped pendulum pushed by the view's turn. FLAGGED ours: the swing's spring
-	 * and damping (CS2 simulates the chain).
+	 * The charm on the gun's wrap (or the C4 in hand), hanging from the weapon's "keychain" attachment ("keychain_legacy"
+	 * on a legacy-model finish) as a pendulum simulated in the world: gravity pulls its weight down, so it hangs down
+	 * whatever the gun does (inspects, draws), and the keychain point moving with you (running, strafing, jumping,
+	 * turning) swings it; it never swings further than CHARM_MAX_SWING from hanging off the gun, so it stays clear of
+	 * it. FLAGGED ours: the length, damping and limit (CS2 simulates the chain).
 	 */
 	private void charm(Loaded l, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
 		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
-		String entry = knife ? null : dev.strafemc.client.WrapChoice.gunCharm(l.cls);
+		var holder = net.minecraft.client.Minecraft.getInstance().player;
+		String entry = knife ? null : l.cls.equals(dev.strafemc.weapon.C4Item.CLS) // the C4's charm is on the one in your hand
+				? (holder == null ? null : emptyToNull(dev.strafemc.weapon.StickerSlots.charm(holder.getMainHandItem())))
+				: dev.strafemc.client.WrapChoice.gunCharm(l.cls);
 		if (entry == null) return;
 		String id = dev.strafemc.weapon.StickerSlots.idOf(entry);
 		double[] point = dev.strafemc.weapon.StickerSlots.placeOf(entry);
-		String kit = dev.strafemc.client.WrapChoice.gunKit(l.cls);
+		String kit = l.cls.equals(dev.strafemc.weapon.C4Item.CLS) ? null : dev.strafemc.client.WrapChoice.gunKit(l.cls);
 		String name = kit != null && WeaponSkinCache.legacy(kit) && l.attachments.containsKey("keychain_legacy") ? "keychain_legacy" : "keychain";
 		Matrix4f at = l.attachments.containsKey(name) ? point != null && point.length == 3 ? pointOnGun(l, name, point) : attachmentTransforms.get(name) : null;
 		VmModel m = at == null ? null : charmModel(id);
 		if (m == null) return;
-		var p = net.minecraft.client.Minecraft.getInstance().player;
 		long now = System.nanoTime();
-		float dt = lastSwingNs == 0 ? 0 : Math.min(0.05f, (now - lastSwingNs) / 1e9f);
+		double dt = lastSwingNs == 0 ? 0 : Math.min(0.05, (now - lastSwingNs) / 1e9);
 		lastSwingNs = now;
-		if (p != null) {
-			float yaw = p.getYRot(), pitch = p.getXRot();
-			if (!Float.isNaN(lastYaw) && dt > 0) { // turning pushes it the other way
-				swingVZ += net.minecraft.util.Mth.wrapDegrees(yaw - lastYaw) * 0.015f;
-				swingVX -= (pitch - lastPitch) * 0.015f;
-			}
-			lastYaw = yaw;
-			lastPitch = pitch;
+		Matrix4f base = new Matrix4f(at).rotate(FROM_GLTF);
+		org.joml.Vector3f pivot = base.getTranslation(new org.joml.Vector3f());
+		org.joml.Vector3f rest = base.transformDirection(new org.joml.Vector3f(0, -1, 0)).normalize(); // hanging straight off the gun
+		var camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
+		org.joml.Quaternionf toWorld = new org.joml.Quaternionf(camera.rotation());
+		var cp = camera.position();
+		org.joml.Vector3f pw = toWorld.transform(new org.joml.Vector3f(pivot)), rw = toWorld.transform(new org.joml.Vector3f(rest));
+		double qx = cp.x + pw.x, qy = cp.y + pw.y, qz = cp.z + pw.z;
+		if (charmBob == null || Math.abs(charmBob[0] - qx) + Math.abs(charmBob[1] - qy) + Math.abs(charmBob[2] - qz) > 1) { // first frame, or a teleport
+			charmBob = new double[] {qx + rw.x * CHARM_LENGTH, qy + rw.y * CHARM_LENGTH, qz + rw.z * CHARM_LENGTH};
+			charmBobPrev = charmBob.clone();
 		}
-		float k = 60, damp = 4.5f; // spring back to hanging, losing speed
-		swingVX += (-k * swingX - damp * swingVX) * dt;
-		swingVZ += (-k * swingZ - damp * swingVZ) * dt;
-		swingX = Math.max(-0.8f, Math.min(0.8f, swingX + swingVX * dt));
-		swingZ = Math.max(-0.8f, Math.min(0.8f, swingZ + swingVZ * dt));
-		Matrix4f place = new Matrix4f(at).rotate(FROM_GLTF).rotateX(swingX).rotateZ(swingZ);
+		int steps = (int) Math.ceil(dt / 0.005); // small steps: the pendulum is short
+		double h = steps == 0 ? 0 : dt / steps, keep = Math.exp(-CHARM_DAMPING * h);
+		for (int s = 0; s < steps; s++) {
+			double[] next = new double[3];
+			for (int i = 0; i < 3; i++) next[i] = charmBob[i] + (charmBob[i] - charmBobPrev[i]) * keep + (i == 1 ? -9.81 * h * h : 0);
+			charmBobPrev = charmBob;
+			charmBob = constrainCharm(next, qx, qy, qz, rw);
+		}
+		org.joml.Vector3f dir = new org.joml.Vector3f((float) (charmBob[0] - qx), (float) (charmBob[1] - qy), (float) (charmBob[2] - qz)).normalize();
+		org.joml.Vector3f dirCam = new org.joml.Quaternionf(toWorld).conjugate().transform(dir);
+		org.joml.Quaternionf swing = new org.joml.Quaternionf().rotationTo(rest, dirCam);
+		Matrix4f place = new Matrix4f().translation(pivot).rotate(swing).mul(new Matrix4f(base).setTranslation(0, 0, 0));
 		emit(m, new Matrix4f[0][], place, cam, ps, out, light, new Matrix4f());
+	}
+
+	/** The charm's weight held at its length from the keychain point (q) and within CHARM_MAX_SWING of hanging off the gun (rest). */
+	private static double[] constrainCharm(double[] b, double qx, double qy, double qz, org.joml.Vector3f rest) {
+		double dx = b[0] - qx, dy = b[1] - qy, dz = b[2] - qz, len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+		if (len < 1e-9) return new double[] {qx + rest.x * CHARM_LENGTH, qy + rest.y * CHARM_LENGTH, qz + rest.z * CHARM_LENGTH};
+		dx /= len;
+		dy /= len;
+		dz /= len;
+		double cos = dx * rest.x + dy * rest.y + dz * rest.z, maxCos = Math.cos(CHARM_MAX_SWING);
+		if (cos < maxCos) { // too far round: back onto the limit cone, keeping its direction of swing
+			double px = dx - rest.x * cos, py = dy - rest.y * cos, pz = dz - rest.z * cos, pl = Math.sqrt(px * px + py * py + pz * pz);
+			if (pl < 1e-9) {
+				px = 1;
+				py = pz = 0;
+				pl = 1;
+			}
+			double sin = Math.sqrt(1 - maxCos * maxCos);
+			dx = rest.x * maxCos + px / pl * sin;
+			dy = rest.y * maxCos + py / pl * sin;
+			dz = rest.z * maxCos + pz / pl * sin;
+		}
+		return new double[] {qx + dx * CHARM_LENGTH, qy + dy * CHARM_LENGTH, qz + dz * CHARM_LENGTH};
+	}
+
+	private static String emptyToNull(String s) {
+		return s == null || s.isEmpty() ? null : s;
 	}
 
 	/** Reads every weapon's clip data (blocking: call off-thread), so first draws/reloads don't wait for the converter. */

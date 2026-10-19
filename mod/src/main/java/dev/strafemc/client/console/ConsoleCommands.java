@@ -129,6 +129,8 @@ public final class ConsoleCommands {
 		local("drop_everyone", "Give every player a care package. Operators.", a -> action("drop_everyone", "", false));
 		local("strafemc_stattrak", "Make the skin you're holding StatTrak with this many kills (off: plain). Cheat.",
 				a -> action("strafemc_stattrak", String.join(" ", a), true));
+		local("strafemc_c4_keypad", "Plant and defuse the C4 by typing its code on a keypad, quicker than holding (1), or just hold (0). Operators.",
+				a -> action("strafemc_c4_keypad", a.length > 0 ? (bool(a, false) ? "1" : "0") : "1", false));
 		local("strafemc_wear", "Wear on case drops (1) or all Factory New (0). Operators.",
 				a -> action("strafemc_wear", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		for (String r : new String[] {"gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer"})
