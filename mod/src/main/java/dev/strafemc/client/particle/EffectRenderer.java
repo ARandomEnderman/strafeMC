@@ -30,13 +30,13 @@ public final class EffectRenderer {
 	static final class Info {
 		final boolean sprites, trails, projected, orientToNormal, additive, bloomOnly, worldZ, cpNormal, refract;
 		final String texture, material;
-		/** The texture is looked up in a colour gradient by brightness x alpha: drawn per fade level. */
+		/** The texture's colour is looked up in a colour gradient (baked into the texture). */
 		final boolean graded;
 		final float animationRate, lengthScale, minLength, maxLength, lengthFadeIn, constrainRatio, forwardShift;
 		final String animationType;
 		final boolean animateInFps;
 		/** CS2's lighting of alpha-blended layers, as one gain (1: drawn as is); subtracted breakup textures' blend amounts. */
-		final Num selfIllum, diffuse;
+		final Num selfIllum, diffuse, desaturation;
 		final boolean lit;
 		final List<Num> erode = new ArrayList<>();
 		final Num radiusScale, alphaScale, overbright, headTaper, tailTaper, headAlpha, tailAlpha, minSize, maxSize;
@@ -85,7 +85,8 @@ public final class EffectRenderer {
 				tex = ParticleTextures.variant(tex, tp.str("m_nTextureChannels", ""));
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);
-			if (gradient != null) tex = ParticleTextures.withGradient(tex, gradient);
+			// alpha-blended layers take their alpha from the looked-up colour's brightness (dark = clear), as CS2's lookup can
+			if (gradient != null) tex = ParticleTextures.withGradient(tex, gradient) + (additive ? "" : ParticleTextures.GRADIENT_ALPHA);
 			graded = gradient != null && tex != null;
 			// heat shimmer: the texture is a normal map that bends the picture behind it, not something to draw (not done yet)
 			refract = p.b("m_bRefract", false) || tex != null && (tex.contains("_normal") || tex.contains("/warp"));
@@ -99,6 +100,7 @@ public final class EffectRenderer {
 			colorScale = p.vecInput("m_vecColorScale", Vec.literal(new Vector3f(1)));
 			selfIllum = p.num("m_flSelfIllumAmount", new Num.Literal(0));
 			diffuse = p.num("m_flDiffuseAmount", new Num.Literal(1));
+			desaturation = p.num("m_flDesaturation", new Num.Literal(0));
 			// CS2 lights alpha-blended layers (diffuse x the sun + self-illumination); layers it darkens with a colour scale
 			// (the HE smoke: 64 / 255) count on that light, so drawn full-bright they came out near black
 			lit = !additive && p.has("m_vecColorScale") && darkLiteral(colorScale);
@@ -192,19 +194,13 @@ public final class EffectRenderer {
 					continue;
 				}
 				if (!in.sprites && !in.trails || in.bloomOnly || in.refract) continue;
-				int levels = in.graded ? ParticleTextures.GRADIENT_LEVELS : 1;
-				for (int level = 1; level <= levels; level++) {
-				ParticleTextures.Tex tex = ParticleTextures.get(in.graded ? in.texture + "@" + level : in.texture);
+				{
+				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
 				if (tex == null) continue;
 				RenderType type = in.additive ? ParticleBlend.additive(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
 				qn = 0; // quads go into QB: 4 corners x (x,y,z,u,v,r,g,b,a) each
 				for (int i = 0; i < s.count(); i++) {
 					Particle p = s.particle(i);
-					if (in.graded) { // this level's particles: their fade is in the texture, drawn at full alpha
-						float a = Math.max(0, Math.min(1, p.alpha * in.alphaScale.next(p, s.state)));
-						if (Math.max(1, (int) Math.ceil(a * levels)) != level) continue;
-						forceAlpha = a > 0 ? 1 : 0;
-					} else forceAlpha = -1;
 					if (in.sprites) sprite(s, in, tex, p, toRender, unit, camRender, camRight, camUp);
 					else trail(s, in, tex, p, toRender, unit, camRender);
 				}
@@ -352,13 +348,28 @@ public final class EffectRenderer {
 		Vector3f ax = AX.set(right).mul(cos).add(T.set(up).mul(sin)).mul(half);
 		Vector3f ay = AY.set(up).mul(cos).sub(T.set(right).mul(sin)).mul(half);
 		float[] uv = frameInto(in, tex, p);
-		Vector3f col = COL.set(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
+		Vector3f col = hdr(in, s, p, COL.set(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p)));
 		float a = forceAlpha >= 0 ? forceAlpha : p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		int o = nextQuad();
 		corner(qb, o, CORNER.set(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
 		corner(qb, o + 9, CORNER.set(c).add(ax).sub(ay), uv[2], uv[3], col, a);
 		corner(qb, o + 18, CORNER.set(c).add(ax).add(ay), uv[2], uv[1], col, a);
 		corner(qb, o + 27, CORNER.set(c).sub(ax).add(ay), uv[0], uv[1], col, a);
+	}
+
+	/**
+	 * CS2 draws effects in HDR: colours pushed past 1 by m_flOverbrightFactor come out of the tone mapping and bloom
+	 * whiter, not just saturated. Additive layers here: m_flDesaturation towards the colour's luminance, then the part
+	 * above 1 spread to the other channels (FLAGGED: our stand-in for the HDR pipeline).
+	 */
+	private static Vector3f hdr(Info in, PSystem s, Particle p, Vector3f c) {
+		if (!in.additive) return c;
+		float d = Math.max(0, Math.min(1, in.desaturation.next(p, s.state)));
+		float l = 0.2125f * c.x + 0.7154f * c.y + 0.0721f * c.z;
+		if (d > 0) c.lerp(new Vector3f(l), d);
+		float m = Math.max(c.x, Math.max(c.y, c.z));
+		if (m > 1) c.lerp(new Vector3f(m), Math.min(1, (m - 1) / m) * 0.6f);
+		return c;
 	}
 
 	/** Two render-space axes (into R, U) spanning the plane with simulation-space normal n. */
@@ -411,8 +422,11 @@ public final class EffectRenderer {
 				for (int k = 0; k < 4; k++) vertex(vc, pose, quads, o + k * 9, false);
 		};
 		RenderType type = RenderTypes.entityTranslucent(mat.texture());
-		if (buffers != null) geometry.render(ps.last(), buffers.getBuffer(type));
-		else out.submitCustomGeometry(ps, type, geometry);
+		if (buffers != null) {
+			geometry.render(ps.last(), buffers.getBuffer(type));
+			// decals lie under everything: drawn now, before the flames buffered so far (those go when the batch ends)
+			if (buffers instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource bs) bs.endBatch(type);
+		} else out.submitCustomGeometry(ps, type, geometry);
 	}
 
 	private static void trail(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam) {
@@ -439,7 +453,7 @@ public final class EffectRenderer {
 		Vector3f head = new Vector3f(center).sub(new Vector3f(dir).mul(lenR * 0.5f)), tail = new Vector3f(center).add(new Vector3f(dir).mul(lenR * 0.5f));
 		float hw = rR * in.headTaper.next(p, s.state), tw = rR * in.tailTaper.next(p, s.state);
 		float[] uv = frame(in, tex, p);
-		Vector3f tint = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
+		Vector3f tint = hdr(in, s, p, new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p)));
 		float a = forceAlpha >= 0 ? forceAlpha * p.alphaAlternate : p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		Vector3f hc = new Vector3f(tint).mul(in.headColor.next(p, s.state)), tc = new Vector3f(tint).mul(in.tailColor.next(p, s.state));
 		float ha = a * in.headAlpha.next(p, s.state), ta = a * in.tailAlpha.next(p, s.state);

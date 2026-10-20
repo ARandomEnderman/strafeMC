@@ -62,8 +62,10 @@ public final class PerfBench {
 		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
 		++ticks;
 		if (PHASES[phase].equals("fire")) {
-			mc.player.setPos(mc.player.getX(), mc.player.getY(), fireZ);
-			mc.player.setXRot(30);
+			mc.player.setPos(3.5, mc.player.getY(), fireZ);
+			mc.player.setXRot(28);
+			if (ticks >= 90 && ticks < 100) mc.player.setYRot(-58); // the incendiary
+			if (ticks == 96) shot(mc, "fire_incendiary");
 			if (ticks == 10 || ticks == 30 || ticks == 60 || ticks == 100 || ticks == 135) shot(mc, "fire_" + ticks);
 			// single layers: everything but one hidden (FX_ONLY), a frame later each
 			if (ticks >= 70 && ticks < 70 + 2 * FX_ONLY.length) {
@@ -72,6 +74,7 @@ public final class PerfBench {
 				else shot(mc, "fire_only_" + FX_ONLY[k]);
 			}
 			if (ticks == 70 + 2 * FX_ONLY.length) dev.strafemc.client.particle.Effects.only(null);
+			if (ticks == 8) for (String l : dev.strafemc.client.particle.Effects.layerCounts()) if (l.contains("sprays") || l.contains("   p ")) log(l);
 			if (ticks == 60) {
 				for (String l : dev.strafemc.client.particle.Effects.layerCounts()) log(l);
 				for (String l : dev.strafemc.client.weapon.InfernoClient.describe()) log(l);
@@ -117,21 +120,22 @@ public final class PerfBench {
 		var server = mc.getSingleplayerServer();
 		if (server == null) return;
 		// a fixed spot: the player 9 blocks back from the fires, old test walls cleared
-		mc.player.setPos(3.5, mc.player.getY(), -2.5);
+		mc.player.setPos(3.5, mc.player.getY(), 0.5);
 		BlockPos g = ground(mc);
 		Perf.toggle(false);
-		fireZ = -2.5;
+		fireZ = 0.5;
 		var dim = mc.player.level().dimension();
 		server.execute(() -> {
 			var level = server.getLevel(dim);
 			if (level == null) return;
+			server.getCommands().performPrefixedCommand(server.createCommandSourceStack().withSuppressedOutput(), "kill @e[type=!player]");
 			for (int x = -20; x <= 20; x++)
 				for (int z = -10; z <= 30; z++)
 					for (int y = 1; y <= 4; y++) level.setBlockAndUpdate(g.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-			for (int x = 3; x <= 10; x++)
-				for (int y = 1; y <= 3; y++) level.setBlockAndUpdate(g.offset(x, y, 11), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
-			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() - 3.5, g.getY() + 1, g.getZ() + 7.5), null, new Vec3(0, 0, 8), Float.NaN, false);
-			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 6.5, g.getY() + 1, g.getZ() + 9.5), null, new Vec3(0, 0, 8), Float.NaN, true);
+			for (int x = 10; x <= 17; x++)
+				for (int y = 1; y <= 3; y++) level.setBlockAndUpdate(g.offset(x, y, 9), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 0.5, g.getY() + 1, g.getZ() + 6.5), null, new Vec3(0, 0, 8), Float.NaN, false);
+			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 13.5, g.getY() + 1, g.getZ() + 7.5), null, new Vec3(0, 0, 8), Float.NaN, true);
 		});
 	}
 

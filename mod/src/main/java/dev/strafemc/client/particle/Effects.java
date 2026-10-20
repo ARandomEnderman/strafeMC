@@ -420,6 +420,9 @@ public final class Effects {
 		}
 	}
 
+	/** Debugging: the layer whose first particles layerCounts lists in detail (-Dstrafemc.fxDump=name). */
+	static final String DUMP = System.getProperty("strafemc.fxDump");
+
 	/** Debugging: every live world effect's layers with their particle counts. */
 	public static java.util.List<String> layerCounts() {
 		java.util.List<String> out = new java.util.ArrayList<>();
@@ -443,6 +446,14 @@ public final class Effects {
 			box = String.format(" x %.0f..%.0f y %.0f..%.0f z %.0f..%.0f r~%.0f", lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, r / s.count());
 		}
 		out.add(indent + s.name.substring(s.name.lastIndexOf('/') + 1).replace(".vpcf", "") + " " + s.count() + (s.state.inEndCap ? " endcap" : "") + box);
+		if (DUMP != null && s.name.endsWith(DUMP + ".vpcf"))
+			for (int i = 0; i < Math.min(6, s.count()); i++) {
+				Particle q = s.particle(i);
+				Vector3f o = s.controlPoint(0).position;
+				out.add(String.format("%s   p %.0f %.0f %.0f prev %.0f %.0f %.0f s17 %.0f %.0f %.0f n %.2f %.2f %.2f age %.2f/%.2f r %.1f tl %.2f a %.2f", indent,
+						q.position.x - o.x, q.position.y - o.y, q.position.z - o.z, q.positionPrevious.x - o.x, q.positionPrevious.y - o.y, q.positionPrevious.z - o.z,
+						q.scratchVector.x - o.x, q.scratchVector.y - o.y, q.scratchVector.z - o.z, q.normal.x, q.normal.y, q.normal.z, q.age, q.lifetime, q.radius, q.trailLength, q.alpha));
+			}
 		for (PSystem c : s.children) counts(c, indent + "  ", out);
 	}
 

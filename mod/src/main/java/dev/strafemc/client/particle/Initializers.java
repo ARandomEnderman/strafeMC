@@ -165,15 +165,17 @@ final class Initializers {
 	}
 
 	static final class InitVec extends PFunction.Initializer {
-		final int field;
+		final int field, method;
 		final Vec value;
-		final boolean writePrev;
+		final boolean writePrev, normalize;
 
 		InitVec(Pd p) {
 			super(p);
 			field = p.field("m_nOutputField", Particle.COLOR);
 			value = p.vecInput("m_InputValue", Vec.literal(new Vector3f()));
 			writePrev = p.b("m_bWritePreviousPosition", false);
+			method = Particle.setMethod(p.str("m_nSetMethod", null));
+			normalize = p.b("m_bNormalizedOutput", false);
 		}
 
 		@Override
@@ -183,7 +185,10 @@ final class Initializers {
 
 		@Override
 		void init(Particle q, PCollection c, PState s) {
-			q.vector(field, value.next(q, s));
+			Vector3f v = q.modifyVectorAtSpawn(c, field, value.next(q, s), method);
+			if (normalize) v = PMath.safeNormalize(v);
+			q.vector(field, v);
+			if (writePrev && field == Particle.POSITION) q.positionPrevious.set(v);
 		}
 	}
 

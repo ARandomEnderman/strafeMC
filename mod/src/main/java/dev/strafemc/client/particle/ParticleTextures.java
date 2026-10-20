@@ -68,11 +68,8 @@ public final class ParticleTextures {
 	public static final String GRADIENT = "#g";
 	private static final Map<String, float[]> GRADIENTS = new ConcurrentHashMap<>();
 	private static final Map<String, Object> PLAIN_BUILDS = new ConcurrentHashMap<>();
-	/**
-	 * A gradient layer's lookup also counts how faded the particle is (its alpha): faint flames slide down the ramp (the
-	 * blue edges of a fire). Baked as this many textures, one per fade level ("...#g<key>@<level>"). FLAGGED: our reading.
-	 */
-	public static final int GRADIENT_LEVELS = 8;
+	/** Suffix after a gradient key: alpha also scaled by the looked-up colour's brightness. */
+	public static final String GRADIENT_ALPHA = "~a";
 
 	/**
 	 * The texture with its brightness replaced by a colour from a gradient (stops as position, r, g, b with r/g/b 0-255):
@@ -83,6 +80,14 @@ public final class ParticleTextures {
 		String key = Integer.toHexString(java.util.Arrays.hashCode(stops));
 		GRADIENTS.put(key, stops);
 		return vtex + GRADIENT + key;
+	}
+
+	static float linear(float c) {
+		return c <= 0.04045f ? c / 12.92f : (float) Math.pow((c + 0.055f) / 1.055f, 2.4);
+	}
+
+	static float srgb(float c) {
+		return c <= 0.0031308f ? c * 12.92f : (float) (1.055f * Math.pow(c, 1 / 2.4) - 0.055f);
 	}
 
 	/** Colour (0xRRGGBB) of a gradient at t (0..1). */
@@ -138,9 +143,8 @@ public final class ParticleTextures {
 	private static void load(String vtex) {
 		int gi = vtex.indexOf(GRADIENT);
 		String gkey = gi >= 0 ? vtex.substring(gi + GRADIENT.length()) : "";
-		int at = gkey.indexOf('@');
-		float level = at >= 0 ? Integer.parseInt(gkey.substring(at + 1)) / (float) GRADIENT_LEVELS : 1; // how faded: the lookup's scale
-		if (at >= 0) gkey = gkey.substring(0, at);
+		boolean lumAlpha = gkey.endsWith(GRADIENT_ALPHA);
+		if (lumAlpha) gkey = gkey.substring(0, gkey.length() - GRADIENT_ALPHA.length());
 		float[] gradient = gi >= 0 ? GRADIENTS.get(gkey) : null;
 		String full = vtex;
 		if (gi >= 0) vtex = vtex.substring(0, gi);
@@ -155,7 +159,7 @@ public final class ParticleTextures {
 			String base = c.substring(0, c.length() - "vtex_c".length());
 			Path png = StrafeConfig.cacheDir().resolve(base + "png");
 			// the finished texture (atlas built, channels moved, downscaled) from an earlier session: no VRF, no rebuild
-			String variant = (alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n") + (gradient != null ? "g" + full.substring(gi + GRADIENT.length()).replace('@', '_') : "");
+			String variant = (alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n") + (gradient != null ? "g3" + gkey + (lumAlpha ? "a" : "") : "");
 			Path ready = StrafeConfig.cacheDir().resolve(base + "strafemc1" + variant + ".png");
 			// a texture CS2's files have no image or sheet for: not converted again every session
 			Path none = StrafeConfig.cacheDir().resolve(base + "strafemc1none");
@@ -213,11 +217,15 @@ public final class ParticleTextures {
 				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());
 				img = w;
 			}
-			if (gradient != null) { // brightness -> the gradient's colour; alpha kept
+			if (gradient != null) { // CS2's colour lookup: the colour's (sRGB) luminance picks the gradient's colour; alpha kept
 				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
 				for (int i = 0; i < px.length; i++) {
-					int l = Math.max(px[i] >> 16 & 255, Math.max(px[i] >> 8 & 255, px[i] & 255));
-					px[i] = (px[i] & 0xFF000000) | gradientAt(gradient, l / 255f * level);
+					// the colour as is (the lookup's straight RGBA channel mode; the premultiplied mode turned whole fires blue)
+					float r = (px[i] >> 16 & 255) / 255f, g = (px[i] >> 8 & 255) / 255f, b = (px[i] & 255) / 255f;
+					int col = gradientAt(gradient, Math.min(1, 0.2125f * r + 0.7154f * g + 0.0721f * b));
+					int a = px[i] >>> 24;
+					if (lumAlpha) a = Math.round(a * (0.299f * (col >> 16 & 255) + 0.587f * (col >> 8 & 255) + 0.114f * (col & 255)) / 255f);
+					px[i] = a << 24 | col;
 				}
 				BufferedImage w = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
 				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());

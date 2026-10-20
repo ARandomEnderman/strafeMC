@@ -220,6 +220,7 @@ public final class PSystem {
 		p.id = p.uniqueId + state.random.seed;
 		p.index = i;
 		p.position.set(state.cp(0).position);
+		p.positionPrevious.set(p.position); // until initializers move it (read while spawning, e.g. a trail's start)
 		p.creationTime = state.age - ageAtSpawn;
 		p.age = ageAtSpawn;
 		long written = 1L << Particle.CREATION_TIME;
