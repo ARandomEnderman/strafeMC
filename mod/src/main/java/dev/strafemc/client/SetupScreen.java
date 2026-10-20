@@ -69,10 +69,16 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 		}
 		if (running || offered || StrafeConfig.setupNeverAsk) return;
 		offered = true;
-		Setup.Status st = Setup.status(StrafeConfig.cacheDir());
-		if (!st.needsSetup()) return;
+		// the check looks at every converted file (thousands): off the render thread, so the title screen stays responsive
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		mc.execute(() -> mc.setScreen(new SetupScreen(st, current)));
+		java.util.concurrent.CompletableFuture.supplyAsync(() -> Setup.status(StrafeConfig.cacheDir())).thenAccept(st -> mc.execute(() -> {
+			if (!st.needsSetup()) return;
+			if (mc.screen != current) { // left the title screen meanwhile: offered next time it shows
+				offered = false;
+				return;
+			}
+			mc.setScreen(new SetupScreen(st, current));
+		}));
 	}
 
 	/** Opened by hand (Options > strafeMC...): always shows, also when the setup is complete (to redo it). */

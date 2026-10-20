@@ -159,6 +159,7 @@ public final class EffectRenderer {
 							   SubmitNodeCollector out, net.minecraft.client.renderer.MultiBufferSource buffers, java.util.function.Supplier<Matrix4f> drawPose) {
 		List<PSystem> all = new ArrayList<>();
 		collect(root, all);
+		readPixelSize();
 		float unit = toRender.getScale(new Vector3f()).x;
 		for (PSystem s : all) {
 			if (s.count() == 0 || Effects.hidden(s.name)) continue;
@@ -168,17 +169,20 @@ public final class EffectRenderer {
 				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
 				if (tex == null) continue;
 				RenderType type = in.additive ? ParticleBlend.additive(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
-				List<float[]> quads = new ArrayList<>(); // 4 corners x (x,y,z,u,v,r,g,b,a)
+				qn = 0; // quads go into QB: 4 corners x (x,y,z,u,v,r,g,b,a) each
 				for (int i = 0; i < s.count(); i++) {
 					Particle p = s.particle(i);
-					if (in.sprites) sprite(s, in, tex, p, toRender, unit, camRender, camRight, camUp, quads);
-					else trail(s, in, tex, p, toRender, unit, camRender, quads);
+					if (in.sprites) sprite(s, in, tex, p, toRender, unit, camRender, camRight, camUp);
+					else trail(s, in, tex, p, toRender, unit, camRender);
 				}
-				if (quads.isEmpty()) continue;
+				if (qn == 0) continue;
 				boolean add = in.additive;
 				// m_flOverbrightFactor > 1 (muzzle flash 3-4): vertex colours cap at 1, so additive layers are drawn that many times
 				int passes = add ? Math.max(1, Math.min(8, (int) Math.ceil(in.overbright.next(s.state)))) : 1;
-				if (passes > 1) for (float[] q : quads) for (int c = 0; c < 4; c++) for (int k = 5; k < 8; k++) q[c * 9 + k] /= passes;
+				if (passes > 1) for (int o = 0; o < qn * QUAD; o += QUAD) for (int c = 0; c < 4; c++) for (int k = 5; k < 8; k++) qb[o + c * 9 + k] /= passes;
+				// drawn now: straight from the shared buffer; submitted for later: its own copy
+				float[] quads = buffers != null ? qb : java.util.Arrays.copyOf(qb, qn * QUAD);
+				int count = qn;
 				SubmitNodeCollector.CustomGeometryRenderer geometry = (given, vc) -> {
 					PoseStack.Pose pose = given;
 					if (drawPose != null) { // viewmodel space: the pose is only known when the features are drawn
@@ -187,13 +191,24 @@ public final class EffectRenderer {
 						pose.normal().set(pose.pose()).invert().transpose();
 					}
 					for (int k = 0; k < passes; k++)
-						for (float[] q : quads)
-							for (int c = 0; c < 4; c++) vertex(vc, pose, q, c * 9, add);
+						for (int o = 0; o < count * QUAD; o += QUAD)
+							for (int c = 0; c < 4; c++) vertex(vc, pose, quads, o + c * 9, add);
 				};
 				if (buffers != null) geometry.render(ps.last(), buffers.getBuffer(type));
 				else out.submitCustomGeometry(ps, type, geometry);
 			}
 		}
+	}
+
+	/** This renderer's quads (render thread only), QUAD floats each, and how many. */
+	private static final int QUAD = 36;
+	private static float[] qb = new float[QUAD * 256];
+	private static int qn;
+
+	/** Room for one more quad; returns its offset in qb. */
+	private static int nextQuad() {
+		if ((qn + 1) * QUAD > qb.length) qb = java.util.Arrays.copyOf(qb, qb.length * 2);
+		return qn++ * QUAD;
 	}
 
 	private static void collect(PSystem s, List<PSystem> out) {
@@ -210,6 +225,40 @@ public final class EffectRenderer {
 	}
 
 	/** Sheet frame rect (u0, v0, u1, v1) for a particle, as VRF's GetSheetFrame. */
+	private static final float[] FULL_FRAME = {0, 0, 1, 1};
+	/** Scratch space for the sprite path (render thread only): the frame rect and the vectors of one quad. */
+	private static final float[] UV = new float[4];
+	private static final Vector3f C = new Vector3f(), AX = new Vector3f(), AY = new Vector3f(), T = new Vector3f(), COL = new Vector3f(),
+			R = new Vector3f(), U = new Vector3f(), CORNER = new Vector3f();
+
+	/** The particle's sheet frame into UV (or the whole texture); returns UV, or FULL_FRAME. */
+	private static float[] frameInto(Info in, ParticleTextures.Tex tex, Particle p) {
+		if (tex.sequences().isEmpty()) return FULL_FRAME;
+		int si = p.sequence >= 0 && p.sequence < tex.sequences().size() ? p.sequence : 0;
+		ParticleTextures.Sequence seq = tex.sequences().get(si);
+		if (seq.frames().isEmpty()) return FULL_FRAME;
+		int idx = frameIndex(in, seq, p);
+		ParticleTextures.Frame f = seq.frames().get(idx);
+		UV[0] = f.u0();
+		UV[1] = f.v0();
+		UV[2] = f.u1();
+		UV[3] = f.v1();
+		return UV;
+	}
+
+	private static int frameIndex(Info in, ParticleTextures.Sequence seq, Particle p) {
+		int idx = 0;
+		if (seq.frames().size() >= 2) {
+			float total = seq.totalTime() > 0 ? seq.totalTime() : 1;
+			float time = in.animationType.equals("ANIMATION_TYPE_FIT_LIFETIME") ? p.normalizedAge() : p.age;
+			float passes = in.animationType.equals("ANIMATION_TYPE_MANUAL_FRAMES") ? p.manualFrame
+					: in.animateInFps ? time * in.animationRate / total : time * in.animationRate;
+			float pos = total * (seq.clamp() ? PMath.saturate(passes) : passes - (float) Math.floor(passes));
+			idx = seq.frameAt(pos);
+		}
+		return idx;
+	}
+
 	private static float[] frame(Info in, ParticleTextures.Tex tex, Particle p) {
 		if (tex.sequences().isEmpty()) return new float[] {0, 0, 1, 1};
 		int si = p.sequence >= 0 && p.sequence < tex.sequences().size() ? p.sequence : 0;
@@ -230,17 +279,23 @@ public final class EffectRenderer {
 
 	/** World size of one screen pixel at a distance (vertical FOV from the options, window height). */
 	private static float pixelSize(float dist) {
-		var mc = net.minecraft.client.Minecraft.getInstance();
-		int h = Math.max(1, mc.getWindow().getHeight());
-		double fov = Math.toRadians(mc.options.fov().get());
-		return (float) (2 * dist * Math.tan(fov / 2) / h);
+		return (float) (2 * dist * pxTan / pxHeight);
 	}
 
-	private static void sprite(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam, Vector3f right, Vector3f up,
-							   List<float[]> quads) {
+	/** tan(vertical FOV / 2) and the window height for pixelSize, read once per draw. */
+	private static double pxTan;
+	private static int pxHeight = 1;
+
+	private static void readPixelSize() {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		pxHeight = Math.max(1, mc.getWindow().getHeight());
+		pxTan = Math.tan(Math.toRadians(mc.options.fov().get()) / 2);
+	}
+
+	private static void sprite(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam, Vector3f right, Vector3f up) {
 		float half = p.radius * in.radiusScale.next(p, s.state) * unit;
 		if (half <= 0) return;
-		Vector3f c = m.transformPosition(new Vector3f(p.position));
+		Vector3f c = m.transformPosition(C.set(p.position));
 		float dist = c.distance(cam);
 		// m_flMinSize / m_flMaxSize: the sprite's size limits in screen pixels (Source 2; default 5000 = no limit), e.g.
 		// the HE explosion's anamorphic flash streak at most 150 px across
@@ -249,23 +304,22 @@ public final class EffectRenderer {
 		float roll = p.rotation.z, cos = (float) Math.cos(roll), sin = (float) Math.sin(roll);
 		if (in.worldZ || in.cpNormal) { // flat in a plane: world XY, or the impact surface (CP0's local XY)
 			org.joml.Quaternionf q = in.cpNormal ? s.controlPoint(0).rotationOrIdentity() : new org.joml.Quaternionf();
-			right = m.transformDirection(q.transform(new Vector3f(1, 0, 0))).normalize();
-			up = m.transformDirection(q.transform(new Vector3f(0, 1, 0))).normalize();
+			right = m.transformDirection(q.transform(R.set(1, 0, 0))).normalize();
+			up = m.transformDirection(q.transform(U.set(0, 1, 0))).normalize();
 		}
-		Vector3f ax = new Vector3f(right).mul(cos).add(new Vector3f(up).mul(sin)).mul(half);
-		Vector3f ay = new Vector3f(up).mul(cos).sub(new Vector3f(right).mul(sin)).mul(half);
-		float[] uv = frame(in, tex, p);
-		Vector3f col = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
+		Vector3f ax = AX.set(right).mul(cos).add(T.set(up).mul(sin)).mul(half);
+		Vector3f ay = AY.set(up).mul(cos).sub(T.set(right).mul(sin)).mul(half);
+		float[] uv = frameInto(in, tex, p);
+		Vector3f col = COL.set(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
 		float a = p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
-		float[] q = new float[36];
-		corner(q, 0, new Vector3f(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
-		corner(q, 9, new Vector3f(c).add(ax).sub(ay), uv[2], uv[3], col, a);
-		corner(q, 18, new Vector3f(c).add(ax).add(ay), uv[2], uv[1], col, a);
-		corner(q, 27, new Vector3f(c).sub(ax).add(ay), uv[0], uv[1], col, a);
-		quads.add(q);
+		int o = nextQuad();
+		corner(qb, o, CORNER.set(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
+		corner(qb, o + 9, CORNER.set(c).add(ax).sub(ay), uv[2], uv[3], col, a);
+		corner(qb, o + 18, CORNER.set(c).add(ax).add(ay), uv[2], uv[1], col, a);
+		corner(qb, o + 27, CORNER.set(c).sub(ax).add(ay), uv[0], uv[1], col, a);
 	}
 
-	private static void trail(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam, List<float[]> quads) {
+	private static void trail(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam) {
 		Vector3f prev = p.vector(in.prevSource);
 		Vector3f diff = new Vector3f(prev).sub(p.position);
 		if (diff.lengthSquared() == 0) return;
@@ -293,12 +347,11 @@ public final class EffectRenderer {
 		float a = p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		Vector3f hc = new Vector3f(tint).mul(in.headColor.next(p, s.state)), tc = new Vector3f(tint).mul(in.tailColor.next(p, s.state));
 		float ha = a * in.headAlpha.next(p, s.state), ta = a * in.tailAlpha.next(p, s.state);
-		float[] q = new float[36];
-		corner(q, 0, new Vector3f(head).sub(new Vector3f(width).mul(hw)), uv[0], uv[1], hc, ha);
-		corner(q, 9, new Vector3f(head).add(new Vector3f(width).mul(hw)), uv[2], uv[1], hc, ha);
-		corner(q, 18, new Vector3f(tail).add(new Vector3f(width).mul(tw)), uv[2], uv[3], tc, ta);
-		corner(q, 27, new Vector3f(tail).sub(new Vector3f(width).mul(tw)), uv[0], uv[3], tc, ta);
-		quads.add(q);
+		int o = nextQuad();
+		corner(qb, o, new Vector3f(head).sub(new Vector3f(width).mul(hw)), uv[0], uv[1], hc, ha);
+		corner(qb, o + 9, new Vector3f(head).add(new Vector3f(width).mul(hw)), uv[2], uv[1], hc, ha);
+		corner(qb, o + 18, new Vector3f(tail).add(new Vector3f(width).mul(tw)), uv[2], uv[3], tc, ta);
+		corner(qb, o + 27, new Vector3f(tail).sub(new Vector3f(width).mul(tw)), uv[0], uv[3], tc, ta);
 	}
 
 	private static void corner(float[] q, int o, Vector3f p, float u, float v, Vector3f c, float a) {

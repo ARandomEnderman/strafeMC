@@ -1214,12 +1214,12 @@ public final class Viewmodel {
 	static boolean twistOff; // TwistCheck's comparison
 
 	private static Matrix4f twistJoint(VmModel.Skin m, VmClip c, Matrix4f[] pose, int j, String name) {
-		String base = name.substring(0, name.indexOf("_TWIST"));
-		if (twistOff || !base.startsWith("arm_lower")) return null;
-		String side = base.substring(base.length() - 1);
-		int jb = m.indexOf(base), jc = m.indexOf("hand_" + side), ju = m.indexOf("arm_upper_" + side);
-		Integer nb = c.node(base), nc = c.node("hand_" + side), nu = c.node("arm_upper_" + side);
-		if (jb < 0 || jc < 0 || nb == null || nc == null) return null;
+		int[] tw = m.twist(j); // forearm, hand, upper arm (names worked out once per skin)
+		if (twistOff || tw == null) return null;
+		int jb = tw[0], jc = tw[1], ju = tw[2];
+		if (jb < 0 || jc < 0) return null;
+		Integer nb = c.node(m.joints[jb]), nc = c.node(m.joints[jc]), nu = ju >= 0 ? c.node(m.joints[ju]) : null;
+		if (nb == null || nc == null) return null;
 		Matrix4f bindB = m.bind(jb);
 		// bindB^-1 is the inverse bind itself
 		Matrix4f localT = new Matrix4f(m.inverseBind[jb]).mul(m.bind(j)), localC = new Matrix4f(m.inverseBind[jb]).mul(m.bind(jc));

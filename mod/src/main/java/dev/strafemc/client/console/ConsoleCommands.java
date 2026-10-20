@@ -50,6 +50,11 @@ public final class ConsoleCommands {
 			}
 			ClientPlayNetworking.send(new NoclipRequest(want));
 		});
+		local("strafemc_perf", "Show how long strafeMC's work takes each frame.", a -> {
+			dev.strafemc.client.perf.Perf.toggle(bool(a, !dev.strafemc.client.perf.Perf.on));
+			ConsoleLog.info("strafemc_perf " + (dev.strafemc.client.perf.Perf.on ? 1 : 0));
+		});
+		local("strafemc_perf_bench", "Measure a fixed scene (bullet holes, smoke, effects) and log the numbers.", a -> dev.strafemc.client.perf.PerfBench.start());
 		local("ui_sweep", "Screenshot every strafeMC menu at each GUI scale into ui-sweep (ui_sweep stop ends it).", a -> {
 			if (a.length > 0 && a[0].equalsIgnoreCase("stop")) dev.strafemc.client.ui.UiSweep.stop();
 			else dev.strafemc.client.ui.UiSweep.start();

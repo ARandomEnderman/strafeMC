@@ -38,13 +38,30 @@ public final class BulletHoles {
 
 	/** normal: the surface normal (the face's for full blocks; the slope's for ramps/stairs, which aren't clipped to faces). */
 	private record Decal(BlockPos block, BlockState state, Direction face, Vec3 at, String material, double sizeRand, double rot, int order,
-						 Vec3 normal) {
+						 Vec3 normal, Geo geo) {
 		boolean onFace() {
 			return Math.abs(normal.x) > 0.999 || Math.abs(normal.y) > 0.999 || Math.abs(normal.z) > 0.999;
 		}
 	}
 
 	private static int counter;
+
+	/**
+	 * A decal's drawn shape, worked out once: its polygons (x, y, z, u, v), light and the neighbour blocks they depend on.
+	 * Each frame a tenth of the decals look again whether those blocks or the light changed.
+	 */
+	private static final class Geo {
+		List<List<double[]>> polys;
+		Vec3 normal;
+		int light;
+		double scaleSetting = Double.NaN, radius;
+		BlockState[] around;
+	}
+
+	/** Frames between a decal's checks of its neighbours and light (spread over the decals). */
+	private static final int RECHECK = 10;
+	private static int frame;
+	private static final java.util.Map<net.minecraft.resources.Identifier, List<Decal>> BY_TEXTURE = new java.util.LinkedHashMap<>();
 
 	private static final Deque<Decal> DECALS = new ArrayDeque<>();
 
@@ -84,7 +101,7 @@ public final class BulletHoles {
 		double rot = m.knife() ? (rng.nextDouble() - 0.5) * Math.toRadians(30) : rng.nextDouble() * Math.PI * 2;
 		if (m.knife() && face.getAxis() == Direction.Axis.X) rot += Math.PI / 2; // on east/west walls the texture's u runs vertically
 		DECALS.addLast(new Decal(bp, mc.level.getBlockState(bp), face, new Vec3(m.x(), m.y(), m.z()), mat, sizeRand, rot, counter++,
-				new Vec3(m.nx(), m.ny(), m.nz())));
+				new Vec3(m.nx(), m.ny(), m.nz()), new Geo()));
 		while (DECALS.size() > MAX_DECALS) DECALS.removeFirst();
 	}
 
@@ -134,56 +151,147 @@ public final class BulletHoles {
 	public static void render(LevelRenderContext ctx) {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level == null || DECALS.isEmpty()) return;
-		Vec3 cam = mc.gameRenderer.getMainCamera().position();
+		var camera = mc.gameRenderer.getMainCamera();
+		Vec3 cam = camera.position();
+		org.joml.Vector3fc fwd = camera.forwardVector();
+		double cone = Math.cos(viewCone(mc));
 		PoseStack ps = ctx.poseStack();
-		double u = StrafeConfig.unitsPerBlock;
 		DECALS.removeIf(d -> mc.level.getBlockState(d.block) != d.state); // block broken or changed
-		for (Decal d : DECALS.toArray(new Decal[0])) { // a copy: nothing drawn here may change the list mid-loop
-			if (d.at.distanceToSqr(cam) > 96 * 96) continue;
+		dev.strafemc.client.perf.Perf.count("holes", DECALS.size());
+		frame++;
+		int drawn = 0;
+		for (List<Decal> l : BY_TEXTURE.values()) l.clear();
+		for (Decal d : DECALS) {
+			double dx = d.at.x - cam.x, dy = d.at.y - cam.y, dz = d.at.z - cam.z, dist2 = dx * dx + dy * dy + dz * dz;
+			if (dist2 > 96 * 96) continue;
 			DecalLibrary.Material m = DecalLibrary.material(d.material);
 			if (m == null) continue;
-			// size from the material: DecalWorldWidth/Height (Hammer units) +- DecalSizeVariance units (interpretation flagged:
-			// a fraction gave 0.4x..1.6x holes on concrete; units gives ~0.8x..1.2x), aspect kept
-			double base = Math.max(m.width(), 1e-3);
-			double scale = Math.max(0.5, (base + m.sizeVariance() * (2 * d.sizeRand - 1)) / base) * (d.material.contains("manhackcut") ? 1 : StrafeConfig.bulletHoleScale); // the 0.6x preference is for bullet holes only
-			double hw = m.width() * scale / u / 2, hh = m.height() * scale / u / 2;
-			if (!d.onFace()) { // slope: a rotated quad on the slope plane
-				List<double[]> q = slopeQuad(d, hw, hh);
-				int lightS = LevelRenderer.getLightCoords(mc.level, BlockPos.containing(d.at.add(d.normal.scale(0.3))));
-				ctx.submitNodeCollector().submitCustomGeometry(ps, RenderTypes.entityTranslucent(m.texture()), (pose, vc) -> {
-					for (int i = 0; i < 4; i++) vertex(vc, pose, q.get(i), cam, d.normal, lightS);
-				});
-				continue;
-			}
-			// the hole continues onto neighbouring blocks whose same face is exposed in the same plane (as CS2's projection)
-			List<List<double[]>> polys = new ArrayList<>();
-			Direction.Axis ax = d.face.getAxis();
-			for (int a = -1; a <= 1; a++)
-				for (int b = -1; b <= 1; b++) {
-					BlockPos cell = switch (ax) {
-						case X -> d.block.offset(0, a, b);
-						case Y -> d.block.offset(a, 0, b);
-						default -> d.block.offset(a, b, 0);
-					};
-					if (!cell.equals(d.block) && (!mc.level.getBlockState(cell).isFaceSturdy(mc.level, cell, d.face)
-							|| mc.level.getBlockState(cell.relative(d.face)).isFaceSturdy(mc.level, cell.relative(d.face), d.face.getOpposite())))
-						continue;
-					List<double[]> poly = clipped(d, cell, hw, hh);
-					if (poly.size() >= 3) polys.add(poly);
-				}
-			if (polys.isEmpty()) continue;
-			int light = LevelRenderer.getLightCoords(mc.level, d.block.relative(d.face));
-			Vec3 n = new Vec3(d.face.getStepX(), d.face.getStepY(), d.face.getStepZ());
-			ctx.submitNodeCollector().submitCustomGeometry(ps, RenderTypes.entityTranslucent(m.texture()), (pose, vc) -> {
-				for (List<double[]> poly : polys)
-					for (int i = 1; i + 1 < poly.size(); i++) { // fan as quads (a, b, c, c)
-						vertex(vc, pose, poly.get(0), cam, n, light);
-						vertex(vc, pose, poly.get(i), cam, n, light);
-						vertex(vc, pose, poly.get(i + 1), cam, n, light);
-						vertex(vc, pose, poly.get(i + 1), cam, n, light);
+			Geo g = d.geo;
+			boolean check = (frame + d.order) % RECHECK == 0;
+			if (g.polys == null || g.scaleSetting != StrafeConfig.bulletHoleScale || check && aroundChanged(mc, d, g)) build(mc, d, m, g);
+			else if (check) g.light = light(mc, d);
+			if (g.polys.isEmpty()) continue;
+			// outside the view (with room to spare): not drawn this frame
+			double dist = Math.sqrt(dist2);
+			if (dist > 1 && dx * fwd.x() + dy * fwd.y() + dz * fwd.z() < cone * dist - g.radius) continue;
+			BY_TEXTURE.computeIfAbsent(m.texture(), k -> new ArrayList<>()).add(d);
+			drawn++;
+		}
+		dev.strafemc.client.perf.Perf.count("holes_drawn", drawn);
+		// one submit per decal texture, its decals in their order (Minecraft groups custom geometry by render type anyway)
+		for (var e : BY_TEXTURE.entrySet()) {
+			if (e.getValue().isEmpty()) continue;
+			Decal[] list = e.getValue().toArray(new Decal[0]);
+			ctx.submitNodeCollector().submitCustomGeometry(ps, RenderTypes.entityTranslucent(e.getKey()), (pose, vc) -> {
+				for (Decal d : list) {
+					Geo g = d.geo;
+					for (int pi = 0; pi < g.polys.size(); pi++) {
+						List<double[]> poly = g.polys.get(pi);
+						if (poly.size() == 4 && !d.onFace()) { // slope quad
+							for (int i = 0; i < 4; i++) vertex(vc, pose, poly.get(i), cam, g.normal, g.light);
+							continue;
+						}
+						for (int i = 1; i + 1 < poly.size(); i++) { // fan as quads (a, b, c, c)
+							vertex(vc, pose, poly.get(0), cam, g.normal, g.light);
+							vertex(vc, pose, poly.get(i), cam, g.normal, g.light);
+							vertex(vc, pose, poly.get(i + 1), cam, g.normal, g.light);
+							vertex(vc, pose, poly.get(i + 1), cam, g.normal, g.light);
+						}
 					}
+				}
 			});
 		}
+	}
+
+	/**
+	 * Half-angle (radians) of a cone around the view direction that holds the whole screen: the diagonal of the widest
+	 * view the FOV setting can give (with headroom for the sprint FOV), plus a margin.
+	 */
+	private static double viewCone(Minecraft mc) {
+		var w = mc.getWindow();
+		double aspect = w.getWidth() / (double) Math.max(1, w.getHeight());
+		double half = Math.toRadians(Math.min(170, mc.options.fov().get() * 1.3) / 2);
+		return Math.min(Math.PI, Math.atan(Math.tan(half) * Math.sqrt(1 + aspect * aspect)) + Math.toRadians(10));
+	}
+
+	/** The decal's light (from the air in front of it). */
+	private static int light(Minecraft mc, Decal d) {
+		return d.onFace() ? LevelRenderer.getLightCoords(mc.level, d.block.relative(d.face))
+				: LevelRenderer.getLightCoords(mc.level, BlockPos.containing(d.at.add(d.normal.scale(0.3))));
+	}
+
+	/** The 3 x 3 cells around the hit on its face, each followed by the block in front of it: what the clipping depends on. */
+	private static BlockPos[] cells(Decal d) {
+		BlockPos[] out = new BlockPos[18];
+		Direction.Axis ax = d.face.getAxis();
+		int k = 0;
+		for (int a = -1; a <= 1; a++)
+			for (int b = -1; b <= 1; b++) {
+				BlockPos cell = switch (ax) {
+					case X -> d.block.offset(0, a, b);
+					case Y -> d.block.offset(a, 0, b);
+					default -> d.block.offset(a, b, 0);
+				};
+				out[k++] = cell;
+				out[k++] = cell.relative(d.face);
+			}
+		return out;
+	}
+
+	private static final BlockPos.MutableBlockPos SCAN = new BlockPos.MutableBlockPos();
+
+	/** Whether any block the decal's clipping depends on changed (same cells and order as cells(), without allocating). */
+	private static boolean aroundChanged(Minecraft mc, Decal d, Geo g) {
+		if (g.around == null) return false;
+		Direction.Axis ax = d.face.getAxis();
+		int k = 0;
+		for (int a = -1; a <= 1; a++)
+			for (int b = -1; b <= 1; b++) {
+				switch (ax) {
+					case X -> SCAN.setWithOffset(d.block, 0, a, b);
+					case Y -> SCAN.setWithOffset(d.block, a, 0, b);
+					default -> SCAN.setWithOffset(d.block, a, b, 0);
+				}
+				if (mc.level.getBlockState(SCAN) != g.around[k++]) return true;
+				SCAN.move(d.face);
+				if (mc.level.getBlockState(SCAN) != g.around[k++]) return true;
+			}
+		return false;
+	}
+
+	/** Works out the decal's polygons, light and the neighbour states they came from. */
+	private static void build(Minecraft mc, Decal d, DecalLibrary.Material m, Geo g) {
+		// size from the material: DecalWorldWidth/Height (Hammer units) +- DecalSizeVariance units (interpretation flagged:
+		// a fraction gave 0.4x..1.6x holes on concrete; units gives ~0.8x..1.2x), aspect kept
+		double u = StrafeConfig.unitsPerBlock;
+		double base = Math.max(m.width(), 1e-3);
+		double scale = Math.max(0.5, (base + m.sizeVariance() * (2 * d.sizeRand - 1)) / base) * (d.material.contains("manhackcut") ? 1 : StrafeConfig.bulletHoleScale); // the 0.6x preference is for bullet holes only
+		double hw = m.width() * scale / u / 2, hh = m.height() * scale / u / 2;
+		g.scaleSetting = StrafeConfig.bulletHoleScale;
+		g.radius = Math.hypot(hw, hh) + 0.25;
+		g.light = light(mc, d);
+		if (!d.onFace()) { // slope: a rotated quad on the slope plane
+			g.polys = List.of(slopeQuad(d, hw, hh));
+			g.normal = d.normal;
+			g.around = null;
+			return;
+		}
+		// the hole continues onto neighbouring blocks whose same face is exposed in the same plane (as CS2's projection)
+		BlockPos[] c = cells(d);
+		BlockState[] around = new BlockState[c.length];
+		for (int i = 0; i < c.length; i++) around[i] = mc.level.getBlockState(c[i]);
+		List<List<double[]>> polys = new ArrayList<>();
+		for (int i = 0; i < c.length; i += 2) {
+			BlockPos cell = c[i], front = c[i + 1];
+			if (!cell.equals(d.block) && (!around[i].isFaceSturdy(mc.level, cell, d.face)
+					|| around[i + 1].isFaceSturdy(mc.level, front, d.face.getOpposite())))
+				continue;
+			List<double[]> poly = clipped(d, cell, hw, hh);
+			if (poly.size() >= 3) polys.add(poly);
+		}
+		g.polys = polys;
+		g.normal = new Vec3(d.face.getStepX(), d.face.getStepY(), d.face.getStepZ());
+		g.around = around;
 	}
 
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, double[] p, Vec3 cam, Vec3 n, int light) {

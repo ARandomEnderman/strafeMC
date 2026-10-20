@@ -18,6 +18,9 @@ public abstract class ItemInHandRendererMixin {
 	private void strafemc$viewmodel(float partial, PoseStack ps, SubmitNodeCollector out, LocalPlayer player, int light, CallbackInfo ci) {
 		if (!(player.getMainHandItem().getItem() instanceof GunItem g)) return;
 		// snipers hide the viewmodel while scoped (m_bHideViewModelWhenZoomed)
-		if (dev.strafemc.client.weapon.GunClient.INSTANCE.scopeOverlay() || Viewmodel.INSTANCE.render(g.weaponClass, ps, out, light)) ci.cancel();
+		long t = dev.strafemc.client.perf.Perf.start();
+		boolean drawn = dev.strafemc.client.weapon.GunClient.INSTANCE.scopeOverlay() || Viewmodel.INSTANCE.render(g.weaponClass, ps, out, light);
+		dev.strafemc.client.perf.Perf.end("viewmodel", t);
+		if (drawn) ci.cancel();
 	}
 }

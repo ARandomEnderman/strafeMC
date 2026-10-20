@@ -343,6 +343,11 @@ public final class GrenadeClient {
 	 * pass) don't draw through it. Drawn among the other submits, the depth pass could land before puffs behind it and
 	 * hide them, leaving only the nearest puff of a smoke visible.
 	 */
+	/** Smoke puffs of this frame, Q floats each (x, y, z, size, r, alpha, light, g, b, depth alpha), and their draw order; kept between frames. */
+	private static final int Q = 10;
+	private static float[] quadBuf = new float[Q * 1024];
+	private static long[] sortKeys = new long[1024];
+
 	public static void renderSmoke(LevelRenderContext ctx) {
 		List<Smoke> smokes;
 		synchronized (SMOKES) {
@@ -355,7 +360,7 @@ public final class GrenadeClient {
 		Vec3 c = cam.position();
 		Vector3f up = new Vector3f(cam.upVector()), right = new Vector3f(cam.forwardVector()).cross(up).normalize();
 		long now = System.nanoTime();
-		List<float[]> quads = new ArrayList<>();
+		int nq = 0;
 		List<Blast> blasts;
 		synchronized (BLASTS) {
 			blasts = new ArrayList<>(BLASTS);
@@ -393,10 +398,31 @@ public final class GrenadeClient {
 					y -= jy * vs;
 					z -= jz * vs;
 				}
-				quads.add(new float[] {x, y, z, size, r, alpha, Float.intBitsToFloat(light), g, b, depthAlpha});
+				if ((nq + 1) * Q > quadBuf.length) quadBuf = java.util.Arrays.copyOf(quadBuf, Math.max(quadBuf.length * 2, (nq + 1) * Q));
+				float[] q = quadBuf;
+				int o = nq++ * Q;
+				q[o] = x;
+				q[o + 1] = y;
+				q[o + 2] = z;
+				q[o + 3] = size;
+				q[o + 4] = r;
+				q[o + 5] = alpha;
+				q[o + 6] = Float.intBitsToFloat(light);
+				q[o + 7] = g;
+				q[o + 8] = b;
+				q[o + 9] = depthAlpha;
 			}
 		}
-		quads.sort(Comparator.comparingDouble((float[] q) -> -(q[0] * q[0] + q[1] * q[1] + q[2] * q[2])));
+		// back to front: farthest first, equal distances in the order they were added (as a stable sort)
+		if (sortKeys.length < nq) sortKeys = new long[Math.max(nq, sortKeys.length * 2)];
+		for (int i = 0; i < nq; i++) {
+			int o = i * Q;
+			float d2 = quadBuf[o] * quadBuf[o] + quadBuf[o + 1] * quadBuf[o + 1] + quadBuf[o + 2] * quadBuf[o + 2];
+			sortKeys[i] = (long) (0x7FFFFFFF - Float.floatToIntBits(d2)) << 32 | i;
+		}
+		java.util.Arrays.sort(sortKeys, 0, nq);
+		dev.strafemc.client.perf.Perf.count("smoke_quads", nq);
+		long tv = dev.strafemc.client.perf.Perf.start();
 		var buffers = ctx.bufferSource();
 		PoseStack.Pose pose = ctx.poseStack().last();
 		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
@@ -404,19 +430,22 @@ public final class GrenadeClient {
 			net.minecraft.client.renderer.rendertype.RenderType type = pass == 0 ? dev.strafemc.client.particle.ParticleBlend.smoke(puff())
 					: dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
 			com.mojang.blaze3d.vertex.VertexConsumer vc = buffers.getBuffer(type);
-			for (float[] q : quads) {
-				float a = pass == 1 ? q[9] : q[5];
+			float[] q = quadBuf;
+			for (int i = 0; i < nq; i++) {
+				int o = (int) sortKeys[i] * Q;
+				float a = pass == 1 ? q[o + 9] : q[o + 5];
 				if (a <= 0) continue;
-				int light = Float.floatToRawIntBits(q[6]);
-				int col = (int) (a * 255) << 24 | (int) (q[4] * 255) << 16 | (int) (q[7] * 255) << 8 | (int) (q[8] * 255);
-				float sz = q[3];
+				int light = Float.floatToRawIntBits(q[o + 6]);
+				int col = (int) (a * 255) << 24 | (int) (q[o + 4] * 255) << 16 | (int) (q[o + 7] * 255) << 8 | (int) (q[o + 8] * 255);
+				float sz = q[o + 3];
 				for (float[] k : corners)
-					vc.addVertex(pose, q[0] + (right.x * k[0] + up.x * k[1]) * sz, q[1] + (right.y * k[0] + up.y * k[1]) * sz,
-									q[2] + (right.z * k[0] + up.z * k[1]) * sz)
+					vc.addVertex(pose, q[o] + (right.x * k[0] + up.x * k[1]) * sz, q[o + 1] + (right.y * k[0] + up.y * k[1]) * sz,
+									q[o + 2] + (right.z * k[0] + up.z * k[1]) * sz)
 							.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
 			}
 			buffers.endBatch(type);
 		}
+		dev.strafemc.client.perf.Perf.end("smoke_vertices", tv);
 	}
 
 	private static void renderPreview(LevelRenderContext ctx) {

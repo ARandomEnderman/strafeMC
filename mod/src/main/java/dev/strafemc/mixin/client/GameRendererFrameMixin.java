@@ -13,7 +13,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GameRendererFrameMixin {
 	@Inject(method = "render", at = @At("HEAD"))
 	private void strafemc$frame(DeltaTracker delta, boolean renderLevel, CallbackInfo ci) {
+		dev.strafemc.client.perf.Perf.frame();
+		long t = dev.strafemc.client.perf.Perf.start();
 		MovementController.INSTANCE.onFrame();
+		dev.strafemc.client.perf.Perf.end("movement", t);
+		t = dev.strafemc.client.perf.Perf.start();
 		dev.strafemc.client.weapon.GunClient.INSTANCE.onFrame(net.minecraft.client.Minecraft.getInstance());
+		dev.strafemc.client.perf.Perf.end("gun", t);
 	}
 }

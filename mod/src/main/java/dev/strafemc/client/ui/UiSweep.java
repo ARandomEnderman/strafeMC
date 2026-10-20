@@ -88,7 +88,8 @@ public final class UiSweep {
 	}
 
 	/** -Dstrafemc.uiSweep=1 (dev runs): open a flat test world, sweep, quit. */
-	private static final boolean AUTO = System.getProperty("strafemc.uiSweep") != null;
+	private static final boolean BENCH = System.getProperty("strafemc.perfBench") != null;
+	private static final boolean AUTO = System.getProperty("strafemc.uiSweep") != null || BENCH;
 	private static final String AUTO_WORLD = "strafemc_ui_sweep";
 	private static int autoPhase, autoTicks;
 
@@ -108,8 +109,9 @@ public final class UiSweep {
 			fill(mc);
 		} else if (autoPhase == 2 && ++autoTicks > 260) {
 			autoPhase = 4;
-			start();
-		} else if (autoPhase == 4 && !running()) {
+			if (BENCH) dev.strafemc.client.perf.PerfBench.startAndQuit();
+			else start();
+		} else if (autoPhase == 4 && !BENCH && !running()) {
 			autoPhase = 3;
 			mc.stop();
 		}

@@ -38,6 +38,28 @@ public final class VmModel {
 		public int[] parent;
 		private Matrix4f[] bind;
 		private java.util.Map<String, Integer> index;
+		/** Per joint: the joints its forearm twist needs (forearm, hand, upper arm), worked out once; null = not a forearm twist helper. */
+		private int[][] twist;
+		private boolean twistDone;
+
+		/** For a forearm twist helper (arm_lower_*_TWIST*): {forearm, hand, upper arm} joint indexes (-1 if missing); else null. */
+		public int[] twist(int j) {
+			if (!twistDone) {
+				int[][] t = new int[joints.length][];
+				for (int i = 0; i < joints.length; i++) {
+					String name = joints[i];
+					int at = name.indexOf("_TWIST");
+					if (at < 0) continue;
+					String base = name.substring(0, at);
+					if (!base.startsWith("arm_lower")) continue;
+					String side = base.substring(base.length() - 1);
+					t[i] = new int[] {indexOf(base), indexOf("hand_" + side), indexOf("arm_upper_" + side)};
+				}
+				twist = t;
+				twistDone = true;
+			}
+			return twist[j];
+		}
 
 		/** Joint j's bind pose (the inverse of its inverse bind), worked out once; callers must not change it. */
 		public Matrix4f bind(int j) {

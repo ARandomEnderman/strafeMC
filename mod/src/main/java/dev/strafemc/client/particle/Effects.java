@@ -184,7 +184,7 @@ public final class Effects {
 	/** Loads an effect's definition tree in the background (VRF runs per file); spawning waits until it's cached. */
 	public static void warm(String vpcf) {
 		if (vpcf == null || vpcf.isEmpty() || READY.contains(vpcf) || !WARMING.add(vpcf)) return;
-		Thread t = new Thread(() -> {
+		dev.strafemc.client.Loaders.run(() -> {
 			try {
 				PSystem s = PSystem.load(vpcf);
 				if (s != null) {
@@ -194,9 +194,7 @@ public final class Effects {
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] effect {} failed: {}", vpcf, e.toString());
 			}
-		}, "strafemc-effect");
-		t.setDaemon(true);
-		t.start();
+		});
 	}
 
 	private static void prefetchTextures(PSystem s) {
@@ -290,8 +288,11 @@ public final class Effects {
 			}
 			// drawn after the translucent terrain (not with the entities): water would otherwise paint over them
 			var buffers = ctx.bufferSource();
+			dev.strafemc.client.perf.Perf.count("effects_alive", WORLD.size());
+			long t = dev.strafemc.client.perf.Perf.start();
 			for (Instance in : WORLD) EffectRenderer.draw(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), buffers);
 			buffers.endBatch();
+			dev.strafemc.client.perf.Perf.end("particles_draw", t);
 		}
 	}
 

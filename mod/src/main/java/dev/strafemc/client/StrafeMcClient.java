@@ -47,8 +47,19 @@ public class StrafeMcClient implements ClientModInitializer {
 				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.ui.UiSweep::tick);
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.weapon.GrenadeClient::render);
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(dev.strafemc.client.weapon.GrenadeClient::renderSmoke);
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "perf"),
+				(g, delta) -> dev.strafemc.client.perf.Perf.hud(g));
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.perf.PerfBench::tick);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> {
+			long t = dev.strafemc.client.perf.Perf.start();
+			dev.strafemc.client.weapon.GrenadeClient.render(ctx);
+			dev.strafemc.client.perf.Perf.end("grenade_preview", t);
+		});
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(ctx -> {
+			long t = dev.strafemc.client.perf.Perf.start();
+			dev.strafemc.client.weapon.GrenadeClient.renderSmoke(ctx);
+			dev.strafemc.client.perf.Perf.end("smoke", t);
+		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.GrenadeFx.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onEffect(msg));
@@ -173,10 +184,22 @@ public class StrafeMcClient implements ClientModInitializer {
 						msg.gain() * dev.strafemc.config.StrafeConfig.movementVolume, false, null));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.BulletImpact.TYPE,
 				(msg, ctx) -> dev.strafemc.client.impact.BulletHoles.onImpact(msg));
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.BulletHoles::render);
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.impact.SprayDecals::render);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> {
+			long t = dev.strafemc.client.perf.Perf.start();
+			dev.strafemc.client.impact.BulletHoles.render(ctx);
+			dev.strafemc.client.perf.Perf.end("bullet_holes", t);
+		});
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> {
+			long t = dev.strafemc.client.perf.Perf.start();
+			dev.strafemc.client.impact.SprayDecals.render(ctx);
+			dev.strafemc.client.perf.Perf.end("sprays", t);
+		});
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(ctx -> DeathCam.frame(Minecraft.getInstance())); // every frame
-		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(dev.strafemc.client.particle.Effects::renderWorld);
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(ctx -> {
+			long t = dev.strafemc.client.perf.Perf.start();
+			dev.strafemc.client.particle.Effects.renderWorld(ctx);
+			dev.strafemc.client.perf.Perf.end("particles", t);
+		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.particle.Effects.clear());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.impact.BulletHoles.clear());
 		ClientPlayNetworking.registerGlobalReceiver(NoclipState.TYPE, (msg, ctx) -> {

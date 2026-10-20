@@ -100,9 +100,7 @@ public final class DecalLibrary {
 		NativeImage img = PENDING.remove(vmat);
 		if (img != null) return register(vmat, img);
 		if (LOADING.putIfAbsent(vmat, true) == null) {
-			Thread t = new Thread(() -> prepare(vmat), "strafemc-decal");
-			t.setDaemon(true);
-			t.start();
+			dev.strafemc.client.Loaders.run(() -> prepare(vmat));
 		}
 		return null;
 	}

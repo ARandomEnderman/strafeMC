@@ -89,9 +89,7 @@ public final class ParticleTextures {
 			return tex;
 		}
 		if (LOADING.putIfAbsent(vtex, true) == null) {
-			Thread th = new Thread(() -> load(vtex), "strafemc-ptex");
-			th.setDaemon(true);
-			th.start();
+			dev.strafemc.client.Loaders.run(() -> load(vtex));
 		}
 		return null;
 	}

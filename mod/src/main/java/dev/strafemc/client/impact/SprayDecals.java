@@ -85,7 +85,7 @@ public final class SprayDecals {
 		Identifier id = TEXTURES.get(material);
 		if (id != null || !LOADING.add(material)) return id;
 		String base = "materials/decals/sprays/" + material;
-		Thread t = new Thread(() -> {
+		dev.strafemc.client.Loaders.run(() -> {
 			try {
 				Path png = StrafeConfig.cacheDir().resolve(base + ".png");
 				if (!Files.exists(png)) AssetCache.decompileAll(List.of(base + ".vtex_c"));
@@ -102,9 +102,7 @@ public final class SprayDecals {
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] graffiti {}: {}", material, e.toString());
 			}
-		}, "strafemc-graffiti");
-		t.setDaemon(true);
-		t.start();
+		});
 		return null;
 	}
 
