@@ -38,11 +38,15 @@ final class FireFunctions {
 		return new Particle().vectorRef(field) != null;
 	}
 
-	/** Copies snapshot attribute `read` of point i into the particle's `write` attribute. */
-	static void copy(Snapshot snap, int i, int read, int write, Particle q, float interp, PState s, int localCp) {
+	/**
+	 * Copies snapshot attribute `read` of point i into the particle's `write` attribute; written to the previous
+	 * position, the value is a velocity (previous = position - value x frame time).
+	 */
+	static void copy(Snapshot snap, int i, int read, int write, Particle q, float interp, PState s, int localCp, float dt) {
 		if (isVectorField(write)) {
 			Vector3f v = snap.vector(read, i);
 			if (read == Particle.POSITION && localCp >= 0) v = Initializers.transformPosition(s, localCp, v);
+			if (write == Particle.POSITION_PREVIOUS) v = new Vector3f(q.position).sub(v.mul(dt > 0 ? dt : 1 / 30f));
 			if (interp < 1) v = new Vector3f(q.vector(write)).lerp(v, interp);
 			q.vector(write, v);
 		} else {
@@ -92,9 +96,10 @@ final class FireFunctions {
 			Snapshot snap = s.cp(cp).snapshot;
 			if (snap == null || snap.count == 0) return;
 			int m = (int) manual.next(q, s);
-			int i = m >= 0 ? Math.min(m, snap.count - 1)
-					: index(snap, q.uniqueId, (int) increment.next(q, s), 0, random, reverse, q, s, seed); // by emission number: slots refill at the end
-			copy(snap, i, read, write, q, 1, s, localCp);
+			// a running index over the points (each new particle the next one), or the manual index wrapped
+			int i = m >= 0 ? m % snap.count
+					: index(snap, q.uniqueId, (int) increment.next(q, s), 0, random, reverse, q, s, seed);
+			copy(snap, i, read, write, q, 1, s, localCp, c.currentFrameTime);
 		}
 	}
 
@@ -115,17 +120,37 @@ final class FireFunctions {
 			increment = p.num("m_nSnapShotIncrement", new Num.Literal(1));
 			start = p.num("m_nSnapShotStartPoint", new Num.Literal(0));
 			interpolation = p.num("m_flInterpolation", new Num.Literal(1));
+			prev = p.b("m_bPrev", false);
 		}
 
+		final boolean prev;
+
+		/**
+		 * Particle k takes point start + k (wrapping back to the start), or with reverse / random / an increment the
+		 * points stepped by the increment around the snapshot (reversed: from the end).
+		 */
 		@Override
 		void operate(PCollection c, float dt, PState s, float strength) {
 			Snapshot snap = s.cp(cp).snapshot;
 			if (snap == null || snap.count == 0) return;
-			int inc = (int) increment.next(s), st = (int) start.next(s);
+			int n = snap.count, inc = Math.max(1, (int) increment.next(s));
+			int st = (int) Math.ceil(Math.max(0, Math.min(n - 1, start.next(s))));
+			boolean indexed = reverse || random || inc != 1;
+			int idx = st;
 			for (int k = 0; k < c.count; k++) {
 				Particle q = c.current[k];
-				int i = index(snap, k, inc, st, random, reverse, q, s, seed);
-				copy(snap, i, read, write, q, Math.min(1, interpolation.next(q, s) * strength), s, localCp);
+				int i;
+				if (random) i = (int) (s.random.forParticle(q.id, 911 + seed) * n) % n;
+				else if (indexed) {
+					i = reverse ? n - 1 - idx : idx;
+					idx = (idx + inc) % n;
+				} else {
+					i = idx;
+					if (++idx >= n) idx = st;
+				}
+				float in = Math.min(1, interpolation.next(q, s) * strength);
+				copy(snap, i, read, write, q, in, s, localCp, c.currentFrameTime);
+				if (prev && write == Particle.POSITION) q.positionPrevious.lerp(snap.vector(read, i), in); // m_bPrev: the previous position too
 			}
 		}
 	}
@@ -202,21 +227,28 @@ final class FireFunctions {
 	}
 
 	/**
-	 * Copies an attribute from a particle of the parent system: every m_nIncrement-th by this particle's number, or a
-	 * random one. m_nFieldOutput's default is the radius (the ground fire's flames take their size from it).
+	 * Copies an attribute from a particle of the parent system: a running index (every m_nIncrement-th, back to the
+	 * first past the last), or a random one; vectors scaled by m_flScale, colours kept within 0..1. With no parent
+	 * particles the particle is left as it is. m_nFieldOutput's default is the radius.
 	 */
 	static final class InheritFromParent extends PFunction.Initializer {
 		final int field, increment, seed;
 		final float scale;
 		final boolean random;
+		int next;
 
 		InheritFromParent(Pd p) {
 			super(p);
 			field = p.field("m_nFieldOutput", Particle.RADIUS);
-			increment = Math.max(1, p.i("m_nIncrement", 1));
+			increment = p.i("m_nIncrement", 1);
 			seed = p.i("m_nRandomSeed", 0);
 			scale = p.f("m_flScale", 1);
 			random = p.b("m_bRandomDistribution", false);
+		}
+
+		@Override
+		void reset() {
+			next = 0;
 		}
 
 		@Override
@@ -227,20 +259,30 @@ final class FireFunctions {
 		@Override
 		void init(Particle q, PCollection c, PState s) {
 			PCollection parent = s.parent == null || s.parent.system == null ? null : s.parent.system.particles;
-			if (parent == null || parent.count == 0) { // nothing to take from: such a particle would sit at the origin
-				q.kill();
-				return;
+			if (parent == null || parent.count == 0) return;
+			int max = parent.count - 1, i;
+			if (random) i = Math.min(max, (int) (s.random.forParticle(q.id, 733 + seed) * parent.count));
+			else {
+				if (next > max) next = 0;
+				i = next;
+				next += increment;
 			}
-			int i = random ? (int) (s.random.forParticle(q.id, 733 + seed) * parent.count) : q.uniqueId * increment;
-			Particle from = parent.current[Math.floorMod(i, parent.count)];
-			if (isVectorField(field)) q.vector(field, from.vector(field).mul(field == Particle.POSITION || field == Particle.POSITION_PREVIOUS ? 1 : scale));
-			else q.scalar(field, from.scalar(field) * scale);
+			Particle from = parent.current[i];
+			if (isVectorField(field)) {
+				Vector3f v = from.vector(field).mul(scale);
+				if (field == Particle.COLOR || field == Particle.GLOW_RGB) v.set(PMath.saturate(v.x), PMath.saturate(v.y), PMath.saturate(v.z));
+				q.vector(field, v);
+			} else {
+				float v = from.scalar(field) * scale;
+				if (field == Particle.ALPHA || field == Particle.ALPHA_ALTERNATE) v = PMath.saturate(v);
+				q.scalar(field, v);
+			}
 		}
 	}
 
 	// ------------------------------------------------------------------ end cap
 
-	/** Particles die once the system is stopped (its end cap). */
+	/** In the end cap, a particle dies once the end cap has lasted its lifetime. */
 	static final class EndCapDecay extends PFunction.Operator {
 		EndCapDecay(Pd p) {
 			super(p);
@@ -249,7 +291,8 @@ final class FireFunctions {
 		@Override
 		void operate(PCollection c, float dt, PState s, float strength) {
 			if (!s.inEndCap) return;
-			for (int i = 0; i < c.count; i++) c.current[i].kill();
+			float age = s.endCapAge();
+			for (int i = 0; i < c.count; i++) if (c.current[i].lifetime <= 0 || c.current[i].lifetime <= age) c.current[i].kill();
 		}
 	}
 
@@ -295,23 +338,29 @@ final class FireFunctions {
 	// ------------------------------------------------------------------ world
 
 	/**
-	 * Puts a new particle on the surface below it (or behind it along its normal): traced up to m_flMaxTraceLength,
-	 * lifted by m_flOffset (+ radius * m_flOffsetByRadiusFactor); a miss kills it when asked.
+	 * Puts a new particle on the surface along m_vecTraceDir (straight down by default): traced from 0.1 units back
+	 * for m_flMaxTraceLength, moved to the hit less m_flOffset (+ radius x m_flOffsetByRadiusFactor) back along the
+	 * trace, its previous position moved with it; m_bSetNormal takes the surface's normal. A miss places it at the
+	 * trace's end (default), kills it, or leaves it.
 	 */
 	static final class PlaceOnGround extends PFunction.Initializer {
 		final Num offset, maxLength;
+		final Vec dir;
 		final float radiusFactor;
-		final boolean water, setNormal, alongNormal, kill;
+		final boolean water, setNormal, setPrevOnly;
+		final int miss;
 
 		PlaceOnGround(Pd p) {
 			super(p);
 			offset = p.num("m_flOffset", new Num.Literal(0));
 			maxLength = p.num("m_flMaxTraceLength", new Num.Literal(128));
+			dir = p.vecInput("m_vecTraceDir", Vec.literal(new Vector3f(0, 0, -1)));
 			radiusFactor = p.f("m_flOffsetByRadiusFactor", 0);
 			water = p.b("m_bIncludeWater", false);
 			setNormal = p.b("m_bSetNormal", false);
-			alongNormal = p.b("m_bTraceAlongNormal", false);
-			kill = p.str("m_nTraceMissBehavior", "").equals("PARTICLE_TRACE_MISS_BEHAVIOR_KILL");
+			setPrevOnly = p.b("m_bSetPXYZOnly", false);
+			String m = p.str("m_nTraceMissBehavior", "PARTICLE_TRACE_MISS_BEHAVIOR_TRACE_END");
+			miss = m.endsWith("NONE") ? 0 : m.endsWith("KILL") ? 1 : 2;
 		}
 
 		@Override
@@ -321,18 +370,19 @@ final class FireFunctions {
 
 		@Override
 		void init(Particle q, PCollection c, PState s) {
-			Vector3f dir = alongNormal && q.normal.lengthSquared() > 0 ? new Vector3f(q.normal).negate().normalize() : new Vector3f(0, 0, -1);
+			Vector3f d = PMath.safeNormalize(dir.next(q, s));
 			float len = maxLength.next(q, s);
-			Vector3f from = new Vector3f(q.position), to = new Vector3f(dir).mul(len).add(from);
+			Vector3f from = new Vector3f(q.position).sub(new Vector3f(d).mul(0.1f)), to = new Vector3f(d).mul(len).add(from);
 			PWorld.Hit hit = s.world().trace(from, to, water);
-			if (hit == null) {
-				if (kill) q.kill();
+			if (hit == null && miss != 2) {
+				if (miss == 1) q.kill();
 				return;
 			}
-			float lift = offset.next(q, s) + q.radius * radiusFactor;
-			Vector3f up = setNormal || alongNormal ? new Vector3f(hit.normal()) : new Vector3f(dir).negate();
-			q.position.set(hit.position()).add(new Vector3f(up).mul(lift));
-			if (setNormal) q.normal.set(hit.normal());
+			float along = (hit == null ? len : len * hit.fraction()) - 0.1f - (offset.next(q, s) + radiusFactor * q.radius);
+			Vector3f move = new Vector3f(d).mul(along);
+			if (!setPrevOnly) q.position.add(move);
+			q.positionPrevious.add(move);
+			if (setNormal && hit != null) q.normal.set(hit.normal());
 		}
 	}
 
@@ -376,7 +426,8 @@ final class FireFunctions {
 		@Override
 		void init(Particle q, PCollection c, PState s) {
 			Vector3f d = new Vector3f(q.position).sub(s.cp(cp).position);
-			q.scalar(field, (float) Math.atan2(d.y, d.x) + offset);
+			if (d.x == 0 && d.y == 0) return;
+			q.scalar(field, (float) Math.atan2(d.y, d.x) + (float) Math.PI + offset);
 		}
 	}
 

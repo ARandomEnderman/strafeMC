@@ -21,6 +21,8 @@ public final class Particle {
 	public float age, lifetime = 1, alpha = 1, alphaAlternate = 1, radius = 5, trailLength = 0.1f, forceScale = 1, scratch0, scratch1,
 			scratch2, glowAlpha, creationTime, manualFrame;
 	public boolean killed;
+	/** While spawning: an initializer set the previous position itself (kept, less the velocity). */
+	public boolean prevSet;
 
 	public Particle copy() {
 		Particle p = new Particle();
@@ -172,6 +174,7 @@ public final class Particle {
 
 	public void vector(int field, Vector3f v) {
 		if (field == NORMAL && v.lengthSquared() == 0) return; // VRF: a zero normal is ignored
+		if (field == POSITION_PREVIOUS) prevSet = true;
 		Vector3f t = vectorRef(field);
 		if (t != null) t.set(v);
 	}

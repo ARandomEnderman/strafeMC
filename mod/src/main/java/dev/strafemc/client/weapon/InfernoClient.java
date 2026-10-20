@@ -408,7 +408,8 @@ public final class InfernoClient {
 				set(cp12, i12, d.pos.x, d.pos.y, d.pos.z, spread, reach, 1, reach);
 				i12 += DIRS;
 			}
-			if (d.state != DEAD) set(cp1, n - 1 - idx, d.pos.x, d.pos.y, d.pos.z, d.pos, reach, 0, d.minOutline);
+			// CS2 keeps the flame's position relative to the fire in CP1's normal
+			if (d.state != DEAD) set(cp1, n - 1 - idx, d.pos.x, d.pos.y, d.pos.z, new Vector3f(d.pos).sub(origin), reach, 0, d.minOutline);
 		}
 		f.fx.snapshot(1, cp1);
 		f.fx.snapshot(11, cp11);

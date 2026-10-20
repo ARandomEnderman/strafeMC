@@ -62,8 +62,17 @@ public final class PerfBench {
 		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
 		++ticks;
 		if (PHASES[phase].equals("fire")) {
-			mc.player.setPos(3.5, mc.player.getY(), fireZ);
-			mc.player.setXRot(28);
+			if (ticks < 104) {
+				mc.player.setPos(3.5, fireY, fireZ);
+				mc.player.setXRot(28);
+			} else { // from above, looking down on the molotov
+				mc.player.getAbilities().flying = true;
+				mc.player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+				mc.player.setPos(3.5, fireY + 6, fireZ + 1);
+				mc.player.setYRot(0);
+				mc.player.setXRot(62);
+			}
+			if (ticks == 112) shot(mc, "fire_top");
 			if (ticks >= 90 && ticks < 100) mc.player.setYRot(-58); // the incendiary
 			if (ticks == 96) shot(mc, "fire_incendiary");
 			if (ticks == 10 || ticks == 30 || ticks == 60 || ticks == 100 || ticks == 135) shot(mc, "fire_" + ticks);
@@ -112,7 +121,7 @@ public final class PerfBench {
 	 * A molotov fire on open ground (thrown forward) and an incendiary fire against a stone wall, started by the
 	 * integrated server as real grenades would.
 	 */
-	private static double fireZ;
+	private static double fireZ, fireY;
 	private static final String[] FX_ONLY = {"groundfire_outline", "main_center", "main_fancy", "snapshot_child_base", "projected", "fire01",
 			"climbingoutline", "filler_replicator"};
 
@@ -124,6 +133,7 @@ public final class PerfBench {
 		BlockPos g = ground(mc);
 		Perf.toggle(false);
 		fireZ = 0.5;
+		fireY = mc.player.getY();
 		var dim = mc.player.level().dimension();
 		server.execute(() -> {
 			var level = server.getLevel(dim);

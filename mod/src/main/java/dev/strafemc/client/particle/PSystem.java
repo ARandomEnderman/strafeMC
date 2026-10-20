@@ -221,6 +221,7 @@ public final class PSystem {
 		p.index = i;
 		p.position.set(state.cp(0).position);
 		p.positionPrevious.set(p.position); // until initializers move it (read while spawning, e.g. a trail's start)
+		p.prevSet = false;
 		p.creationTime = state.age - ageAtSpawn;
 		p.age = ageAtSpawn;
 		long written = 1L << Particle.CREATION_TIME;
@@ -231,8 +232,10 @@ public final class PSystem {
 			in.init(p, particles, state);
 			written |= f;
 		}
-		// initial velocity into the Verlet pair (prev = pos - vel * dt); BasicMovement integrates from positions
-		p.positionPrevious.set(p.position).sub(new org.joml.Vector3f(p.velocity).mul(currentFrameTime));
+		// initial velocity into the Verlet pair (prev = pos - vel * dt); BasicMovement integrates from positions. A
+		// previous position an initializer set itself (from a snapshot or a parent particle) is kept, less the velocity.
+		if (p.prevSet) p.positionPrevious.sub(new org.joml.Vector3f(p.velocity).mul(currentFrameTime));
+		else p.positionPrevious.set(p.position).sub(new org.joml.Vector3f(p.velocity).mul(currentFrameTime));
 		particles.initial[i].set(p);
 	}
 
