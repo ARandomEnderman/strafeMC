@@ -44,7 +44,8 @@ public final class GrenadeClient {
 		final double[] density;
 		final boolean[] inner;
 		final int[] light;
-		long lightNs = Long.MIN_VALUE;
+		long lightNs;
+		boolean lit;
 
 		Cells(dev.strafemc.weapon.SmokeVolume v) {
 			int n = v.cells.length, N = dev.strafemc.weapon.SmokeVolume.N;
@@ -63,7 +64,8 @@ public final class GrenadeClient {
 		}
 
 		void refreshLight(net.minecraft.client.multiplayer.ClientLevel level, long now) {
-			if (now - lightNs < 250_000_000L) return;
+			if (lit && now - lightNs < 250_000_000L) return;
+			lit = true;
 			lightNs = now;
 			for (int k = 0; k < center.length; k++) light[k] = LevelRenderer.getLightCoords(level, BlockPos.containing(center[k]));
 		}
