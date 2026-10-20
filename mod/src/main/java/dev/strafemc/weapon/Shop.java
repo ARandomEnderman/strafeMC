@@ -22,7 +22,7 @@ import java.util.UUID;
 
 /**
  * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and ten offers bought
- * from it (cases in a stock of 1-3, a sticker capsule 2-6, a graffiti box 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
+ * from it (cases in a stock of 1-3, a sticker capsule 2-6, a single sticker 1-3, a graffiti box 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
@@ -73,7 +73,7 @@ public final class Shop {
 	private static final AttachmentType<Integer> PROGRESS = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "shop_progress"),
 			b -> b.persistent(Codec.INT).copyOnDeath().initializer(() -> 0));
 
-	/** item: what you get; cents: its price; stock: how many can be bought this rotation (cases 1-3, sticker capsules 2-6, graffiti boxes 1-3, the rest 1). */
+	/** item: what you get; cents: its price; stock: how many can be bought this rotation (cases 1-3, sticker capsules 2-6, single stickers 1-3, graffiti boxes 1-3, the rest 1). */
 	public record Offer(ItemStack item, long cents, int stock) {}
 
 	private Shop() {}
@@ -112,7 +112,7 @@ public final class Shop {
 		p.setAttached(DATA, new State(s.cents(), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
 	}
 
-	/** The rotation's offers for this player: three cases, a sticker capsule, a graffiti box, a Universal Key and four high-grade skins (knives and gloves too). */
+	/** The rotation's offers for this player: three cases, a sticker capsule, a single sticker, a graffiti box / charm collection / Universal Key, a tool and three high-grade skins (knives and gloves too). */
 	public static List<Offer> offers(UUID player, int rotation) {
 		Random rng = new Random((player.getMostSignificantBits() * 31 + player.getLeastSignificantBits()) * 1_000_003L + rotation);
 		List<Offer> out = new ArrayList<>();
@@ -125,6 +125,13 @@ public final class Shop {
 		if (!stickers.isEmpty()) {
 			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 2 + rng.nextInt(5)));
+		}
+		// a sticker from CS2's one-sticker packs (1-3 of it), at its worth
+		List<Stickers.Sticker> singles = Stickers.shop();
+		if (!singles.isEmpty()) {
+			ItemStack st = StickerItem.stack(WeaponItems.STICKER, singles.get(rng.nextInt(singles.size())).id());
+			double v = Worth.of(st);
+			if (v > 0) out.add(new Offer(st, price(v, rng), 1 + rng.nextInt(3)));
 		}
 		// one slot: a graffiti box, a charm collection or 1-3 universal keys (FLAGGED ours: 40 / 30 / 30 %)
 		double pick = rng.nextDouble();
