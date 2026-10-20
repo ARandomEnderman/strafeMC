@@ -29,7 +29,7 @@ strafeMC uses the open-source ValveResourceFormat converter to read CS2's files.
 ## 3. Install the mod
 
 1. Make a Fabric profile for Minecraft **26.1.2** (Fabric Loader 0.19.5 or newer, Java 25 or newer).
-2. Put the strafeMC jar into the profile's `mods` folder. Fabric API is included in the jar.
+2. Put the strafeMC jar and Fabric API (0.155.3 or newer) into the profile's `mods` folder.
 3. Start Minecraft once, until the title screen, then close it.
 
 This creates strafeMC's settings file:

@@ -71,7 +71,7 @@ CS2 install.
 - Friends without CS2 can still join and play, with placeholder icons and Minecraft sounds
 
 ## Requirements
-- Minecraft **26.1.2**, Fabric Loader **0.19.5+**, Java **25+** (Fabric API is included)
+- Minecraft **26.1.2**, Fabric Loader **0.19.5+**, Fabric API **0.155.3+**, Java **25+**
 - **Counter-Strike 2** on Steam, on the same PC
 - For multiplayer: strafeMC on the server and on every client
 

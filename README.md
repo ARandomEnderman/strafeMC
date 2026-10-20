@@ -73,7 +73,7 @@ The first-time setup is built in: when you join a world, strafeMC offers to conv
 | | |
 |---|---|
 | Minecraft | 26.1.2 |
-| Loader | Fabric Loader 0.19.5 or newer (Fabric API is included in the mod) |
+| Loader | Fabric Loader 0.19.5 or newer and Fabric API 0.155.3 or newer |
 | Java | 25 or newer |
 | Also needs | Counter-Strike 2, installed through Steam on the same PC |
 | Tested on | Windows |
