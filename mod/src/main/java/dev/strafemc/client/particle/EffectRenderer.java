@@ -179,6 +179,21 @@ public final class EffectRenderer {
 		submit(root, toRender, camRender, camRight, camUp, ps, null, buffers, null);
 	}
 
+	/** Which layers draw: decals (projected) are drawn for every effect first, then the rest over them. */
+	static final int ALL = 0, DECALS = 1, NO_DECALS = 2;
+	private static int layers = ALL;
+
+	/** draw() limited to decals or to everything else. */
+	public static void draw(PSystem root, Matrix4f toRender, Vector3f camRender, Vector3f camRight, Vector3f camUp, PoseStack ps,
+							net.minecraft.client.renderer.MultiBufferSource buffers, boolean decals) {
+		layers = decals ? DECALS : NO_DECALS;
+		try {
+			submit(root, toRender, camRender, camRight, camUp, ps, null, buffers, null);
+		} finally {
+			layers = ALL;
+		}
+	}
+
 	private static void submit(PSystem root, Matrix4f toRender, Vector3f camRender, Vector3f camRight, Vector3f camUp, PoseStack ps,
 							   SubmitNodeCollector out, net.minecraft.client.renderer.MultiBufferSource buffers, java.util.function.Supplier<Matrix4f> drawPose) {
 		List<PSystem> all = new ArrayList<>();
@@ -190,9 +205,10 @@ public final class EffectRenderer {
 			for (Map<String, Object> def : s.renderers) {
 				Info in = info(s, def);
 				if (in.projected) {
-					projected(s, in, toRender, unit, ps, out, buffers);
+					if (layers != NO_DECALS) projected(s, in, toRender, unit, ps, out, buffers);
 					continue;
 				}
+				if (layers == DECALS) continue;
 				if (!in.sprites && !in.trails || in.bloomOnly || in.refract) continue;
 				{
 				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
@@ -424,8 +440,7 @@ public final class EffectRenderer {
 		RenderType type = RenderTypes.entityTranslucent(mat.texture());
 		if (buffers != null) {
 			geometry.render(ps.last(), buffers.getBuffer(type));
-			// decals lie under everything: drawn now, before the flames buffered so far (those go when the batch ends)
-			if (buffers instanceof net.minecraft.client.renderer.MultiBufferSource.BufferSource bs) bs.endBatch(type);
+
 		} else out.submitCustomGeometry(ps, type, geometry);
 	}
 
