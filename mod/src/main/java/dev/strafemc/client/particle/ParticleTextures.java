@@ -160,7 +160,7 @@ public final class ParticleTextures {
 			NativeImage ni = NativeImage.read(new ByteArrayInputStream(bytes.toByteArray()));
 			PENDING.put(vtex, new Object[] {ni, sheet});
 		} catch (Exception e) {
-			StrafeMc.LOG.warn("[strafemc] particle texture {} failed: {}", vtex, e.toString());
+			StrafeMc.LOG.warn("[strafePE] particle texture {} failed: {}", vtex, e.toString());
 		}
 	}
 

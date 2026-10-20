@@ -4,7 +4,7 @@ strafeMC includes or is derived from the following third-party software.
 
 ## ValveResourceFormat (Source 2 Viewer)
 
-strafeMC's particle system (`dev.strafemc.client.particle`) is a Java port of the particle simulation and rendering
+strafePE, strafeMC's particle engine (`dev.strafemc.client.particle`), is a Java port of the particle simulation and rendering
 code from ValveResourceFormat. strafeMC also uses the ValveResourceFormat command-line tool (Source2Viewer-CLI),
 which is not bundled with the mod, to convert files from the player's own Counter-Strike 2 installation.
 

@@ -64,7 +64,7 @@ public final class PSystem {
 				def.put("__format", fm.find() ? Long.parseLong(fm.group(1)) : 0L);
 				return def;
 			} catch (Exception e) {
-				StrafeMc.LOG.warn("[strafemc] particle system {} failed to load: {}", k, e.toString());
+				StrafeMc.LOG.warn("[strafePE] particle system {} failed to load: {}", k, e.toString());
 				if (Boolean.getBoolean("strafemc.trace")) e.printStackTrace();
 				return null;
 			}
@@ -121,7 +121,7 @@ public final class PSystem {
 			String cls = p.str("_class", "?");
 			PFunction f = Functions.create(kind, cls, p);
 			if (f == null) {
-				if (WARNED.add(cls)) StrafeMc.LOG.warn("[strafemc] particles: unsupported {} {} ({})", kind, cls, name);
+				if (WARNED.add(cls)) StrafeMc.LOG.warn("[strafePE] unsupported {} {} ({})", kind, cls, name);
 			} else {
 				if (f instanceof PFunction.Initializer in) {
 					in.definitionIndex = index;

@@ -143,7 +143,7 @@ The jar ends up in `mod/build/libs`.
 
 ## Credits
 
-strafeMC's particle system is a Java port of [ValveResourceFormat](https://github.com/ValveResourceFormat/ValveResourceFormat)'s
+strafePE, strafeMC's particle engine, is a Java port of [ValveResourceFormat](https://github.com/ValveResourceFormat/ValveResourceFormat)'s
 particle code (MIT license), and the mod uses ValveResourceFormat's converter to read files from your own CS2 install.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for all third-party licenses.
 

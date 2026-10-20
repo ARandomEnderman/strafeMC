@@ -102,6 +102,6 @@ strafeMC is free, and always will be. Not an official Minecraft product; not app
 Microsoft.
 
 ## Credits
-strafeMC's particle system is a Java port of [ValveResourceFormat](https://github.com/ValveResourceFormat/ValveResourceFormat)'s
+strafePE, strafeMC's particle engine, is a Java port of [ValveResourceFormat](https://github.com/ValveResourceFormat/ValveResourceFormat)'s
 particle code (MIT license). Full third-party notices are in the
 [repository](https://github.com/ARandomEnderman/strafeMC/blob/main/THIRD_PARTY_NOTICES.md).
