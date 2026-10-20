@@ -27,23 +27,10 @@ import java.util.Random;
 /**
  * Client side of grenades going off: CS2's effects and sounds, the flashbang white-out, smoke and fire patches. Smoke is
  * CS2's simulated voxel volume (weapon.SmokeVolume, stepped by client.smoke.SmokeVolumes) drawn by
- * client.smoke.SmokeRenderer; fire is CS2's per-flame effect. Durations match weapon.GrenadeZones.
+ * client.smoke.SmokeRenderer; fire is CS2's ground fire effect, shaped by InfernoClient from the server's flames.
  */
 public final class GrenadeClient {
 	private GrenadeClient() {}
-
-	private static final class Fire {
-		final Vec3 at;
-		final long until;
-		final boolean incendiary;
-		final String key = "flame" + FLAME_IDS.incrementAndGet();
-
-		Fire(Vec3 at, long until, boolean incendiary) {
-			this.at = at;
-			this.until = until;
-			this.incendiary = incendiary;
-		}
-	}
 
 	/** A burning fire's centre, for its looping sound (Inferno.Loop is a few seconds long: replayed while it burns). */
 	private static final class FireSound {
@@ -55,13 +42,9 @@ public final class GrenadeClient {
 		}
 	}
 
-	private static final java.util.concurrent.atomic.AtomicLong FLAME_IDS = new java.util.concurrent.atomic.AtomicLong();
 	private static final List<FireSound> FIRE_SOUNDS = new ArrayList<>();
 	private static final double LOOP_EVERY = 2.0;
 
-	private static final List<Fire> FIRES = new ArrayList<>();
-	/** CS2's inferno_flame_lifetime (7 s, incendiary 5.5 s); the server sends each flame as it spreads. */
-	private static final double FLAME_SECONDS = 7, FLAME_SECONDS_INC = 5.5, FLAME_REACH = 21;
 	private static Identifier puffTexture;
 
 	/** The trajectory preview: the path of the grenade being held charged (null = none). */
@@ -108,14 +91,6 @@ public final class GrenadeClient {
 				if (level != null) dev.strafemc.client.smoke.SmokeVolumes.add(dev.strafemc.weapon.SmokeVolume.create(level, at), m.kind() == GrenadeEffects.EV_SMOKE_T);
 				CsSounds.play("BaseSmokeEffect.Sound", at.x, at.y, at.z, 1.0);
 			}
-			case GrenadeEffects.EV_FLAME, GrenadeEffects.EV_FLAME_INC -> {
-				boolean inc = m.kind() == GrenadeEffects.EV_FLAME_INC;
-				Fire f = new Fire(at, System.nanoTime() + (long) ((inc ? FLAME_SECONDS_INC : FLAME_SECONDS) * 1e9), inc);
-				synchronized (FIRES) {
-					FIRES.add(f);
-				}
-				dev.strafemc.client.particle.Effects.atHeld(f.key, inc ? GrenadeEffects.INCENDIARY_FLAME_EFFECT : GrenadeEffects.MOLOTOV_FLAME_EFFECT, at, up);
-			}
 			case GrenadeEffects.EV_FIRE, GrenadeEffects.EV_FIRE_INC -> {
 				boolean inc = m.kind() == GrenadeEffects.EV_FIRE_INC;
 				dev.strafemc.client.particle.Effects.at(inc ? GrenadeEffects.INCENDIARY_GROUND_EFFECT : GrenadeEffects.MOLOTOV_GROUND_EFFECT, at, up, fwd);
@@ -126,14 +101,6 @@ public final class GrenadeClient {
 				}
 			}
 			case GrenadeEffects.EV_FIRE_OUT, GrenadeEffects.EV_FIRE_END -> {
-				double range = 160 / StrafeConfig.unitsPerBlock;
-				synchronized (FIRES) {
-					FIRES.removeIf(f -> {
-						if (f.at.distanceToSqr(at) >= range * range) return false;
-						dev.strafemc.client.particle.Effects.stopHeld(f.key);
-						return true;
-					});
-				}
 				synchronized (FIRE_SOUNDS) {
 					FIRE_SOUNDS.removeIf(f -> f.at.distanceToSqr(at) < 0.01);
 				}
@@ -206,7 +173,6 @@ public final class GrenadeClient {
 		if (mc.level == null || mc.isPaused()) return;
 		decoySparks(mc);
 		long now = System.nanoTime();
-		double r = FLAME_REACH / StrafeConfig.unitsPerBlock;
 		Random rnd = new Random();
 		synchronized (FIRE_SOUNDS) {
 			for (FireSound fs : FIRE_SOUNDS)
@@ -215,20 +181,13 @@ public final class GrenadeClient {
 					fs.nextLoop = now + (long) (LOOP_EVERY * 1e9);
 				}
 		}
-		synchronized (FIRES) {
-			FIRES.removeIf(f -> {
-				if (now <= f.until) return false;
-				dev.strafemc.client.particle.Effects.stopHeld(f.key);
-				return true;
-			});
-			if (dev.strafemc.client.Placeholders.active()) // no CS2 effects: Minecraft flames instead
-				for (Fire f : FIRES)
-					for (int i = 0; i < 2; i++) {
-						double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * r;
-						double x = f.at.x + Math.cos(a) * d, z = f.at.z + Math.sin(a) * d;
-						mc.level.addParticle(i % 4 == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, x, f.at.y + 0.05, z, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
-					}
-		}
+		InfernoClient.tick();
+		if (dev.strafemc.client.Placeholders.active()) // no CS2 effects: Minecraft flames over the fires instead
+			for (Vec3 at : InfernoClient.flames()) {
+				double a = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * 1.2;
+				mc.level.addParticle(rnd.nextInt(4) == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, at.x + Math.cos(a) * d, at.y + 0.05,
+						at.z + Math.sin(a) * d, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
+			}
 		dev.strafemc.client.smoke.SmokeVolumes.tick();
 	}
 
@@ -287,9 +246,7 @@ public final class GrenadeClient {
 			FIRE_SOUNDS.clear();
 		}
 		dev.strafemc.client.smoke.SmokeVolumes.clear();
-		synchronized (FIRES) {
-			FIRES.clear();
-		}
+		InfernoClient.clear();
 		flashSeconds = 0;
 	}
 }

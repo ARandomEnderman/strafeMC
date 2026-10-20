@@ -6,6 +6,7 @@ final class Functions {
 
 	static PFunction create(String kind, String cls, Pd p) {
 		PFunction f = kind.equals("initializer") ? Initializers.create(cls, p) : Operators.create(kind, cls, p);
-		return f != null ? f : MoreFunctions.create(kind, cls, p);
+		if (f == null) f = MoreFunctions.create(kind, cls, p);
+		return f != null ? f : FireFunctions.create(kind, cls, p);
 	}
 }

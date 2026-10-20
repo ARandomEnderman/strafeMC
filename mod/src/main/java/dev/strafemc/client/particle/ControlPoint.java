@@ -8,6 +8,8 @@ import org.joml.Vector3f;
 public final class ControlPoint {
 	public final Vector3f position = new Vector3f(), positionPrevious = new Vector3f(), orientation = new Vector3f();
 	public Quaternionf rotation; // full rotation when known (attachments); else derived from orientation
+	/** Points attached to this control point (null = none). */
+	public volatile Snapshot snapshot;
 	float changeTime = -1, previousStepTime;
 
 	public void set(Vector3f pos, Quaternionf rot, PState clock) {

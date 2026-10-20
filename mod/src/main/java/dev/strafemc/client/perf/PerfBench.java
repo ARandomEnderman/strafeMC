@@ -18,7 +18,10 @@ import java.util.Random;
  */
 public final class PerfBench {
 	private static final int PHASE = 160; // 8 s: the averages settle over the last second
-	private static final String[] PHASES = {"idle", "bullet_holes", "smoke", "effects"};
+	private static final String[] ALL = {"idle", "bullet_holes", "smoke", "effects", "fire"};
+	/** -Dstrafemc.perfBenchOnly=a,b runs only those phases. */
+	private static final String[] PHASES = System.getProperty("strafemc.perfBenchOnly") != null
+			? System.getProperty("strafemc.perfBenchOnly").split(",") : ALL;
 	private static int phase = -1, ticks;
 	private static final Random RNG = new Random(7);
 	/** Quit the game when done (dev runs with -Dstrafemc.perfBench=1). */
@@ -48,6 +51,7 @@ public final class PerfBench {
 		mc.player.setYRot(0);
 		phase = 0;
 		ticks = 0;
+		begin(mc);
 		log("perf bench: " + PHASE / 20 + " s per phase " + String.join(", ", PHASES));
 	}
 
@@ -55,8 +59,25 @@ public final class PerfBench {
 		if (!running() || mc.player == null) return;
 		mc.player.setXRot(45);
 		mc.player.setYRot(0);
-		if (phase == 3) for (int i = 0; i < 6; i++) effect(mc);
-		if (++ticks < PHASE) return;
+		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
+		++ticks;
+		if (PHASES[phase].equals("fire")) {
+			mc.player.setPos(mc.player.getX(), mc.player.getY(), fireZ);
+			mc.player.setXRot(30);
+			if (ticks == 10 || ticks == 30 || ticks == 60 || ticks == 100 || ticks == 135) shot(mc, "fire_" + ticks);
+			// single layers: everything but one hidden (FX_ONLY), a frame later each
+			if (ticks >= 70 && ticks < 70 + 2 * FX_ONLY.length) {
+				int k = (ticks - 70) / 2;
+				if ((ticks - 70) % 2 == 0) dev.strafemc.client.particle.Effects.only(FX_ONLY[k]);
+				else shot(mc, "fire_only_" + FX_ONLY[k]);
+			}
+			if (ticks == 70 + 2 * FX_ONLY.length) dev.strafemc.client.particle.Effects.only(null);
+			if (ticks == 60) {
+				for (String l : dev.strafemc.client.particle.Effects.layerCounts()) log(l);
+				for (String l : dev.strafemc.client.weapon.InfernoClient.describe()) log(l);
+			}
+		}
+		if (ticks < PHASE) return;
 		log("== " + PHASES[phase]);
 		shot(mc, PHASES[phase]);
 		for (String l : Perf.lines()) log(l);
@@ -67,8 +88,13 @@ public final class PerfBench {
 			if (quitAfter) mc.stop();
 			return;
 		}
+		begin(mc);
+	}
+
+	private static void begin(Minecraft mc) {
 		switch (PHASES[phase]) {
 			case "bullet_holes" -> holes(mc, 2048);
+			case "fire" -> fires(mc);
 			case "smoke" -> {
 				BlockPos g = ground(mc);
 				for (int k = 0; k < 2; k++)
@@ -77,6 +103,36 @@ public final class PerfBench {
 			}
 			default -> {}
 		}
+	}
+
+	/**
+	 * A molotov fire on open ground (thrown forward) and an incendiary fire against a stone wall, started by the
+	 * integrated server as real grenades would.
+	 */
+	private static double fireZ;
+	private static final String[] FX_ONLY = {"groundfire_outline", "main_center", "main_fancy", "snapshot_child_base", "projected", "fire01",
+			"climbingoutline", "filler_replicator"};
+
+	private static void fires(Minecraft mc) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		// a fixed spot: the player 9 blocks back from the fires, old test walls cleared
+		mc.player.setPos(3.5, mc.player.getY(), -2.5);
+		BlockPos g = ground(mc);
+		Perf.toggle(false);
+		fireZ = -2.5;
+		var dim = mc.player.level().dimension();
+		server.execute(() -> {
+			var level = server.getLevel(dim);
+			if (level == null) return;
+			for (int x = -20; x <= 20; x++)
+				for (int z = -10; z <= 30; z++)
+					for (int y = 1; y <= 4; y++) level.setBlockAndUpdate(g.offset(x, y, z), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+			for (int x = 3; x <= 10; x++)
+				for (int y = 1; y <= 3; y++) level.setBlockAndUpdate(g.offset(x, y, 11), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() - 3.5, g.getY() + 1, g.getZ() + 7.5), null, new Vec3(0, 0, 8), Float.NaN, false);
+			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 6.5, g.getY() + 1, g.getZ() + 9.5), null, new Vec3(0, 0, 8), Float.NaN, true);
+		});
 	}
 
 	/** A picture of the phase's scene (runtime folder, perf-bench/) to compare looks before and after a change. */

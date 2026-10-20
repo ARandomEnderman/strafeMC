@@ -18,6 +18,10 @@ final class PState {
 	final PRandom random = new PRandom();
 	final Vector3f cameraPosition = new Vector3f();
 	private final Map<Integer, ControlPoint> controlPoints = new HashMap<>();
+	/** Control points a child system set itself (C_OP_SetSingleControlPointPosition...): its own and its children's. */
+	private final Map<Integer, ControlPoint> local = new HashMap<>();
+	/** Traces and the viewer, for the root (children use their root's). */
+	PWorld world = PWorld.NONE;
 	long particleCount;
 	float age, restartAge, frameStartAge, frameLength, endCapStartAge, endTime;
 	boolean inEndCap, endEarly, frozen;
@@ -58,8 +62,21 @@ final class PState {
 	}
 
 	ControlPoint cp(int i) {
-		if (parent != null) return parent.cp(i);
+		if (parent != null) {
+			ControlPoint own = local.isEmpty() ? null : local.get(i);
+			return own != null ? own : parent.cp(i);
+		}
 		return controlPoints.computeIfAbsent(i, k -> new ControlPoint());
+	}
+
+	/** A control point this system sets for itself and its children (the root's are everyone's). */
+	ControlPoint ownCp(int i) {
+		if (parent == null) return cp(i);
+		return local.computeIfAbsent(i, k -> new ControlPoint());
+	}
+
+	PWorld world() {
+		return parent != null ? parent.world() : world;
 	}
 
 	/** Control point history for velocities, recorded once per frame by the root. */

@@ -204,7 +204,7 @@ public final class Setup {
 			for (Path p : s.filter(x -> x.toString().endsWith(".DATA.kv3")).toList()) collect(Files.readString(p), ".vpcf", roots);
 		}
 		roots.addAll(java.util.List.of(dev.strafemc.weapon.GrenadeEffects.EFFECTS));
-		Set<String> done = new LinkedHashSet<>(), textures = new LinkedHashSet<>();
+		Set<String> done = new LinkedHashSet<>(), textures = new LinkedHashSet<>(), materials = new LinkedHashSet<>();
 		Set<String> frontier = new LinkedHashSet<>();
 		for (String r : roots) frontier.add(compiled(r));
 		while (!frontier.isEmpty()) {
@@ -221,8 +221,17 @@ public final class Setup {
 				collect(t, ".vpcf", children);
 				for (String c : children) if (!done.contains(compiled(c))) next.add(compiled(c));
 				collect(t, ".vtex", textures);
+				collect(t, ".vmat", materials); // projected layers (a fire's scorch) draw a material
 			}
 			frontier = next;
+		}
+		List<String> vmats = materials.stream().map(Setup::compiled).filter(pak::containsKey).toList();
+		if (!vmats.isEmpty()) {
+			vrf.blocks(vmats, null, "DATA", cache);
+			for (String m : vmats) {
+				Path p = cache.resolve(m + ".DATA.kv3");
+				if (Files.exists(p)) collect(Files.readString(p), ".vtex", textures);
+			}
 		}
 		progress(base + span * 0.5, "Effect textures (" + textures.size() + ")");
 		List<String> tex = textures.stream().map(Setup::compiled).filter(pak::containsKey).toList();

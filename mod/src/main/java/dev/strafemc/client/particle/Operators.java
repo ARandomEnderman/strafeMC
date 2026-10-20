@@ -56,7 +56,11 @@ final class Operators {
 			count = p.num("m_nParticlesToEmit", new Num.Literal(100));
 			startTime = p.num("m_flStartTime", new Num.Literal(0));
 			maxPerFrame = p.i("m_nMaxEmittedPerFrame", -1);
+			snapshotCp = p.i("m_nSnapshotControlPoint", -1);
 		}
+
+		/** With a snapshot control point, the count is per snapshot point. */
+		final int snapshotCp;
 
 		@Override
 		void onStart(PSystem s) {
@@ -85,6 +89,10 @@ final class Operators {
 			if (!resolved) {
 				resolved = true;
 				remaining = (int) count.next(s);
+				if (snapshotCp >= 0) {
+					Snapshot snap = s.cp(snapshotCp).snapshot;
+					remaining *= snap == null ? 0 : snap.count;
+				}
 			}
 			int cap = maxPerFrame >= 0 ? maxPerFrame : Math.min(sys.maxParticles, 20000);
 			int claimed = Math.min(remaining, cap);
@@ -107,7 +115,11 @@ final class Operators {
 			duration = p.num("m_flEmissionDuration", new Num.Literal(0));
 			startTime = p.num("m_flStartTime", new Num.Literal(0));
 			rate = p.num("m_flEmitRate", new Num.Literal(100));
+			perParent = p.f("m_flScalePerParentParticle", 0);
 		}
+
+		/** m_flScalePerParentParticle: the rate is per live particle of the parent system, times this. */
+		final float perParent;
 
 		@Override
 		void onStart(PSystem s) {
@@ -133,7 +145,9 @@ final class Operators {
 			float elapsed = s.age - startAge, start = startTime.next(s), dur = duration.next(s);
 			if (elapsed < start) return;
 			float from = Math.max(start, elapsed - dt), to = dur > 0 ? Math.min(elapsed, start + dur) : elapsed;
-			if (to > from) owed += rate.next(s) * (to - from) * strength;
+			float r = rate.next(s);
+			if (perParent > 0) r *= perParent * (s.parent == null || s.parent.system == null ? 0 : s.parent.system.particles.count);
+			if (to > from) owed += r * (to - from) * strength;
 			int n = (int) owed;
 			owed -= n;
 			for (int i = 0; i < n; i++) sys.emit(dt * (n - i) / (n + 1f)); // spread over this frame
@@ -709,11 +723,14 @@ final class Operators {
 
 	static final class StopAfterDuration extends PFunction.PreEmission {
 		final Num duration;
+		final boolean destroy, endCap;
 		boolean stopped;
 
 		StopAfterDuration(Pd p) {
 			super(p);
 			duration = p.num("m_flDuration", new Num.Literal(1));
+			destroy = p.b("m_bDestroyImmediately", false);
+			endCap = p.b("m_bPlayEndCap", true);
 		}
 
 		@Override
@@ -726,7 +743,9 @@ final class Operators {
 			if (stopped || s.inEndCap) return;
 			if (s.age > duration.next(s)) {
 				stopped = true;
-				sys.stop();
+				if (destroy) sys.destroy();
+				else if (endCap) sys.stopWithEndCap();
+				else sys.stop();
 			}
 		}
 	}

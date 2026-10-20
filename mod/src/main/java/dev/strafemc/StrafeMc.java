@@ -101,6 +101,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Tagged.TYPE, dev.strafemc.net.StrafePayloads.Tagged.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ServerTick.TYPE, dev.strafemc.net.StrafePayloads.ServerTick.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.GrenadeFx.TYPE, dev.strafemc.net.StrafePayloads.GrenadeFx.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.InfernoState.TYPE, dev.strafemc.net.StrafePayloads.InfernoState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Flashed.TYPE, dev.strafemc.net.StrafePayloads.Flashed.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ArmorSync.TYPE, dev.strafemc.net.StrafePayloads.ArmorSync.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.weapon.CsArmor::tick);

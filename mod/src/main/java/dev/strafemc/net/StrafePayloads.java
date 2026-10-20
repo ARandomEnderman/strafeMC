@@ -373,6 +373,43 @@ public final class StrafePayloads {
 		}
 	}
 
+	/**
+	 * Server -> client: a fire (CS2 inferno) as it is now. Its start (blocks), kind, how long it burns and how long it has
+	 * burnt (seconds), whether it is over (ended: out of time; extinguished: by a smoke), and its flames, 10 floats each:
+	 * position and parent position relative to the start (blocks), surface normal (Minecraft axes), burning (1/0).
+	 */
+	public record InfernoState(int id, boolean incendiary, double x, double y, double z, float lifetime, float age, int end, float[] fires)
+			implements CustomPacketPayload {
+		public static final int BURNING = 0, ENDED = 1, EXTINGUISHED = 2, FLOATS = 10;
+		public static final Type<InfernoState> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "inferno"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, InfernoState> CODEC = StreamCodec.of((b, v) -> {
+			b.writeVarInt(v.id);
+			b.writeBoolean(v.incendiary);
+			b.writeDouble(v.x);
+			b.writeDouble(v.y);
+			b.writeDouble(v.z);
+			b.writeFloat(v.lifetime);
+			b.writeFloat(v.age);
+			b.writeVarInt(v.end);
+			b.writeVarInt(v.fires.length);
+			for (float f : v.fires) b.writeFloat(f);
+		}, b -> {
+			int id = b.readVarInt();
+			boolean inc = b.readBoolean();
+			double x = b.readDouble(), y = b.readDouble(), z = b.readDouble();
+			float life = b.readFloat(), age = b.readFloat();
+			int end = b.readVarInt(), n = Math.min(b.readVarInt(), 64 * FLOATS);
+			float[] f = new float[n];
+			for (int i = 0; i < n; i++) f[i] = b.readFloat();
+			return new InfernoState(id, inc, x, y, z, life, age, end, f);
+		});
+
+		@Override
+		public Type<InfernoState> type() {
+			return TYPE;
+		}
+	}
+
 	/** Server -> client, every tick: the server's tick number (lag compensation: client.LagClock). */
 	public record ServerTick(int tick) implements CustomPacketPayload {
 		public static final Type<ServerTick> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "server_tick"));

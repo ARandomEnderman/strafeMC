@@ -64,6 +64,47 @@ public final class ParticleTextures {
 	public static final String RED_ALPHA = "#ra";
 	/** Suffix on a texture name: alpha taken from the green channel (..._MIX_GALPHA). */
 	public static final String GREEN_ALPHA = "#ga";
+	/** Suffix on a texture name: its brightness looked up in a colour gradient (a layer's 1D colour lookup), then the gradient key. */
+	public static final String GRADIENT = "#g";
+	private static final Map<String, float[]> GRADIENTS = new ConcurrentHashMap<>();
+	private static final Map<String, Object> PLAIN_BUILDS = new ConcurrentHashMap<>();
+	/**
+	 * A gradient layer's lookup also counts how faded the particle is (its alpha): faint flames slide down the ramp (the
+	 * blue edges of a fire). Baked as this many textures, one per fade level ("...#g<key>@<level>"). FLAGGED: our reading.
+	 */
+	public static final int GRADIENT_LEVELS = 8;
+
+	/**
+	 * The texture with its brightness replaced by a colour from a gradient (stops as position, r, g, b with r/g/b 0-255):
+	 * CS2's m_bReplaceTextureWithGradient, e.g. a fire's flames going blue and purple where they're faint.
+	 */
+	public static String withGradient(String vtex, float[] stops) {
+		if (vtex == null || stops.length < 4) return vtex;
+		String key = Integer.toHexString(java.util.Arrays.hashCode(stops));
+		GRADIENTS.put(key, stops);
+		return vtex + GRADIENT + key;
+	}
+
+	/** Colour (0xRRGGBB) of a gradient at t (0..1). */
+	static int gradientAt(float[] s, float t) {
+		int n = s.length / 4;
+		if (t <= s[0]) return rgb(s, 0);
+		for (int i = 1; i < n; i++) {
+			if (t <= s[i * 4]) {
+				float a = s[(i - 1) * 4], b = s[i * 4], k = b > a ? (t - a) / (b - a) : 1;
+				int r = Math.round(s[(i - 1) * 4 + 1] + (s[i * 4 + 1] - s[(i - 1) * 4 + 1]) * k);
+				int g = Math.round(s[(i - 1) * 4 + 2] + (s[i * 4 + 2] - s[(i - 1) * 4 + 2]) * k);
+				int bl = Math.round(s[(i - 1) * 4 + 3] + (s[i * 4 + 3] - s[(i - 1) * 4 + 3]) * k);
+				return r << 16 | g << 8 | bl;
+			}
+		}
+		return rgb(s, n - 1);
+	}
+
+	private static int rgb(float[] s, int i) {
+		return Math.round(s[i * 4 + 1]) << 16 | Math.round(s[i * 4 + 2]) << 8 | Math.round(s[i * 4 + 3]);
+	}
+
 	/** Suffix on a texture name: the same texture with RGB forced white (alpha-only texture channel). */
 	public static final String ALPHA_ONLY = "#a";
 
@@ -95,6 +136,14 @@ public final class ParticleTextures {
 	}
 
 	private static void load(String vtex) {
+		int gi = vtex.indexOf(GRADIENT);
+		String gkey = gi >= 0 ? vtex.substring(gi + GRADIENT.length()) : "";
+		int at = gkey.indexOf('@');
+		float level = at >= 0 ? Integer.parseInt(gkey.substring(at + 1)) / (float) GRADIENT_LEVELS : 1; // how faded: the lookup's scale
+		if (at >= 0) gkey = gkey.substring(0, at);
+		float[] gradient = gi >= 0 ? GRADIENTS.get(gkey) : null;
+		String full = vtex;
+		if (gi >= 0) vtex = vtex.substring(0, gi);
 		try {
 			boolean alphaOnly = vtex.endsWith(ALPHA_ONLY), luma = vtex.endsWith(LUMA_ALPHA), red = vtex.endsWith(RED_ALPHA),
 					green = vtex.endsWith(GREEN_ALPHA);
@@ -106,7 +155,7 @@ public final class ParticleTextures {
 			String base = c.substring(0, c.length() - "vtex_c".length());
 			Path png = StrafeConfig.cacheDir().resolve(base + "png");
 			// the finished texture (atlas built, channels moved, downscaled) from an earlier session: no VRF, no rebuild
-			String variant = alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n";
+			String variant = (alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n") + (gradient != null ? "g" + full.substring(gi + GRADIENT.length()).replace('@', '_') : "");
 			Path ready = StrafeConfig.cacheDir().resolve(base + "strafemc1" + variant + ".png");
 			// a texture CS2's files have no image or sheet for: not converted again every session
 			Path none = StrafeConfig.cacheDir().resolve(base + "strafemc1none");
@@ -114,7 +163,7 @@ public final class ParticleTextures {
 			if (Files.exists(ready)) {
 				List<Sequence> sheet = sheet(c);
 				try (var in = Files.newInputStream(ready)) {
-					PENDING.put(vtex, new Object[] {NativeImage.read(in), sheet});
+					PENDING.put(full, new Object[] {NativeImage.read(in), sheet});
 				}
 				return;
 			}
@@ -126,7 +175,17 @@ public final class ParticleTextures {
 			List<Sequence> sheet = sheet(c);
 			// sheet textures: VRF writes each (alpha-cropped) frame as <name>_seq<S>_<F>.png; rebuild the atlas from them
 			BufferedImage img;
-			if (Files.exists(png)) img = ImageIO.read(png.toFile());
+			boolean finished = false;
+			Path plain = StrafeConfig.cacheDir().resolve(base + "strafemc1" + variant.substring(0, 1) + ".png");
+			if (gradient != null && !Files.exists(plain)) // the fade levels share one plain build (the atlas is the slow part)
+				synchronized (PLAIN_BUILDS.computeIfAbsent(plain.toString(), k -> new Object())) {
+					if (!Files.exists(plain)) load(vtex);
+				}
+			if (gradient != null && Files.exists(plain)) { // the finished texture, just recoloured
+				img = ImageIO.read(plain.toFile());
+				finished = true;
+			}
+			else if (Files.exists(png)) img = ImageIO.read(png.toFile());
 			else try {
 				img = atlas(c, base, sheet);
 			} catch (java.io.IOException e) {
@@ -136,7 +195,7 @@ public final class ParticleTextures {
 			int f = 1;
 			while (Math.max(img.getWidth(), img.getHeight()) / f > 2048) f *= 2;
 			if (f > 1) img = boxDown(img, f);
-			if (luma || red || green) {
+			if ((luma || red || green) && !finished) {
 				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
 				for (int i = 0; i < px.length; i++) {
 					int r = px[i] >> 16 & 255, gr = px[i] >> 8 & 255, b = px[i] & 255, a = px[i] >>> 24;
@@ -147,9 +206,19 @@ public final class ParticleTextures {
 				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());
 				img = w;
 			}
-			if (alphaOnly) {
+			if (alphaOnly && !finished) {
 				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
 				for (int i = 0; i < px.length; i++) px[i] |= 0xFFFFFF;
+				BufferedImage w = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
+				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());
+				img = w;
+			}
+			if (gradient != null) { // brightness -> the gradient's colour; alpha kept
+				int[] px = img.getRGB(0, 0, img.getWidth(), img.getHeight(), null, 0, img.getWidth());
+				for (int i = 0; i < px.length; i++) {
+					int l = Math.max(px[i] >> 16 & 255, Math.max(px[i] >> 8 & 255, px[i] & 255));
+					px[i] = (px[i] & 0xFF000000) | gradientAt(gradient, l / 255f * level);
+				}
 				BufferedImage w = new BufferedImage(img.getWidth(), img.getHeight(), BufferedImage.TYPE_INT_ARGB);
 				w.setRGB(0, 0, img.getWidth(), img.getHeight(), px, 0, img.getWidth());
 				img = w;
@@ -158,7 +227,7 @@ public final class ParticleTextures {
 			ImageIO.write(img, "png", bytes);
 			Files.write(ready, bytes.toByteArray());
 			NativeImage ni = NativeImage.read(new ByteArrayInputStream(bytes.toByteArray()));
-			PENDING.put(vtex, new Object[] {ni, sheet});
+			PENDING.put(full, new Object[] {ni, sheet});
 		} catch (Exception e) {
 			StrafeMc.LOG.warn("[strafePE] particle texture {} failed: {}", vtex, e.toString());
 		}

@@ -31,6 +31,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 
 	/** Velocity in blocks per second (Minecraft's delta movement is per tick and only mirrors it for interpolation). */
 	private Vec3 vel = Vec3.ZERO;
+	/** Velocity (blocks/s) just before it last hit a floor: a molotov's fire is carried on by it. */
+	private Vec3 floorVel = Vec3.ZERO;
 	private double stepTime;
 	private boolean resting;
 	private int age, restTicks, decoyNext, decoyShots;
@@ -105,6 +107,11 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		if (level() instanceof ServerLevel sl) serverTick(sl);
 	}
 
+	/** Velocity (blocks/s) when it last landed on a floor. */
+	public Vec3 landingVelocity() {
+		return floorVel;
+	}
+
 	/** Horizontal flight direction (radians, atan2(z, x)), NaN when (almost) not moving sideways. */
 	public float flightHeading() {
 		return Math.hypot(vel.x, vel.z) < 0.05 ? Float.NaN : (float) Math.atan2(vel.z, vel.x);
@@ -112,7 +119,9 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 
 	/** One 1/64 s step (GrenadeFlight, shared with the client's trajectory preview); bounce sounds on the server. */
 	private void step(double gravity) {
+		Vec3 before = vel;
 		GrenadeFlight.Step st = GrenadeFlight.step(level(), this, age < 5 ? getOwner() : null, position(), vel, gravity);
+		if (st.normal() != null && st.normal().y > 0.7) floorVel = before;
 		setPos(st.pos());
 		vel = st.vel();
 		if (st.normal() != null) {

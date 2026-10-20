@@ -35,6 +35,8 @@ public final class PSystem {
 	final PCollection particles;
 	final PState state;
 	boolean childEnabled = true, isEndCapChild;
+	/** Its particles carry their own normals (snapshot / ground-placement functions): renderers align to them. */
+	boolean particleNormals;
 	float startDelay;
 	private boolean started;
 	private int emitted, simulatedFrames;
@@ -97,6 +99,9 @@ public final class PSystem {
 		setup(p.array("m_Operators"), "operator", p);
 		setup(p.array("m_PreEmissionOperators"), "preemission", p);
 		renderers = p.array("m_Renderers");
+		for (PFunction.Initializer in : initializers)
+			if ((in instanceof FireFunctions.InitFromSnapshot || in instanceof FireFunctions.InheritFromParent || in instanceof FireFunctions.PlaceOnGround)
+					&& (in.writes() & PFunction.Initializer.mask(Particle.NORMAL)) != 0) particleNormals = true;
 		for (Map<String, Object> c : p.array("m_Children")) {
 			Pd cp = p.nested(c);
 			if (behaviorVersion >= 5 && cp.b("m_bDisableChild", false)) continue;
@@ -173,6 +178,25 @@ public final class PSystem {
 		for (PSystem c : children) c.stop();
 	}
 
+	/** Stops emitting and plays the end cap: end-cap operators and end-cap children run, the rest fades out. */
+	public void stopWithEndCap() {
+		for (PFunction.Emitter e : emitters) e.stop();
+		state.startEndCap();
+		for (PSystem c : children) if (!c.isEndCapChild) c.stopWithEndCap();
+	}
+
+	/** Stops at once: no more particles, the live ones gone (this system and its children). */
+	void destroy() {
+		for (PFunction.Emitter e : emitters) e.stop();
+		particles.clear();
+		for (PSystem c : children) c.destroy();
+	}
+
+	/** Traces and the viewer for this effect's functions (WORLD effects). */
+	void world(PWorld w) {
+		state.world = w;
+	}
+
 	/** Advances by one render frame (seconds); the root also records control point history. */
 	public void update(float frameTime) {
 		updateFrame(frameTime, false);
@@ -182,7 +206,7 @@ public final class PSystem {
 	public boolean finished() {
 		if (particles.count > 0) return false;
 		for (PFunction.Emitter e : emitters) if (!e.finished()) return false;
-		for (PSystem c : children) if (!c.isEndCapChild && c.childEnabled && !c.finished()) return false;
+		for (PSystem c : children) if ((!c.isEndCapChild || state.inEndCap) && c.childEnabled && !c.finished()) return false;
 		return true;
 	}
 

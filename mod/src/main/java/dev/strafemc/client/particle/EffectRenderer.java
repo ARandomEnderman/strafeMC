@@ -28,8 +28,10 @@ public final class EffectRenderer {
 
 	/** Parsed renderer definition. */
 	static final class Info {
-		final boolean sprites, trails, additive, bloomOnly, worldZ, cpNormal, refract;
-		final String texture;
+		final boolean sprites, trails, projected, orientToNormal, additive, bloomOnly, worldZ, cpNormal, refract;
+		final String texture, material;
+		/** The texture is looked up in a colour gradient by brightness x alpha: drawn per fade level. */
+		final boolean graded;
 		final float animationRate, lengthScale, minLength, maxLength, lengthFadeIn, constrainRatio, forwardShift;
 		final String animationType;
 		final boolean animateInFps;
@@ -45,17 +47,35 @@ public final class EffectRenderer {
 			String cls = p.str("_class", "");
 			sprites = cls.equals("C_OP_RenderSprites");
 			trails = cls.equals("C_OP_RenderTrails");
+			// C_OP_RenderProjected: decals laid on surfaces (the fire's scorch), drawn as quads flat on the particle's plane
+			projected = cls.equals("C_OP_RenderProjected");
+			orientToNormal = p.b("m_bOrientToNormal", false);
+			List<Map<String, Object>> mats = p.array("m_vecProjectedMaterials");
+			material = mats.isEmpty() ? null : p.nested(mats.get(0)).str("m_hMaterial", null);
 			String blend = p.str("m_nOutputBlendMode", "PARTICLE_OUTPUT_BLEND_MODE_ALPHA");
 			additive = blend.contains("ADD") || blend.contains("LIGHTEN");
-			bloomOnly = p.b("m_bOnlyRenderInEffectsBloomPass", false); // drawn only into the bloom buffer: not a visible layer
+			// drawn only into the bloom buffer, or only into water's reflection/refraction: not a visible layer here
+			bloomOnly = p.b("m_bOnlyRenderInEffectsBloomPass", false) || p.b("m_bOnlyRenderInEffectsWaterPass", false);
 			String orient = p.str("m_nOrientationType", "PARTICLE_ORIENTATION_SCREEN_ALIGNED");
 			worldZ = orient.equals("PARTICLE_ORIENTATION_WORLD_Z_ALIGNED");
 			// particle normals aren't simulated (C_INIT_NormalAlignToCP missing): impact layers align to CP0's normal (flagged)
 			cpNormal = orient.equals("PARTICLE_ORIENTATION_ALIGN_TO_PARTICLE_NORMAL");
 			String tex = null;
+			float[] gradient = null;
 			for (Map<String, Object> t : p.array("m_vecTexturesInput")) {
 				Pd tp = p.nested(t);
 				if (!tp.b("m_bEnabled", true)) continue;
+				if (tp.b("m_bReplaceTextureWithGradient", false)) { // a colour lookup over the first texture's brightness
+					List<Map<String, Object>> stops = tp.nested(tp.raw("m_Gradient")).array("m_Stops");
+					gradient = new float[stops.size() * 4];
+					for (int k = 0; k < stops.size(); k++) {
+						Pd st = tp.nested(stops.get(k));
+						float[] col = st.floats("m_Color");
+						gradient[k * 4] = st.f("m_flPosition", 0);
+						for (int c = 0; c < 3; c++) gradient[k * 4 + 1 + c] = col.length > c ? col[c] : 0;
+					}
+					continue;
+				}
 				if (tex != null && tp.str("m_nTextureBlendMode", "").equals("SPRITECARD_TEXTURE_BLEND_SUBTRACT"))
 					erode.add(tp.num("m_flTextureBlend", new Num.Literal(1)));
 				if (tex != null) continue;
@@ -65,6 +85,8 @@ public final class EffectRenderer {
 				tex = ParticleTextures.variant(tex, tp.str("m_nTextureChannels", ""));
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);
+			if (gradient != null) tex = ParticleTextures.withGradient(tex, gradient);
+			graded = gradient != null && tex != null;
 			// heat shimmer: the texture is a normal map that bends the picture behind it, not something to draw (not done yet)
 			refract = p.b("m_bRefract", false) || tex != null && (tex.contains("_normal") || tex.contains("/warp"));
 			texture = tex;
@@ -165,16 +187,28 @@ public final class EffectRenderer {
 			if (s.count() == 0 || Effects.hidden(s.name)) continue;
 			for (Map<String, Object> def : s.renderers) {
 				Info in = info(s, def);
+				if (in.projected) {
+					projected(s, in, toRender, unit, ps, out, buffers);
+					continue;
+				}
 				if (!in.sprites && !in.trails || in.bloomOnly || in.refract) continue;
-				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
+				int levels = in.graded ? ParticleTextures.GRADIENT_LEVELS : 1;
+				for (int level = 1; level <= levels; level++) {
+				ParticleTextures.Tex tex = ParticleTextures.get(in.graded ? in.texture + "@" + level : in.texture);
 				if (tex == null) continue;
 				RenderType type = in.additive ? ParticleBlend.additive(tex.id()) : RenderTypes.entityTranslucentEmissive(tex.id());
 				qn = 0; // quads go into QB: 4 corners x (x,y,z,u,v,r,g,b,a) each
 				for (int i = 0; i < s.count(); i++) {
 					Particle p = s.particle(i);
+					if (in.graded) { // this level's particles: their fade is in the texture, drawn at full alpha
+						float a = Math.max(0, Math.min(1, p.alpha * in.alphaScale.next(p, s.state)));
+						if (Math.max(1, (int) Math.ceil(a * levels)) != level) continue;
+						forceAlpha = a > 0 ? 1 : 0;
+					} else forceAlpha = -1;
 					if (in.sprites) sprite(s, in, tex, p, toRender, unit, camRender, camRight, camUp);
 					else trail(s, in, tex, p, toRender, unit, camRender);
 				}
+				forceAlpha = -1;
 				if (qn == 0) continue;
 				boolean add = in.additive;
 				// m_flOverbrightFactor > 1 (muzzle flash 3-4): vertex colours cap at 1, so additive layers are drawn that many times
@@ -196,9 +230,13 @@ public final class EffectRenderer {
 				};
 				if (buffers != null) geometry.render(ps.last(), buffers.getBuffer(type));
 				else out.submitCustomGeometry(ps, type, geometry);
+				}
 			}
 		}
 	}
+
+	/** A graded layer's particle alpha (its fade is in the texture), or -1. */
+	private static float forceAlpha = -1;
 
 	/** This renderer's quads (render thread only), QUAD floats each, and how many. */
 	private static final int QUAD = 36;
@@ -302,7 +340,11 @@ public final class EffectRenderer {
 		float pxToWorld = pixelSize(dist);
 		half = Math.min(Math.max(half, in.minSize.next(p, s.state) * 0.5f * pxToWorld), in.maxSize.next(p, s.state) * 0.5f * pxToWorld);
 		float roll = p.rotation.z, cos = (float) Math.cos(roll), sin = (float) Math.sin(roll);
-		if (in.worldZ || in.cpNormal) { // flat in a plane: world XY, or the impact surface (CP0's local XY)
+		if (in.cpNormal && s.particleNormals) { // flat on the particle's own normal (simulated: the ground fire's layers)
+			planeAxes(p.normal, m);
+			right = R;
+			up = U;
+		} else if (in.worldZ || in.cpNormal) { // flat in a plane: world XY, or the impact surface (CP0's local XY)
 			org.joml.Quaternionf q = in.cpNormal ? s.controlPoint(0).rotationOrIdentity() : new org.joml.Quaternionf();
 			right = m.transformDirection(q.transform(R.set(1, 0, 0))).normalize();
 			up = m.transformDirection(q.transform(U.set(0, 1, 0))).normalize();
@@ -311,12 +353,66 @@ public final class EffectRenderer {
 		Vector3f ay = AY.set(up).mul(cos).sub(T.set(right).mul(sin)).mul(half);
 		float[] uv = frameInto(in, tex, p);
 		Vector3f col = COL.set(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
-		float a = p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
+		float a = forceAlpha >= 0 ? forceAlpha : p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		int o = nextQuad();
 		corner(qb, o, CORNER.set(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
 		corner(qb, o + 9, CORNER.set(c).add(ax).sub(ay), uv[2], uv[3], col, a);
 		corner(qb, o + 18, CORNER.set(c).add(ax).add(ay), uv[2], uv[1], col, a);
 		corner(qb, o + 27, CORNER.set(c).sub(ax).add(ay), uv[0], uv[1], col, a);
+	}
+
+	/** Two render-space axes (into R, U) spanning the plane with simulation-space normal n. */
+	private static void planeAxes(Vector3f n, Matrix4f m) {
+		Vector3f z = new Vector3f(n);
+		if (z.lengthSquared() < 1e-8f) z.set(0, 0, 1);
+		z.normalize();
+		Vector3f ref = Math.abs(z.z) < 0.9f ? new Vector3f(0, 0, 1) : new Vector3f(1, 0, 0);
+		Vector3f x = new Vector3f(ref).cross(z).normalize(), y = new Vector3f(z).cross(x);
+		m.transformDirection(R.set(x)).normalize();
+		m.transformDirection(U.set(y)).normalize();
+	}
+
+	/**
+	 * C_OP_RenderProjected: each particle's material laid flat on its plane (its normal when m_bOrientToNormal, else
+	 * the ground), radius across, rolled, nudged off the surface. CS2 projects it onto the geometry below; flat quads
+	 * are our stand-in (FLAGGED).
+	 */
+	private static void projected(PSystem s, Info in, Matrix4f m, float unit, PoseStack ps, SubmitNodeCollector out,
+								  net.minecraft.client.renderer.MultiBufferSource buffers) {
+		if (in.material == null) return;
+		dev.strafemc.client.impact.DecalLibrary.Material mat = dev.strafemc.client.impact.DecalLibrary.material(in.material);
+		if (mat == null) return;
+		qn = 0;
+		Vector3f ground = new Vector3f(0, 0, 1);
+		for (int i = 0; i < s.count(); i++) {
+			Particle p = s.particle(i);
+			float half = p.radius * in.radiusScale.next(p, s.state) * unit;
+			if (half <= 0) continue;
+			Vector3f n = in.orientToNormal ? p.normal : ground;
+			planeAxes(n, m);
+			Vector3f lift = m.transformDirection(new Vector3f(n).normalize()).normalize().mul(0.01f);
+			Vector3f c = m.transformPosition(C.set(p.position)).add(lift);
+			float roll = p.rotation.z, cos = (float) Math.cos(roll), sin = (float) Math.sin(roll);
+			Vector3f ax = AX.set(R).mul(cos).add(T.set(U).mul(sin)).mul(half);
+			Vector3f ay = AY.set(U).mul(cos).sub(T.set(R).mul(sin)).mul(half);
+			Vector3f col = COL.set(p.color).mul(in.colorScale.next(p, s.state));
+			float a = p.alpha * in.alphaScale.next(p, s.state);
+			int o = nextQuad();
+			corner(qb, o, CORNER.set(c).sub(ax).sub(ay), 0, 1, col, a);
+			corner(qb, o + 9, CORNER.set(c).add(ax).sub(ay), 1, 1, col, a);
+			corner(qb, o + 18, CORNER.set(c).add(ax).add(ay), 1, 0, col, a);
+			corner(qb, o + 27, CORNER.set(c).sub(ax).add(ay), 0, 0, col, a);
+		}
+		if (qn == 0) return;
+		float[] quads = buffers != null ? qb : java.util.Arrays.copyOf(qb, qn * QUAD);
+		int count = qn;
+		SubmitNodeCollector.CustomGeometryRenderer geometry = (pose, vc) -> {
+			for (int o = 0; o < count * QUAD; o += QUAD)
+				for (int k = 0; k < 4; k++) vertex(vc, pose, quads, o + k * 9, false);
+		};
+		RenderType type = RenderTypes.entityTranslucent(mat.texture());
+		if (buffers != null) geometry.render(ps.last(), buffers.getBuffer(type));
+		else out.submitCustomGeometry(ps, type, geometry);
 	}
 
 	private static void trail(PSystem s, Info in, ParticleTextures.Tex tex, Particle p, Matrix4f m, float unit, Vector3f cam) {
@@ -344,7 +440,7 @@ public final class EffectRenderer {
 		float hw = rR * in.headTaper.next(p, s.state), tw = rR * in.tailTaper.next(p, s.state);
 		float[] uv = frame(in, tex, p);
 		Vector3f tint = new Vector3f(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p));
-		float a = p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state) * erosion(s, in, p);
+		float a = forceAlpha >= 0 ? forceAlpha * p.alphaAlternate : p.alpha * p.alphaAlternate * in.alphaScale.next(p, s.state) * erosion(s, in, p);
 		Vector3f hc = new Vector3f(tint).mul(in.headColor.next(p, s.state)), tc = new Vector3f(tint).mul(in.tailColor.next(p, s.state));
 		float ha = a * in.headAlpha.next(p, s.state), ta = a * in.tailAlpha.next(p, s.state);
 		int o = nextQuad();

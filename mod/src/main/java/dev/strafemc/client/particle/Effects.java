@@ -28,8 +28,9 @@ public final class Effects {
 		final PSystem sys;
 		final String attachment; // VIEW effects follow this viewmodel attachment
 		double age;
-		/** Held effects run until stopHeld (a lit molotov's rag); others end after MAX_AGE. */
+		/** Held effects run until stopHeld (a lit molotov's rag); others end after maxAge. */
 		String heldKey;
+		double maxAge = MAX_AGE;
 
 		Instance(PSystem sys, String attachment) {
 			this.sys = sys;
@@ -86,6 +87,7 @@ public final class Effects {
 	public static void tracer(String vpcf, Vec3 from, Vec3 to) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
+		s.world(MC_WORLD);
 		Vector3f a = toSim(from), b = toSim(to);
 		Quaternionf rot = PMath.forwardToRotation(new Vector3f(b).sub(a));
 		s.controlPoint(0).set(a, rot, s.state);
@@ -108,7 +110,16 @@ public final class Effects {
 	private static final java.util.Set<String> HIDDEN = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	private static volatile PSystem lastImpact;
 
+	/** Debugging: draw only layers whose name contains this (null: all). */
+	private static volatile String only;
+
+	public static void only(String part) {
+		only = part;
+	}
+
 	public static boolean hidden(String systemName) {
+		String o = only;
+		if (o != null && systemName != null && !systemName.contains(o)) return true;
 		if (HIDDEN.isEmpty() || systemName == null) return false;
 		String n = systemName.toLowerCase();
 		for (String h : HIDDEN) if (n.contains(h)) return true;
@@ -158,6 +169,7 @@ public final class Effects {
 	private static void spawnAt(String vpcf, Vec3 pos, Vec3 normal, Vector3f tint, String heldKey, Vec3 forward) {
 		PSystem s = load(vpcf);
 		if (s == null) return;
+		s.world(MC_WORLD);
 		lastImpact = s;
 		Vector3f z = new Vector3f((float) normal.x, (float) -normal.z, (float) normal.y).normalize();
 		Vector3f ref = Math.abs(z.z) > 0.9f ? new Vector3f(1, 0, 0) : new Vector3f(0, 0, 1);
@@ -222,8 +234,120 @@ public final class Effects {
 		}
 	}
 
+	// ------------------------------------------------------------------ driven world effects
+
+	/**
+	 * A world effect its owner drives (CS2's inferno ground fire): control points, snapshots, the end cap. It runs until
+	 * endCap() lets it finish (then at most `afterEnd` seconds more) or clear().
+	 */
+	public static final class Handle {
+		private final Instance in;
+		private final double afterEnd;
+
+		private Handle(Instance in, double afterEnd) {
+			this.in = in;
+			this.afterEnd = afterEnd;
+		}
+
+		/** Sets a control point at a Minecraft position (no orientation). */
+		public void controlPoint(int cp, Vec3 pos) {
+			synchronized (WORLD) {
+				in.sys.controlPoint(cp).set(toSim(pos), null, in.sys.state);
+			}
+		}
+
+		/** Sets a control point to raw simulation values (e.g. CS2's CP3 = duration, height, 70). */
+		public void controlPointValue(int cp, Vector3f value) {
+			synchronized (WORLD) {
+				in.sys.controlPoint(cp).set(value, null, in.sys.state);
+			}
+		}
+
+		public void snapshot(int cp, Snapshot snap) {
+			in.sys.controlPoint(cp).snapshot = snap;
+		}
+
+		/** Runs the effect ahead by `seconds` (an effect that started before we saw it). */
+		public void skip(float seconds) {
+			synchronized (WORLD) {
+				for (float left = seconds; left > 0; left -= 0.05f) in.sys.update(Math.min(0.05f, left));
+			}
+		}
+
+		/** Stops emitting and plays the end cap; the effect goes once its particles are gone. */
+		public void endCap() {
+			synchronized (WORLD) {
+				in.sys.stopWithEndCap();
+				in.heldKey = null;
+				in.age = 0;
+				in.maxAge = afterEnd;
+			}
+		}
+
+		public boolean alive() {
+			synchronized (WORLD) {
+				return WORLD.contains(in);
+			}
+		}
+	}
+
+	/** A driven world effect with control point 0 at `pos`; null while its files are still loading (call again later). */
+	public static Handle driven(String vpcf, Vec3 pos, double afterEnd) {
+		PSystem s = load(vpcf);
+		if (s == null) return null;
+		s.world(MC_WORLD);
+		Vector3f at = toSim(pos);
+		s.controlPoint(0).set(at, new Quaternionf(), s.state);
+		Instance in = new Instance(s, null);
+		in.heldKey = "driven";
+		synchronized (WORLD) {
+			WORLD.add(in);
+		}
+		return new Handle(in, afterEnd);
+	}
+
+	/** The Minecraft world as particle functions see it (traces in simulation space). */
+	public static PWorld world() {
+		return MC_WORLD;
+	}
+
+	/** Traces and the viewer for particle functions, from the Minecraft level and camera (render thread). */
+	static final PWorld MC_WORLD = new PWorld() {
+		@Override
+		public Hit trace(Vector3f from, Vector3f to, boolean water) {
+			var level = Minecraft.getInstance().level;
+			if (level == null) return null;
+			Vec3 a = fromSim(from), b = fromSim(to);
+			var r = level.clip(new net.minecraft.world.level.ClipContext(a, b, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+					water ? net.minecraft.world.level.ClipContext.Fluid.ANY : net.minecraft.world.level.ClipContext.Fluid.NONE,
+					net.minecraft.world.phys.shapes.CollisionContext.empty()));
+			if (r.getType() == net.minecraft.world.phys.HitResult.Type.MISS) return null;
+			var d = r.getDirection();
+			double len = a.distanceTo(b);
+			return new Hit(toSim(r.getLocation()), new Vector3f(d.getStepX(), -d.getStepZ(), d.getStepY()),
+					len > 0 ? (float) (a.distanceTo(r.getLocation()) / len) : 0, r.isInside());
+		}
+
+		@Override
+		public Vector3f eyePosition() {
+			return toSim(Minecraft.getInstance().gameRenderer.getMainCamera().position());
+		}
+
+		@Override
+		public Vector3f eyeForward() {
+			org.joml.Vector3fc f = Minecraft.getInstance().gameRenderer.getMainCamera().forwardVector();
+			return new Vector3f(f.x(), -f.z(), f.y()).normalize();
+		}
+	};
+
+	/** WORLD simulation space to the Minecraft world (blocks). */
+	public static Vec3 fromSim(Vector3f p) {
+		float u = u();
+		return new Vec3(p.x / u, p.z / u, -p.y / u);
+	}
+
 	/** Minecraft world (blocks) to WORLD simulation space (Source units, z up). */
-	static Vector3f toSim(Vec3 p) {
+	public static Vector3f toSim(Vec3 p) {
 		float u = u();
 		return new Vector3f((float) p.x * u, (float) -p.z * u, (float) p.y * u);
 	}
@@ -284,7 +408,7 @@ public final class Effects {
 				in.sys.controlPoint(5).set(toSim(c), null, in.sys.state); // detail-by-distance input of impact effects: the viewer (flagged)
 				in.sys.update(dt);
 				in.age += dt;
-				if ((in.heldKey == null && in.age > MAX_AGE) || (in.age > 0.05 && in.sys.finished())) it.remove();
+				if ((in.heldKey == null && in.age > in.maxAge) || (in.age > 0.05 && in.sys.finished())) it.remove();
 			}
 			// drawn after the translucent terrain (not with the entities): water would otherwise paint over them
 			var buffers = ctx.bufferSource();
@@ -294,6 +418,32 @@ public final class Effects {
 			buffers.endBatch();
 			dev.strafemc.client.perf.Perf.end("particles_draw", t);
 		}
+	}
+
+	/** Debugging: every live world effect's layers with their particle counts. */
+	public static java.util.List<String> layerCounts() {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		synchronized (WORLD) {
+			for (Instance in : WORLD) counts(in.sys, "", out);
+		}
+		return out;
+	}
+
+	private static void counts(PSystem s, String indent, java.util.List<String> out) {
+		String box = "";
+		if (s.count() > 0) {
+			Vector3f o = s.controlPoint(0).position, lo = new Vector3f(Float.MAX_VALUE), hi = new Vector3f(-Float.MAX_VALUE);
+			float r = 0;
+			for (int i = 0; i < s.count(); i++) {
+				Vector3f p = new Vector3f(s.particle(i).position).sub(o);
+				lo.min(p);
+				hi.max(p);
+				r += s.particle(i).radius;
+			}
+			box = String.format(" x %.0f..%.0f y %.0f..%.0f z %.0f..%.0f r~%.0f", lo.x, hi.x, lo.y, hi.y, lo.z, hi.z, r / s.count());
+		}
+		out.add(indent + s.name.substring(s.name.lastIndexOf('/') + 1).replace(".vpcf", "") + " " + s.count() + (s.state.inEndCap ? " endcap" : "") + box);
+		for (PSystem c : s.children) counts(c, indent + "  ", out);
 	}
 
 	public static void clear() {

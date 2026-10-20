@@ -24,10 +24,11 @@ public final class GrenadeEffects {
 			EXTINGUISH_EFFECT = "particles/inferno_fx/extinguish_fire.vpcf",
 			MOLOTOV_AIR_EFFECT = "particles/inferno_fx/explosion_molotov_air.vpcf",
 			INCENDIARY_AIR_EFFECT = "particles/inferno_fx/explosion_incend_air.vpcf",
-			// one flame of CS2's ground fire (molotov_groundfire's per-flame part; the rest of it is drawn from a snapshot of
-			// all the flames, which we don't simulate)
-			MOLOTOV_FLAME_EFFECT = "particles/inferno_fx/molotov_fire01.vpcf",
-			INCENDIARY_FLAME_EFFECT = "particles/inferno_fx/incendiary_fire01.vpcf",
+			// CS2's ground fire: one effect for a whole fire, shaped by its flames (client.weapon.InfernoClient), and the
+			// smouldering scorch it leaves
+			MOLOTOV_FIRE_EFFECT = "particles/inferno_fx/molotov_groundfire.vpcf",
+			INCENDIARY_FIRE_EFFECT = "particles/inferno_fx/incendiary_groundfire.vpcf",
+			FIRE_REMNANT_EFFECT = "particles/inferno_fx/molotov_groundfire_remnant.vpcf",
 			MOLOTOV_HELD_EFFECT = "particles/weapons/cs_weapon_fx/weapon_molotov_held.vpcf",
 			// a decoy lying on the ground: sparks and smoke while it lies there (CS2's client), a burst with each fake shot (server)
 			DECOY_GROUND_EFFECT = "particles/weapons/cs_weapon_fx/weapon_decoy_ground_effect.vpcf",
@@ -37,19 +38,19 @@ public final class GrenadeEffects {
 			C4_LIGHT_EFFECT = "particles/explosions_fx/c4_light_pulse_single_light.vpcf";
 	/** Every CS2 effect the grenades use (the setup converts these). */
 	public static final String[] EFFECTS = {HE_EFFECT, FLASH_EFFECT, MOLOTOV_GROUND_EFFECT, MOLOTOV_AIR_EFFECT, INCENDIARY_AIR_EFFECT,
-			MOLOTOV_FLAME_EFFECT, INCENDIARY_FLAME_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT,
+			MOLOTOV_FIRE_EFFECT, INCENDIARY_FIRE_EFFECT, FIRE_REMNANT_EFFECT, MOLOTOV_HELD_EFFECT, INCENDIARY_GROUND_EFFECT, EXTINGUISH_EFFECT,
 			DECOY_GROUND_EFFECT, DECOY_SHOT_EFFECT, C4_EFFECT, C4_LIGHT_EFFECT};
 
 	/** What happened, for the clients (GrenadeFx.kind). */
 	public static final int EV_HE = 0, EV_FLASH = 1, EV_SMOKE = 2, EV_FIRE = 3, EV_FIRE_INC = 4, EV_FIRE_OUT = 5, EV_FIRE_END = 6,
-			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9, EV_FLAME = 10, EV_FLAME_INC = 11,
+			EV_FIZZLE = 7, EV_FIZZLE_INC = 8, EV_DECOY_POP = 9,
 			EV_SMOKE_T = 12, // a T's smoke (EV_SMOKE: CT): CS2 tints them differently
 			EV_DECOY_SHOT = 13,
 			EV_C4 = 14, // the planted C4 blows
 			EV_C4_BEEP = 15, // and beeps: A site, B site, and each in its last 10 seconds (CS2's own beep sounds for each)
 			EV_C4_BEEP_B = 16, EV_C4_BEEP_10 = 17, EV_C4_BEEP_B_10 = 18;
 	/** How far away players still get the effect message (blocks). */
-	private static final double FX_RANGE = 160;
+	static final double FX_RANGE = 160;
 
 	private GrenadeEffects() {}
 

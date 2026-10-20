@@ -35,18 +35,13 @@ abstract class Vec {
 					return literal(p.vec("m_LiteralColor", new Vector3f()).div(255f));
 				case "PVEC_TYPE_PARTICLE_VECTOR":
 				case "PVEC_TYPE_PARTICLE_INITIAL_VECTOR": {
-					int field = p.field("m_nVectorAttribute", 0), cp = p.i("m_nControlPoint", -1);
-					Vector3f scale = p.vec("m_vVectorAttributeScale", new Vector3f(1)), cpScale = p.vec("m_vCPValueScale", new Vector3f(1)),
-							relPos = p.vec("m_vCPRelativePosition", new Vector3f()), relDir = p.vec("m_vCPRelativeDir", new Vector3f());
+					// the particle's own vector attribute, scaled (m_nControlPoint, written into every input block, isn't used)
+					int field = p.field("m_nVectorAttribute", 0);
+					Vector3f scale = p.vec("m_vVectorAttributeScale", new Vector3f(1));
 					return new Vec() {
 						@Override
 						Vector3f next(Particle q, PState s) {
-							Vector3f r = new Vector3f(scale).mul(q.vector(field));
-							if (cp < 0) return r;
-							ControlPoint c = s.cp(cp);
-							r = new Vector3f(c.position).mul(cpScale).add(relPos);
-							if (relDir.lengthSquared() > 0) r.add(c.orientation.lengthSquared() > 0 ? new Vector3f(c.orientation).sub(relDir) : new Vector3f(relDir).negate());
-							return r;
+							return new Vector3f(scale).mul(q.vector(field));
 						}
 					};
 				}

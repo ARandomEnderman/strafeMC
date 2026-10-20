@@ -17,70 +17,24 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Smokes and fires ("infernos") burning right now (server), with CS2's values:
+ * Smokes and fires burning right now (server):
  * <ul>
  * <li>Smoke: CS2's simulated voxel smoke (SmokeVolume), stepped ten times a second as CS2's server does; gone at
  * 22 s.</li>
- * <li>Fire (CS2's inferno_* settings): starts with one flame where it lands; flames spawn new ones inferno_flame_spacing
- * (42) units away, within inferno_spawn_angle (45) degrees of their own direction, for inferno_per_flame_spawn_duration
- * (3) s each, at most inferno_max_flames (16), never farther than inferno_max_range (150; incendiary 110) from the
- * start. Spawn interval starts at inferno_initial_spawn_interval (0.02 s), grows by
- * inferno_child_spawn_interval_multiplier (0.1) per generation up to inferno_max_child_spawn_interval (0.5 s), divided
- * by inferno_spread_speed_mult (1; incendiary 10). Each flame lives inferno_flame_lifetime (7 s; incendiary 5.5 s)
- * and hurts inferno_damage (40) per second. FLAGGED (ours): a flame hurts within 21 units (half the spacing).</li>
+ * <li>Fire: CS2's inferno (Inferno): flames spread over the floor, burn what's near them, die together, and go out
+ * under smoke.</li>
  * </ul>
- * Fires go out when a smoke covers them.
  */
 public final class GrenadeZones {
 	static final double SMOKE_SECONDS = 22;
 	static final int SMOKE_TICKS = (int) (SMOKE_SECONDS * 20);
 
-	static final double FLAME_SPACING = 42, SPAWN_ANGLE = 45, SPAWN_DURATION = 3, INITIAL_INTERVAL = 0.02, INTERVAL_MULT = 0.1,
-			MAX_INTERVAL = 0.5, FLAME_REACH = 21;
-	static final int MAX_FLAMES = 16;
-
 	record Smoke(ServerLevel level, Vec3 at, long start, long until, SmokeVolume volume) {}
 
-	private static final class Flame {
-		final Vec3 at;
-		final Vec3 dir;
-		final int depth;
-		final long born, dies;
-		long nextSpawn;
-
-		Flame(Vec3 at, Vec3 dir, int depth, long born, long dies, long nextSpawn) {
-			this.at = at;
-			this.dir = dir;
-			this.depth = depth;
-			this.born = born;
-			this.dies = dies;
-			this.nextSpawn = nextSpawn;
-		}
-	}
-
-	static final class Fire {
-		final ServerLevel level;
-		final Vec3 origin;
-		final boolean incendiary;
-		final double dps, range, lifetime, speed;
-		final List<Flame> flames = new ArrayList<>();
-		int spawned;
-		/** Who threw it (for the killfeed). */
-		java.util.UUID owner;
-
-		Fire(ServerLevel level, Vec3 origin, boolean incendiary, double dps) {
-			this.level = level;
-			this.origin = origin;
-			this.incendiary = incendiary;
-			this.dps = dps;
-			this.range = incendiary ? 110 : 150;
-			this.lifetime = incendiary ? 5.5 : 7;
-			this.speed = incendiary ? 10 : 1;
-		}
-	}
+	private record Burning(Inferno fire, long start) {}
 
 	private static final List<Smoke> SMOKES = new ArrayList<>();
-	private static final List<Fire> FIRES = new ArrayList<>();
+	private static final List<Burning> FIRES = new ArrayList<>();
 
 	private GrenadeZones() {}
 
@@ -95,29 +49,22 @@ public final class GrenadeZones {
 		for (Smoke s : SMOKES) if (s.level == level && s.volume.origin.distanceTo(at) * StrafeConfig.unitsPerBlock < 640) s.volume.blast(at);
 	}
 
-	/** Starts a fire on the ground at `at`; false if a smoke already covers that spot (it fizzles, like CS). */
+	/**
+	 * Starts a fire on the floor at `at`, carried on by the grenade's velocity when it landed; false when its first flame
+	 * can't burn there (in a smoke or water: it fizzles, like CS).
+	 */
 	static boolean fire(ServerLevel level, Vec3 at, ServerPlayer owner, GrenadeEntity source, boolean incendiary) {
-		for (Smoke s : SMOKES) if (s.level == level && covered(s, at)) return false;
-		java.util.Map<String, Object> d = dev.strafemc.data.WeaponData.get(incendiary ? Grenade.INCENDIARY.cls : Grenade.MOLOTOV.cls);
-		Fire f = new Fire(level, at, incendiary, d != null && d.get("m_nDamage") instanceof Number n ? n.doubleValue() : 40);
-		long t = level.getGameTime();
-		f.flames.add(new Flame(at, Vec3.ZERO, 0, t, t + lifetimeTicks(f, level.getRandom()), t));
-		f.owner = owner != null ? owner.getUUID() : null;
-		f.spawned = 1;
-		FIRES.add(f);
-		GrenadeEffects.event(level, incendiary ? GrenadeEffects.EV_FIRE_INC : GrenadeEffects.EV_FIRE, at,
-				source != null ? source.flightHeading() : Float.NaN);
-		flameEvent(f, at);
+		return fire(level, at, owner, source != null ? source.landingVelocity() : Vec3.ZERO, source != null ? source.flightHeading() : Float.NaN, incendiary);
+	}
+
+	/** A fire as if a grenade landed at `at` moving at `velocity` (blocks/s) (also the developer bench's). */
+	public static boolean fire(ServerLevel level, Vec3 at, ServerPlayer owner, Vec3 velocity, float heading, boolean incendiary) {
+		Inferno f = new Inferno(level, at, new Vec3(0, 1, 0), velocity, incendiary, owner != null ? owner.getUUID() : null);
+		if (f.fires.isEmpty()) return false;
+		FIRES.add(new Burning(f, level.getGameTime()));
+		GrenadeEffects.event(level, incendiary ? GrenadeEffects.EV_FIRE_INC : GrenadeEffects.EV_FIRE, at, heading);
+		f.sync();
 		return true;
-	}
-
-	/** inferno_flame_lifetime is an average: +-20% (FLAGGED spread). */
-	private static long lifetimeTicks(Fire f, RandomSource r) {
-		return (long) (f.lifetime * 20 * (0.8 + r.nextDouble() * 0.4));
-	}
-
-	private static void flameEvent(Fire f, Vec3 at) {
-		GrenadeEffects.event(f.level, f.incendiary ? GrenadeEffects.EV_FLAME_INC : GrenadeEffects.EV_FLAME, at);
 	}
 
 	/** Does the line from -> to pass through a smoke (CS2's through-smoke kill)? Checked every quarter block. */
@@ -132,33 +79,45 @@ public final class GrenadeZones {
 		return false;
 	}
 
-	/** Is a flame burning at this spot (within a flame's reach, at its height)? */
+	/** Is a flame burning near this spot? (A smoke grenade lying in a fire goes off at once.) */
 	static boolean burning(ServerLevel level, Vec3 at) {
-		double reach = FLAME_REACH / StrafeConfig.unitsPerBlock;
-		for (Fire f : FIRES) {
-			if (f.level != level) continue;
-			for (Flame fl : f.flames) {
-				double dx = at.x - fl.at.x, dz = at.z - fl.at.z, dy = at.y - fl.at.y;
-				if (dx * dx + dz * dz <= reach * reach && dy > -0.6 && dy < 1.2) return true;
-			}
-		}
+		for (Burning b : FIRES) if (b.fire.level == level && b.fire.end == 0 && b.fire.burns(at)) return true;
 		return false;
 	}
 
-	/** Is this spot on the ground inside the smoke (a voxel just above it is filled)? */
-	private static boolean covered(Smoke smoke, Vec3 spot) {
-		return smoke.volume.contains(spot.add(0, 0.25, 0));
-	}
-
-	/** Does the smoke cover the fire's start or any of its flames? */
-	private static boolean covered(Smoke smoke, Fire f) {
-		if (covered(smoke, f.origin)) return true;
-		for (Flame fl : f.flames) if (covered(smoke, fl.at)) return true;
+	/** Is a spot on the ground inside a smoke (a voxel just above it is filled)? */
+	static boolean inSmoke(ServerLevel level, Vec3 spot) {
+		for (Smoke s : SMOKES) if (s.level == level && s.volume.contains(spot.add(0, 0.25, 0))) return true;
 		return false;
 	}
 
+	/** As inSmoke, counting only smokes that went off less than `seconds` ago. */
+	static boolean inYoungSmoke(ServerLevel level, Vec3 spot, double seconds) {
+		long now = level.getGameTime();
+		for (Smoke s : SMOKES)
+			if (s.level == level && (now - s.start) / 20.0 <= seconds && s.volume.contains(spot.add(0, 0.25, 0))) return true;
+		return false;
+	}
 
-	/** Every server tick: flames spread and hurt (four times a second); burnt-out smokes and fires are dropped. */
+	/** One burn from a fire (CS2: inferno_damage x 0.2 every 0.2 s). */
+	static void burn(Inferno f, LivingEntity e, double damage) {
+		// burning for a moment: mobs that die in the fire drop cooked meat (a molotov-killed chicken drops cooked chicken)
+		if (!(e instanceof Player)) e.setRemainingFireTicks(Math.max(e.getRemainingFireTicks(), 10));
+		e.invulnerableTime = 0;
+		Vec3 motion = e.getDeltaMovement();
+		boolean marked = e.hurtMarked;
+		boolean wasAlive = e.isAlive();
+		ServerPlayer burner = f.owner != null ? f.level.getServer().getPlayerList().getPlayer(f.owner) : null;
+		if (burner != null) KillFeed.damaged(burner, e, Math.min(damage, e.getHealth() / StrafeConfig.hpScale));
+		e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (damage * StrafeConfig.hpScale));
+		if (wasAlive && e.isDeadOrDying() && burner != null) KillFeed.notice(burner, e, "inferno", 0);
+		e.setDeltaMovement(motion);
+		e.hurtMarked = marked;
+		// CS2 tagging by the fire's own weapon data: incendiary fire slows you (0.7 / 0.8), molotov fire doesn't (1 / 1)
+		if (e instanceof ServerPlayer sp) GunServer.tag(sp, f.incendiary ? Grenade.INCENDIARY.cls : Grenade.MOLOTOV.cls);
+	}
+
+	/** Every server tick: smokes step, fires think at their own rates; burnt-out ones are dropped. */
 	public static void tick(MinecraftServer server) {
 		for (Iterator<Smoke> it = SMOKES.iterator(); it.hasNext(); ) {
 			Smoke s = it.next();
@@ -167,98 +126,21 @@ public final class GrenadeZones {
 				it.remove();
 				continue;
 			}
-			int before = s.volume.steps();
 			s.volume.runUntil((t - s.start) / 20.0);
-			if (s.volume.steps() != before) // the smoke spreading over a fire puts it out
-				for (Iterator<Fire> fi = FIRES.iterator(); fi.hasNext(); ) {
-					Fire f = fi.next();
-					if (f.level == s.level && covered(s, f)) {
-						GrenadeEffects.event(f.level, GrenadeEffects.EV_FIRE_OUT, f.origin);
-						fi.remove();
-					}
-				}
 		}
-		double upb = StrafeConfig.unitsPerBlock;
-		for (Iterator<Fire> it = FIRES.iterator(); it.hasNext(); ) {
-			Fire f = it.next();
-			long t = f.level.getGameTime();
-			f.flames.removeIf(fl -> t >= fl.dies);
-			if (f.flames.isEmpty()) {
-				GrenadeEffects.event(f.level, GrenadeEffects.EV_FIRE_END, f.origin);
-				it.remove();
-				continue;
+		for (Iterator<Burning> it = FIRES.iterator(); it.hasNext(); ) {
+			Burning b = it.next();
+			Inferno f = b.fire;
+			int before = f.end;
+			boolean keep = f.run((f.level.getGameTime() - b.start) / 20.0);
+			if (before == 0 && f.end != 0) {
+				Vec3 at = Inferno.toMc(f.ox, f.oy, f.oz);
+				GrenadeEffects.event(f.level, f.end == dev.strafemc.net.StrafePayloads.InfernoState.EXTINGUISHED ? GrenadeEffects.EV_FIRE_OUT
+						: GrenadeEffects.EV_FIRE_END, at);
 			}
-			spread(f, t, upb);
-			if (t % 5 != 0) continue;
-			double reach = FLAME_REACH / upb;
-			for (LivingEntity e : f.level.getEntitiesOfClass(LivingEntity.class, new AABB(f.origin, f.origin).inflate(f.range / upb + 1, 2, f.range / upb + 1),
-					LivingEntity::isAlive)) {
-				boolean in = false;
-				for (Flame fl : f.flames) {
-					double dx = e.getX() - fl.at.x, dz = e.getZ() - fl.at.z, dy = e.getY() - fl.at.y;
-					double r = reach + e.getBbWidth() / 2;
-					if (dx * dx + dz * dz <= r * r && dy > -0.6 && dy < 1.2) {
-						in = true;
-						break;
-					}
-				}
-				if (!in) continue;
-				// burning for a moment: mobs that die in the fire drop cooked meat (a molotov-killed chicken drops cooked chicken)
-				if (!(e instanceof Player)) e.setRemainingFireTicks(Math.max(e.getRemainingFireTicks(), 10));
-				e.invulnerableTime = 0;
-				Vec3 motion = e.getDeltaMovement();
-				boolean marked = e.hurtMarked;
-				boolean wasAlive = e.isAlive();
-				if (f.owner != null && f.level.getServer().getPlayerList().getPlayer(f.owner) instanceof ServerPlayer burner)
-					KillFeed.damaged(burner, e, Math.min(f.dps * 0.25, e.getHealth() / StrafeConfig.hpScale));
-				e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (f.dps * 0.25 * StrafeConfig.hpScale));
-				if (wasAlive && e.isDeadOrDying() && f.owner != null && f.level.getServer().getPlayerList().getPlayer(f.owner) instanceof ServerPlayer killer)
-					KillFeed.notice(killer, e, "inferno", 0);
-				e.setDeltaMovement(motion);
-				e.hurtMarked = marked;
-				// CS2 tagging by the fire's own weapon data: incendiary fire slows you (0.7 / 0.8), molotov fire doesn't (1 / 1)
-				if (e instanceof ServerPlayer sp) GunServer.tag(sp, f.incendiary ? Grenade.INCENDIARY.cls : Grenade.MOLOTOV.cls);
-			}
+			f.sync();
+			if (!keep) it.remove();
 		}
-	}
-
-	/** New flames from flames still spawning (see the class comment). */
-	private static void spread(Fire f, long t, double upb) {
-		if (f.spawned >= MAX_FLAMES) return;
-		RandomSource rnd = f.level.getRandom();
-		List<Flame> born = new ArrayList<>();
-		for (Flame parent : f.flames) {
-			if (f.spawned + born.size() >= MAX_FLAMES) break;
-			if (t - parent.born > SPAWN_DURATION * 20 || t < parent.nextSpawn) continue;
-			double interval = Math.min(MAX_INTERVAL, INITIAL_INTERVAL + INTERVAL_MULT * parent.depth) / f.speed;
-			parent.nextSpawn = t + Math.max(1, Math.round(interval * 20));
-			// direction: the parent's own, turned by up to the spawn angle (the first flame: any direction)
-			double base = parent.dir == Vec3.ZERO ? rnd.nextDouble() * 360 : Math.toDegrees(Math.atan2(parent.dir.z, parent.dir.x));
-			double a = Math.toRadians(base + (parent.dir == Vec3.ZERO ? 0 : (rnd.nextDouble() * 2 - 1) * SPAWN_ANGLE));
-			Vec3 dir = new Vec3(Math.cos(a), 0, Math.sin(a));
-			Vec3 want = parent.at.add(dir.scale(FLAME_SPACING / upb));
-			Vec3 spot = ground(f.level, want);
-			if (spot == null || spot.subtract(f.origin).horizontalDistance() * upb > f.range) continue;
-			if (f.level.clip(new ClipContext(parent.at.add(0, 0.2, 0), spot.add(0, 0.2, 0), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
-					net.minecraft.world.phys.shapes.CollisionContext.empty())).getType() != HitResult.Type.MISS) continue; // not through walls
-			boolean crowded = false;
-			for (Flame o : f.flames) if (o.at.distanceTo(spot) * upb < FLAME_SPACING * 0.99) crowded = true;
-			for (Flame o : born) if (o.at.distanceTo(spot) * upb < FLAME_SPACING * 0.99) crowded = true;
-			if (crowded) continue;
-			born.add(new Flame(spot, dir, parent.depth + 1, t, t + lifetimeTicks(f, rnd), t));
-		}
-		for (Flame b : born) {
-			f.flames.add(b);
-			flameEvent(f, b.at);
-		}
-		f.spawned += born.size();
-	}
-
-	/** The ground under (or just over) a spot, within a block and a half: fire runs over the floor, not through walls. */
-	private static Vec3 ground(ServerLevel level, Vec3 spot) {
-		Vec3 top = spot.add(0, 1.5, 0), bottom = spot.add(0, -1.5, 0);
-		HitResult h = level.clip(new ClipContext(top, bottom, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty()));
-		return h.getType() == HitResult.Type.MISS ? null : h.getLocation();
 	}
 
 	public static void clear() {
