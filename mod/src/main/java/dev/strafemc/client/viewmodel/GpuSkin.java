@@ -44,6 +44,16 @@ public final class GpuSkin {
 
 	private GpuSkin() {}
 
+	/** Frees a part's buffers (render thread, between frames); it uploads again if it is drawn later. */
+	static void free(VmModel.Part p) {
+		if (p.gpu instanceof Mesh m) {
+			m.vertices.close();
+			m.indices.close();
+			m.skin.close();
+		}
+		p.gpu = null;
+	}
+
 	/** A part's static buffers and its own joint uniform buffer. */
 	static final class Mesh {
 		final GpuBuffer vertices, indices, skin;

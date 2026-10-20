@@ -268,6 +268,71 @@ public final class Viewmodel {
 	/** Weapon models in a finish (key: weapon#kit#pattern), baked and loaded in the background on first use. */
 	private final Map<String, VmModel> finishes = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> finishLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+	/** When each finish was last drawn (System.nanoTime), for letting go of old ones. */
+	private final Map<String, Long> finishUsed = new java.util.concurrent.ConcurrentHashMap<>();
+	/** Finishes kept loaded at most (each is a weapon mesh and its 1024 px textures); older unused ones are let go. */
+	private static final int KEEP_FINISHES = 16;
+	/** A finish drawn within this long is never let go. */
+	private static final long KEEP_RECENT_NS = 60_000_000_000L;
+	private long lastEvictCheck;
+
+	private VmModel used(String key, VmModel m) {
+		finishUsed.put(key, System.nanoTime());
+		return m;
+	}
+
+	/**
+	 * Lets go of the least recently drawn finishes beyond KEEP_FINISHES (none drawn in the last minute): their meshes'
+	 * GPU buffers and the textures nothing else uses. Seen again, a finish loads again the usual way (the plain weapon
+	 * meanwhile, as the first time). Render thread, before this frame's drawing.
+	 */
+	private void evictFinishes() {
+		long now = System.nanoTime();
+		if (now - lastEvictCheck < 2_000_000_000L || finishes.size() <= KEEP_FINISHES) return;
+		lastEvictCheck = now;
+		java.util.Set<VmModel> bases = new java.util.HashSet<>();
+		for (Loaded l : cache.values()) bases.add(l.gun);
+		java.util.List<String> keys = new java.util.ArrayList<>(finishes.keySet());
+		keys.sort(java.util.Comparator.comparingLong(k -> finishUsed.getOrDefault(k, 0L)));
+		int over = finishes.size() - KEEP_FINISHES;
+		java.util.List<VmModel> gone = new java.util.ArrayList<>();
+		for (String k : keys) {
+			if (over <= 0) break;
+			if (now - finishUsed.getOrDefault(k, 0L) < KEEP_RECENT_NS) break; // the rest were drawn more recently
+			VmModel m = finishes.remove(k);
+			finishLoading.remove(k);
+			finishUsed.remove(k);
+			over--;
+			if (m != null && !bases.contains(m) && !finishes.containsValue(m)) gone.add(m);
+		}
+		if (gone.isEmpty()) return;
+		// textures still in use: the base weapons', the kept finishes' and their holo steps
+		java.util.Set<Path> keep = new java.util.HashSet<>();
+		for (VmModel m : bases) for (VmModel.Part p : m.parts) keep.add(p.texture);
+		for (VmModel m : finishes.values()) {
+			for (VmModel.Part p : m.parts) keep.add(p.texture);
+			Path[] st = holoSteps.get(m);
+			if (st != null) java.util.Collections.addAll(keep, st);
+		}
+		var tm = net.minecraft.client.Minecraft.getInstance().getTextureManager();
+		for (VmModel m : gone) {
+			java.util.Set<Path> drop = new java.util.HashSet<>();
+			for (VmModel.Part p : m.parts) {
+				drop.add(p.texture);
+				GpuSkin.free(p);
+			}
+			Path[] st = holoSteps.remove(m);
+			if (st != null) java.util.Collections.addAll(drop, st);
+			for (Path t : drop) {
+				if (t == null || keep.contains(t)) continue;
+				Identifier id = textures.remove(t);
+				if (id != null) tm.release(id);
+				NativeImage img = decoded.remove(t);
+				if (img != null) img.close();
+			}
+		}
+		StrafeMc.LOG.info("[strafemc] let go of {} weapon finishes not drawn lately ({} kept)", gone.size(), finishes.size());
+	}
 
 	/** The weapon model to draw: in its loadout wrap's finish once baked, the plain weapon until then (and without one). */
 	private VmModel gun(Loaded l) {
@@ -279,7 +344,7 @@ public final class Viewmodel {
 			if (!any) return l.gun;
 			String key = l.cls + "#plain#0#" + String.join(",", stickers);
 			VmModel m = finishes.get(key);
-			if (m != null) return holo(l, m);
+			if (m != null) return holo(l, used(key, m));
 			loadFinish(l, null, 0, key, stickers);
 			return l.gun;
 		}
@@ -291,10 +356,11 @@ public final class Viewmodel {
 		if (stickers == null) return gun(l, kit, pattern);
 		String key = l.cls + "#" + kit + "#" + pattern + "#" + String.join(",", stickers);
 		VmModel m = finishes.get(key);
-		if (m != null) return holo(l, m);
+		if (m != null) return holo(l, used(key, m));
 		loadFinish(l, kit, pattern, key, stickers);
-		VmModel plain = finishes.get(l.cls + "#" + kit + "#" + pattern); // until the stickers are on: the finish without them
-		return plain != null ? plain : l.gun;
+		String plainKey = l.cls + "#" + kit + "#" + pattern;
+		VmModel plain = finishes.get(plainKey); // until the stickers are on: the finish without them
+		return plain != null ? used(plainKey, plain) : l.gun;
 	}
 
 	/** Finishes with holo / lenticular stickers: their pictures along the spectrum (step 0: the finish's own). */
@@ -330,7 +396,7 @@ public final class Viewmodel {
 	private VmModel gun(Loaded l, String kit, int pattern) {
 		String key = l.cls + "#" + kit + "#" + pattern;
 		VmModel m = finishes.get(key);
-		if (m != null) return m;
+		if (m != null) return used(key, m);
 		loadFinish(l, kit, pattern, key, null);
 		return l.gun;
 	}
@@ -387,6 +453,7 @@ public final class Viewmodel {
 						decoded.put(part.texture, decode(part.texture, !part.alphaMode.equals("MASK")));
 				}
 				if (steps != null) holoSteps.put(m, steps);
+				finishUsed.put(key, System.nanoTime()); // fresh: not the first to be let go before it's ever drawn
 				finishes.put(key, m);
 			} catch (Exception e) {
 				finishes.put(key, l.gun);
@@ -893,6 +960,7 @@ public final class Viewmodel {
 	/** Renders the viewmodel; false if not ready (vanilla hand renders instead). */
 	public boolean render(String cls, PoseStack ps, SubmitNodeCollector out, int light) {
 		if (broken || !ready(cls)) return false;
+		evictFinishes();
 		Loaded l = loaded;
 		if (clip == null) play(nextDraw);
 		if (clip == null) play("draw");

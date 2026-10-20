@@ -108,6 +108,9 @@ public final class ParticleTextures {
 			// the finished texture (atlas built, channels moved, downscaled) from an earlier session: no VRF, no rebuild
 			String variant = alphaOnly ? "a" : luma ? "l" : red ? "r" : green ? "g" : "n";
 			Path ready = StrafeConfig.cacheDir().resolve(base + "strafemc1" + variant + ".png");
+			// a texture CS2's files have no image or sheet for: not converted again every session
+			Path none = StrafeConfig.cacheDir().resolve(base + "strafemc1none");
+			if (Files.exists(none)) return;
 			if (Files.exists(ready)) {
 				List<Sequence> sheet = sheet(c);
 				try (var in = Files.newInputStream(ready)) {
@@ -122,7 +125,14 @@ public final class ParticleTextures {
 				AssetCache.ensureDecompiled(c, png);
 			List<Sequence> sheet = sheet(c);
 			// sheet textures: VRF writes each (alpha-cropped) frame as <name>_seq<S>_<F>.png; rebuild the atlas from them
-			BufferedImage img = Files.exists(png) ? ImageIO.read(png.toFile()) : atlas(c, base, sheet);
+			BufferedImage img;
+			if (Files.exists(png)) img = ImageIO.read(png.toFile());
+			else try {
+				img = atlas(c, base, sheet);
+			} catch (java.io.IOException e) {
+				if (String.valueOf(e.getMessage()).startsWith("no image and no sheet")) Files.writeString(none, e.getMessage());
+				throw e;
+			}
 			int f = 1;
 			while (Math.max(img.getWidth(), img.getHeight()) / f > 2048) f *= 2;
 			if (f > 1) img = boxDown(img, f);
