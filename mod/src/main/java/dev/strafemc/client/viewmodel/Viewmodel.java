@@ -564,14 +564,22 @@ public final class Viewmodel {
 
 	/** The sleeves of the agent picked for your side (its model's firstperson_sleeves mesh), or null. */
 	private VmModel sleeves() {
-		var a = dev.strafemc.client.Agents.current();
+		return sleeves(dev.strafemc.client.Agents.current());
+	}
+
+	/** Starts loading an agent's sleeves (picked in the agent menu), so they're ready when worn. */
+	public void warmSleeves(dev.strafemc.client.Agents.Agent a) {
+		sleeves(a);
+	}
+
+	private VmModel sleeves(dev.strafemc.client.Agents.Agent a) {
 		if (a == null) return null;
 		String model = a.model() + "_c";
 		VmModel m = sleeveModels.get(model);
 		if (m != null || !sleevesLoading.add(model)) return m;
 		Thread t = new Thread(() -> {
 			try {
-				VmModel s = VmModel.load(Glb.read(AssetCache.exportGlb(model, true)), ".firstperson_sleeves");
+				VmModel s = VmModel.load(Glb.read(AssetCache.exportGlb(model, true, false)), ".firstperson_sleeves");
 				for (VmModel.Part part : s.parts) armsOnly(s, part);
 				for (VmModel.Part part : s.parts) {
 					if (part.texture == null) continue;

@@ -59,6 +59,7 @@ public final class AgentScreen extends Screen implements dev.strafemc.client.ui.
 		} catch (Exception ignored) {
 		}
 		dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/submenu_leveloptions_select_01", 0.4f);
+		if (!v.isEmpty()) dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.warmSleeves(dev.strafemc.client.Agents.get(v));
 	}
 
 	private int cols() {

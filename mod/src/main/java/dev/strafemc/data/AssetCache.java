@@ -129,6 +129,14 @@ public final class AssetCache {
 	 * into cache/gltf, once. Returns the .glb path.
 	 */
 	public static Path exportGlb(String vpkPath, boolean materials) throws IOException {
+		return exportGlb(vpkPath, materials, true);
+	}
+
+	/**
+	 * As exportGlb, optionally without the model's animations (the skeleton stays): a whole agent model with its
+	 * animations takes the converter over half a minute, without them a couple of seconds.
+	 */
+	public static Path exportGlb(String vpkPath, boolean materials, boolean animations) throws IOException {
 		synchronized (lock("gltf export")) { // exports write shared textures next to the models: one at a time
 			Path dir = StrafeConfig.cacheDir().resolve("gltf");
 			String base = vpkPath.substring(0, vpkPath.lastIndexOf('.'));
@@ -137,7 +145,8 @@ public final class AssetCache {
 			if (Files.exists(glb) && (!materials || texturesPresent(glb))) return glb;
 			Files.createDirectories(dir); // VRF treats a missing -o folder as an output file name
 			List<String> args = new java.util.ArrayList<>(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", dir.toString(), "-d",
-					"--gltf_export_format", "glb", "--gltf_export_animations"));
+					"--gltf_export_format", "glb"));
+			if (animations) args.add("--gltf_export_animations");
 			if (materials) args.add("--gltf_export_materials");
 			runVrf(args);
 			if (!Files.exists(glb)) throw new IOException("VRF produced no " + glb);
