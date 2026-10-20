@@ -75,10 +75,12 @@ public final class ParticleTextures {
 	 * The texture with its brightness replaced by a colour from a gradient (stops as position, r, g, b with r/g/b 0-255):
 	 * CS2's m_bReplaceTextureWithGradient, e.g. a fire's flames going blue and purple where they're faint.
 	 */
-	public static String withGradient(String vtex, float[] stops) {
+	public static String withGradient(String vtex, float[] stops, float blend) {
 		if (vtex == null || stops.length < 4) return vtex;
-		String key = Integer.toHexString(java.util.Arrays.hashCode(stops));
-		GRADIENTS.put(key, stops);
+		float[] s = java.util.Arrays.copyOf(stops, stops.length + 1);
+		s[stops.length] = blend; // the last value: how much of the gradient's colour replaces the texture's
+		String key = Integer.toHexString(java.util.Arrays.hashCode(s));
+		GRADIENTS.put(key, s);
 		return vtex + GRADIENT + key;
 	}
 
@@ -145,7 +147,9 @@ public final class ParticleTextures {
 		String gkey = gi >= 0 ? vtex.substring(gi + GRADIENT.length()) : "";
 		boolean lumAlpha = gkey.endsWith(GRADIENT_ALPHA);
 		if (lumAlpha) gkey = gkey.substring(0, gkey.length() - GRADIENT_ALPHA.length());
-		float[] gradient = gi >= 0 ? GRADIENTS.get(gkey) : null;
+		float[] gs = gi >= 0 ? GRADIENTS.get(gkey) : null;
+		float gradientBlend = gs != null ? gs[gs.length - 1] : 1;
+		float[] gradient = gs != null ? java.util.Arrays.copyOf(gs, gs.length - 1) : null;
 		String full = vtex;
 		if (gi >= 0) vtex = vtex.substring(0, gi);
 		try {
@@ -223,6 +227,12 @@ public final class ParticleTextures {
 					// the colour as is (the lookup's straight RGBA channel mode; the premultiplied mode turned whole fires blue)
 					float r = (px[i] >> 16 & 255) / 255f, g = (px[i] >> 8 & 255) / 255f, b = (px[i] & 255) / 255f;
 					int col = gradientAt(gradient, Math.min(1, 0.2125f * r + 0.7154f * g + 0.0721f * b));
+					if (gradientBlend < 1) { // part of the texture's own colour kept
+						int rr = Math.round((px[i] >> 16 & 255) + ((col >> 16 & 255) - (px[i] >> 16 & 255)) * gradientBlend);
+						int gg = Math.round((px[i] >> 8 & 255) + ((col >> 8 & 255) - (px[i] >> 8 & 255)) * gradientBlend);
+						int bb = Math.round((px[i] & 255) + ((col & 255) - (px[i] & 255)) * gradientBlend);
+						col = rr << 16 | gg << 8 | bb;
+					}
 					int a = px[i] >>> 24;
 					if (lumAlpha) a = Math.round(a * (0.299f * (col >> 16 & 255) + 0.587f * (col >> 8 & 255) + 0.114f * (col & 255)) / 255f);
 					px[i] = a << 24 | col;

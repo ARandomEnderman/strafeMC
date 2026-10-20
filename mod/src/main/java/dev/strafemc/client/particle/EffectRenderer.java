@@ -39,7 +39,7 @@ public final class EffectRenderer {
 		final Num selfIllum, diffuse, desaturation;
 		final boolean lit;
 		final List<Num> erode = new ArrayList<>();
-		final Num radiusScale, alphaScale, overbright, headTaper, tailTaper, headAlpha, tailAlpha, minSize, maxSize;
+		final Num radiusScale, alphaScale, overbright, headTaper, tailTaper, headAlpha, tailAlpha, minSize, maxSize, startFade, endFade;
 		final Vec colorScale, headColor, tailColor;
 		final int prevSource;
 
@@ -62,11 +62,14 @@ public final class EffectRenderer {
 			cpNormal = orient.equals("PARTICLE_ORIENTATION_ALIGN_TO_PARTICLE_NORMAL");
 			String tex = null;
 			float[] gradient = null;
+			float gradientBlend = 1;
 			for (Map<String, Object> t : p.array("m_vecTexturesInput")) {
 				Pd tp = p.nested(t);
 				if (!tp.b("m_bEnabled", true)) continue;
 				if (tp.b("m_bReplaceTextureWithGradient", false)) { // a colour lookup over the first texture's brightness
 					List<Map<String, Object>> stops = tp.nested(tp.raw("m_Gradient")).array("m_Stops");
+					// m_flTextureBlend: how much of the looked-up colour replaces the texture's own (the flames keep half)
+					gradientBlend = Math.max(0, Math.min(1, tp.num("m_flTextureBlend", new Num.Literal(1)).next(PState.DEFAULT)));
 					gradient = new float[stops.size() * 4];
 					for (int k = 0; k < stops.size(); k++) {
 						Pd st = tp.nested(stops.get(k));
@@ -86,7 +89,7 @@ public final class EffectRenderer {
 			}
 			if (tex == null) tex = p.str("m_hTexture", null);
 			// alpha-blended layers take their alpha from the looked-up colour's brightness (dark = clear), as CS2's lookup can
-			if (gradient != null) tex = ParticleTextures.withGradient(tex, gradient) + (additive ? "" : ParticleTextures.GRADIENT_ALPHA);
+			if (gradient != null) tex = ParticleTextures.withGradient(tex, gradient, gradientBlend) + (additive ? "" : ParticleTextures.GRADIENT_ALPHA);
 			graded = gradient != null && tex != null;
 			// heat shimmer: the texture is a normal map that bends the picture behind it, not something to draw (not done yet)
 			refract = p.b("m_bRefract", false) || tex != null && (tex.contains("_normal") || tex.contains("/warp"));
@@ -118,6 +121,9 @@ public final class EffectRenderer {
 			tailColor = p.vecInput("m_vecTailColorScale", Vec.literal(new Vector3f(1)));
 			prevSource = p.field("m_nPrevPntSource", Particle.POSITION_PREVIOUS);
 			// screen-relative size limits (x camera distance): sprites 0..5000, trails 0..2000 (VRF defaults)
+			// sprites fade out as they grow from m_flStartFadeSize to m_flEndFadeSize of the screen (up close)
+			startFade = p.num("m_flStartFadeSize", new Num.Literal(10));
+			endFade = p.num("m_flEndFadeSize", new Num.Literal(20));
 			minSize = p.num("m_flMinSize", new Num.Literal(0));
 			maxSize = p.num("m_flMaxSize", new Num.Literal(sprites ? 5000 : 2000));
 		}
@@ -366,6 +372,9 @@ public final class EffectRenderer {
 		float[] uv = frameInto(in, tex, p);
 		Vector3f col = hdr(in, s, p, COL.set(p.color).mul(in.colorScale.next(p, s.state)).mul(in.overbright.next(p, s.state)).mul(gain(s, in, p)));
 		float a = forceAlpha >= 0 ? forceAlpha : p.alpha * in.alphaScale.next(p, s.state) * erosion(s, in, p);
+		float screen = 2 * half / Math.max(1e-4f, pixelSize(dist) * pxHeight), fs = in.startFade.next(p, s.state), fe = in.endFade.next(p, s.state);
+		if (screen > fs) a *= fe > fs ? Math.max(0, 1 - (screen - fs) / (fe - fs)) : 0;
+		if (a <= 0) return;
 		int o = nextQuad();
 		corner(qb, o, CORNER.set(c).sub(ax).sub(ay), uv[0], uv[3], col, a);
 		corner(qb, o + 9, CORNER.set(c).add(ax).sub(ay), uv[2], uv[3], col, a);
@@ -417,7 +426,7 @@ public final class EffectRenderer {
 			if (half <= 0) continue;
 			Vector3f n = in.orientToNormal ? p.normal : ground;
 			planeAxes(n, m);
-			Vector3f lift = m.transformDirection(new Vector3f(n).normalize()).normalize().mul(0.01f);
+			Vector3f lift = m.transformDirection(new Vector3f(n).normalize()).normalize().mul(0.02f + (i % 16) * 0.001f);
 			Vector3f c = m.transformPosition(C.set(p.position)).add(lift);
 			float roll = p.rotation.z, cos = (float) Math.cos(roll), sin = (float) Math.sin(roll);
 			Vector3f ax = AX.set(R).mul(cos).add(T.set(U).mul(sin)).mul(half);
@@ -437,7 +446,7 @@ public final class EffectRenderer {
 			for (int o = 0; o < count * QUAD; o += QUAD)
 				for (int k = 0; k < 4; k++) vertex(vc, pose, quads, o + k * 9, false);
 		};
-		RenderType type = RenderTypes.entityTranslucent(mat.texture());
+		RenderType type = ParticleBlend.smoke(mat.texture()); // no depth writes: overlapping decals don't fight
 		if (buffers != null) {
 			geometry.render(ps.last(), buffers.getBuffer(type));
 
