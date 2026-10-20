@@ -414,10 +414,13 @@ public final class Effects {
 			var buffers = ctx.bufferSource();
 			dev.strafemc.client.perf.Perf.count("effects_alive", WORLD.size());
 			long t = dev.strafemc.client.perf.Perf.start();
+			ParticleBloom.begin();
 			// decals (a fire's scorch) under every effect: drawn and flushed first, then the effects over them
 			for (Instance in : WORLD) EffectRenderer.draw(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), buffers, true);
 			buffers.endBatch();
 			for (Instance in : WORLD) EffectRenderer.draw(in.sys, toRender, new Vector3f(), right, up, ctx.poseStack(), buffers, false);
+			buffers.endBatch();
+			ParticleBloom.apply();
 			buffers.endBatch();
 			dev.strafemc.client.perf.Perf.end("particles_draw", t);
 		}

@@ -28,7 +28,7 @@ public final class EffectRenderer {
 
 	/** Parsed renderer definition. */
 	static final class Info {
-		final boolean sprites, trails, projected, orientToNormal, additive, bloomOnly, worldZ, cpNormal, refract;
+		final boolean sprites, trails, projected, orientToNormal, additive, bloomOnly, waterOnly, worldZ, cpNormal, refract;
 		final String texture, material;
 		/** The texture's colour is looked up in a colour gradient (baked into the texture). */
 		final boolean graded;
@@ -53,9 +53,12 @@ public final class EffectRenderer {
 			List<Map<String, Object>> mats = p.array("m_vecProjectedMaterials");
 			material = mats.isEmpty() ? null : p.nested(mats.get(0)).str("m_hMaterial", null);
 			String blend = p.str("m_nOutputBlendMode", "PARTICLE_OUTPUT_BLEND_MODE_ALPHA");
-			additive = blend.contains("ADD") || blend.contains("LIGHTEN");
-			// drawn only into the bloom buffer, or only into water's reflection/refraction: not a visible layer here
-			bloomOnly = p.b("m_bOnlyRenderInEffectsBloomPass", false) || p.b("m_bOnlyRenderInEffectsWaterPass", false);
+			// m_flAddSelfAmount 1: the spritecard adds the layer instead of blending it (an alpha layer that is additive)
+			float addSelf = p.num("m_flAddSelfAmount", new Num.Literal(0)).next(PState.DEFAULT);
+			additive = blend.contains("ADD") || blend.contains("LIGHTEN") || addSelf >= 1;
+			// drawn only into the bloom buffer (ours too), or only into water's reflection/refraction (never here)
+			bloomOnly = p.b("m_bOnlyRenderInEffectsBloomPass", false);
+			waterOnly = p.b("m_bOnlyRenderInEffectsWaterPass", false);
 			String orient = p.str("m_nOrientationType", "PARTICLE_ORIENTATION_SCREEN_ALIGNED");
 			worldZ = orient.equals("PARTICLE_ORIENTATION_WORLD_Z_ALIGNED");
 			// particle normals aren't simulated (C_INIT_NormalAlignToCP missing): impact layers align to CP0's normal (flagged)
@@ -215,7 +218,9 @@ public final class EffectRenderer {
 					continue;
 				}
 				if (layers == DECALS) continue;
-				if (!in.sprites && !in.trails || in.bloomOnly || in.refract) continue;
+				// layers CS2 draws only into its bloom pass go only into ours (world effects, additive)
+				boolean bloom = buffers != null && in.additive && ParticleBloom.ready();
+				if (!in.sprites && !in.trails || in.refract || in.waterOnly || in.bloomOnly && !bloom) continue;
 				{
 				ParticleTextures.Tex tex = ParticleTextures.get(in.texture);
 				if (tex == null) continue;
@@ -228,6 +233,13 @@ public final class EffectRenderer {
 				}
 				forceAlpha = -1;
 				if (qn == 0) continue;
+				if (bloom) { // the glow: into the bloom buffer at a quarter (overbright up to 4 fits)
+					var bvc = buffers.getBuffer(ParticleBloom.type(tex.id()));
+					for (int o = 0; o < qn * QUAD; o += QUAD)
+						for (int c = 0; c < 4; c++) vertex(bvc, ps.last(), qb, o + c * 9, true, ParticleBloom.IN);
+					ParticleBloom.markDrawn();
+				}
+				if (in.bloomOnly) continue;
 				boolean add = in.additive;
 				// m_flOverbrightFactor > 1 (muzzle flash 3-4): vertex colours cap at 1, so additive layers are drawn that many times
 				int passes = add ? Math.max(1, Math.min(8, (int) Math.ceil(in.overbright.next(s.state)))) : 1;
@@ -273,8 +285,12 @@ public final class EffectRenderer {
 	}
 
 	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] q, int o, boolean additive) {
+		vertex(vc, pose, q, o, additive, 1);
+	}
+
+	private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float[] q, int o, boolean additive, float scale) {
 		float a = Math.max(0, Math.min(1, q[o + 8]));
-		float r = Math.max(0, Math.min(1, q[o + 5])), g = Math.max(0, Math.min(1, q[o + 6])), b = Math.max(0, Math.min(1, q[o + 7]));
+		float r = Math.max(0, Math.min(1, q[o + 5] * scale)), g = Math.max(0, Math.min(1, q[o + 6] * scale)), b = Math.max(0, Math.min(1, q[o + 7] * scale));
 		int argb = (int) (a * 255) << 24 | (int) (r * 255) << 16 | (int) (g * 255) << 8 | (int) (b * 255);
 		vc.addVertex(pose, q[o], q[o + 1], q[o + 2]).setColor(argb).setUv(q[o + 3], q[o + 4]).setOverlay(OverlayTexture.NO_OVERLAY)
 				.setLight(FULL_BRIGHT).setNormal(pose, 0, 1, 0);
