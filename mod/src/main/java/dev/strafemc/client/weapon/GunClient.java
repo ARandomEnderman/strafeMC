@@ -853,16 +853,15 @@ public final class GunClient {
 		dev.strafemc.client.particle.Effects.tracer(tracer.toString(), start != null ? start : eye, end);
 	}
 
-	/** The bullet's path for the smoke: CS2 bullets push a tunnel through smoke and light it along the way. */
+	/** The bullet's path for the smoke, from the eyes as the shot itself: CS2 bullets push a tunnel through smoke. */
 	private void smokeTunnel(LocalPlayer p, WeaponStats w, Vec3 dir) {
 		if (!dev.strafemc.client.smoke.SmokeVolumes.any()) return;
 		Vec3 eye = eye(p), end = eye.add(dir.scale(w.range() / StrafeConfig.unitsPerBlock));
 		var hit = p.level().clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
 				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
 		if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = hit.getLocation();
-		Vec3 muzzle = muzzleWorld(Minecraft.getInstance());
 		int freq = w.tracerFrequency();
-		dev.strafemc.client.smoke.SmokeVolumes.shot(muzzle != null ? muzzle : eye, end, freq > 0 && ((int) recoilIndex) % freq == 0);
+		dev.strafemc.client.smoke.SmokeVolumes.shot(eye, end, freq > 0 && ((int) recoilIndex) % freq == 0);
 	}
 
 	/** The muzzle a flash comes from: the Dual Berettas' left gun flashes with config "alternate" at the second muzzle. */
