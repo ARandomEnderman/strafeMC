@@ -332,6 +332,7 @@ public final class StrafeSettings {
 	}
 
 	private static void save() {
+		GameplaySync.resendAll(); // every client's console quick menu shows the server's settings
 		if (file == null) return;
 		JsonObject o = new JsonObject();
 		o.addProperty("sourceMovement", sourceMovement);

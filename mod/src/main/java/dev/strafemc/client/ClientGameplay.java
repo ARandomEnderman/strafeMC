@@ -31,6 +31,8 @@ public final class ClientGameplay {
 	private static volatile int killCardTime = 0;
 	private static volatile boolean loadoutKeep = true, drops = true, c4Keypad = false;
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
+	/** Other server settings by their console command (strafemc_knockback, bot_quota, ...), as numbers. */
+	private static volatile java.util.Map<String, Double> settings = java.util.Map.of();
 	private static final Map<String, WeaponStats> STATS = new ConcurrentHashMap<>();
 	private static final Map<String, Recoil> RECOIL = new ConcurrentHashMap<>();
 	/** Local vdata entry with the server's gameplay fields on top. */
@@ -61,6 +63,10 @@ public final class ClientGameplay {
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
 			movementPersonal = pers;
+			java.util.Map<String, Double> st = new java.util.HashMap<>();
+			if (root.get("settings") instanceof java.util.Map<?, ?> sm)
+				sm.forEach((k, v) -> { if (v instanceof Number n) st.put(String.valueOf(k), n.doubleValue()); });
+			settings = st;
 			STATS.clear();
 			RECOIL.clear();
 			MERGED.clear();
@@ -175,6 +181,12 @@ public final class ClientGameplay {
 	/** The server's strafemc_c4_keypad: plant and defuse the C4 on a keypad. */
 	public static boolean c4Keypad() {
 		return c4Keypad;
+	}
+
+	/** A server setting by its console command, or NaN before the server has said. */
+	public static double setting(String command) {
+		Double v = settings.get(command);
+		return v == null ? Double.NaN : v;
 	}
 
 	public static boolean loadoutKeep() {

@@ -56,6 +56,8 @@ public final class UiSweep {
 		windows.add(new int[] {origW, origH});
 		if (!w.isFullscreen()) for (int[] s : WINDOWS) windows.add(s);
 		Map<String, Supplier<Screen>> menus = menus();
+		String only = System.getProperty("strafemc.uiSweepOnly"); // e.g. console_menu: just those menus
+		if (only != null) menus.keySet().retainAll(java.util.List.of(only.split(",")));
 		steps = new ArrayList<>();
 		for (int[] win : windows)
 			for (int scale = 1; scale <= 6; scale++)
@@ -237,6 +239,10 @@ public final class UiSweep {
 			m.put("settings" + t, () -> new dev.strafemc.client.StrafeSettingsScreen(null, tab));
 		}
 		m.put("console", dev.strafemc.client.console.ConsoleScreen::new);
+		m.put("console_menu", () -> {
+			dev.strafemc.client.console.ConsoleScreen.showMenu();
+			return new dev.strafemc.client.console.ConsoleScreen();
+		});
 		m.put("presets", () -> new dev.strafemc.client.console.PresetScreen(null));
 		m.put("agents", () -> new dev.strafemc.client.AgentScreen(null));
 		m.put("hosting_info", () -> new dev.strafemc.client.HostingInfoScreen(null));

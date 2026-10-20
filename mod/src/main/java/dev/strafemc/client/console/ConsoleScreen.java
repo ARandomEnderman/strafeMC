@@ -39,15 +39,22 @@ public final class ConsoleScreen extends Screen {
 	private int wx, wy, ww, wh;
 	private List<String[]> suggestions = List.of();
 
-	/** One quick-menu row: main button, optional reset-to-default button, the cvar it edits (numbers open a text field). */
-	private record MenuItem(Button button, Supplier<String> label, Button reset, String cvar, boolean numeric) {}
+	/** One quick-menu row: its name, its value, its control, an optional back-to-default button, the cvar or setting it edits. */
+	private record MenuItem(String name, Supplier<String> value, Button button, Button reset, String cvar, boolean numeric, boolean header) {}
 
-	private static final int ROW_H = 20, ROW_GAP = 2;
-	/** Quick-menu width: 184 GUI px, shrunk on small screens / large GUI scales so the log keeps at least half the window. */
-	private int menuW = 184;
+	private static final int ROW_H = 18, ROW_GAP = 2, CTRL_W = 80;
+	/** strafeMC menu colours (StrafeSettingsScreen). */
+	private static final int MENU_BG = dev.strafemc.client.StrafeSettingsScreen.BG, MENU_LINE = 0x30FFFFFF, ACCENT = 0xFFE0C060;
+	/** Quick-menu width: 236 GUI px, shrunk on small screens / large GUI scales so the log keeps at least half the window. */
+	private int menuW = 236;
 	private int menuScroll;
 	private EditBox menuEdit;
 	private String editingCvar;
+
+	/** Opens the quick menu with the console (the menu sweep pictures it). */
+	public static void showMenu() {
+		menuOpen = true;
+	}
 
 	public ConsoleScreen() {
 		super(Component.literal("Console"));
@@ -59,7 +66,7 @@ public final class ConsoleScreen extends Screen {
 		wh = (int) (height * 0.72);
 		wx = (width - ww) / 2;
 		wy = (int) (height * 0.05);
-		menuW = Math.max(110, Math.min(184, ww / 2 - 10));
+		menuW = Math.max(150, Math.min(236, ww / 2 - 10));
 
 		String keep = input == null ? "" : input.getValue();
 		input = new EditBox(font, wx + 6, wy + wh - 22, ww - 74, 16, Component.literal("command"));
@@ -79,55 +86,69 @@ public final class ConsoleScreen extends Screen {
 		gear.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Quick settings")));
 
 		items.clear();
-		header("Personal");
-		toggle(() -> "Team: " + ("t".equals(StrafeConfig.team) ? "T" : "CT"), () -> ConsoleCommands.execute("strafemc_team"));
-		toggle(() -> "Scroll wheel: " + (StrafeConfig.scrollJump ? "Jump" : "Hotbar"), () -> ConsoleCommands.execute("cl_scrolljump"));
-		toggle(() -> "cl_showpos: " + onOff(StrafeConfig.showSpeed), () -> ConsoleCommands.execute("cl_showpos"));
-		toggle(() -> "Double-tap fly: " + onOff(StrafeConfig.doubleTapFly), () -> ConsoleCommands.execute("cl_doubletapfly"));
-		toggle(() -> "Source movement: " + onOff(dev.strafemc.client.ClientGameplay.sourceMovement()), () -> ConsoleCommands.execute("strafemc_movement"));
-		toggle(() -> "Server log: " + onOff(StrafeConfig.showServerLog), () -> ConsoleCommands.execute("strafemc_serverlog"));
-		toggle(() -> "Jump stats: " + onOff(StrafeConfig.jumpStats), () -> ConsoleCommands.execute("cl_jumpstats"));
-		toggle(() -> "Speed graph: " + onOff(StrafeConfig.velGraph), () -> ConsoleCommands.execute("cl_velgraph"));
-		toggle(() -> "Speed meter: " + onOff(StrafeConfig.showSpeedMeter), () -> ConsoleCommands.execute("cl_showspeed"));
-		header("Presets");
-		toggle(() -> "Presets...", () -> minecraft.setScreen(new PresetScreen(this)));
+		// the same sections and look as the strafeMC menus: a gold header per section, each row a name and its control
+		header("You");
+		row("Team", () -> "t".equals(StrafeConfig.team) ? "T" : "CT", () -> ConsoleCommands.execute("strafemc_team"));
+		row("Movement", () -> dev.strafemc.client.ClientGameplay.sourceMovement() ? "CS2" : "Minecraft", () -> ConsoleCommands.execute("strafemc_movement"));
+		row("Scroll wheel", () -> StrafeConfig.scrollJump ? "Jump" : "Hotbar", () -> ConsoleCommands.execute("cl_scrolljump"));
+		row("Double-tap to fly", () -> onOff(StrafeConfig.doubleTapFly), () -> ConsoleCommands.execute("cl_doubletapfly"));
+		row("Right-handed", () -> onOff(StrafeConfig.rightHand), () -> ConsoleCommands.execute("cl_righthand " + (StrafeConfig.rightHand ? 0 : 1)));
+		row("Show position", () -> onOff(StrafeConfig.showSpeed), () -> ConsoleCommands.execute("cl_showpos"));
+		row("Speed meter", () -> onOff(StrafeConfig.showSpeedMeter), () -> ConsoleCommands.execute("cl_showspeed"));
+		row("Jump stats", () -> onOff(StrafeConfig.jumpStats), () -> ConsoleCommands.execute("cl_jumpstats"));
+		row("Velocity graph", () -> onOff(StrafeConfig.velGraph), () -> ConsoleCommands.execute("cl_velgraph"));
+		row("Performance overlay", () -> onOff(dev.strafemc.client.perf.Perf.on), () -> ConsoleCommands.execute("strafemc_perf"));
+		row("CS2 server log", () -> onOff(StrafeConfig.showServerLog), () -> ConsoleCommands.execute("strafemc_serverlog"));
+		row("Crosshair", () -> "Edit...", () -> minecraft.setScreen(dev.strafemc.client.StrafeSettingsScreen.at(this, "crosshair")));
+		row("Movement presets", () -> "Open...", () -> minecraft.setScreen(new PresetScreen(this)));
+
+		header("Server");
+		row("Buy menu", () -> capital(dev.strafemc.weapon.BuyMenu.modeName(dev.strafemc.client.ClientGameplay.buyMode())), () -> ConsoleCommands.execute("strafemc_buymenu"));
+		row("Buy time", () -> dev.strafemc.client.ClientGameplay.buyTime() == 0 ? "No limit" : dev.strafemc.client.ClientGameplay.buyTime() + " s",
+				() -> cycle("strafemc_buytime", dev.strafemc.client.ClientGameplay.buyTime(), 0, 10, 20, 45, 90));
+		row("Kill card time", () -> dev.strafemc.client.ClientGameplay.killCardTime() == 0 ? "Until death" : dev.strafemc.client.ClientGameplay.killCardTime() + " s",
+				() -> cycle("strafemc_killcards_time", dev.strafemc.client.ClientGameplay.killCardTime(), 0, 3, 5, 10, 30));
+		row("Loadout on death", () -> dev.strafemc.client.ClientGameplay.loadoutKeep() ? "Kept" : "Dropped", () -> ConsoleCommands.execute("strafemc_loadout_keep"));
+		row("Care packages", () -> onOff(dev.strafemc.client.ClientGameplay.drops()),
+				() -> ConsoleCommands.execute("strafemc_drops " + (dev.strafemc.client.ClientGameplay.drops() ? 0 : 1)));
+		setting("Wear on drops", "strafemc_wear", "On", "Factory New");
+		setting("Respawn on spawn blocks", "strafemc_spawnblocks", "On", "Off");
+		row("C4 keypad", () -> onOff(dev.strafemc.client.ClientGameplay.c4Keypad()),
+				() -> ConsoleCommands.execute("strafemc_c4_keypad " + (dev.strafemc.client.ClientGameplay.c4Keypad() ? 0 : 1)));
+		setting("Hits", "strafemc_knockback", "Knock back", "Slow down");
+		row("Step up slabs", () -> onOff(dev.strafemc.client.ClientGameplay.slabStep()), () -> ConsoleCommands.execute("strafemc_slabstep"));
+		row("Players pick movement", () -> onOff(dev.strafemc.client.ClientGameplay.movementChoice()),
+				() -> ConsoleCommands.execute("strafemc_movement_choice " + (dev.strafemc.client.ClientGameplay.movementChoice() ? 0 : 1)));
+		setting("Lag compensation", "strafemc_lagcomp", "On", "Off");
+		settingNumber("Max lag rewind (ms)", "strafemc_maxunlag");
+
+		header("Bots");
+		settingNumber("Bot count", "bot_quota");
+		settingNumber("Bot skill (1-10)", "bot_difficulty");
+		setting("Bots fight", "strafemc_bot_ffa", "Everyone", "Other team");
+		row("Add a bot", () -> "T", () -> ConsoleCommands.quiet("bot_add_t"));
+		row("Add a bot ", () -> "CT", () -> ConsoleCommands.quiet("bot_add_ct"));
+		row("Kick all bots", () -> "Kick", () -> ConsoleCommands.quiet("bot_kick"));
+
 		header("CS2 server");
 		if (ServerLauncher.configured()) // optional host extra
-			toggle(() -> Cs2Bridge.INSTANCE.connected() ? "§cStop CS2 server" : "§aStart CS2 server",
+			row("CS2 server", () -> Cs2Bridge.INSTANCE.connected() ? "Stop" : "Start",
 					() -> { if (Cs2Bridge.INSTANCE.connected()) ServerLauncher.stop(); else ServerLauncher.start(); });
 		cvarToggle("Auto bunnyhop", "sv_autobunnyhopping", false);
 		cvarToggle("Bhop speed cap", "sv_enablebunnyhopping", true);
 		// sv_legacy_jump 1: CS2's pre-2026 jump (full height every time, no weaker jump right after landing)
 		cvarToggle("Pre-2026 jump", "sv_legacy_jump", false);
-		// sv_stepsize 18 (CS2) vs 20: a slab is 20 units at 40 units per block, so 20 lets you walk up slabs
-		toggle(() -> "Step up slabs: " + onOff(dev.strafemc.client.ClientGameplay.slabStep()), () -> ConsoleCommands.execute("strafemc_slabstep"));
-		toggle(() -> "Loadout on death: " + (dev.strafemc.client.ClientGameplay.loadoutKeep() ? "kept" : "dropped"), () -> ConsoleCommands.execute("strafemc_loadout_keep"));
-		toggle(() -> "Buy menu: " + dev.strafemc.weapon.BuyMenu.modeName(dev.strafemc.client.ClientGameplay.buyMode()), () -> ConsoleCommands.execute("strafemc_buymenu"));
-		// buy time presets (strafemc_buytime takes any number of seconds)
-		toggle(() -> "Buy time: " + (dev.strafemc.client.ClientGameplay.buyTime() == 0 ? "no limit" : dev.strafemc.client.ClientGameplay.buyTime() + " s"), () -> {
-			int[] presets = {0, 10, 20, 45, 90};
-			int cur = dev.strafemc.client.ClientGameplay.buyTime(), next = presets[0];
-			for (int i = 0; i < presets.length; i++) if (presets[i] == cur) next = presets[(i + 1) % presets.length];
-			ConsoleCommands.execute("strafemc_buytime " + next);
-		});
-		toggle(() -> "Kill card time: " + (dev.strafemc.client.ClientGameplay.killCardTime() == 0 ? "until death" : dev.strafemc.client.ClientGameplay.killCardTime() + " s"), () -> {
-			int[] presets = {0, 3, 5, 10, 30};
-			int cur = dev.strafemc.client.ClientGameplay.killCardTime(), next = presets[0];
-			for (int i = 0; i < presets.length; i++) if (presets[i] == cur) next = presets[(i + 1) % presets.length];
-			ConsoleCommands.execute("strafemc_killcards_time " + next);
-		});
+		cvarToggle("Cheats", "sv_cheats", false);
+		row("Noclip", () -> onOff(MovementController.INSTANCE.noclip()), () -> ConsoleCommands.execute("noclip"));
 		number("Max velocity", "sv_maxvelocity");
 		number("Accelerate", "sv_accelerate");
+		number("Air accelerate", "sv_airaccelerate");
 		number("Friction", "sv_friction");
 		number("Gravity", "sv_gravity");
 		number("Max speed", "sv_maxspeed");
-		cvarToggle("sv_cheats", "sv_cheats", false);
-		toggle(() -> "Noclip: " + onOff(MovementController.INSTANCE.noclip()), () -> ConsoleCommands.execute("noclip"));
+		number("Jump impulse", "sv_jump_impulse");
 		number("Timescale", "host_timescale");
-		toggle(() -> "Crosshair editor", () -> minecraft.setScreen(dev.strafemc.client.StrafeSettingsScreen.at(this, "crosshair")));
-		toggle(() -> "Add bot", () -> ConsoleCommands.quiet("bot_add"));
-		toggle(() -> "Kick all bots", () -> ConsoleCommands.quiet("bot_kick"));
-		toggle(() -> "Reset all movement cvars", () -> ConsoleCommands.execute("strafemc_reset_movement"));
+		row("Movement cvars", () -> "Reset", () -> ConsoleCommands.execute("strafemc_reset_movement"));
 
 		menuEdit = new EditBox(font, 0, 0, 10, ROW_H, Component.literal("value"));
 		menuEdit.setMaxLength(32);
@@ -140,30 +161,58 @@ public final class ConsoleScreen extends Screen {
 	}
 
 	private void header(String text) {
-		Button b = addRenderableWidget(Button.builder(Component.literal(text), x -> {}).bounds(0, 0, 10, ROW_H).build());
-		b.active = false;
-		items.add(new MenuItem(b, () -> "§e" + text, null, null, false));
+		items.add(new MenuItem(text, null, null, null, null, false, true));
 	}
 
-	private void toggle(Supplier<String> label, Runnable action) {
-		Button b = addRenderableWidget(Button.builder(Component.literal(label.get()), x -> action.run()).bounds(0, 0, 10, ROW_H).build());
-		items.add(new MenuItem(b, label, null, null, false));
+	/** A row: its name, and a control showing value (clicking runs action). */
+	private void row(String name, Supplier<String> value, Runnable action) {
+		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> action.run()).bounds(0, 0, CTRL_W, ROW_H).build());
+		items.add(new MenuItem(name, value, b, null, null, false, false));
 	}
 
-	/** Boolean CS2 cvar with a reset button; inverted = label shows the opposite (e.g. "speed cap ON" = enablebunnyhopping 0). */
+	/** Steps a server setting through preset values. */
+	private static void cycle(String command, int current, int... presets) {
+		int next = presets[0];
+		for (int i = 0; i < presets.length; i++) if (presets[i] == current) next = presets[(i + 1) % presets.length];
+		ConsoleCommands.execute(command + " " + next);
+	}
+
+	/** An on/off server setting (its console command takes 1 or 0), shown with the server's current value. */
+	private void setting(String name, String command, String on, String off) {
+		row(name, () -> {
+			double v = dev.strafemc.client.ClientGameplay.setting(command);
+			return Double.isNaN(v) ? "?" : v != 0 ? on : off;
+		}, () -> {
+			double v = dev.strafemc.client.ClientGameplay.setting(command);
+			ConsoleCommands.execute(command + " " + (v != 0 && !Double.isNaN(v) ? 0 : 1));
+		});
+	}
+
+	/** A numeric server setting: click to type a value. */
+	private void settingNumber(String name, String command) {
+		Supplier<String> value = () -> {
+			double v = dev.strafemc.client.ClientGameplay.setting(command);
+			return Double.isNaN(v) ? "?" : String.valueOf((long) v);
+		};
+		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> startEdit(command, x, value.get())).bounds(0, 0, CTRL_W, ROW_H).build());
+		items.add(new MenuItem(name, value, b, null, command, true, false));
+	}
+
+	/** Boolean CS2 cvar with a reset button; inverted = shows the opposite (e.g. "speed cap On" = enablebunnyhopping 0). */
 	private void cvarToggle(String name, String cvar, boolean inverted) {
-		Supplier<String> label = () -> name + ": " + onOff(cvBool(cvar) != inverted);
-		Button b = addRenderableWidget(Button.builder(Component.literal(label.get()),
-				x -> ConsoleCommands.quiet(cvar + " " + (cvBool(cvar) ? 0 : 1))).bounds(0, 0, 10, ROW_H).build());
-		items.add(new MenuItem(b, label, resetButton(cvar), cvar, false));
+		Supplier<String> value = () -> onOff(cvBool(cvar) != inverted);
+		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()),
+				x -> ConsoleCommands.quiet(cvar + " " + (cvBool(cvar) ? 0 : 1))).bounds(0, 0, CTRL_W, ROW_H).build());
+		b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(cvar)));
+		items.add(new MenuItem(name, value, b, resetButton(cvar), cvar, false, false));
 	}
 
 	/** Numeric CS2 cvar: click to type a value; the reset button restores the server default. */
 	private void number(String name, String cvar) {
-		Supplier<String> label = () -> name + ": §b" + cvStr(cvar);
-		Button b = addRenderableWidget(Button.builder(Component.literal(label.get()), x -> startEdit(cvar, x)).bounds(0, 0, 10, ROW_H).build());
-		b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Click to type a value (" + cvar + ")")));
-		items.add(new MenuItem(b, label, resetButton(cvar), cvar, true));
+		Supplier<String> value = () -> cvStr(cvar);
+		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> startEdit(cvar, x, cvStr(cvar))).bounds(0, 0, CTRL_W, ROW_H).build());
+		b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(cvar)));
+		items.add(new MenuItem(name, value, b, resetButton(cvar), cvar, true, false));
 	}
 
 	private Button resetButton(String cvar) {
@@ -172,16 +221,16 @@ public final class ConsoleScreen extends Screen {
 			if (d != null) ConsoleCommands.quiet(cvar + " " + d);
 			else ConsoleLog.error("No default known for " + cvar + " yet");
 		}).bounds(0, 0, ROW_H, ROW_H).build());
-		r.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Reset " + cvar + " to the server default")));
+		r.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Back to CS2's value")));
 		return r;
 	}
 
-	private void startEdit(String cvar, Button over) {
+	private void startEdit(String cvar, Button over, String current) {
 		editingCvar = cvar;
 		menuEdit.setX(over.getX());
 		menuEdit.setY(over.getY());
 		menuEdit.setWidth(over.getWidth());
-		menuEdit.setValue(cvStr(cvar));
+		menuEdit.setValue(current);
 		menuEdit.moveCursorToEnd(false);
 		menuEdit.visible = true;
 		over.visible = false;
@@ -191,7 +240,10 @@ public final class ConsoleScreen extends Screen {
 	private void finishEdit(boolean apply) {
 		if (editingCvar == null) return;
 		String v = menuEdit.getValue().trim();
-		if (apply && !v.isEmpty()) ConsoleCommands.quiet(editingCvar + " " + v);
+		if (apply && !v.isEmpty()) {
+			if (editingCvar.startsWith("strafemc_") || editingCvar.startsWith("bot_")) ConsoleCommands.execute(editingCvar + " " + v);
+			else ConsoleCommands.quiet(editingCvar + " " + v);
+		}
 		editingCvar = null;
 		menuEdit.visible = false;
 		setFocused(input);
@@ -213,16 +265,17 @@ public final class ConsoleScreen extends Screen {
 	private void layoutMenu() {
 		int maxScroll = Math.max(0, menuContentHeight() - (menuBottom() - menuTop()));
 		menuScroll = Math.max(0, Math.min(menuScroll, maxScroll));
-		int mx = wx + ww - menuW - 4, my = menuTop() - menuScroll;
+		int x1 = wx + ww - 8, my = menuTop() - menuScroll;
 		for (MenuItem it : items) {
 			boolean inside = my >= menuTop() && my + ROW_H <= menuBottom();
-			Button b = it.button;
-			b.setX(mx);
-			b.setY(my);
-			b.setWidth(it.reset != null ? menuW - ROW_H - 2 : menuW);
-			b.visible = menuOpen && inside && !(it.cvar != null && it.cvar.equals(editingCvar));
+			if (it.button != null) {
+				it.button.setX(it.reset != null ? x1 - ROW_H - 2 - CTRL_W : x1 - CTRL_W);
+				it.button.setY(my);
+				it.button.setWidth(CTRL_W);
+				it.button.visible = menuOpen && inside && !(it.cvar != null && it.cvar.equals(editingCvar));
+			}
 			if (it.reset != null) {
-				it.reset.setX(mx + menuW - ROW_H);
+				it.reset.setX(x1 - ROW_H);
 				it.reset.setY(my);
 				it.reset.visible = menuOpen && inside;
 			}
@@ -231,8 +284,12 @@ public final class ConsoleScreen extends Screen {
 		if (editingCvar != null && !menuOpen) finishEdit(false);
 	}
 
+	private static String capital(String s) {
+		return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+	}
+
 	private static String onOff(boolean b) {
-		return b ? "§aON" : "§cOFF";
+		return b ? "On" : "Off";
 	}
 
 	private static String cvStr(String n) {
@@ -461,7 +518,7 @@ public final class ConsoleScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
-		for (MenuItem it : items) it.button.setMessage(Component.literal(it.label.get()));
+		for (MenuItem it : items) if (it.button != null) it.button.setMessage(Component.literal(it.value.get()));
 
 		g.fill(wx - 1, wy - 1, wx + ww + 1, wy + wh + 1, BORDER);
 		g.fill(wx, wy, wx + ww, wy + wh, BG);
@@ -510,7 +567,26 @@ public final class ConsoleScreen extends Screen {
 		if (scroll > 0) g.text(font, "↑ " + scroll + " more (PgDn)", lx1 - 100, ly1 - 9, 0xFFFFC864, false);
 
 		if (menuOpen) {
-			g.fill(wx + ww - menuW - 6, menuTop() - 2, wx + ww - 2, menuBottom() + 2, 0xC0181818);
+			int px0 = wx + ww - menuW - 6, px1 = wx + ww - 2;
+			g.fill(px0, menuTop() - 2, px1, menuBottom() + 2, MENU_BG);
+			g.fill(px0, menuTop() - 2, px0 + 1, menuBottom() + 2, MENU_LINE);
+			// names and section headers, like the strafeMC settings rows
+			g.enableScissor(px0, menuTop(), px1, menuBottom());
+			int ry = menuTop() - menuScroll;
+			for (MenuItem it : items) {
+				if (ry + ROW_H >= menuTop() && ry <= menuBottom()) {
+					if (it.header) {
+						g.text(font, it.name.toUpperCase(), px0 + 6, ry + 6, ACCENT, false);
+						g.fill(px0 + 6, ry + ROW_H - 2, px1 - 6, ry + ROW_H - 1, MENU_LINE);
+					} else {
+						int room = (it.button != null ? it.button.getX() : px1) - px0 - 14;
+						g.text(font, font.plainSubstrByWidth(it.name, room), px0 + 8, ry + 5, 0xFFFFFFFF, false);
+						g.fill(px0 + 6, ry + ROW_H + ROW_GAP / 2, px1 - 6, ry + ROW_H + ROW_GAP / 2 + 1, 0x14FFFFFF);
+					}
+				}
+				ry += ROW_H + ROW_GAP;
+			}
+			g.disableScissor();
 			int content = menuContentHeight(), view = menuBottom() - menuTop();
 			if (content > view) { // scrollbar
 				int barH = Math.max(12, view * view / content), barY = menuTop() + (view - barH) * menuScroll / Math.max(1, content - view);
