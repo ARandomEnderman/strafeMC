@@ -25,81 +25,12 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Client side of grenades going off: CS2's effects and sounds, the flashbang white-out, smoke clouds and fire patches.
- * Smoke is CS2's voxel volume (weapon.SmokeVolume, the same fill the server runs) drawn as one soft puff per voxel
- * (CS2 raymarches it); fire is CS2's per-flame effect. Durations match weapon.GrenadeZones.
+ * Client side of grenades going off: CS2's effects and sounds, the flashbang white-out, smoke and fire patches. Smoke is
+ * CS2's simulated voxel volume (weapon.SmokeVolume, stepped by client.smoke.SmokeVolumes) drawn by
+ * client.smoke.SmokeRenderer; fire is CS2's per-flame effect. Durations match weapon.GrenadeZones.
  */
 public final class GrenadeClient {
 	private GrenadeClient() {}
-
-	private record Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t, Cells cells) {
-		Smoke(dev.strafemc.weapon.SmokeVolume volume, long start, boolean t) {
-			this(volume, start, t, new Cells(volume));
-		}
-	}
-
-	/** What doesn't change per frame for a smoke's voxels: centre, density, whether it's inside, and its light (refreshed a few times a second). */
-	private static final class Cells {
-		final Vec3[] center;
-		final double[] density;
-		final boolean[] inner;
-		final int[] light;
-		long lightNs;
-		boolean lit;
-
-		Cells(dev.strafemc.weapon.SmokeVolume v) {
-			int n = v.cells.length, N = dev.strafemc.weapon.SmokeVolume.N;
-			center = new Vec3[n];
-			density = new double[n];
-			inner = new boolean[n];
-			light = new int[n];
-			for (int k = 0; k < n; k++) {
-				int cell = v.cells[k];
-				center[k] = v.center(cell);
-				density[k] = v.density(center[k]);
-				int cx = cell % N, cy = cell / N % N, cz = cell / (N * N);
-				inner[k] = v.filled(cx + 1, cy, cz) && v.filled(cx - 1, cy, cz) && v.filled(cx, cy + 1, cz) && v.filled(cx, cy - 1, cz)
-						&& v.filled(cx, cy, cz + 1) && v.filled(cx, cy, cz - 1);
-			}
-		}
-
-		void refreshLight(net.minecraft.client.multiplayer.ClientLevel level, long now) {
-			if (lit && now - lightNs < 250_000_000L) return;
-			lit = true;
-			lightNs = now;
-			for (int k = 0; k < center.length; k++) light[k] = LevelRenderer.getLightCoords(level, BlockPos.containing(center[k]));
-		}
-	}
-
-	/**
-	 * CS2's team smoke colours (smoke_grenade_ct_color 75 127 155, smoke_grenade_t_color 180 129 50) and how much of
-	 * them tints the grey (FLAGGED: ours, CS2's smoke shader mixes it its own way).
-	 */
-	private static final float[] CT_TINT = {75 / 255f, 127 / 255f, 155 / 255f}, T_TINT = {180 / 255f, 129 / 255f, 50 / 255f};
-	private static final float TINT = 0.3f;
-
-	/**
-	 * HE grenades blow a hole in smoke that fills back in (CS2 keeps recent HE blasts per smoke on its client).
-	 * FLAGGED: radius and timing are ours: 450 units (3x the first 150), clear for 0.5 s, refilled from the
-	 * edge by 2 s.
-	 */
-	private record Blast(Vec3 at, long time) {}
-
-	private static final List<Blast> BLASTS = new ArrayList<>();
-	private static final double BLAST_RADIUS = 450, BLAST_CLEAR = 0.5, BLAST_REFILLED = 2.0, BLAST_EDGE = 20;
-
-	/** How much of the smoke at p survives recent HE blasts (0 inside a fresh hole, 1 untouched). */
-	private static double blastKeep(Vec3 p, long now, List<Blast> blasts) {
-		double keep = 1, upb = StrafeConfig.unitsPerBlock;
-		for (Blast b : blasts) {
-			double t = (now - b.time) / 1e9;
-			double r = BLAST_RADIUS * (1 - smoothstep(BLAST_CLEAR, BLAST_REFILLED, t)); // the hole shrinks as it refills
-			if (r <= 0) continue;
-			double d = p.distanceTo(b.at) * upb;
-			keep = Math.min(keep, Math.max(0, Math.min(1, (d - r) / BLAST_EDGE + 1)));
-		}
-		return keep;
-	}
 
 	private static final class Fire {
 		final Vec3 at;
@@ -128,10 +59,7 @@ public final class GrenadeClient {
 	private static final List<FireSound> FIRE_SOUNDS = new ArrayList<>();
 	private static final double LOOP_EVERY = 2.0;
 
-	private static final List<Smoke> SMOKES = new ArrayList<>();
 	private static final List<Fire> FIRES = new ArrayList<>();
-	/** CS2's smoke timing: smoothstep in over 0.1..1.5 s, full until 17 s, gone at 22 s. */
-	private static final double SMOKE_IN0 = 0.1, SMOKE_IN1 = 1.5, SMOKE_OUT0 = 17, SMOKE_GONE = 22;
 	/** CS2's inferno_flame_lifetime (7 s, incendiary 5.5 s); the server sends each flame as it spreads. */
 	private static final double FLAME_SECONDS = 7, FLAME_SECONDS_INC = 5.5, FLAME_REACH = 21;
 	private static Identifier puffTexture;
@@ -155,9 +83,7 @@ public final class GrenadeClient {
 		Vec3 fwd = Float.isNaN(m.heading()) ? null : new Vec3(-Math.cos(m.heading()), 0, -Math.sin(m.heading()));
 		switch (m.kind()) {
 			case GrenadeEffects.EV_HE -> {
-				synchronized (BLASTS) {
-					BLASTS.add(new Blast(at, System.nanoTime()));
-				}
+				dev.strafemc.client.smoke.SmokeVolumes.blast(at);
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.HE_EFFECT, at, up);
 				CsSounds.play("BaseGrenade.Explode", at.x, at.y, at.z, 1.0);
 			}
@@ -173,14 +99,13 @@ public final class GrenadeClient {
 				dev.strafemc.client.viewmodel.PlantedC4Renderer.beeped(at); // its LED blinks
 			}
 			case GrenadeEffects.EV_FLASH -> {
+				dev.strafemc.client.smoke.SmokeVolumes.flash(at);
 				dev.strafemc.client.particle.Effects.at(GrenadeEffects.FLASH_EFFECT, at, up);
 				CsSounds.play("Flashbang.Explode", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_SMOKE, GrenadeEffects.EV_SMOKE_T -> {
 				var level = Minecraft.getInstance().level;
-				if (level != null) synchronized (SMOKES) {
-					SMOKES.add(new Smoke(dev.strafemc.weapon.SmokeVolume.fill(level, at), System.nanoTime(), m.kind() == GrenadeEffects.EV_SMOKE_T));
-				}
+				if (level != null) dev.strafemc.client.smoke.SmokeVolumes.add(dev.strafemc.weapon.SmokeVolume.create(level, at), m.kind() == GrenadeEffects.EV_SMOKE_T);
 				CsSounds.play("BaseSmokeEffect.Sound", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_FLAME, GrenadeEffects.EV_FLAME_INC -> {
@@ -304,12 +229,7 @@ public final class GrenadeClient {
 						mc.level.addParticle(i % 4 == 3 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME, x, f.at.y + 0.05, z, 0, 0.03 + rnd.nextDouble() * 0.04, 0);
 					}
 		}
-		synchronized (SMOKES) {
-			SMOKES.removeIf(s -> (now - s.start) / 1e9 > SMOKE_GONE);
-		}
-		synchronized (BLASTS) {
-			BLASTS.removeIf(b -> (now - b.time) / 1e9 > BLAST_REFILLED);
-		}
+		dev.strafemc.client.smoke.SmokeVolumes.tick();
 	}
 
 	/** CS2's smoothstep: 0 at e0, 1 at e1 (either order), smooth in between. */
@@ -339,117 +259,6 @@ public final class GrenadeClient {
 		renderPreview(ctx);
 	}
 
-	/**
-	 * Smoke, drawn last in the main pass (END_MAIN) so the order is fixed: every puff back to front with normal blending
-	 * (overlapping puffs build up to opaque), then the thick inside into the depth buffer, so clouds (their own later
-	 * pass) don't draw through it. Drawn among the other submits, the depth pass could land before puffs behind it and
-	 * hide them, leaving only the nearest puff of a smoke visible.
-	 */
-	/** Smoke puffs of this frame, Q floats each (x, y, z, size, r, alpha, light, g, b, depth alpha), and their draw order; kept between frames. */
-	private static final int Q = 10;
-	private static float[] quadBuf = new float[Q * 1024];
-	private static long[] sortKeys = new long[1024];
-
-	public static void renderSmoke(LevelRenderContext ctx) {
-		List<Smoke> smokes;
-		synchronized (SMOKES) {
-			if (SMOKES.isEmpty()) return;
-			smokes = new ArrayList<>(SMOKES);
-		}
-		Minecraft mc = Minecraft.getInstance();
-		if (mc.level == null) return;
-		Camera cam = mc.gameRenderer.getMainCamera();
-		Vec3 c = cam.position();
-		Vector3f up = new Vector3f(cam.upVector()), right = new Vector3f(cam.forwardVector()).cross(up).normalize();
-		long now = System.nanoTime();
-		int nq = 0;
-		List<Blast> blasts;
-		synchronized (BLASTS) {
-			blasts = new ArrayList<>(BLASTS);
-		}
-		for (Smoke s : smokes) {
-			double t = (now - s.start) / 1e9, fade = smoothstep(SMOKE_GONE, SMOKE_OUT0, t);
-			var v = s.volume;
-			Cells cs = s.cells;
-			cs.refreshLight(mc.level, now);
-			float[] tint = s.t ? T_TINT : CT_TINT;
-			double vs = dev.strafemc.weapon.SmokeVolume.VOXEL / StrafeConfig.unitsPerBlock;
-			for (int n = 0; n < v.cells.length; n++) {
-				// grows out from the grenade in flood order over CS2's 0.1..1.5 s fade-in (FLAGGED: the order is ours)
-				double at0 = SMOKE_IN0 + (SMOKE_IN1 - SMOKE_IN0) * v.steps[n] / Math.max(1, v.maxStep);
-				double appear = smoothstep(at0, at0 + 0.35, t);
-				if (appear <= 0) continue;
-				int cell = v.cells[n];
-				Vec3 p = cs.center[n];
-				double dens = cs.density[n];
-				if (dens > 0 && !blasts.isEmpty()) dens *= blastKeep(p, now, blasts);
-				if (dens <= 0) continue;
-				int h = cell * 0x9E3779B1; // a fixed per-voxel wobble so the puffs don't sit on a grid
-				float jx = ((h >>> 8 & 255) / 255f - 0.5f) * 0.3f, jy = ((h >>> 16 & 255) / 255f - 0.5f) * 0.3f, jz = ((h >>> 24) / 255f - 0.5f) * 0.3f;
-				float x = (float) (p.x + jx * vs - c.x), y = (float) (p.y + jy * vs - c.y), z = (float) (p.z + jz * vs - c.z);
-				float alpha = (float) (0.55 * dens * appear * fade);
-				boolean inner = cs.inner[n];
-				float depthAlpha = inner && dens > 0.9 ? (float) (appear * fade) : 0; // only the thick inside hides what's behind
-				int light = cs.light[n];
-				float shade = 0.64f + ((h >>> 4 & 7) - 3.5f) * 0.012f;
-				float r = shade * (1 - TINT) + tint[0] * TINT, g = shade * (1 - TINT) + tint[1] * TINT, b = shade * (1 - TINT) + tint[2] * TINT;
-				// edge voxels (next to a wall or the cloud's end) get small puffs: big ones would hang through the wall
-				float size = (float) (vs * (inner ? 1.25 : 0.6));
-				if (!inner) {
-					x -= jx * vs;
-					y -= jy * vs;
-					z -= jz * vs;
-				}
-				if ((nq + 1) * Q > quadBuf.length) quadBuf = java.util.Arrays.copyOf(quadBuf, Math.max(quadBuf.length * 2, (nq + 1) * Q));
-				float[] q = quadBuf;
-				int o = nq++ * Q;
-				q[o] = x;
-				q[o + 1] = y;
-				q[o + 2] = z;
-				q[o + 3] = size;
-				q[o + 4] = r;
-				q[o + 5] = alpha;
-				q[o + 6] = Float.intBitsToFloat(light);
-				q[o + 7] = g;
-				q[o + 8] = b;
-				q[o + 9] = depthAlpha;
-			}
-		}
-		// back to front: farthest first, equal distances in the order they were added (as a stable sort)
-		if (sortKeys.length < nq) sortKeys = new long[Math.max(nq, sortKeys.length * 2)];
-		for (int i = 0; i < nq; i++) {
-			int o = i * Q;
-			float d2 = quadBuf[o] * quadBuf[o] + quadBuf[o + 1] * quadBuf[o + 1] + quadBuf[o + 2] * quadBuf[o + 2];
-			sortKeys[i] = (long) (0x7FFFFFFF - Float.floatToIntBits(d2)) << 32 | i;
-		}
-		java.util.Arrays.sort(sortKeys, 0, nq);
-		dev.strafemc.client.perf.Perf.count("smoke_quads", nq);
-		long tv = dev.strafemc.client.perf.Perf.start();
-		var buffers = ctx.bufferSource();
-		PoseStack.Pose pose = ctx.poseStack().last();
-		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};
-		for (int pass = 0; pass < 2; pass++) {
-			net.minecraft.client.renderer.rendertype.RenderType type = pass == 0 ? dev.strafemc.client.particle.ParticleBlend.smoke(puff())
-					: dev.strafemc.client.particle.ParticleBlend.depthOnly(puff());
-			com.mojang.blaze3d.vertex.VertexConsumer vc = buffers.getBuffer(type);
-			float[] q = quadBuf;
-			for (int i = 0; i < nq; i++) {
-				int o = (int) sortKeys[i] * Q;
-				float a = pass == 1 ? q[o + 9] : q[o + 5];
-				if (a <= 0) continue;
-				int light = Float.floatToRawIntBits(q[o + 6]);
-				int col = (int) (a * 255) << 24 | (int) (q[o + 4] * 255) << 16 | (int) (q[o + 7] * 255) << 8 | (int) (q[o + 8] * 255);
-				float sz = q[o + 3];
-				for (float[] k : corners)
-					vc.addVertex(pose, q[o] + (right.x * k[0] + up.x * k[1]) * sz, q[o + 1] + (right.y * k[0] + up.y * k[1]) * sz,
-									q[o + 2] + (right.z * k[0] + up.z * k[1]) * sz)
-							.setColor(col).setUv(k[2], k[3]).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(pose, 0, 1, 0);
-			}
-			buffers.endBatch(type);
-		}
-		dev.strafemc.client.perf.Perf.end("smoke_vertices", tv);
-	}
-
 	private static void renderPreview(LevelRenderContext ctx) {
 		List<Vec3> path = preview;
 		Minecraft mc = Minecraft.getInstance();
@@ -477,9 +286,7 @@ public final class GrenadeClient {
 		synchronized (FIRE_SOUNDS) {
 			FIRE_SOUNDS.clear();
 		}
-		synchronized (SMOKES) {
-			SMOKES.clear();
-		}
+		dev.strafemc.client.smoke.SmokeVolumes.clear();
 		synchronized (FIRES) {
 			FIRES.clear();
 		}

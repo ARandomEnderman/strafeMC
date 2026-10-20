@@ -57,7 +57,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		});
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(ctx -> {
 			long t = dev.strafemc.client.perf.Perf.start();
-			dev.strafemc.client.weapon.GrenadeClient.renderSmoke(ctx);
+			dev.strafemc.client.smoke.SmokeRenderer.render();
 			dev.strafemc.client.perf.Perf.end("smoke", t);
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());
@@ -86,6 +86,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ClientGameplay.clear());
 		// first-time setup / top-up after an update: offered on the title screen (or on joining, if that was skipped) while CS2 files are missing
 		dev.strafemc.client.particle.ParticleBlend.init();
+		dev.strafemc.client.smoke.SmokeRenderer.init();
 		SetupScreen.registerHud();
 		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.AFTER_INIT.register((mc, screen, w, h) -> {
 			if (!(screen instanceof SetupScreen)) // the running setup's progress on every menu (title, pause, options...)

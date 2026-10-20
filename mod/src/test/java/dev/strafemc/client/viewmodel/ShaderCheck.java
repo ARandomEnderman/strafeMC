@@ -21,12 +21,18 @@ public final class ShaderCheck {
 		GL.createCapabilities();
 		int failed = 0;
 		// each program as the game links it: vertex + fragment shader, with the pipeline's defines
-		String[][] programs = {{"viewmodel.vsh", "viewmodel.fsh", ""}, {"viewmodel_skinned.vsh", "viewmodel.fsh", "#define MAX_JOINTS " + GpuSkin.MAX_JOINTS}};
+		String[][] programs = {{"viewmodel.vsh", "viewmodel.fsh", ""}, {"viewmodel_skinned.vsh", "viewmodel.fsh", "#define MAX_JOINTS " + GpuSkin.MAX_JOINTS},
+				{"minecraft:screenquad.vsh", "smoke_volume.fsh", ""}, {"minecraft:screenquad.vsh", "smoke_composite.fsh", ""}};
 		for (String[] prog : programs) {
 			int program = GL20.glCreateProgram();
 			boolean ok = true;
 			for (int k = 0; k < 2; k++) {
-				String src = resolve(read("/assets/strafemc/shaders/core/" + prog[k]), new java.util.HashSet<>());
+				String file = prog[k], ns = "strafemc";
+				if (file.startsWith("minecraft:")) {
+					ns = "minecraft";
+					file = file.substring(10);
+				}
+				String src = resolve(read("/assets/" + ns + "/shaders/core/" + file), new java.util.HashSet<>());
 				if (!prog[2].isEmpty()) {
 					int eol = src.indexOf('\n') + 1; // after #version
 					src = src.substring(0, eol) + prog[2] + "\n" + src.substring(eol);

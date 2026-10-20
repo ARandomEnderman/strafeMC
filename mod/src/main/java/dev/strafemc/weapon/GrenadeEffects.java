@@ -87,6 +87,7 @@ public final class GrenadeEffects {
 			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] HE hit {} at {}u: {} CS dmg", e.getType().toShortString(), Math.round(dist), String.format("%.1f", dmg));
 		}
 		event(level, EV_HE, at);
+		GrenadeZones.blast(level, at);
 	}
 
 	/**

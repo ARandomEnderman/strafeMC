@@ -47,6 +47,7 @@ public final class Setup {
 		m.put("icons", 2); // 2: armor icons
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
+		m.put("smoke", 1); // volumetric smoke: CS2's 3D smoke noise and the blue noise its raymarch is jittered with
 		m.put("wraps", 7); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template); 4: colour-only skins; 5: Doppler phases; 6: gun wraps one per gun; 7: the Gallery case's skins
 		return m;
 	}
@@ -56,7 +57,7 @@ public final class Setup {
 	private static final Gson GSON = new Gson();
 	private static final Pattern RES = Pattern.compile("resource(?:_name)?:\"([^\"]+)\"");
 
-	private final Path cache, vpk;
+	private final Path cache, vpk, vrfExe;
 	private final Vrf vrf;
 	/** (fraction done 0..1, what is happening) */
 	private final BiConsumer<Double, String> progress;
@@ -66,6 +67,7 @@ public final class Setup {
 		this.vpk = cs2Folder.resolve("game").resolve("csgo").resolve("pak01_dir.vpk");
 		Files.createDirectories(cache);
 		this.vrf = new Vrf(converter, vpk, cache);
+		this.vrfExe = converter;
 		this.progress = progress;
 	}
 
@@ -114,6 +116,7 @@ public final class Setup {
 				case "effects" -> effects(pak, base, span);
 				case "decals" -> decals(base, span);
 				case "wraps" -> wraps(pak, base, span);
+				case "smoke" -> smoke(base, span);
 				default -> {
 				}
 			}
@@ -243,6 +246,22 @@ public final class Setup {
 		}
 		progress(base + span / 2, "Bullet hole textures (" + tex.size() + ")");
 		vrf.decompile(tex.stream().map(Setup::compiled).toList(), null, cache);
+	}
+
+	/**
+	 * Volumetric smoke: the 3D noise CS2's smoke shader (materials/dev/smoke_volume.vmat, g_tSmokeNoiseTex) samples, as
+	 * one PNG per depth slice, and the blue noise texture from the core pak that jitters each ray's start.
+	 */
+	private void smoke(double base, double span) throws IOException {
+		progress(base, "Smoke noise");
+		vrf.decompile(List.of("materials/dev/noise/"), "vtex_c", cache);
+		Path core = vpk.getParent().getParent().resolve("core").resolve("pak01_dir.vpk");
+		if (!Files.isRegularFile(core)) return;
+		// one matching file: the converter writes it next to the -o path, named after the texture
+		Path dir = Files.createDirectories(cache.resolve("textures/dev"));
+		Path stem = dir.resolve("blue_noise_256");
+		new Vrf(vrfExe, core, cache).decompile(List.of("textures/dev/blue_noise_256.vtex_c"), null, stem);
+		if (Files.isRegularFile(stem)) Files.delete(stem); // the converter's own dump of the texture's header
 	}
 
 	/**

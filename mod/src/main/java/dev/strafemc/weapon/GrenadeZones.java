@@ -19,8 +19,8 @@ import java.util.List;
 /**
  * Smokes and fires ("infernos") burning right now (server), with CS2's values:
  * <ul>
- * <li>Smoke: fades in over 0.1..1.5 s, full until 17 s, gone at 22 s (smoothstep); its space is CS2's
- * voxel volume (SmokeVolume).</li>
+ * <li>Smoke: CS2's simulated voxel smoke (SmokeVolume), stepped ten times a second as CS2's server does; gone at
+ * 22 s.</li>
  * <li>Fire (CS2's inferno_* settings): starts with one flame where it lands; flames spawn new ones inferno_flame_spacing
  * (42) units away, within inferno_spawn_angle (45) degrees of their own direction, for inferno_per_flame_spawn_duration
  * (3) s each, at most inferno_max_flames (16), never farther than inferno_max_range (150; incendiary 110) from the
@@ -39,7 +39,7 @@ public final class GrenadeZones {
 			MAX_INTERVAL = 0.5, FLAME_REACH = 21;
 	static final int MAX_FLAMES = 16;
 
-	record Smoke(ServerLevel level, Vec3 at, long until, SmokeVolume volume) {}
+	record Smoke(ServerLevel level, Vec3 at, long start, long until, SmokeVolume volume) {}
 
 	private static final class Flame {
 		final Vec3 at;
@@ -85,16 +85,14 @@ public final class GrenadeZones {
 	private GrenadeZones() {}
 
 	static void smoke(ServerLevel level, Vec3 at, net.minecraft.world.entity.Entity thrower) {
-		Smoke smoke = new Smoke(level, at, level.getGameTime() + SMOKE_TICKS, SmokeVolume.fill(level, at));
-		SMOKES.add(smoke);
+		long now = level.getGameTime();
+		SMOKES.add(new Smoke(level, at, now, now + SMOKE_TICKS, SmokeVolume.create(level, at)));
 		GrenadeEffects.event(level, CsTeam.isT(thrower) ? GrenadeEffects.EV_SMOKE_T : GrenadeEffects.EV_SMOKE, at);
-		for (Iterator<Fire> it = FIRES.iterator(); it.hasNext(); ) { // a smoke on a fire puts it out
-			Fire f = it.next();
-			if (f.level == level && covered(smoke, f)) {
-				GrenadeEffects.event(level, GrenadeEffects.EV_FIRE_OUT, f.origin);
-				it.remove();
-			}
-		}
+	}
+
+	/** An HE grenade went off: smokes it reaches are pushed apart (their simulations take the blast). */
+	static void blast(ServerLevel level, Vec3 at) {
+		for (Smoke s : SMOKES) if (s.level == level && s.volume.origin.distanceTo(at) * StrafeConfig.unitsPerBlock < 640) s.volume.blast(at);
 	}
 
 	/** Starts a fire on the ground at `at`; false if a smoke already covers that spot (it fizzles, like CS). */
@@ -164,7 +162,21 @@ public final class GrenadeZones {
 	public static void tick(MinecraftServer server) {
 		for (Iterator<Smoke> it = SMOKES.iterator(); it.hasNext(); ) {
 			Smoke s = it.next();
-			if (s.level.getGameTime() >= s.until) it.remove();
+			long t = s.level.getGameTime();
+			if (t >= s.until) {
+				it.remove();
+				continue;
+			}
+			int before = s.volume.steps();
+			s.volume.runUntil((t - s.start) / 20.0);
+			if (s.volume.steps() != before) // the smoke spreading over a fire puts it out
+				for (Iterator<Fire> fi = FIRES.iterator(); fi.hasNext(); ) {
+					Fire f = fi.next();
+					if (f.level == s.level && covered(s, f)) {
+						GrenadeEffects.event(f.level, GrenadeEffects.EV_FIRE_OUT, f.origin);
+						fi.remove();
+					}
+				}
 		}
 		double upb = StrafeConfig.unitsPerBlock;
 		for (Iterator<Fire> it = FIRES.iterator(); it.hasNext(); ) {
