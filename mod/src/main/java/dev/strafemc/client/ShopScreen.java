@@ -191,8 +191,8 @@ public final class ShopScreen extends Screen implements dev.strafemc.client.ui.U
 
 	// ---------------------------------------------------------------- the offers grid
 
-	/** Offers per row: the ten in two rows. */
-	private static final int COLS = 5;
+	/** Offers per row: all of them in two rows. */
+	private static final int COLS = (Shop.OFFERS + 1) / 2;
 
 	private int tileW() {
 		return Math.max(60, Math.min(120, offersW() / COLS - 6));
