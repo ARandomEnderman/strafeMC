@@ -459,6 +459,7 @@ public final class RuntimePack {
 		for (var c : allCases) {
 			String img = "panorama/images/" + c.image() + "_png";
 			Path out = tex.resolve("item/case/" + c.id() + ".png");
+			if (!Files.exists(out) && !Files.exists(StrafeConfig.cacheDir().resolve(img + ".png"))) continue; // no picture in CS2's files
 			try {
 				icon(img + ".vtex_c", img + ".png", out, 128);
 			} catch (Exception e) {
@@ -544,12 +545,17 @@ public final class RuntimePack {
 			for (var st : dev.strafemc.weapon.Stickers.all())
 				if (!Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/econ/stickers/" + st.material() + "_png.png")))
 					stickerMissing.add("panorama/images/econ/stickers/" + st.material() + "_png.vtex_c");
-			for (int i = 0; i < stickerMissing.size(); i += 64) AssetCache.decompileAll(stickerMissing.subList(i, Math.min(stickerMissing.size(), i + 64)));
+			// a few missing: converted now; thousands (an install from before every sticker was in): the setup's
+			// "stickers" step converts them all in one go, never the start-up
+			boolean few = stickerMissing.size() <= 256;
+			if (few) for (int i = 0; i < stickerMissing.size(); i += 64) AssetCache.decompileAll(stickerMissing.subList(i, Math.min(stickerMissing.size(), i + 64)));
 			StringBuilder stickers = new StringBuilder();
 			for (var st : dev.strafemc.weapon.Stickers.all()) {
 				String img = "panorama/images/econ/stickers/" + st.material() + "_png";
+				if (!few && !Files.exists(StrafeConfig.cacheDir().resolve(img + ".png")) && !Files.exists(tex.resolve("item/sticker/" + st.id() + ".png"))) continue;
 				try {
-					icon(img + ".vtex_c", img + ".png", tex.resolve("item/sticker/" + st.id() + ".png"), 64);
+					// 32 px: some 11,500 stickers share Minecraft's item atlas (menus show the full picture)
+					icon(img + ".vtex_c", img + ".png", tex.resolve("item/sticker/" + st.id() + ".png"), 32);
 				} catch (Exception e) {
 					continue;
 				}

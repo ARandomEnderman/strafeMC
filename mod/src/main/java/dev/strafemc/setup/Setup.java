@@ -48,6 +48,7 @@ public final class Setup {
 		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
 		m.put("decals", 1);
 		m.put("smoke", 1); // volumetric smoke: CS2's 3D smoke noise and the blue noise its raymarch is jittered with
+		m.put("stickers", 1); // every sticker's picture (tournament, autograph, community) and every capsule's
 		m.put("wraps", 7); // skin wrap pictures; 3: skin pieces only (the runtime pack puts them on the wrap template); 4: colour-only skins; 5: Doppler phases; 6: gun wraps one per gun; 7: the Gallery case's skins
 		return m;
 	}
@@ -117,6 +118,7 @@ public final class Setup {
 				case "decals" -> decals(base, span);
 				case "wraps" -> wraps(pak, base, span);
 				case "smoke" -> smoke(base, span);
+				case "stickers" -> stickers(base, span);
 				default -> {
 				}
 			}
@@ -255,6 +257,14 @@ public final class Setup {
 		}
 		progress(base + span / 2, "Bullet hole textures (" + tex.size() + ")");
 		vrf.decompile(tex.stream().map(Setup::compiled).toList(), null, cache);
+	}
+
+	/** Every sticker picture (~11,500: each tournament's team and autograph stickers too) and every capsule picture. */
+	private void stickers(double base, double span) throws IOException {
+		progress(base, "Sticker pictures");
+		vrf.decompile(List.of("panorama/images/econ/stickers/"), "vtex_c", cache);
+		progress(base + span * 0.8, "Capsule pictures");
+		vrf.decompile(List.of("panorama/images/econ/weapon_cases/"), "vtex_c", cache);
 	}
 
 	/**

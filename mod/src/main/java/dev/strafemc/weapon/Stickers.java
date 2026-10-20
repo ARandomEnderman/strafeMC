@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * CS2's stickers that come in the sticker capsules (items_game sticker_kits, strafemc/stickers.tsv): their picture is
- * panorama/images/econ/stickers/<material>_png. They do nothing yet; they can be kept, sold, staked and stored.
+ * Every CS2 sticker (items_game sticker_kits, strafemc/stickers.tsv): community, tournament team and autograph
+ * stickers, in capsules or not. Their picture is panorama/images/econ/stickers/<material>_png.
  */
 public final class Stickers {
 	public record Sticker(String id, String name, String material, SkinWraps.Rarity rarity) {}
