@@ -241,9 +241,10 @@ public final class EffectRenderer {
 				}
 				if (in.bloomOnly) continue;
 				boolean add = in.additive;
-				// m_flOverbrightFactor > 1 (muzzle flash 3-4): vertex colours cap at 1, so additive layers are drawn that many times
-				int passes = add ? Math.max(1, Math.min(8, (int) Math.ceil(in.overbright.next(s.state)))) : 1;
-				if (passes > 1) for (int o = 0; o < qn * QUAD; o += QUAD) for (int c = 0; c < 4; c++) for (int k = 5; k < 8; k++) qb[o + c * 9 + k] /= passes;
+				// m_flOverbrightFactor > 1 (fire 2-5, muzzle flash 3-4): the full value went into the bloom; on screen it is
+				// compressed like CS2's tone mapping does (hue kept, easing to white) in one pass
+				int passes = 1;
+				if (add) for (int o = 0; o < qn * QUAD; o += QUAD) for (int c = 0; c < 4; c++) tone(qb, o + c * 9 + 5);
 				// drawn now: straight from the shared buffer; submitted for later: its own copy
 				float[] quads = buffers != null ? qb : java.util.Arrays.copyOf(qb, qn * QUAD);
 				int count = qn;
@@ -398,6 +399,19 @@ public final class EffectRenderer {
 		corner(qb, o + 27, CORNER.set(c).sub(ax).add(ay), uv[0], uv[1], col, a);
 	}
 
+	/** Tone curve for an additive colour (q[o..o+2]): as is up to KNEE, then easing to 1 (FLAGGED: our curve). */
+	private static final float KNEE = 0.6f;
+
+	private static void tone(float[] q, int o) {
+		float m = Math.max(q[o], Math.max(q[o + 1], q[o + 2]));
+		if (m <= KNEE) return;
+		float g = KNEE + (1 - KNEE) * (1 - (float) Math.exp(-(m - KNEE) / (1 - KNEE)));
+		float k = g / m;
+		q[o] *= k;
+		q[o + 1] *= k;
+		q[o + 2] *= k;
+	}
+
 	/**
 	 * CS2 draws effects in HDR: colours pushed past 1 by m_flOverbrightFactor come out of the tone mapping and bloom
 	 * whiter, not just saturated. Additive layers here: m_flDesaturation towards the colour's luminance, then the part
@@ -408,8 +422,6 @@ public final class EffectRenderer {
 		float d = Math.max(0, Math.min(1, in.desaturation.next(p, s.state)));
 		float l = 0.2125f * c.x + 0.7154f * c.y + 0.0721f * c.z;
 		if (d > 0) c.lerp(new Vector3f(l), d);
-		float m = Math.max(c.x, Math.max(c.y, c.z));
-		if (m > 1) c.lerp(new Vector3f(m), Math.min(1, (m - 1) / m) * 0.6f);
 		return c;
 	}
 

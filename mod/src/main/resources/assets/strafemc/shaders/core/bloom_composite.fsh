@@ -6,7 +6,7 @@ uniform sampler2D InSampler;
 in vec2 texCoord;
 out vec4 fragColor;
 
-const float STRENGTH = 1.0;
+const float STRENGTH = 0.5;
 
 void main() {
     vec3 c = texture(InSampler, texCoord).rgb * 4.0 * STRENGTH;
