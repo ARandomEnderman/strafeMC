@@ -21,12 +21,12 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and eleven offers bought
+ * The shop (ours): a balance in dollars, skins sold into it at SELL_RATE of their worth, and twelve offers bought
  * from it (cases in a stock of 1-3, a sticker capsule 2-6, a single sticker 1-3, a graffiti box 1-3, the rest once), until the shop rotates after half an hour of the player's own play. Every player's offers are their
  * own: worked out from the player and the rotation number (client and server alike), so nothing rerolls them.
  */
 public final class Shop {
-	public static final int ROTATION = 36_000, OFFERS = 11; // 30 minutes of play
+	public static final int ROTATION = 36_000, OFFERS = 12; // 30 minutes of play
 	/** Selling pays this share of a skin's worth. */
 	public static final double SELL_RATE = 0.75;
 	/** Offer prices: the item's worth times 80-110%. */
@@ -112,7 +112,7 @@ public final class Shop {
 		p.setAttached(DATA, new State(s.cents(), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
 	}
 
-	/** The rotation's offers for this player: three cases, a sticker capsule, a single sticker, a graffiti box / charm collection / Universal Key, a tool and four high-grade skins (knives and gloves too). */
+	/** The rotation's offers for this player: three cases, a sticker capsule, a single sticker, a graffiti box / charm collection / Universal Key, a tool and five high-grade skins (knives and gloves too). */
 	public static List<Offer> offers(UUID player, int rotation) {
 		Random rng = new Random((player.getMostSignificantBits() * 31 + player.getLeastSignificantBits()) * 1_000_003L + rotation);
 		List<Offer> out = new ArrayList<>();
