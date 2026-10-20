@@ -265,6 +265,21 @@ public final class ConsoleScreen extends Screen {
 		ConsoleCommands.execute(v);
 	}
 
+	/** Each log line's wrapped rows at the current width (worked out once per line). */
+	private final java.util.Map<ConsoleLog.Line, List<net.minecraft.util.FormattedCharSequence>> wraps = new java.util.IdentityHashMap<>();
+	private int wrapWidth;
+
+	private List<net.minecraft.util.FormattedCharSequence> wrapped(ConsoleLog.Line l, int w) {
+		if (w != wrapWidth || wraps.size() > 4000) {
+			wraps.clear();
+			wrapWidth = w;
+		}
+		return wraps.computeIfAbsent(l, k -> {
+			List<net.minecraft.util.FormattedCharSequence> parts = font.split(net.minecraft.network.chat.FormattedText.of(k.text()), Math.max(20, w));
+			return parts.isEmpty() ? List.of(net.minecraft.util.FormattedCharSequence.EMPTY) : parts;
+		});
+	}
+
 	private static List<String> loadHistory() {
 		List<String> h = new ArrayList<>();
 		try {
@@ -468,14 +483,28 @@ public final class ConsoleScreen extends Screen {
 		g.fill(lx0 - 2, ly0 - 2, lx1 + 2, ly1 + 2, LOG_BG);
 		List<ConsoleLog.Line> lines = ConsoleLog.snapshot();
 		int lineH = 10, rows = Math.max(1, (ly1 - ly0) / lineH);
-		scroll = Math.min(scroll, Math.max(0, lines.size() - rows));
-		int start = Math.max(0, lines.size() - rows - scroll);
-		g.enableScissor(lx0, ly0, lx1, ly1);
-		int y = ly0;
-		for (int i = start; i < Math.min(lines.size(), start + rows); i++) {
+		// long lines wrap: rows are gathered from the newest line back, only as many as the view and the scroll need
+		List<net.minecraft.util.FormattedCharSequence> shown = new ArrayList<>();
+		List<Integer> colors = new ArrayList<>();
+		boolean all = true;
+		for (int i = lines.size() - 1; i >= 0; i--) {
+			if (shown.size() >= rows + scroll) {
+				all = false;
+				break;
+			}
 			ConsoleLog.Line l = lines.get(i);
-			g.text(font, l.text(), lx0, y, l.color(), false);
-			y += lineH;
+			List<net.minecraft.util.FormattedCharSequence> parts = wrapped(l, lx1 - lx0);
+			for (int k = parts.size() - 1; k >= 0; k--) {
+				shown.add(parts.get(k));
+				colors.add(l.color());
+			}
+		}
+		if (all) scroll = Math.min(scroll, Math.max(0, shown.size() - rows));
+		g.enableScissor(lx0, ly0, lx1, ly1);
+		int y = ly0 + (Math.min(rows, shown.size() - scroll) - 1) * lineH; // top-aligned until the view is full
+		for (int r = scroll; r < Math.min(shown.size(), scroll + rows); r++) {
+			g.text(font, shown.get(r), lx0, y, colors.get(r), false);
+			y -= lineH;
 		}
 		g.disableScissor();
 		if (scroll > 0) g.text(font, "↑ " + scroll + " more (PgDn)", lx1 - 100, ly1 - 9, 0xFFFFC864, false);

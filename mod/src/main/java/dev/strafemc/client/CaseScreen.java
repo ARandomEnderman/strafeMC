@@ -19,7 +19,7 @@ import java.util.Random;
  * A CS2 weapon case: its contents by tier in CS2's rarity colours, then "Unlock Container" (or 2x-5x at once): the
  * server rolls, one reel per case spins and slows down onto what came out, and the drops are revealed, as in CS2.
  */
-public final class CaseScreen extends Screen {
+public final class CaseScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	/** One reel / contents tile: the item to show, its rarity colour and name. */
 	private record Tile(ItemStack stack, int color, String name, Cases.Entry entry) {}
 
@@ -156,7 +156,7 @@ public final class CaseScreen extends Screen {
 			Button b = addRenderableWidget(Button.builder(Component.literal(n == 1 ? "Unlock Container" : n + "x"), btn -> unlock(n))
 					.bounds(x, height - 50, w, 20).build());
 			b.active = spins == null && n <= openable();
-			b.visible = !revealed;
+			b.visible = !revealed && !bulk; // a bulk opening was already sent by the tool
 			unlocks.add(b);
 			x += w + 4;
 		}

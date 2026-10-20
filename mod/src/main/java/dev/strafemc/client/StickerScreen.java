@@ -34,7 +34,7 @@ import java.util.Set;
  * and can hang from any point on the gun. Pick a slot that has a sticker to Scrape it (a bit more each time, previewed;
  * scraped through it comes off and is gone), or the charm's spot to Detach it (uses a Charm Detachment, gives it back).
  */
-public final class StickerScreen extends Screen {
+public final class StickerScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, LIST_TOP = 30;
 	/** The inventory slot of the sticker or charm being applied. */
 	private final int stickerSlot;

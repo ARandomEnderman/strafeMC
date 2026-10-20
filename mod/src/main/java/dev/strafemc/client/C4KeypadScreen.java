@@ -15,7 +15,18 @@ import net.minecraft.network.chat.Component;
  * Planting, the keys spell CS2's 7355608; defusing, they're random (14 keys, 7 with a defuse kit). Finishing them is the
  * only way to plant or defuse while it's on. A wrong key starts over; closing it (Esc) stops.
  */
-public final class C4KeypadScreen extends Screen {
+public final class C4KeypadScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
+	/** The keypad and its hint line need about 300 GUI pixels of height. */
+	@Override
+	public int minWidth() {
+		return 320;
+	}
+
+	@Override
+	public int minHeight() {
+		return 300;
+	}
+
 	private static final String[] KEYS = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"};
 	private static final int KEY = 30, GAP = 6, GOLD = 0xFFEABE54;
 	private final PlantedC4 bomb;

@@ -46,6 +46,7 @@ public class StrafeMcClient implements ClientModInitializer {
 					g.text(mc.font, (helmet ? "\u00a7f\u26e8+ " : "\u00a7f\u26e8 ") + armor, 8, g.guiHeight() - 20, 0xFFFFFFFF, true);
 				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.ui.UiSweep::tick);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.weapon.GrenadeClient::render);
 		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(dev.strafemc.client.weapon.GrenadeClient::renderSmoke);
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.weapon.GrenadeClient.clear());

@@ -24,7 +24,7 @@ import java.util.List;
  * The shop (strafeMC menu, new offers every 30 minutes of play): your balance and the time to the next rotation at the top, skins to sell on the left
  * (inventory, then each Storage Unit, foldable; 75% of their worth), and this rotation's ten offers on the right.
  */
-public final class ShopScreen extends Screen {
+public final class ShopScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, LIST_TOP = 44;
 	private final Screen parent;
 	/** What's being sold: ref -> how many of that stack (left click adds one, right click takes one off). */

@@ -6,7 +6,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** Options > strafeMC > About hosting: what "Host a CS2 server" does and what it opens on the network. */
-public final class HostingInfoScreen extends Screen {
+public final class HostingInfoScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final String[] TEXT = {
 			"§lHost a CS2 server (advanced)",
 			"",

@@ -26,7 +26,7 @@ import java.util.Map;
  * of any mix; the panel shows the keys they take (each case's own keys first, then Universal Keys) and opens them all,
  * which uses the tool.
  */
-public final class BulkOpenScreen extends Screen {
+public final class BulkOpenScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, ROW = 22;
 	private final int toolSlot;
 	/** Picked: ref (Upgrader.at) -> how many. */

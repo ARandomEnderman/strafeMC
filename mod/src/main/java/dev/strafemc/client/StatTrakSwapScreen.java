@@ -18,7 +18,7 @@ import java.util.List;
  * Using a StatTrak™ Swap Tool: your StatTrak wraps in a list; pick two of the same weapon (after the first, only its
  * kind can be picked) and swap their Confirmed Kills, which uses the tool, as in CS2.
  */
-public final class StatTrakSwapScreen extends Screen {
+public final class StatTrakSwapScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, ROW = 22;
 	private final int toolSlot;
 	private String first, second;

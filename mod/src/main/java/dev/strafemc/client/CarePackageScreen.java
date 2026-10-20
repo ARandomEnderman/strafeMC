@@ -20,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
  * four item tiles with CS2's inventory pictures; pick as many as your balance (2) and Claim Rewards; claimed tiles say
  * CLAIMED. Your rank and its XP bar (CS2's, toward the next package) sit under them.
  */
-public final class CarePackageScreen extends Screen {
+public final class CarePackageScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, CASE_GREY = 0xFFB0C3D9;
 	private final Screen parent;
 	private int selected;

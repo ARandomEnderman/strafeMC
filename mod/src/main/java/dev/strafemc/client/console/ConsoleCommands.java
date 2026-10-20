@@ -50,6 +50,10 @@ public final class ConsoleCommands {
 			}
 			ClientPlayNetworking.send(new NoclipRequest(want));
 		});
+		local("ui_sweep", "Screenshot every strafeMC menu at each GUI scale into ui-sweep (ui_sweep stop ends it).", a -> {
+			if (a.length > 0 && a[0].equalsIgnoreCase("stop")) dev.strafemc.client.ui.UiSweep.stop();
+			else dev.strafemc.client.ui.UiSweep.start();
+		});
 		local("cl_scrolljump", "Scroll to jump (1) or scroll the hotbar (0).", a -> {
 			StrafeConfig.scrollJump = bool(a, !StrafeConfig.scrollJump);
 			saved("cl_scrolljump", StrafeConfig.scrollJump);

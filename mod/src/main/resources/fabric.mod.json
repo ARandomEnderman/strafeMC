@@ -19,6 +19,9 @@
 		],
 		"jei_mod_plugin": [
 			"dev.strafemc.client.compat.JeiCompat"
+		],
+		"modmenu": [
+			"dev.strafemc.client.compat.ModMenuCompat"
 		]
 	},
 	"mixins": [

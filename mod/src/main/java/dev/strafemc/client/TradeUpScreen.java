@@ -21,7 +21,7 @@ import java.util.List;
  * CS2's Trade Up Contract (strafeMC menu): pick 10 skins of one quality (left: inventory and Storage Units), see every
  * possible result with its odds and float (right), and sign: the result is revealed.
  */
-public final class TradeUpScreen extends Screen {
+public final class TradeUpScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, LIST_TOP = 30;
 	private static TradeUpScreen open;
 	private final Screen parent;

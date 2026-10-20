@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
  * Drag gloves and skin wraps into their slots; shift-click moves them in and out. FLAGGED: wrap slots preview the item,
  * not yet the skinned 3D weapon (comes with the weapon skin renderer).
  */
-public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> {
+public final class LoadoutScreen extends AbstractContainerScreen<Loadout.Menu> implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, TILE = 0xE52B2B2B, TILE_EMPTY = 0x80202020, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
 	private int previewSlot = 0; // the gloves until the mouse picks another
 	/** The agent tile last looked at: "t" or "ct". */

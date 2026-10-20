@@ -18,7 +18,7 @@ import net.minecraft.world.item.ItemStack;
  * A Storage Unit open (click its name to rename it): six rows of its 1,000 places (scroll, or drag the bar), the count, your inventory, and on the
  * right a preview of the item under the mouse like the loadout's (a wrap on its gun, a gun or knife, a case's picture).
  */
-public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnitItem.Menu> {
+public final class StorageUnitScreen extends AbstractContainerScreen<StorageUnitItem.Menu> implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int BG = 0xF0101317, PANEL = 0xC01C2127, SLOT = 0xFF0E0F11, ACCENT = 0xFFEABE54;
 	private static final int BAR_X = 176, BAR_Y = 18, BAR_W = 8, BAR_H = StorageUnitItem.ROWS * 18;
 	/** The last storable item under the mouse (the preview keeps showing it). */

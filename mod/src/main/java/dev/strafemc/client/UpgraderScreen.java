@@ -23,7 +23,7 @@ import java.util.List;
  * name, foldable), one of the five offers for exactly that stake (right), and Upgrade: a needle spins round the dial
  * and stops in the green part (your chance) or not.
  */
-public final class UpgraderScreen extends Screen {
+public final class UpgraderScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, WIN = 0xFF4CAF50, LOSE = 0xFFE04040;
 	private static UpgraderScreen open;
 	private final Screen parent;

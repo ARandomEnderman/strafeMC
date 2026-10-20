@@ -25,7 +25,7 @@ import java.util.List;
  * pick one, type its new name (up to 20 characters, as in CS2) and apply it, which uses the tag. A named wrap's tag can
  * be taken off for free.
  */
-public final class NameTagScreen extends Screen {
+public final class NameTagScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, ROW = 22;
 	private final int tagSlot;
 	private String picked;

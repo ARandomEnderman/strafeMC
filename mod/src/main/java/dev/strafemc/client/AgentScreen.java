@@ -12,7 +12,7 @@ import java.util.List;
  * The agents (strafeMC settings): every CS2 agent of a side in a grid with CS2's picture of them; click one to wear it
  * on that side (click it again, or "None", for none). The other side is a button away.
  */
-public final class AgentScreen extends Screen {
+public final class AgentScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final int GOLD = 0xFFEABE54, TILE_W = 96, TILE_H = 120;
 	private final Screen parent;
 	/** Instead of going back to parent: what closing does (the loadout reopens). */

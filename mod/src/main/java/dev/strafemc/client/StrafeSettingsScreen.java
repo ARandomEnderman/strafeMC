@@ -25,7 +25,7 @@ import java.util.function.DoubleSupplier;
  * Hosting), each a column of rows with the setting's name on the left and its control on the right, scrolling when
  * taller than the screen. The Crosshair tab is the crosshair editor; it and the Viewmodel tab have a live first-person preview.
  */
-public final class StrafeSettingsScreen extends Screen {
+public final class StrafeSettingsScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final String[] TABS = {"Game", "Viewmodel", "Crosshair", "Audio", "Binds", "Setup & Hosting"};
 	/** The menu backdrop, shared by the other strafeMC screens. */
 	public static final int BG = 0xF0121416;

@@ -22,7 +22,7 @@ import java.util.List;
  * automatically (after showing exactly what will happen) or points to the manual guide. Shown on world join while the
  * setup is missing or incomplete, unless the player chose "don't ask again".
  */
-public final class SetupScreen extends Screen {
+public final class SetupScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	public static final String STORE = "https://store.steampowered.com/app/730/";
 	public static final String GUIDE = "https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md";
 	/** Rough size of a full setup (all guns and knives, shrunk textures, effects, sounds); see setup.json for the real files. */
