@@ -112,13 +112,14 @@ public final class Shop {
 		p.setAttached(DATA, new State(s.cents(), s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
 	}
 
-	/** The rotation's offers for this player: three cases, a sticker capsule, a single sticker, a graffiti box / charm collection / Universal Key, a tool and five high-grade skins (knives and gloves too). */
+	/** The rotation's offers for this player: three cases, a sticker capsule, a single sticker, a fourth case or a second single sticker, a graffiti box / charm collection / Universal Key, a tool and four high-grade skins (knives and gloves too). */
 	public static List<Offer> offers(UUID player, int rotation) {
 		Random rng = new Random((player.getMostSignificantBits() * 31 + player.getLeastSignificantBits()) * 1_000_003L + rotation);
 		List<Offer> out = new ArrayList<>();
 		List<Cases.Case> cases = new ArrayList<>(Cases.all());
 		java.util.Collections.shuffle(cases, rng);
-		for (int i = 0; i < 3 && i < cases.size(); i++)
+		boolean extraCase = rng.nextBoolean(); // one slot: a fourth case or a second single sticker (50 / 50)
+		for (int i = 0; i < (extraCase ? 4 : 3) && i < cases.size(); i++)
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, cases.get(i).id()), price(caseWorth(cases.get(i)), rng), 1 + rng.nextInt(3)));
 		// a sticker capsule (2-6 of it), priced like cases: its average opening x CASE_SHARE
 		List<Cases.Case> stickers = Cases.capsules("sticker"), charms = Cases.capsules("charm"), sprays = Cases.capsules("spray");
@@ -126,10 +127,11 @@ public final class Shop {
 			Cases.Case c = stickers.get(rng.nextInt(stickers.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 2 + rng.nextInt(5)));
 		}
-		// a sticker from CS2's one-sticker packs (1-3 of it), at its worth
-		List<Stickers.Sticker> singles = Stickers.shop();
-		if (!singles.isEmpty()) {
-			ItemStack st = StickerItem.stack(WeaponItems.STICKER, singles.get(rng.nextInt(singles.size())).id());
+		// one or two stickers from CS2's one-sticker packs (1-3 of each), at their worth
+		List<Stickers.Sticker> singles = new ArrayList<>(Stickers.shop());
+		java.util.Collections.shuffle(singles, rng);
+		for (int i = 0; i < (extraCase ? 1 : 2) && i < singles.size(); i++) {
+			ItemStack st = StickerItem.stack(WeaponItems.STICKER, singles.get(i).id());
 			double v = Worth.of(st);
 			if (v > 0) out.add(new Offer(st, price(v, rng), 1 + rng.nextInt(3)));
 		}
