@@ -8,7 +8,6 @@ import dev.strafemc.config.StrafeConfig;
 import dev.strafemc.weapon.MenuLoadout;
 import dev.strafemc.weapon.WeaponTable;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.world.item.ItemStack;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -118,12 +117,6 @@ public final class MyLoadout {
 		if (entry == null) s.remove(slot);
 		else s.add(slot, entry);
 		changed();
-	}
-
-	/** The skin entry as the item it stands for (built as the server builds it), or EMPTY. */
-	public static ItemStack stack(String slot) {
-		JsonObject s = skin(slot);
-		return s == null ? ItemStack.EMPTY : MenuLoadout.build(slot, s);
 	}
 
 	/** The chosen knife's class, or null for the side's default knife. */

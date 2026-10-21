@@ -19,7 +19,6 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +46,11 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 	private List<Option> options = List.of();
 	private String optionsFor;
 
-	/** One choice in the skins grid: its id (null: the default look), name, rarity colour, picture or icon. */
-	private record Option(String id, String label, int color, Cases.Entry picture, String image, ItemStack icon) {}
+	/**
+	 * One choice in the skins grid: its id (null: the default look), name, rarity colour and CS2 picture. No items: this
+	 * screen opens from the main menu, before a world has set items up.
+	 */
+	private record Option(String id, String label, int color, Cases.Entry picture, String image) {}
 
 	/** One row of the skins list: a slot ("knife_model", "knife", "gloves", a gun's class), or a group header (slot null). */
 	private record Row(String slot, String label) {}
@@ -226,38 +228,37 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 		int covert = 0xFF000000 | SkinWraps.Rarity.ANCIENT.color;
 		switch (skinSlot) {
 			case "knife_model" -> {
-				out.add(new Option(null, "Default", 0xFF808080, null, null, ItemStack.EMPTY));
+				out.add(new Option(null, "Default", 0xFF808080, null, null));
 				for (WeaponTable.Entry e : WeaponTable.knives()) {
 					if (e.loadoutDefault()) continue; // the sides' own knives
-					out.add(new Option(e.cls(), WeaponTable.name(e.cls()).replace(" Knife", ""), covert, null, "panorama/images/econ/weapons/base_weapons/" + e.cls() + "_png",
-							new ItemStack(WeaponItems.KNIVES.get(e.cls()))));
+					out.add(new Option(e.cls(), WeaponTable.name(e.cls()).replace(" Knife", ""), covert, null, "panorama/images/econ/weapons/base_weapons/" + e.cls() + "_png"));
 				}
 			}
 			case "knife" -> {
-				out.add(new Option(null, "Vanilla", 0xFF808080, null, null, ItemStack.EMPTY));
+				out.add(new Option(null, "Vanilla", 0xFF808080, null, null));
 				String knife = knifeForPictures();
 				for (SkinWraps.Wrap w : SkinWraps.all()) {
 					if (!w.knife() || w.kits().isEmpty()) continue;
 					String kit = w.kits().get(knife);
 					Cases.Entry pic = kit != null ? new Cases.Entry(kit, knife) : new Cases.Entry(w.kits().values().iterator().next(), w.kits().keySet().iterator().next());
-					out.add(new Option(w.id(), after(w.name()), covert, pic, null, SkinWrapItem.stack(WeaponItems.KNIFE_WRAP, w.id())));
+					out.add(new Option(w.id(), after(w.name()), covert, pic, null));
 				}
 			}
 			case "gloves" -> {
-				out.add(new Option(null, "Default", 0xFF808080, null, null, ItemStack.EMPTY));
+				out.add(new Option(null, "Default", 0xFF808080, null, null));
 				for (GloveSkins.Skin s : GloveSkins.ALL) {
-					ItemStack st = GloveItem.stack(WeaponItems.GLOVES.get(s.kind()), s.kit());
-					out.add(new Option(s.kit(), st.getHoverName().getString(), covert, new Cases.Entry(s.kit(), s.kind().id), null, st));
+					String name = Component.translatable("item.strafemc." + s.kind().id).getString() + " | "
+							+ Component.translatableWithFallback("strafemc.paintkit." + s.kit(), GloveSkins.fallbackName(s.kit())).getString();
+					out.add(new Option(s.kit(), name, covert, new Cases.Entry(s.kit(), s.kind().id), null));
 				}
 			}
 			default -> {
-				out.add(new Option(null, "Default", 0xFF808080, null, null, ItemStack.EMPTY));
+				out.add(new Option(null, "Default", 0xFF808080, null, null));
 				for (SkinWraps.Wrap w : SkinWraps.all()) {
 					String kit = w.knife() ? null : w.kits().get(skinSlot);
 					if (kit == null) continue;
 					var r = w.rarity();
-					out.add(new Option(w.id(), after(w.name()), r == null ? 0xFF808080 : 0xFF000000 | r.color, new Cases.Entry(kit, skinSlot), null,
-							SkinWrapItem.stack(WeaponItems.GUN_WRAP, w.id())));
+					out.add(new Option(w.id(), after(w.name()), r == null ? 0xFF808080 : 0xFF000000 | r.color, new Cases.Entry(kit, skinSlot), null));
 				}
 			}
 		}
@@ -405,7 +406,6 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 			Identifier pic = o.picture != null ? CaseImages.get(o.picture) : o.image != null ? CaseImages.image(o.image) : null;
 			int pw = TILE_W - 8, ph = pw * 3 / 4;
 			if (pic != null) g.blit(RenderPipelines.GUI_TEXTURED, pic, rc[0] + 4, rc[1] + 2, 0, 0, pw, ph, pw, ph);
-			else if (!o.icon.isEmpty()) g.item(o.icon, rc[0] + TILE_W / 2 - 8, rc[1] + 16);
 			String label = font.plainSubstrByWidth(o.label, TILE_W - 4);
 			g.text(font, label, rc[0] + TILE_W / 2 - font.width(label) / 2, rc[3] - 12, 0xFFE0E0E0, false);
 		}
@@ -413,14 +413,16 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 		// the chosen one, large, with its exterior
 		int px = width - PANEL_W - 6;
 		g.fill(px - 4, TOP, width - 6, bottom, PANEL);
-		ItemStack shown = skinSlot.equals("knife_model") ? MyLoadout.knife() == null ? ItemStack.EMPTY : new ItemStack(WeaponItems.KNIVES.get(MyLoadout.knife()))
-				: MyLoadout.stack(skinSlot);
-		if (skinSlot.equals("knife_model") && MyLoadout.knife() != null) {
-			Identifier pic = CaseImages.image("panorama/images/econ/weapons/base_weapons/" + MyLoadout.knife() + "_png");
-			if (pic != null) g.blit(RenderPipelines.GUI_TEXTURED, pic, px, TOP + 4, 0, 0, PANEL_W - 8, (PANEL_W - 8) * 3 / 4, PANEL_W - 8, (PANEL_W - 8) * 3 / 4);
-			else CaseImages.draw(g, shown, px, TOP + 4, PANEL_W - 8, (PANEL_W - 8) * 3 / 4);
-		} else CaseImages.draw(g, shown, px, TOP + 4, PANEL_W - 8, (PANEL_W - 8) * 3 / 4);
-		String name = shown.isEmpty() ? "Default" : shown.getHoverName().getString();
+		Option sel = null;
+		for (Option o : opts) if (o.id != null && o.id.equals(chosen)) sel = o;
+		int pw = PANEL_W - 8, ph = pw * 3 / 4;
+		Identifier big = sel == null ? null : sel.picture != null ? CaseImages.get(sel.picture) : sel.image != null ? CaseImages.image(sel.image) : null;
+		if (big != null) g.blit(RenderPipelines.GUI_TEXTURED, big, px, TOP + 4, 0, 0, pw, ph, pw, ph);
+		String name = sel == null ? "Default" : skinSlot.equals("gloves") || skinSlot.equals("knife_model") ? sel.label
+				: (skinSlot.equals("knife") ? WeaponTable.name(knifeForPictures()) : WeaponTable.name(skinSlot)) + " | " + sel.label;
+		if (sel != null && skinSlot.equals("knife_model")) name = WeaponTable.name(sel.id);
+		JsonObject entry = skinSlot.equals("knife_model") ? null : MyLoadout.skin(skinSlot);
+		if (entry != null && entry.has("st") && entry.get("st").getAsBoolean()) name = "StatTrak™ " + name;
 		int ty = TOP + 4 + (PANEL_W - 8) * 3 / 4 + 4;
 		for (var line : font.split(Component.literal(name), PANEL_W - 8)) {
 			g.text(font, line, px, ty, 0xFFFFFFFF, false);
