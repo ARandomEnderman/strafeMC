@@ -20,40 +20,15 @@ public class StrafeMcClient implements ClientModInitializer {
 	static volatile boolean helmet;
 
 	/**
-	 * Your loadout (buy menu slots, skins, agents) before joining anything: squeezed into the title screen's Realms row
-	 * (that row's buttons, Realms and e.g. Mod Menu's Mods, share its width with it). Without a Realms button (another
-	 * mod's menu) it goes top left.
+	 * Your loadout (buy menu slots, skins, agents) before joining a server: a button at the top of the Multiplayer
+	 * screen, right of its title.
 	 */
 	private static void loadoutButton(net.minecraft.client.gui.screens.Screen screen) {
-		var widgets = net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen);
-		net.minecraft.client.gui.components.AbstractWidget realms = null;
-		for (var w : widgets)
-			if (w.getMessage().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t && t.getKey().equals("menu.online")) realms = w;
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		if (realms == null) {
-			widgets.add(net.minecraft.client.gui.components.Button.builder(net.minecraft.network.chat.Component.literal("strafeMC Loadout"),
-					b -> mc.setScreen(new MenuLoadoutScreen(screen))).bounds(4, 14, 110, 20).build());
-			return;
-		}
-		java.util.List<net.minecraft.client.gui.components.AbstractWidget> row = new java.util.ArrayList<>();
-		int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE;
-		for (var w : widgets)
-			if (w.getY() == realms.getY() && w.getHeight() == realms.getHeight()) {
-				row.add(w);
-				x0 = Math.min(x0, w.getX());
-				x1 = Math.max(x1, w.getX() + w.getWidth());
-			}
-		row.sort(java.util.Comparator.comparingInt(net.minecraft.client.gui.components.AbstractWidget::getX));
-		int n = row.size() + 1, gap = 4, each = (x1 - x0 - gap * (n - 1)) / n;
-		var button = net.minecraft.client.gui.components.Button.builder(net.minecraft.network.chat.Component.literal(each >= 100 ? "strafeMC Loadout" : "Loadout"),
-				b -> mc.setScreen(new MenuLoadoutScreen(screen))).bounds(0, realms.getY(), each, realms.getHeight()).build();
-		row.add(button);
-		for (int i = 0; i < row.size(); i++) {
-			var w = row.get(i);
-			w.setX(x0 + i * (each + gap));
-			w.setWidth(i == row.size() - 1 ? x1 - w.getX() : each);
-		}
-		widgets.add(button);
+		int w = 110;
+		net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(net.minecraft.client.gui.components.Button.builder(
+				net.minecraft.network.chat.Component.literal("strafeMC Loadout"), b -> mc.setScreen(new MenuLoadoutScreen(screen))).bounds(screen.width - w - 6, 6, w, 20)
+				.build());
 	}
 
 	@Override
@@ -131,8 +106,8 @@ public class StrafeMcClient implements ClientModInitializer {
 				});
 			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
 				SetupScreen.offer(screen);
-				loadoutButton(screen);
 			}
+			if (screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen) loadoutButton(screen);
 		});
 		MyLoadout.register();
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);
