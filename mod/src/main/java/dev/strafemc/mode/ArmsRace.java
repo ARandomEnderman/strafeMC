@@ -267,6 +267,25 @@ final class ArmsRace {
 		o.addProperty("leaderLevel", lead == null ? 0 : level(lead) + 1);
 		o.addProperty("winner", winner);
 		o.addProperty("immune", Math.max(0, immuneUntil.getOrDefault(p.getUUID(), 0L) - now()) / 20.0);
+		// everyone in the mode, for the team counter: highest level first, then who got there first
+		List<ServerPlayer> all = new ArrayList<>();
+		for (ServerPlayer q : server.getPlayerList().getPlayers()) if (q.hasAttached(GameModes.SAVED)) all.add(q);
+		all.sort((x, y) -> {
+			int c = Integer.compare(level(y.getUUID()), level(x.getUUID()));
+			return c != 0 ? c : Long.compare(reached.getOrDefault(x.getUUID(), Long.MAX_VALUE), reached.getOrDefault(y.getUUID(), Long.MAX_VALUE));
+		});
+		var arr = new com.google.gson.JsonArray();
+		for (ServerPlayer q : all) {
+			JsonObject e = new JsonObject();
+			e.addProperty("name", q.getScoreboardName());
+			e.addProperty("id", q.getUUID().toString());
+			e.addProperty("t", CsTeam.isT(q));
+			e.addProperty("level", level(q.getUUID()) + 1);
+			e.addProperty("weapon", weapons.get(level(q.getUUID())));
+			e.addProperty("hp", q.isAlive() ? q.getHealth() / q.getMaxHealth() : 0);
+			arr.add(e);
+		}
+		o.add("players", arr);
 		return o.toString();
 	}
 }

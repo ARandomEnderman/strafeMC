@@ -54,6 +54,14 @@ public final class ConsoleCommands {
 			dev.strafemc.client.perf.Perf.toggle(bool(a, !dev.strafemc.client.perf.Perf.on));
 			ConsoleLog.info("strafemc_perf " + (dev.strafemc.client.perf.Perf.on ? 1 : 0));
 		});
+		local("strafemc_server_data", "Pack what a dedicated server needs from CS2 into strafemc-server-data.zip (unzip it in the server's folder).", a -> {
+			try {
+				var r = dev.strafemc.data.ServerData.export();
+				ConsoleLog.info("Wrote " + r.files() + " files to " + r.zip() + ". Unzip it into the server's folder (it makes strafemc/cache).");
+			} catch (Exception e) {
+				ConsoleLog.error("strafemc_server_data: " + e);
+			}
+		});
 		local("strafemc_perf_bench", "Measure a fixed scene (bullet holes, smoke, effects) and log the numbers.", a -> dev.strafemc.client.perf.PerfBench.start());
 		local("ui_sweep", "Screenshot every strafeMC menu at each GUI scale into ui-sweep (ui_sweep stop ends it).", a -> {
 			if (a.length > 0 && a[0].equalsIgnoreCase("stop")) dev.strafemc.client.ui.UiSweep.stop();

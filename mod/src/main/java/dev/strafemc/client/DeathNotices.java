@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class DeathNotices {
 	public static final String[] WEAPON_ICONS = java.util.stream.Stream.concat(
-			java.util.stream.Stream.of("knife", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
+			java.util.stream.Stream.of("knife", "knifegg", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
 			java.util.stream.Stream.concat(dev.strafemc.weapon.WeaponTable.guns().stream(), dev.strafemc.weapon.WeaponTable.knives().stream())
 					.map(dev.strafemc.weapon.WeaponTable.Entry::shortName)).distinct().toArray(String[]::new);
 	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide"};
@@ -159,8 +159,14 @@ public final class DeathNotices {
 		return Math.round((argb >>> 24) * alpha) << 24 | (argb & 0xFFFFFF);
 	}
 
+	/** A killfeed icon's PNG size (0 x 0 if it isn't there). */
+	static int[] iconPixels(String name) {
+		iconWidth(name, 1);
+		return SIZES.get(name);
+	}
+
 	/** An icon's width at the given height (its PNG's aspect, read once from the runtime pack). */
-	private static int iconWidth(String name, int height) {
+	static int iconWidth(String name, int height) {
 		int[] sz = SIZES.computeIfAbsent(name, n -> {
 			Path png = RuntimePack.DIR.resolve("assets/strafemc/textures/gui/deathnotice/" + n + ".png");
 			if (!Files.exists(png)) return new int[] {0, 0};
