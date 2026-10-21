@@ -798,6 +798,8 @@ public final class GunServer {
 			net.minecraft.core.registries.Registries.DAMAGE_TYPE, net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "bullet"));
 
 	static void hurtCs(ServerPlayer p, LivingEntity target, float amount, String cls) {
+		amount *= (float) dev.strafemc.mode.GameModes.teamDamage(p, target, cls.contains("knife") || cls.contains("bayonet") ? "other" : "bullets");
+		if (amount <= 0) return;
 		Vec3 motion = target.getDeltaMovement();
 		boolean marked = target.hurtMarked;
 		// endermen dodge gunfire as they do arrows (teleporting away, unhurt); the Zeus's arc gets them

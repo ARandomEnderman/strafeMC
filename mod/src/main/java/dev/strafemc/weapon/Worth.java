@@ -195,13 +195,16 @@ public final class Worth {
 
 	/**
 	 * What opening a sticker capsule / graffiti box gives on average: CS2's case odds by tier (High Grade 79.92%, Remarkable
-	 * 15.98%, Exotic 3.2%, Extraordinary the rest), a tier it lacks falling to the next lower one it has, as Cases.roll does.
+	 * 15.98%, Exotic 3.2%, Extraordinary the rest), a tier it lacks falling to the next lower one it has (else the next higher), as Cases.roll does.
 	 */
 	public static double capsuleOpening(Cases.Case c) {
 		double[] odds = {0.7992, 0.1598, 0.032, 0.0064 + 0.0026};
 		double ev = 0;
-		for (int t = 0; t < odds.length; t++)
-			for (int k = SkinWraps.Rarity.RARE.ordinal() + t; k >= 0; k--) {
+		for (int t = 0; t < odds.length; t++) {
+			java.util.List<Integer> order = new java.util.ArrayList<>(); // as Cases.roll: lower first, then higher
+			for (int k = SkinWraps.Rarity.RARE.ordinal() + t; k >= 0; k--) order.add(k);
+			for (int k = SkinWraps.Rarity.RARE.ordinal() + t + 1; k < SkinWraps.Rarity.values().length; k++) order.add(k);
+			for (int k : order) {
 				var list = c.guns().get(SkinWraps.Rarity.values()[k]);
 				if (list == null || list.isEmpty()) continue;
 				double sum = 0;
@@ -209,6 +212,7 @@ public final class Worth {
 				ev += odds[t] * sum / list.size();
 				break;
 			}
+		}
 		return ev;
 	}
 

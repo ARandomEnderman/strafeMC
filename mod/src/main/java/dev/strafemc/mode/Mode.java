@@ -121,6 +121,11 @@ abstract class Mode {
 		return out;
 	}
 
+	/** Who a participant is across lives: a player's own id; a bot's from its name (each life is a new entity). */
+	static UUID key(LivingEntity e) {
+		return Bots.isBot(e) ? UUID.nameUUIDFromBytes(("bot:" + name(e)).getBytes(java.nio.charset.StandardCharsets.UTF_8)) : e.getUUID();
+	}
+
 	static String name(LivingEntity e) {
 		return e instanceof ServerPlayer p ? p.getScoreboardName() : e.getName().getString().replaceFirst("^BOT ", "");
 	}

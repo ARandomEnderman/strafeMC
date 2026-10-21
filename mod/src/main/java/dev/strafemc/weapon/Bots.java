@@ -145,7 +145,7 @@ public final class Bots {
 		for (Bot b : BOTS) {
 			if (b.e == null || b.e.isRemoved() || !b.e.isAlive()) {
 				if (b.e != null && b.deadSince == 0) b.deadSince = now;
-				if (b.e == null || now - b.deadSince > RESPAWN_MS) spawn(server, b);
+				if ((b.e == null || now - b.deadSince > RESPAWN_MS) && (b.e == null || dev.strafemc.mode.GameModes.botMayRespawn())) spawn(server, b);
 				continue;
 			}
 			try {
@@ -178,7 +178,8 @@ public final class Bots {
 	}
 
 	private static void spawn(MinecraftServer server, Bot b) {
-		var pick = StrafeSettings.spawnBlocks() ? dev.strafemc.world.SpawnPoints.pick() : null; // like players: spawn blocks when they're on
+		var pick = StrafeSettings.spawnBlocks() || b.e != null && dev.strafemc.mode.GameModes.botSide(b.e) != null // like players: spawn blocks when they're on
+				? dev.strafemc.world.SpawnPoints.pick(b.e == null ? null : dev.strafemc.mode.GameModes.botSide(b.e)) : null;
 		ServerLevel level = pick != null ? pick.level() : server.overworld();
 		Vec3 at;
 		if (pick != null) at = pick.pos();

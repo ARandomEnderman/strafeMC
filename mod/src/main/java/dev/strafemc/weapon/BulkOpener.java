@@ -67,12 +67,14 @@ public final class BulkOpener {
 		List<String> caseIds = new ArrayList<>();
 		List<dev.strafemc.net.StrafePayloads.CaseResult.Drop> sent = new ArrayList<>();
 		Map<String, Integer> perKey = new LinkedHashMap<>();
+		Map<Integer, Integer> opened = new LinkedHashMap<>(); // only what gave something is used up
 		for (var e : refs.entrySet()) {
 			Cases.Case c = Cases.get(CaseItem.caseId(Upgrader.at(p, e.getKey())));
-			if (c.needsKey()) perKey.merge(c.key(), e.getValue(), Integer::sum);
 			for (int n = 0; n < e.getValue(); n++) {
 				var drop = Cases.roll(c, rng);
 				if (drop == null) continue;
+				opened.merge(e.getKey(), 1, Integer::sum);
+				if (c.needsKey()) perKey.merge(c.key(), 1, Integer::sum);
 				stacks.add(drop.stack());
 				rarity.add(drop.rarity());
 				caseIds.add(c.id());
@@ -85,7 +87,7 @@ public final class BulkOpener {
 		}
 		if (stacks.isEmpty()) return;
 		if (!creative) {
-			Upgrader.take(p, refs);
+			Upgrader.take(p, opened);
 			for (var e : perKey.entrySet()) CaseKeys.use(p, e.getKey(), e.getValue());
 			inv.getItem(toolSlot).shrink(1);
 		}

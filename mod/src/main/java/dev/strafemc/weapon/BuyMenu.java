@@ -26,7 +26,7 @@ public final class BuyMenu {
 	private static final Map<UUID, Long> SPAWNED = new ConcurrentHashMap<>();
 
 	/** One purchase (for refunds): the buy command's item, what was handed out, and the armor before it. */
-	private record Purchase(String what, List<ItemStack> given, CsArmor.Armor armorBefore) {}
+	private record Purchase(String what, List<ItemStack> given, CsArmor.Armor armorBefore, int paid) {}
 
 	/** Purchases since the player last (re)spawned, newest last. */
 	private static final Map<UUID, java.util.Deque<Purchase>> BOUGHT = new ConcurrentHashMap<>();
@@ -70,6 +70,7 @@ public final class BuyMenu {
 			it.remove();
 			for (ItemStack g : b.given) take(p, g.getItem(), g.getCount());
 			if (b.armorBefore != null) CsArmor.set(p, b.armorBefore.value(), b.armorBefore.helmet());
+			if (b.paid > 0) dev.strafemc.mode.GameModes.refund(p, b.paid);
 			if (!all) break;
 		}
 		GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
@@ -125,13 +126,19 @@ public final class BuyMenu {
 		}
 		List<ItemStack> given = new java.util.ArrayList<>();
 		CsArmor.Armor before = CsArmor.of(p);
+		paid = 0;
 		switch (what) {
 			case "kevlar" -> {
+				if (!dev.strafemc.mode.GameModes.charge(p, price("item_kevlar", 650))) return;
+				paid = price("item_kevlar", 650);
 				CsArmor.set(p, 100, before.helmet());
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 				bought(p, what, given, before);
 			}
-			case "assaultsuit" -> {
+			case "assaultsuit" -> { // with kevlar on already, only the helmet is paid for (CS's price difference)
+				int cost = before.value() >= 100 ? price("item_assaultsuit", 1000) - price("item_kevlar", 650) : price("item_assaultsuit", 1000);
+				if (!dev.strafemc.mode.GameModes.charge(p, cost)) return;
+				paid = cost;
 				CsArmor.set(p, 100, true);
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 				bought(p, what, given, before);
@@ -143,6 +150,8 @@ public final class BuyMenu {
 			default -> {
 				WeaponTable.Entry gun = WeaponTable.get("weapon_" + what);
 				if (gun != null && !gun.knife()) { // a gun with CS2's reserve: m_nPrimaryReserveAmmoMax magazines (shells for shotguns)
+					if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
+					paid = price(gun.cls(), 0);
 					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);
 					WeaponStats st = WeaponStats.of(gun.cls());
 					int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
@@ -162,6 +171,8 @@ public final class BuyMenu {
 					dev.strafemc.server.Toasts.warn(p, "You cannot carry any more");
 					return;
 				}
+				if (!dev.strafemc.mode.GameModes.charge(p, price(g.cls, 0))) return;
+				paid = price(g.cls, 0);
 				give(p, new ItemStack(WeaponItems.GRENADES.get(g)), given);
 				bought(p, what, given, null);
 			}
@@ -178,8 +189,18 @@ public final class BuyMenu {
 		return n;
 	}
 
+	/** What the purchase being made cost (game modes with money), for its refund. */
+	private static int paid;
+
+	/** CS2's price of an item (weapons.vdata m_nPrice). */
+	static int price(String cls, int fallback) {
+		var w = dev.strafemc.data.WeaponData.get(cls);
+		Object v = w == null ? null : w.get("m_nPrice");
+		return v instanceof Number n ? n.intValue() : fallback;
+	}
+
 	private static void bought(ServerPlayer p, String what, List<ItemStack> given, CsArmor.Armor armorBefore) {
-		BOUGHT.computeIfAbsent(p.getUUID(), u -> new java.util.concurrent.ConcurrentLinkedDeque<>()).add(new Purchase(what, List.copyOf(given), armorBefore));
+		BOUGHT.computeIfAbsent(p.getUUID(), u -> new java.util.concurrent.ConcurrentLinkedDeque<>()).add(new Purchase(what, List.copyOf(given), armorBefore, paid));
 		sendRefundable(p);
 	}
 

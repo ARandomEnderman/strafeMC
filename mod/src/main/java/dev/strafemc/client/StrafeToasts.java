@@ -41,6 +41,10 @@ public final class StrafeToasts {
 		UP.removeIf(t -> now - t.at() > SHOW_MS + OUT_MS);
 		var font = Minecraft.getInstance().font;
 		int y = g.guiHeight() - 6;
+		if (ModeHud.active()) { // above a game mode's money, health and armor
+			var w = net.minecraft.client.Minecraft.getInstance().getWindow();
+			y -= (int) Math.round(140 * w.getHeight() / 1080.0 / w.getGuiScale());
+		}
 		for (int i = UP.size() - 1; i >= 0; i--) { // newest at the bottom
 			Toast t = UP.get(i);
 			long age = now - t.at();

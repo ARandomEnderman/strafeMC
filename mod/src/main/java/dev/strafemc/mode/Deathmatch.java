@@ -120,7 +120,7 @@ final class Deathmatch extends Mode {
 		int pts = 8 + (knife ? 17 : priceBonus(price("weapon_" + icon)));
 		boolean isBonus = !bonus.isEmpty() && bonus.equals("weapon_" + icon);
 		if (isBonus) pts += pts * 50 / 100;
-		score.merge(attacker.getUUID(), pts, Integer::sum);
+		score.merge(key(attacker), pts, Integer::sum);
 		if (teams) {
 			int team = 1 + (isBonus ? 1 : 0);
 			if (CsTeam.isT(attacker)) scoreT += team;
@@ -170,13 +170,13 @@ final class Deathmatch extends Mode {
 	String leaderName() {
 		if (teams) return scoreT == scoreCt ? null : scoreT > scoreCt ? "Terrorists" : "Counter-Terrorists";
 		List<LivingEntity> r = ranking();
-		return r.isEmpty() || !score.containsKey(r.get(0).getUUID()) ? null : name(r.get(0));
+		return r.isEmpty() || !score.containsKey(key(r.get(0))) ? null : name(r.get(0));
 	}
 
 	@Override
 	List<LivingEntity> ranking() {
 		List<LivingEntity> all = participants();
-		all.sort((x, y) -> Integer.compare(score.getOrDefault(y.getUUID(), 0), score.getOrDefault(x.getUUID(), 0)));
+		all.sort((x, y) -> Integer.compare(score.getOrDefault(key(y), 0), score.getOrDefault(key(x), 0)));
 		return all;
 	}
 
@@ -192,6 +192,6 @@ final class Deathmatch extends Mode {
 
 	@Override
 	void entry(LivingEntity e, JsonObject o) {
-		o.addProperty("value", String.valueOf(score.getOrDefault(e.getUUID(), 0)));
+		o.addProperty("value", String.valueOf(score.getOrDefault(key(e), 0)));
 	}
 }

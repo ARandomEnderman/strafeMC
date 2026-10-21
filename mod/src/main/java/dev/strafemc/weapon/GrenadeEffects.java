@@ -70,7 +70,7 @@ public final class GrenadeEffects {
 			double dist = spot.distanceTo(at) * upb;
 			if (dist > radius) continue;
 			if (level.clip(new ClipContext(at, spot, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, g)).getType() != HitResult.Type.MISS) continue;
-			double dmg = damage * Math.exp(-(dist * dist) / (2 * sigma * sigma));
+			double dmg = damage * Math.exp(-(dist * dist) / (2 * sigma * sigma)) * dev.strafemc.mode.GameModes.teamDamage(owner, e, "grenade");
 			if (dmg < 1) continue;
 			Vec3 motion = e.getDeltaMovement();
 			boolean marked = e.hurtMarked;

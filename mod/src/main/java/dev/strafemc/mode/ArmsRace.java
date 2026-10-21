@@ -107,12 +107,12 @@ final class ArmsRace extends Mode {
 
 	@Override
 	String botWeapon(LivingEntity bot) {
-		return weapons.get(botLevel(bot.getUUID()));
+		return weapons.get(botLevel(key(bot)));
 	}
 
 	@Override
 	void scored(LivingEntity attacker, LivingEntity victim, String icon) {
-		UUID id = attacker.getUUID();
+		UUID id = key(attacker);
 		int before = level(id);
 		boolean knife = icon.contains("knife") || icon.contains("bayonet");
 		if (knife && before == weapons.size() - 1) { // the golden knife kill: the match is won
@@ -124,9 +124,9 @@ final class ArmsRace extends Mode {
 		kills.merge(id, knife ? KILLS_PER_LEVEL : 1, Integer::sum);
 		if (Bots.isBot(attacker)) kills.put(id, Math.min(kills.get(id), (weapons.size() - 2) * KILLS_PER_LEVEL + 1));
 		if (knife) {
-			int lv = level(victim.getUUID());
+			int lv = level(key(victim));
 			if (lv > 0) {
-				kills.put(victim.getUUID(), (lv - 1) * KILLS_PER_LEVEL);
+				kills.put(key(victim), (lv - 1) * KILLS_PER_LEVEL);
 				if (victim instanceof ServerPlayer v) sound(v, "UI.ArmsRace.Demoted");
 			}
 		}
@@ -150,21 +150,21 @@ final class ArmsRace extends Mode {
 
 	private UUID leaderId() {
 		List<LivingEntity> r = ranking();
-		return r.isEmpty() || !kills.containsKey(r.get(0).getUUID()) ? null : r.get(0).getUUID();
+		return r.isEmpty() || !kills.containsKey(key(r.get(0))) ? null : key(r.get(0));
 	}
 
 	@Override
 	String leaderName() {
 		List<LivingEntity> r = ranking();
-		return r.isEmpty() || !kills.containsKey(r.get(0).getUUID()) ? null : name(r.get(0));
+		return r.isEmpty() || !kills.containsKey(key(r.get(0))) ? null : name(r.get(0));
 	}
 
 	@Override
 	List<LivingEntity> ranking() {
 		List<LivingEntity> all = participants();
 		all.sort((x, y) -> {
-			int c = Integer.compare(level(y.getUUID()), level(x.getUUID()));
-			return c != 0 ? c : Long.compare(reached.getOrDefault(x.getUUID(), Long.MAX_VALUE), reached.getOrDefault(y.getUUID(), Long.MAX_VALUE));
+			int c = Integer.compare(level(key(y)), level(key(x)));
+			return c != 0 ? c : Long.compare(reached.getOrDefault(key(x), Long.MAX_VALUE), reached.getOrDefault(key(y), Long.MAX_VALUE));
 		});
 		return all;
 	}
@@ -180,7 +180,7 @@ final class ArmsRace extends Mode {
 
 	@Override
 	void entry(LivingEntity e, JsonObject o) {
-		int lv = Bots.isBot(e) ? botLevel(e.getUUID()) : level(e.getUUID());
+		int lv = Bots.isBot(e) ? botLevel(key(e)) : level(key(e));
 		o.addProperty("value", String.valueOf(lv + 1));
 		o.addProperty("weapon", weapons.get(lv));
 		o.addProperty("gold", lv == weapons.size() - 1);

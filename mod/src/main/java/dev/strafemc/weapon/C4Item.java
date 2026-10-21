@@ -43,6 +43,11 @@ public class C4Item extends GunItem {
 	/** The client started planting (holding the C4, on the ground). */
 	public static void start(ServerPlayer p) {
 		if (!(p.getMainHandItem().getItem() instanceof C4Item) || !p.onGround()) return;
+		String no = dev.strafemc.mode.GameModes.plantRefusal(p);
+		if (no != null && !no.isEmpty()) {
+			dev.strafemc.server.Toasts.warn(p, no);
+			return;
+		}
 		PLANTING.put(p.getUUID(), now(p));
 	}
 
@@ -59,12 +64,15 @@ public class C4Item extends GunItem {
 		if (keypad && !typed) return; // keypad mode: only typing the code arms it
 		double need = keypad ? KEYPAD_PLANT : PLANT_TIME;
 		if (now(p) - at < need - SLACK) return;
+		String no = dev.strafemc.mode.GameModes.plantRefusal(p);
+		if (no != null && !no.isEmpty()) return;
 		PlantedC4 bomb = new PlantedC4(p.level(), p, held.copyWithCount(1));
 		bomb.setPos(p.getX(), p.getY(), p.getZ());
 		bomb.setYRot(p.getYRot());
 		p.level().addFreshEntity(bomb);
 		if (!p.getAbilities().instabuild) held.shrink(1);
 		GunServer.soundAt(p.level(), "c4.plant", p.position(), bomb);
+		dev.strafemc.mode.GameModes.planted(p, bomb);
 		dev.strafemc.server.Toasts.send(p, "The bomb has been planted.", dev.strafemc.server.Toasts.GOOD);
 	}
 

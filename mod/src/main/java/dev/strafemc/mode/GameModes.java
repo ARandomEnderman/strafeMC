@@ -26,18 +26,19 @@ import java.util.List;
  * gear, nothing drops on death, hunger stays full and the mode's CS2 cvars apply.
  */
 public final class GameModes {
-	public static final List<String> MODES = List.of("none", "armsrace", "deathmatch", "teamdeathmatch");
+	public static final List<String> MODES = List.of("none", "armsrace", "deathmatch", "teamdeathmatch", "casual", "competitive", "wingman");
 	/** The modes' names as CS2 shows them. */
 	public static final java.util.Map<String, String> NAMES = java.util.Map.of("none", "None", "armsrace", "Arms Race", "deathmatch", "Deathmatch",
-			"teamdeathmatch", "Team Deathmatch");
+			"teamdeathmatch", "Team Deathmatch", "casual", "Casual", "competitive", "Competitive", "wingman", "Wingman");
 
 	/** A player's own things while a mode runs. */
-	record Saved(List<ItemStack> items, int level, float progress, int total) {
+	record Saved(List<ItemStack> items, int level, float progress, int total, String gameType) {
 		static final Codec<Saved> CODEC = RecordCodecBuilder.create(i -> i.group(
 				ItemStack.OPTIONAL_CODEC.listOf().fieldOf("items").forGetter(Saved::items),
 				Codec.INT.optionalFieldOf("level", 0).forGetter(Saved::level),
 				Codec.FLOAT.optionalFieldOf("progress", 0f).forGetter(Saved::progress),
-				Codec.INT.optionalFieldOf("total", 0).forGetter(Saved::total)).apply(i, Saved::new));
+				Codec.INT.optionalFieldOf("total", 0).forGetter(Saved::total),
+				Codec.STRING.optionalFieldOf("gameType", "survival").forGetter(Saved::gameType)).apply(i, Saved::new));
 	}
 
 	static final AttachmentType<Saved> SAVED = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "mode_saved"),
@@ -75,7 +76,10 @@ public final class GameModes {
 		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE.register((e, src, amount) -> race == null || race.allowDamage(e, src));
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DEATH.register((e, src, amount) -> {
-			if (race != null && e instanceof ServerPlayer p && p.hasAttached(SAVED)) p.getInventory().clearContent(); // the mode's gear doesn't drop
+			if (race != null && e instanceof ServerPlayer p && p.hasAttached(SAVED)) {
+				if (race instanceof RoundMode r) r.deathDrops(p);
+				p.getInventory().clearContent(); // the mode's gear doesn't drop (round modes drop the guns and the bomb)
+			}
 			return true;
 		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((e, src) -> {
@@ -116,6 +120,9 @@ public final class GameModes {
 			case "armsrace" -> new ArmsRace(server);
 			case "deathmatch" -> new Deathmatch(server, false);
 			case "teamdeathmatch" -> new Deathmatch(server, true);
+			case "casual" -> new RoundMode(server, RoundMode.CASUAL);
+			case "competitive" -> new RoundMode(server, RoundMode.COMPETITIVE);
+			case "wingman" -> new RoundMode(server, RoundMode.WINGMAN);
 			default -> null;
 		};
 		if (race == null) return;
@@ -146,8 +153,9 @@ public final class GameModes {
 		var inv = p.getInventory();
 		List<ItemStack> items = new ArrayList<>();
 		for (int i = 0; i < inv.getContainerSize(); i++) items.add(inv.getItem(i).copy());
-		p.setAttached(SAVED, new Saved(items, p.experienceLevel, p.experienceProgress, p.totalExperience));
+		p.setAttached(SAVED, new Saved(items, p.experienceLevel, p.experienceProgress, p.totalExperience, p.gameMode.getGameModeForPlayer().getName()));
 		inv.clearContent();
+		p.setGameMode(net.minecraft.world.level.GameType.ADVENTURE); // the map stays as built; creative players can be hit
 		p.setExperienceLevels(0);
 		p.setExperiencePoints(0);
 	}
@@ -162,6 +170,7 @@ public final class GameModes {
 		p.setExperienceLevels(s.level());
 		p.experienceProgress = s.progress();
 		p.totalExperience = s.total();
+		p.setGameMode(net.minecraft.world.level.GameType.byName(s.gameType(), net.minecraft.world.level.GameType.SURVIVAL));
 		p.removeAttached(SAVED);
 		p.inventoryMenu.broadcastChanges();
 	}
@@ -173,6 +182,11 @@ public final class GameModes {
 	/** A kill announced by the killfeed (any CS weapon): counts for the running mode. */
 	public static void kill(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String icon) {
 		if (race != null) race.kill(attacker, victim, icon);
+	}
+
+	/** The player's HUD state (tests). */
+	public static String stateOf(ServerPlayer p) {
+		return race == null ? "{}" : race.state(p);
 	}
 
 	/** Ends the warmup at once (tests). */
@@ -203,6 +217,63 @@ public final class GameModes {
 	/** A gun bought in the running mode. */
 	public static void bought(ServerPlayer p, String cls) {
 		if (race != null && p.hasAttached(SAVED)) race.bought(p, cls);
+	}
+
+	/** Why the player can't plant the C4 here and now: null when anywhere goes (no round mode), else "" or the reason. */
+	public static String plantRefusal(ServerPlayer p) {
+		return race instanceof RoundMode r && p.hasAttached(SAVED) ? r.plantRefusal(p) : null;
+	}
+
+	public static void planted(ServerPlayer p, dev.strafemc.weapon.PlantedC4 bomb) {
+		if (race instanceof RoundMode r) r.planted(p, bomb);
+	}
+
+	public static void exploded(dev.strafemc.weapon.PlantedC4 bomb) {
+		if (race instanceof RoundMode r) r.exploded(bomb);
+	}
+
+	public static void defused(ServerPlayer by, dev.strafemc.weapon.PlantedC4 bomb) {
+		if (race instanceof RoundMode r) r.defused(by, bomb);
+	}
+
+	/** Whether dead bots may come back now (round modes: only between rounds). */
+	public static boolean botMayRespawn() {
+		return !(race instanceof RoundMode r) || r.botMayRespawn();
+	}
+
+	/** Whose spawn blocks a bot uses (null: any). */
+	public static dev.strafemc.world.SpawnBlock.Side botSide(net.minecraft.world.entity.LivingEntity bot) {
+		if (!(race instanceof RoundMode)) return null;
+		return dev.strafemc.weapon.CsTeam.isT(bot) ? dev.strafemc.world.SpawnBlock.Side.T : dev.strafemc.world.SpawnBlock.Side.CT;
+	}
+
+	/** Pays for a purchase in a mode with money; false when they can't afford it (true when no mode charges). */
+	public static boolean charge(ServerPlayer p, int price) {
+		return !(race instanceof RoundMode r) || !p.hasAttached(SAVED) || r.charge(p, price);
+	}
+
+	public static void refund(ServerPlayer p, int price) {
+		if (race instanceof RoundMode r && p.hasAttached(SAVED)) r.refund(p, price);
+	}
+
+	/**
+	 * How much of a teammate's damage gets through (ff_damage_reduction_bullets / _grenade / _other; 1 for enemies and
+	 * outside modes). kind: "bullets", "grenade" or "other".
+	 */
+	public static double teamDamage(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String kind) {
+		if (race == null || race.ffa() || attacker == null || victim == null || !Mode.inMode(victim) || !Mode.inMode(attacker)) return 1;
+		if (attacker == victim) return kind.equals("grenade") ? cvar("ff_damage_reduction_grenade_self", 1) : 1;
+		if (dev.strafemc.weapon.CsTeam.isT(attacker) != dev.strafemc.weapon.CsTeam.isT(victim)) return 1;
+		return cvar("ff_damage_reduction_" + kind, 0);
+	}
+
+	private static double cvar(String name, double fallback) {
+		String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(name);
+		try {
+			return v == null ? fallback : Double.parseDouble(v);
+		} catch (NumberFormatException e) {
+			return fallback;
+		}
 	}
 
 	/** The player fired: their spawn protection ends. */

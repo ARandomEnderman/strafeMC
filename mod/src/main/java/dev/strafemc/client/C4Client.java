@@ -29,7 +29,7 @@ public final class C4Client {
 
 	/** Planting or defusing: movement is held still, as in CS2. */
 	public static boolean frozen() {
-		return defusing || dev.strafemc.client.weapon.GunClient.INSTANCE.planting();
+		return defusing || dev.strafemc.client.weapon.GunClient.INSTANCE.planting() || dev.strafemc.client.ModeHud.frozen();
 	}
 
 	/** The bomb being defused through the keypad, else the one held on with use, else null. */

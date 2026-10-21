@@ -213,6 +213,7 @@ public class PlantedC4 extends Entity {
 		getEntityData().set(DEFUSE_DONE, getEntityData().get(DEFUSE_LEN));
 		gone = 60;
 		GunServer.soundAt(sl, "c4.disarmfinish", position(), this);
+		dev.strafemc.mode.GameModes.defused(by, this);
 		dev.strafemc.server.Toasts.send(by, "The bomb has been defused.", dev.strafemc.server.Toasts.GOOD);
 	}
 
@@ -241,6 +242,7 @@ public class PlantedC4 extends Entity {
 			}
 		}
 		GrenadeEffects.event(level, GrenadeEffects.EV_C4, at);
+		dev.strafemc.mode.GameModes.exploded(this);
 		discard();
 	}
 

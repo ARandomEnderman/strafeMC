@@ -227,7 +227,20 @@ public final class WeaponSkinCache {
 	 * finishes (no composite inputs: CS2's default knives). parts: the mesh parts that use the material's colour texture;
 	 * base: their texture (the exported colour).
 	 */
+	/** One bake of a finish at a time (the viewmodel, wrap pictures and the planted C4 may ask for the same one at once). */
+	private static final java.util.Map<String, Object> LOCKS = new java.util.concurrent.ConcurrentHashMap<>();
+
+	private static Object lock(String cls, String kit, int pattern) {
+		return LOCKS.computeIfAbsent(cls + "#" + kit + "#" + pattern, k -> new Object());
+	}
+
 	public static Path ensure(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base) throws Exception {
+		synchronized (lock(cls, kit, pattern)) {
+			return ensureUnlocked(cls, material, kit, pattern, parts, base);
+		}
+	}
+
+	private static Path ensureUnlocked(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base) throws Exception {
 		Path tex = texture(cls, kit, pattern), pixels = sibling(tex, ".vm1024b.png"), metal = sibling(tex, ".vm1024m.png");
 		if (Files.exists(pixels)) return tex;
 		Matcher m = COMPOSITE.matcher(Files.readString(AssetCache.dataBlock(material + "_c")));
@@ -312,10 +325,17 @@ public final class WeaponSkinCache {
 	 * glitter's sparkle is left out.
 	 */
 	public static Path ensureStickers(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers) throws Exception {
+		synchronized (lock(cls, kit, pattern)) {
+			return ensureStickersUnlocked(cls, material, kit, pattern, parts, base, stickers);
+		}
+	}
+
+	private static Path ensureStickersUnlocked(String cls, String material, String kit, int pattern, List<VmModel.Part> parts, Path base, String[] stickers)
+			throws Exception {
 		// no finish (the C4): the stickers go on the weapon's own texture
 		Path plain = kit == null ? plainCopy(cls, base) : ensure(cls, material, kit, pattern, parts, base);
 		if (plain == null) return null;
-		String sig = Integer.toHexString((String.join(",", stickers) + "|m4").hashCode()); // "|m": with metalness and roughness
+		String sig = Integer.toHexString((String.join(",", stickers) + "|m5").hashCode()); // "|m": with metalness and roughness (5: after bakes racing)
 		Path tex = plain.resolveSibling(plain.getFileName().toString().replace(".png", "_s" + sig + ".png")), pixels = sibling(tex, ".vm1024b.png");
 		if (Files.exists(pixels)) return tex;
 		BufferedImage img = ImageIO.read(sibling(plain, ".vm1024b.png").toFile());
@@ -475,7 +495,7 @@ public final class WeaponSkinCache {
 	}
 
 	/** The mesh's second UV set (TEXCOORD_1) per texel of its texture (u, v pairs; NaN where nothing covers it). */
-	private static float[] secondUv(List<VmModel.Part> parts, int size) {
+	static float[] secondUv(List<VmModel.Part> parts, int size) {
 		float[] out = new float[size * size * 2];
 		java.util.Arrays.fill(out, Float.NaN);
 		for (VmModel.Part p : parts) {

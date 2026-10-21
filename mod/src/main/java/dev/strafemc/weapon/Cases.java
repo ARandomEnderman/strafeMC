@@ -175,7 +175,7 @@ public final class Cases {
 	}
 
 	/**
-	 * Opens a case: a tier by CS2's odds (a tier the case lacks falls to the next lower one it has), then one of its
+	 * Opens a case: a tier by CS2's odds (a tier the case lacks falls to the next lower one it has, else the next higher), then one of its
 	 * items at random, handed out as a wrap / knife wrap / gloves with a random pattern template (0-1000); wraps are StatTrak 10% of the time.
 	 */
 	public static Drop roll(Case c, Random rng) {
@@ -200,7 +200,11 @@ public final class Cases {
 			}
 		}
 		if (tier == null) tier = SkinWraps.Rarity.ANCIENT;
-		for (int t = tier.ordinal(); t >= 0; t--) {
+		// the rolled tier, else the next lower one the case has, else (capsules of only rarer stickers) the next higher
+		List<Integer> tiers = new ArrayList<>();
+		for (int t = tier.ordinal(); t >= 0; t--) tiers.add(t);
+		for (int t = tier.ordinal() + 1; t < SkinWraps.Rarity.values().length; t++) tiers.add(t);
+		for (int t : tiers) {
 			List<Entry> list = c.guns().get(SkinWraps.Rarity.values()[t]);
 			if (list == null || list.isEmpty()) continue;
 			List<Entry> pool = new ArrayList<>(list);

@@ -96,6 +96,10 @@ public final class UiSweep {
 	private static int autoPhase, autoTicks;
 
 	private static void auto(Minecraft mc) {
+		if (BENCH && autoPhase >= 1) { // the bench window may be in the background: no pause menu in the way
+			mc.options.pauseOnLostFocus = false;
+			if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
+		}
 		if (autoPhase == 0 && mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
 			autoPhase = 1;
 			if (mc.getLevelSource().levelExists(AUTO_WORLD)) mc.createWorldOpenFlows().openWorld(AUTO_WORLD, () -> {});

@@ -65,6 +65,7 @@ public final class PerfBench {
 		++ticks;
 		if (PHASES[phase].equals("armsrace")) armsRace(mc, ticks);
 		if (PHASES[phase].equals("modes")) modes(mc, ticks);
+		if (PHASES[phase].equals("rounds")) rounds(mc, ticks);
 		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
 			mc.player.getAbilities().flying = true;
 			mc.player.setDeltaMovement(Vec3.ZERO);
@@ -275,6 +276,79 @@ public final class PerfBench {
 		if (t == 26) shot(mc, "modes_armsrace");
 		if (t == 75) shot(mc, "modes_deathmatch");
 		if (t == 110) shot(mc, "modes_teamdeathmatch");
+	}
+
+	/**
+	 * Competitive: T and CT spawn blocks and a bomb site built in front, the player a T, a CT bot; the warmup and freeze
+	 * skipped, a purchase with too little money and one with enough, the bomb planted at the site, the bot killed: the
+	 * log shows the money at each step and how the round ended.
+	 */
+	private static void rounds(Minecraft mc, int t) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		if (t == 1) Perf.toggle(false);
+		java.util.UUID id = mc.player.getUUID();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayer(id);
+			if (p == null) return;
+			var level = p.level();
+			BlockPos g = p.blockPosition().below();
+			var bot = level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity.class),
+					e -> dev.strafemc.weapon.Bots.isBot(e)).stream().findFirst().orElse(null);
+			switch (t) {
+				case 2 -> {
+					var sp = dev.strafemc.weapon.WeaponItems.SPAWN_POINT.defaultBlockState();
+					level.setBlockAndUpdate(g.offset(0, 0, 3), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.T));
+					level.setBlockAndUpdate(g.offset(12, 0, 3), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.CT));
+					level.setBlockAndUpdate(g.offset(6, 0, 8), dev.strafemc.weapon.WeaponItems.BOMB_SITE.defaultBlockState());
+					dev.strafemc.weapon.CsTeam.set(p, true);
+					dev.strafemc.mode.GameModes.set("competitive");
+					dev.strafemc.weapon.Bots.add(false);
+				}
+				case 6 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 10 -> log("rounds: round 1 " + p.blockPosition().toShortString() + " " + inv(p) + " " + state(p));
+				case 12 -> {
+					dev.strafemc.weapon.BuyMenu.buy(p, "ak47");
+					dev.strafemc.weapon.BuyMenu.buy(p, "kevlar");
+					log("rounds: bought kevlar (ak47 refused) " + inv(p) + " armor " + dev.strafemc.weapon.CsArmor.of(p) + " " + state(p));
+				}
+				case 14 -> dev.strafemc.mode.GameModes.skipWarmup(); // freeze over
+				case 20 -> { // to the bomb site with the C4 out
+					var inv = p.getInventory();
+					for (int i = 0; i < 9; i++) if (inv.getItem(i).is(dev.strafemc.weapon.WeaponItems.C4)) inv.setSelectedSlot(i);
+					p.connection.send(new net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket(inv.getSelectedSlot()));
+					p.teleportTo(g.getX() + 7.5, g.getY() + 1, g.getZ() + 8.5);
+				}
+				case 24 -> {
+					dev.strafemc.weapon.C4Item.start(p);
+					log("rounds: planting, holding " + p.getMainHandItem().getItem() + " onGround " + p.onGround());
+				}
+				case 90 -> {
+					dev.strafemc.weapon.C4Item.plant(p, false);
+					log("rounds: planted? " + state(p));
+				}
+				case 100 -> {
+					if (bot != null) {
+						dev.strafemc.mode.GameModes.kill(p, bot, "glock");
+						bot.kill((net.minecraft.server.level.ServerLevel) level);
+					}
+				}
+				case 104 -> log("rounds: after the kill " + state(p));
+				case 150 -> {
+					dev.strafemc.mode.GameModes.set("none");
+					dev.strafemc.weapon.Bots.kickAll();
+					log("rounds: stopped " + inv(p));
+				}
+				default -> {}
+			}
+		});
+		if (t == 30) shot(mc, "rounds_live");
+		if (t == 95) shot(mc, "rounds_bomb");
+		if (t == 110) shot(mc, "rounds_over");
+	}
+
+	private static String state(net.minecraft.server.level.ServerPlayer p) {
+		return dev.strafemc.mode.GameModes.stateOf(p);
 	}
 
 	private static String inv(net.minecraft.server.level.ServerPlayer p) {

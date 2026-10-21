@@ -19,8 +19,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The world's spawn blocks (SpawnBlock), saved in <world>/strafemc_spawns.txt as "dimension x y z" lines. Entries are
- * checked when used, so a block removed while its chunk was unloaded simply drops out.
+ * The world's spawn blocks (SpawnBlock) and bomb sites (BombSiteBlock), saved in <world>/strafemc_spawns.txt as
+ * "dimension x y z" lines. Entries are checked when used, so a block removed while its chunk was unloaded simply drops
+ * out; whose spawn it is or which site lives in the block's state.
  */
 public final class SpawnPoints {
 	private static final Set<String> POINTS = new LinkedHashSet<>();
@@ -69,7 +70,12 @@ public final class SpawnPoints {
 	 * block gone) are dropped on the way.
 	 */
 	public static synchronized boolean respawn(ServerPlayer p) {
-		Pick at = pick();
+		return respawn(p, null);
+	}
+
+	/** On one of a side's spawn blocks (null: any spawn block). */
+	public static synchronized boolean respawn(ServerPlayer p, SpawnBlock.Side side) {
+		Pick at = pick(side);
 		return at != null && p.teleportTo(at.level(), at.pos().x, at.pos().y, at.pos().z, Set.of(), p.getYRot(), p.getXRot(), true);
 	}
 
@@ -78,24 +84,53 @@ public final class SpawnPoints {
 
 	/** On top of a random spawn block, or null if there's none (stale entries dropped on the way). */
 	public static synchronized Pick pick() {
-		if (server == null || POINTS.isEmpty()) return null;
-		List<String> all = new ArrayList<>(POINTS);
+		return pick(null);
+	}
+
+	/**
+	 * On top of a random spawn block of a side (T or CT; blocks set to anyone count for both when a side has none of
+	 * its own), or any spawn block for null; null if there's none.
+	 */
+	public static synchronized Pick pick(SpawnBlock.Side side) {
+		List<Marker> all = markers();
 		java.util.Collections.shuffle(all);
-		for (String k : all) {
+		for (int pass = 0; pass < 2; pass++)
+			for (Marker m : all) {
+				if (!(m.state().getBlock() instanceof SpawnBlock)) continue;
+				SpawnBlock.Side s = m.state().getValue(SpawnBlock.SIDE);
+				if (side != null && s != (pass == 0 ? side : SpawnBlock.Side.ANY)) continue;
+				return new Pick(m.level(), new net.minecraft.world.phys.Vec3(m.pos().getX() + 0.5, m.pos().getY() + 1, m.pos().getZ() + 0.5));
+			}
+		return null;
+	}
+
+	/** A spawn block or bomb site in the world. */
+	public record Marker(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {}
+
+	/** Every spawn block and bomb site still there (stale entries dropped). */
+	public static synchronized List<Marker> markers() {
+		List<Marker> out = new ArrayList<>();
+		if (server == null) return out;
+		boolean changed = false;
+		for (String k : new ArrayList<>(POINTS)) {
 			String[] f = k.split(" ");
 			if (f.length != 4) {
 				POINTS.remove(k);
+				changed = true;
 				continue;
 			}
 			ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION, Identifier.parse(f[0])));
 			BlockPos pos = new BlockPos(Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]));
-			if (level == null || !(level.getBlockState(pos).getBlock() instanceof SpawnBlock)) {
+			if (level == null) continue;
+			var state = level.getBlockState(pos);
+			if (!(state.getBlock() instanceof SpawnBlock) && !(state.getBlock() instanceof BombSiteBlock)) {
 				POINTS.remove(k);
-				save();
+				changed = true;
 				continue;
 			}
-			return new Pick(level, new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5));
+			out.add(new Marker(level, pos, state));
 		}
-		return null;
+		if (changed) save();
+		return out;
 	}
 }

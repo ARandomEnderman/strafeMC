@@ -1,7 +1,13 @@
 {
  "variants": {
-  "": {
+  "side=any": {
    "model": "strafemc:block/spawn_point"
+  },
+  "side=t": {
+   "model": "strafemc:block/spawn_point_t"
+  },
+  "side=ct": {
+   "model": "strafemc:block/spawn_point_ct"
   }
  }
 }

@@ -1,0 +1,10 @@
+{
+ "variants": {
+  "site=a": {
+   "model": "strafemc:block/bomb_site_a"
+  },
+  "site=b": {
+   "model": "strafemc:block/bomb_site_b"
+  }
+ }
+}

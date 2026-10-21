@@ -42,7 +42,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "armor"),
 				(g, delta) -> { // CS armor: shown while worn
 					var mc = Minecraft.getInstance();
-					if (armor <= 0 || mc.options.hideGui || mc.player == null) return;
+					if (armor <= 0 || mc.options.hideGui || mc.player == null || dev.strafemc.client.ModeHud.active()) return; // a game mode's HUD shows it
 					g.text(mc.font, (helmet ? "\u00a7f\u26e8+ " : "\u00a7f\u26e8 ") + armor, 8, g.guiHeight() - 20, 0xFFFFFFFF, true);
 				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
