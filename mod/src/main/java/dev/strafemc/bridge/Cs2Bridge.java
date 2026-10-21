@@ -110,17 +110,27 @@ public final class Cs2Bridge {
 		return true;
 	}
 
-	/** Snapshot of every cvar the CS2 server reported (or the cached ones). */
+	/** Snapshot of every cvar the CS2 server reported (or the cached ones), with the running game mode's on top. */
 	public Map<String, String> cvars() {
 		Map<String, String> m = new java.util.HashMap<>(Cs2Defaults.VALUES);
 		m.putAll(cvars);
+		m.putAll(modeCvars);
 		return m;
 	}
 
-	/** Raw cvar string, or null if the server never reported it. */
+	/** Raw cvar string, or null if the server never reported it. The running game mode's values come first. */
 	public String cvar(String name) {
-		String v = cvars.get(name);
+		String v = modeCvars.get(name);
+		if (v == null) v = cvars.get(name);
 		return v != null ? v : Cs2Defaults.VALUES.get(name);
+	}
+
+	/** The running game mode's cvars (its CS2 gamemode config), over the CS2 server's; empty for none. */
+	private volatile Map<String, String> modeCvars = Map.of();
+
+	public void setModeCvars(Map<String, String> m) {
+		modeCvars = Map.copyOf(m);
+		version++;
 	}
 
 	public void send(String msg) {

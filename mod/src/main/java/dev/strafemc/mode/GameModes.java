@@ -1,0 +1,177 @@
+package dev.strafemc.mode;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.strafemc.StrafeMc;
+import dev.strafemc.net.StrafePayloads;
+import dev.strafemc.server.StrafeSettings;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * strafeGM: CS2 game modes in a Minecraft world. strafemc_gamemode (operators; /strafemode in the server console) picks
+ * one; "none", the default, is plain strafeMC survival. While a mode runs, each player's own inventory and experience
+ * are put away with the player (given back when the mode stops, also after a restart), the mode hands out its own
+ * gear, nothing drops on death, hunger stays full and the mode's CS2 cvars apply.
+ */
+public final class GameModes {
+	public static final List<String> MODES = List.of("none", "armsrace");
+
+	/** A player's own things while a mode runs. */
+	record Saved(List<ItemStack> items, int level, float progress, int total) {
+		static final Codec<Saved> CODEC = RecordCodecBuilder.create(i -> i.group(
+				ItemStack.OPTIONAL_CODEC.listOf().fieldOf("items").forGetter(Saved::items),
+				Codec.INT.optionalFieldOf("level", 0).forGetter(Saved::level),
+				Codec.FLOAT.optionalFieldOf("progress", 0f).forGetter(Saved::progress),
+				Codec.INT.optionalFieldOf("total", 0).forGetter(Saved::total)).apply(i, Saved::new));
+	}
+
+	static final AttachmentType<Saved> SAVED = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "mode_saved"),
+			b -> b.persistent(Saved.CODEC).copyOnDeath());
+
+	private static MinecraftServer server;
+	private static ArmsRace race;
+
+	private GameModes() {}
+
+	public static void register() {
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(s -> {
+			server = s;
+			start(StrafeSettings.gameMode()); // after StrafeSettings has loaded the world's choice
+		});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
+			race = null;
+			server = null;
+			dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(java.util.Map.of());
+		});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(s -> {
+			if (race != null) race.tick();
+		});
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, s) -> {
+			ServerPlayer p = handler.getPlayer();
+			if (race != null) race.join(p);
+			else if (p.hasAttached(SAVED)) giveBack(p); // the mode stopped while they were away
+			send(p, race == null ? "{}" : race.state(p));
+		});
+		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register((handler, s) -> {
+			if (race != null) race.leave(handler.getPlayer());
+		});
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
+			if (race != null && !alive) race.spawned(newP);
+		});
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE.register((e, src, amount) -> race == null || race.allowDamage(e, src));
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DEATH.register((e, src, amount) -> {
+			if (race != null && e instanceof ServerPlayer p && p.hasAttached(SAVED)) p.getInventory().clearContent(); // the mode's gear doesn't drop
+			return true;
+		});
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((e, src) -> {
+			if (race != null && e instanceof ServerPlayer p) race.died(p);
+		});
+		net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register((dispatcher, registry, env) -> {
+			var cmd = Commands.literal("strafemode").requires(src -> src.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+					.executes(ctx -> {
+						ctx.getSource().sendSuccess(() -> Component.literal("Game mode: " + StrafeSettings.gameMode() + " (" + String.join(", ", MODES) + ")"), false);
+						return 1;
+					});
+			for (String m : MODES)
+				cmd.then(Commands.literal(m).executes(ctx -> {
+					set(m);
+					ctx.getSource().sendSuccess(() -> Component.literal("Game mode: " + m), true);
+					return 1;
+				}));
+			dispatcher.register(cmd);
+		});
+	}
+
+	public static String mode() {
+		return race != null ? "armsrace" : "none";
+	}
+
+	/** Switches the world's game mode (saved with the world). */
+	public static void set(String mode) {
+		if (!MODES.contains(mode) || mode.equals(mode())) return;
+		stop();
+		StrafeSettings.setGameMode(mode);
+		start(mode);
+		if (server != null) server.getPlayerList().broadcastSystemMessage(Component.literal(mode.equals("none") ? "Game mode off." : "Game mode: Arms Race"), false);
+	}
+
+	private static void start(String mode) {
+		if (server == null || !mode.equals("armsrace")) return;
+		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(ArmsRace.CVARS);
+		race = new ArmsRace(server);
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) race.join(p);
+		StrafeMc.LOG.info("[strafemc] strafeGM: Arms Race started");
+	}
+
+	private static void stop() {
+		if (race == null) return;
+		race = null;
+		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(java.util.Map.of());
+		if (server == null) return;
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			if (p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
+		}
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+			giveBack(p);
+			send(p, "{}");
+		}
+		StrafeMc.LOG.info("[strafemc] strafeGM: mode stopped");
+	}
+
+	/** Puts the player's own things away (once) and empties the inventory for the mode's gear. */
+	static void putAway(ServerPlayer p) {
+		if (p.hasAttached(SAVED)) return;
+		var inv = p.getInventory();
+		List<ItemStack> items = new ArrayList<>();
+		for (int i = 0; i < inv.getContainerSize(); i++) items.add(inv.getItem(i).copy());
+		p.setAttached(SAVED, new Saved(items, p.experienceLevel, p.experienceProgress, p.totalExperience));
+		inv.clearContent();
+		p.setExperienceLevels(0);
+		p.setExperiencePoints(0);
+	}
+
+	/** Gives the player's own things back (the mode's gear goes). */
+	static void giveBack(ServerPlayer p) {
+		Saved s = p.getAttached(SAVED);
+		if (s == null) return;
+		var inv = p.getInventory();
+		inv.clearContent();
+		for (int i = 0; i < Math.min(inv.getContainerSize(), s.items().size()); i++) inv.setItem(i, s.items().get(i).copy());
+		p.setExperienceLevels(s.level());
+		p.experienceProgress = s.progress();
+		p.totalExperience = s.total();
+		p.removeAttached(SAVED);
+		p.inventoryMenu.broadcastChanges();
+	}
+
+	static void send(ServerPlayer p, String json) {
+		if (ServerPlayNetworking.canSend(p, StrafePayloads.ModeState.TYPE)) ServerPlayNetworking.send(p, new StrafePayloads.ModeState(json));
+	}
+
+	/** A kill announced by the killfeed (any CS weapon): counts for the running mode. */
+	public static void kill(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String icon) {
+		if (race != null) race.kill(attacker, victim, icon);
+	}
+
+	/** Ends the warmup at once (tests). */
+	public static void skipWarmup() {
+		if (race != null) race.skipWarmup();
+	}
+
+	/** The player fired: their spawn protection ends. */
+	public static void fired(ServerPlayer p) {
+		if (race != null) race.fired(p);
+	}
+}

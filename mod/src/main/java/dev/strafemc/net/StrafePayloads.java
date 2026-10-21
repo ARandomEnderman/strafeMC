@@ -500,6 +500,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** The running game mode as this player sees it (strafeGM), as JSON; "{}" when none runs. */
+	public record ModeState(String json) implements CustomPacketPayload {
+		public static final Type<ModeState> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "mode_state"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ModeState> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, ModeState::json, ModeState::new);
+
+		@Override
+		public Type<ModeState> type() {
+			return TYPE;
+		}
+	}
+
 	/** A CS2 sound event another player made (shots, reload foley), played at its position with the real distance curve. */
 	public record CsSound(String event, double x, double y, double z, boolean suppressed, int entity) implements CustomPacketPayload {
 		public static final Type<CsSound> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "cs_sound"));

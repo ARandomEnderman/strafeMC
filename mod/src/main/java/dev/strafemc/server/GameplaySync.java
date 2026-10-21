@@ -123,6 +123,7 @@ public final class GameplaySync {
 		st.put("strafemc_bot_ffa", StrafeSettings.botFfa() ? 1 : 0);
 		st.put("strafemc_wear", StrafeSettings.wear() ? 1 : 0);
 		st.put("strafemc_spawnblocks", StrafeSettings.spawnBlocks() ? 1 : 0);
+		st.put("strafemc_gamemode", dev.strafemc.mode.GameModes.MODES.indexOf(StrafeSettings.gameMode()));
 		root.put("settings", st);
 		String json = GSON.toJson(root);
 		if (dev.strafemc.config.StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] gameplay sync: {} weapons, {} chars", weapons.size(), json.length());

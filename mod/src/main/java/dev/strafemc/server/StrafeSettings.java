@@ -52,6 +52,8 @@ public final class StrafeSettings {
 	private static final java.util.Set<String> WEAR_OFF = java.util.concurrent.ConcurrentHashMap.newKeySet();
 	public static final java.util.List<String> WEAR_RARITIES = java.util.List.of("gold", "covert", "classified", "restricted", "milspec", "industrial", "consumer");
 	private static volatile int maxUnlagMs = 300;
+	/** strafemc_gamemode: the game mode running in this world ("none": plain strafeMC survival; "armsrace"). */
+	private static volatile String gameMode = "none";
 	private static Path file;
 
 	private StrafeSettings() {}
@@ -113,6 +115,15 @@ public final class StrafeSettings {
 		buyMode = Math.max(BUY_OFF, Math.min(BUY_EVERYONE, mode));
 		save();
 		GameplaySync.resendAll();
+	}
+
+	public static String gameMode() {
+		return gameMode;
+	}
+
+	public static void setGameMode(String mode) {
+		gameMode = mode;
+		save();
 	}
 
 	public static boolean spawnBlocks() {
@@ -296,6 +307,7 @@ public final class StrafeSettings {
 		botSkins = java.util.List.of();
 		playerChoice = false;
 		PERSONAL.clear();
+		gameMode = "none";
 		try {
 			if (Files.exists(file)) {
 				JsonObject o = GSON.fromJson(Files.readString(file), JsonObject.class);
@@ -322,6 +334,7 @@ public final class StrafeSettings {
 				}
 				if (o != null && o.has("wearOff")) for (var e : o.getAsJsonArray("wearOff")) WEAR_OFF.add(e.getAsString());
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
+				if (o != null && o.has("gameMode")) gameMode = o.get("gameMode").getAsString();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
 					for (var e : o.getAsJsonObject("personal").entrySet()) PERSONAL.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsBoolean());
@@ -358,6 +371,7 @@ public final class StrafeSettings {
 		o.add("wearOff", off);
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
+		o.addProperty("gameMode", gameMode);
 		JsonObject pers = new JsonObject();
 		PERSONAL.forEach((k, v) -> pers.addProperty(k.toString(), v));
 		o.add("personal", pers);
@@ -374,5 +388,6 @@ public final class StrafeSettings {
 		mcKnockback = false;
 		playerChoice = false;
 		PERSONAL.clear();
+		gameMode = "none";
 	}
 }

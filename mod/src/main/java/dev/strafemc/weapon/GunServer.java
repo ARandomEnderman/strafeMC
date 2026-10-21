@@ -381,6 +381,7 @@ public final class GunServer {
 	}
 
 	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
+		dev.strafemc.mode.GameModes.fired(p);
 		ItemStack held = p.getMainHandItem();
 		int zoom = f.flags() & dev.strafemc.net.StrafePayloads.Fire.ZOOM_MASK;
 		boolean alt = (f.flags() & dev.strafemc.net.StrafePayloads.Fire.ALT) != 0;
@@ -851,7 +852,7 @@ public final class GunServer {
 	}
 
 	/** One CS2 sound event for one player, at (and following) an entity. */
-	static void soundTo(ServerPlayer to, String event, Entity at) {
+	public static void soundTo(ServerPlayer to, String event, Entity at) {
 		if (!net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(to, dev.strafemc.net.StrafePayloads.CsSound.TYPE)) return;
 		net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(to,
 				new dev.strafemc.net.StrafePayloads.CsSound(event, at.getX(), at.getEyeY(), at.getZ(), false, at.getId()));

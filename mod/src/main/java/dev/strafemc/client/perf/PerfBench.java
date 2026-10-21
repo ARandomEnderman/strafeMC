@@ -57,10 +57,13 @@ public final class PerfBench {
 
 	public static void tick(Minecraft mc) {
 		if (!running() || mc.player == null) return;
+		mc.options.pauseOnLostFocus = false; // the bench runs in a window in the background
+		if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
 		mc.player.setXRot(45);
 		mc.player.setYRot(0);
 		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
 		++ticks;
+		if (PHASES[phase].equals("armsrace")) armsRace(mc, ticks);
 		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
 			mc.player.getAbilities().flying = true;
 			mc.player.setDeltaMovement(Vec3.ZERO);
@@ -174,6 +177,55 @@ public final class PerfBench {
 			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 0.5, g.getY() + 1, g.getZ() + 6.5), null, new Vec3(0, 0, 8), Float.NaN, false);
 			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 13.5, g.getY() + 1, g.getZ() + 7.5), null, new Vec3(0, 0, 8), Float.NaN, true);
 		});
+	}
+
+	/**
+	 * Arms Race: the mode on with a bot on the other side, kills handed to the rules (warmup skipped), the player killed
+	 * and respawned, then the mode off; the log shows the inventory at each step and shots show the HUD.
+	 */
+	private static void armsRace(Minecraft mc, int t) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		java.util.UUID id = mc.player.getUUID();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayer(id);
+			if (p == null) return;
+			switch (t) {
+				case 2 -> {
+					p.getInventory().setItem(5, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 7));
+					log("arms race: before " + inv(p));
+					dev.strafemc.weapon.CsTeam.set(p, false);
+					dev.strafemc.mode.GameModes.set("armsrace");
+					dev.strafemc.weapon.Bots.add(true);
+					log("arms race: started " + inv(p));
+				}
+				case 10 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 20, 22, 24, 26, 28 -> {
+					var bot = server.overworld().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity.class),
+							e -> dev.strafemc.weapon.Bots.isBot(e)).stream().findFirst().orElse(null);
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47");
+					log("arms race: kill " + t + " bot " + (bot != null) + " " + inv(p));
+				}
+				case 40 -> p.kill(server.overworld());
+				case 70 -> log("arms race: respawned alive " + p.isAlive() + " " + inv(p));
+				case 140 -> {
+					dev.strafemc.mode.GameModes.set("none");
+					dev.strafemc.weapon.Bots.kickAll();
+					log("arms race: stopped " + inv(p));
+				}
+				default -> {}
+			}
+		});
+		if (t == 1) Perf.toggle(false); // the overlay would cover the mode's HUD
+		if (t == 30 || t == 75) shot(mc, "armsrace_" + t);
+	}
+
+	private static String inv(net.minecraft.server.level.ServerPlayer p) {
+		StringBuilder b = new StringBuilder();
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++)
+			if (!inv.getItem(i).isEmpty()) b.append(i).append('=').append(inv.getItem(i).getItem()).append('x').append(inv.getItem(i).getCount()).append(' ');
+		return b.toString();
 	}
 
 	private static Vec3 c4At = Vec3.ZERO;

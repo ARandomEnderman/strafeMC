@@ -87,6 +87,7 @@ public final class KillFeed {
 				attacker.getId(), victim.getName().getString(), CsTeam.isT(victim), victim.getId(), victimPlayer, icon, flags,
 				assister == null ? "" : assister.getScoreboardName(), assister != null && CsTeam.isT(assister));
 		if (victim instanceof ServerPlayer vp) DamageReport.killedBy(vp, attacker, icon, flags);
+		dev.strafemc.mode.GameModes.kill(attacker, victim, icon);
 		if (attacker instanceof ServerPlayer ap) {
 			Advancements.kill(ap, victim, icon, flags, assister);
 			if ((flags & SUICIDE) == 0) CarePackage.kill(ap, victim, icon, flags);

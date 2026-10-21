@@ -415,6 +415,18 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
+			case "strafemc_gamemode" -> {
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can change the game mode."));
+					break;
+				}
+				String m = arg.trim().toLowerCase(java.util.Locale.ROOT);
+				if (!dev.strafemc.mode.GameModes.MODES.contains(m)) {
+					ConsoleRelay.reply(p, "strafemc_gamemode = " + dev.strafemc.mode.GameModes.mode() + " (" + String.join(", ", dev.strafemc.mode.GameModes.MODES) + ")");
+					break;
+				}
+				dev.strafemc.mode.GameModes.set(m);
+			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change spawn blocks."));
