@@ -30,9 +30,10 @@ import java.util.List;
  * every gun, the knife and its finish, and gloves; AGENTS opens the agents.
  */
 public final class MenuLoadoutScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
-	private static final int GOLD = 0xFFEABE54, TILE = 0xFF22272E, TILE_HOVER = 0xFF2A313A, PANEL = 0xC01C2127, MUTED = 0xFF909090;
+	private static final int GOLD = dev.strafemc.client.ui.Style.GOLD, TILE = 0xFF22272E, TILE_HOVER = 0xFF2A313A, PANEL = 0xC01C2127,
+			MUTED = dev.strafemc.client.ui.Style.MUTED;
 	private static final String[] TITLES = {"PISTOLS", "MID-TIER", "RIFLES"};
-	private static final int TOP = 34, ROW = 14, TILE_W = 76, TILE_H = 60;
+	private static final int TOP = dev.strafemc.client.ui.Style.BAR_H + 6, ROW = 14, TILE_W = 76, TILE_H = 60;
 
 	private static int lastTab;
 	private static boolean lastT;
@@ -43,6 +44,8 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 	private boolean t = lastT;
 	private String buySlot = lastBuySlot, skinSlot = lastSkin;
 	private double listScroll, gridScroll;
+	/** The tab buttons and the side buttons (BUY MENU: T, CT), for marking the chosen one. */
+	private final List<Button> tabButtons = new ArrayList<>(), sideButtons = new ArrayList<>();
 	private List<Option> options = List.of();
 	private String optionsFor;
 
@@ -69,23 +72,25 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 	@Override
 	protected void init() {
 		lastTab = tab;
+		tabButtons.clear();
+		sideButtons.clear();
 		String[] tabs = {"BUY MENU", "SKINS", "AGENTS"};
 		int tw = 90, tx = width / 2 - tabs.length * tw / 2;
 		for (int i = 0; i < tabs.length; i++) {
 			final int k = i;
-			addRenderableWidget(Button.builder(Component.literal(tabs[i]), b -> {
+			tabButtons.add(addRenderableWidget(Button.builder(Component.literal(tabs[i]), b -> {
 				if (k == 2) {
 					minecraft.setScreen(new AgentScreen(this));
 					return;
 				}
 				tab = k;
 				rebuildWidgets();
-			}).bounds(tx + i * tw, 6, tw - 2, 20).build());
+			}).bounds(tx + i * tw, 5, tw - 2, 20).build()));
 		}
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		if (tab == 0) {
-			addRenderableWidget(Button.builder(Component.literal("Terrorist"), b -> side(true)).bounds(20, TOP, 90, 20).build());
-			addRenderableWidget(Button.builder(Component.literal("Counter-Terrorist"), b -> side(false)).bounds(112, TOP, 110, 20).build());
+			sideButtons.add(addRenderableWidget(Button.builder(Component.literal("Terrorist"), b -> side(true)).bounds(20, TOP, 90, 20).build()));
+			sideButtons.add(addRenderableWidget(Button.builder(Component.literal("Counter-Terrorist"), b -> side(false)).bounds(112, TOP, 110, 20).build()));
 		} else skinWidgets();
 	}
 
@@ -131,7 +136,6 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 	}
 
 	private void renderBuy(GuiGraphicsExtractor g, int mx, int my) {
-		g.text(font, t ? "Terrorist" : "Counter-Terrorist", 234, TOP + 6, GOLD, false);
 		for (int c = 0; c < 3; c++) {
 			int[] h = buyTile(c, 0);
 			g.text(font, TITLES[c], h[0], h[1] - 12, GOLD, false);
@@ -493,10 +497,12 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		g.fill(0, 0, width, height, StrafeSettingsScreen.BG);
+		dev.strafemc.client.ui.Style.backdrop(g, width, height);
 		if (tab == 0) renderBuy(g, mx, my);
 		else renderSkins(g, mx, my);
 		super.extractRenderState(g, mx, my, delta);
+		if (tab < tabButtons.size()) dev.strafemc.client.ui.Style.underline(g, tabButtons.get(tab));
+		if (sideButtons.size() == 2) dev.strafemc.client.ui.Style.underline(g, sideButtons.get(t ? 0 : 1));
 	}
 
 	@Override

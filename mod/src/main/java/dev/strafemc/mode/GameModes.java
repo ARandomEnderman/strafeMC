@@ -218,6 +218,11 @@ public final class GameModes {
 		race.joinTeam(p, side);
 	}
 
+	/** The player is in the running mode (their own things put away, the mode's gear in hand). */
+	public static boolean playing(ServerPlayer p) {
+		return race != null && p.hasAttached(SAVED);
+	}
+
 	/** Ends the warmup now (mp_warmup_end). */
 	public static void warmupEnd() {
 		if (race != null) race.skipWarmup();

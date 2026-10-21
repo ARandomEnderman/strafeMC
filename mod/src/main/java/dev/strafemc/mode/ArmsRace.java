@@ -180,7 +180,7 @@ final class ArmsRace extends Mode {
 	}
 
 	@Override
-	void entry(LivingEntity e, JsonObject o) {
+	void entry(LivingEntity e, JsonObject o, boolean ally) {
 		int lv = Bots.isBot(e) ? botLevel(key(e)) : level(key(e));
 		o.addProperty("value", String.valueOf(lv + 1));
 		o.addProperty("weapon", weapons.get(lv));

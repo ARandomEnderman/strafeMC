@@ -154,6 +154,13 @@ public final class MenuLoadout {
 			buy.put(side, Map.copyOf(m));
 		}
 		CHOICES.put(p.getUUID(), new Choice(knife, Map.copyOf(buy)));
+		// in a mode the knife held is the mode's (never the player's own): the chosen one takes its place at once
+		if (on(p) && dev.strafemc.mode.GameModes.playing(p)) {
+			ItemStack k = knife(p);
+			var inv = p.getInventory();
+			for (int i = 0; i < inv.getContainerSize(); i++)
+				if (inv.getItem(i).getItem() instanceof KnifeItem && !inv.getItem(i).is(k.getItem())) inv.setItem(i, k.copy());
+		}
 		Map<String, ItemStack> built = new HashMap<>();
 		JsonObject skins = o.has("skins") && o.get("skins").isJsonObject() ? o.getAsJsonObject("skins") : new JsonObject();
 		for (var e : skins.entrySet()) {

@@ -192,7 +192,7 @@ final class Deathmatch extends Mode {
 	}
 
 	@Override
-	void entry(LivingEntity e, JsonObject o) {
+	void entry(LivingEntity e, JsonObject o, boolean ally) {
 		o.addProperty("value", String.valueOf(score.getOrDefault(key(e), 0)));
 	}
 }

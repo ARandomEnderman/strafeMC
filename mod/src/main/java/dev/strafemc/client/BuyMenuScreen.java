@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 10 px apart in CS2's loadout order; dark tiles with the key top left, the name top right, the white equipment icon
  * in the middle and the price bottom right; a number key picks a column, a second one buys from it. Prices are
  * CS2's (weapons.vdata m_nPrice) though strafeMC has no money. Sizes are CS2's 1080p pixels scaled to the window.
- * The defuse kit is shown but not for sale (no C4 yet). The server decides
+ * The server decides
  * whether you may buy (strafemc_buymenu, strafemc_buytime) and applies CS2's grenade limits. Weapon columns show CS2's
  * default loadout for your side (items_game flexible_loadout_default). FLAGGED: Minecraft's font for CS2's Stratum; no
  * agent model. The weapons in each slot are chosen in the main menu's loadout (MenuLoadoutScreen).
@@ -90,7 +90,7 @@ public final class BuyMenuScreen extends Screen {
 		boolean t = "t".equals(StrafeConfig.team);
 		return new Slot[][] {
 				{new Slot("kevlar", "Kevlar Vest", "kevlar", "item_kevlar"), new Slot("assaultsuit", "Kevlar & Helmet", "assaultsuit", "item_assaultsuit"),
-						new Slot("taser", "Zeus x27", "taser", "weapon_taser"), t ? null : new Slot(null, "Defuse Kit", "defuser", "item_defuser"), null},
+						new Slot("taser", "Zeus x27", "taser", "weapon_taser"), t ? null : new Slot("defuser", "Defuse Kit", "defuser", "item_defuser"), null},
 				column("secondary", t), column("smg", t), column("rifle", t),
 				{new Slot("flashbang", "Flashbang", "flashbang", "weapon_flashbang"), new Slot("smokegrenade", "Smoke Grenade", "smokegrenade", "weapon_smokegrenade"),
 						new Slot("hegrenade", "High Explosive Grenade", "hegrenade", "weapon_hegrenade"),
@@ -232,6 +232,10 @@ public final class BuyMenuScreen extends Screen {
 		if (p == null) return true;
 		if (buy.equals("kevlar")) return StrafeMcClient.armor < 100;
 		if (buy.equals("assaultsuit")) return StrafeMcClient.armor < 100 || !StrafeMcClient.helmet;
+		if (buy.equals("defuser")) {
+			for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return false;
+			return true;
+		}
 		dev.strafemc.weapon.Grenade g = null;
 		for (var x : dev.strafemc.weapon.Grenade.values()) if (x.cls.equals("weapon_" + buy)) g = x;
 		if (g == null) return true;

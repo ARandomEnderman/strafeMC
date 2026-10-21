@@ -43,7 +43,12 @@ final class RoundMode extends Mode {
 	record Config(String id, int maxRounds, boolean halftime, int freeze, int buy, int roundTime, int startMoney, int maxMoney, int killDefault,
 			double killFactor, int teamElimination, int teamBomb, int teamDefuse, int teamTime, int loserBonus, int loserConsecutive, int plantedDefused,
 			int playerPlant, int playerDefuse, boolean freeArmor, int warmup, int restartDelay, int startingLosses, double ffBullets, double ffGrenade,
-			double ffOther, int flashLimit, int grenadeLimit) {}
+			double ffOther, int flashLimit, int grenadeLimit) {
+		/** gamemode_casual.cfg's mp_defuser_allocation 2 (competitive and wingman: 0). */
+		boolean freeDefuser() {
+			return id.equals("casual");
+		}
+	}
 
 	static final Config COMPETITIVE = new Config("competitive", 24, true, 15, 20, 115, 800, 16000, 300, 1, 3250, 3500, 3500, 3250, 1400, 500, 600, 300, 300,
 			false, 120, 7, 1, 0.33, 0.85, 0.4, 2, 4);
@@ -204,6 +209,11 @@ final class RoundMode extends Mode {
 				select(p, 1);
 				CsArmor.set(p, c.freeArmor() ? 100 : 0, c.freeArmor());
 			} else if (c.freeArmor()) CsArmor.set(p, 100, true);
+			if (c.freeDefuser() && !CsTeam.isT(p)) { // mp_defuser_allocation 2: every CT gets a kit
+				boolean has = false;
+				for (int i = 0; i < p.getInventory().getContainerSize(); i++) has |= p.getInventory().getItem(i).is(WeaponItems.DEFUSE_KIT);
+				if (!has) p.getInventory().add(new ItemStack(WeaponItems.DEFUSE_KIT));
+			}
 			removeC4(p);
 			p.inventoryMenu.broadcastChanges();
 		}
@@ -746,8 +756,8 @@ final class RoundMode extends Mode {
 	}
 
 	@Override
-	void entry(LivingEntity e, JsonObject o) {
+	void entry(LivingEntity e, JsonObject o, boolean ally) {
 		o.addProperty("value", "");
-		o.addProperty("money", money(key(e))); // the scoreboard shows it to teammates only (the client filters)
+		if (ally) o.addProperty("money", money(key(e))); // teammates' money only
 	}
 }

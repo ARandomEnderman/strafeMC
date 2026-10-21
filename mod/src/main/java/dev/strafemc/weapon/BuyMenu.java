@@ -143,6 +143,16 @@ public final class BuyMenu {
 				GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 				bought(p, what, given, before);
 			}
+			case "defuser" -> { // CS2: Counter-Terrorists only, one at a time
+				if (CsTeam.isT(p) || count(p, WeaponItems.DEFUSE_KIT) > 0) {
+					dev.strafemc.server.Toasts.warn(p, "You cannot carry any more");
+					return;
+				}
+				if (!dev.strafemc.mode.GameModes.charge(p, price("item_defuser", 400))) return;
+				paid = price("item_defuser", 400);
+				give(p, new ItemStack(WeaponItems.DEFUSE_KIT), given);
+				bought(p, what, given, null);
+			}
 			case "knife" -> {
 				give(p, MenuLoadout.knife(p), given);
 				bought(p, what, given, null);
@@ -180,7 +190,10 @@ public final class BuyMenu {
 	}
 
 	public static int count(ServerPlayer p, Grenade g) {
-		Item item = WeaponItems.GRENADES.get(g);
+		return count(p, WeaponItems.GRENADES.get(g));
+	}
+
+	static int count(ServerPlayer p, Item item) {
 		int n = 0;
 		for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
 			ItemStack s = p.getInventory().getItem(i);

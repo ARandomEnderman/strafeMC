@@ -236,7 +236,8 @@ public final class ModeHud {
 		double hp = p.get("hp").getAsDouble();
 		if (hp <= 0) g.fill(x + edge, y + edge, x + col - edge, y + col - edge, 0xA0000000); // dead
 		int hy = y + col + (int) Math.round(2 * px), hh = Math.max(1, (int) Math.round(4 * px)), hw = (int) Math.round(52 * px);
-		g.fill(x + (col - hw) / 2, hy, x + (col - hw) / 2 + (int) Math.round(hw * Math.max(0, Math.min(1, hp))), hy + hh, 0xFFFF0000);
+		if (!p.has("ally") || p.get("ally").getAsBoolean()) // enemies' health isn't sent
+			g.fill(x + (col - hw) / 2, hy, x + (col - hw) / 2 + (int) Math.round(hw * Math.max(0, Math.min(1, hp))), hy + hh, 0xFFFF0000);
 		int ly = hy + hh + (int) Math.round(2 * px), lh = (int) Math.round(32 * px);
 		if (p.get("value").getAsString().isEmpty()) return;
 		g.fill(x, ly, x + col, ly + lh, 0x6F000000);

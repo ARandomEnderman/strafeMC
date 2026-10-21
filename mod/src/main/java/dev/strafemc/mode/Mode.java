@@ -74,7 +74,8 @@ abstract class Mode {
 	abstract void state(ServerPlayer p, JsonObject o);
 
 	/** A participant's HUD entry: their score or level and what's shown under it. */
-	abstract void entry(LivingEntity e, JsonObject o);
+	/** A scoreboard row's mode values; ally: on the viewer's team (or the viewer). */
+	abstract void entry(LivingEntity e, JsonObject o, boolean ally);
 
 	/** Participants in the order the HUD shows them. */
 	abstract List<LivingEntity> ranking();
@@ -351,13 +352,16 @@ abstract class Mode {
 			x.addProperty("id", e.getUUID().toString());
 			x.addProperty("t", CsTeam.isT(e));
 			x.addProperty("bot", Bots.isBot(e));
-			x.addProperty("hp", e.isAlive() ? e.getHealth() / e.getMaxHealth() : 0);
+			// enemies' health and money stay on the server: clients only learn whether they're alive (CS2 shows no more)
+			boolean ally = e == p || !ffa() && CsTeam.isT(e) == CsTeam.isT(p);
+			x.addProperty("hp", !e.isAlive() ? 0 : ally ? e.getHealth() / e.getMaxHealth() : 1);
+			x.addProperty("ally", ally);
 			int[] st = stats.getOrDefault(key(e), new int[4]);
 			x.addProperty("k", st[0]);
 			x.addProperty("a", st[1]);
 			x.addProperty("d", st[2]);
 			x.addProperty("mvp", st[3]);
-			entry(e, x);
+			entry(e, x, ally);
 			arr.add(x);
 		}
 		o.add("players", arr);

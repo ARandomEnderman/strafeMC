@@ -28,9 +28,10 @@ import java.util.function.DoubleSupplier;
 public final class StrafeSettingsScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	private static final String[] TABS = {"Game", "Viewmodel", "Crosshair", "Audio", "Binds", "Setup & Hosting"};
 	/** The menu backdrop, shared by the other strafeMC screens. */
-	public static final int BG = 0xF0121416;
-	private static final int BAR = 0xFF0B0C0D, LINE = 0x30FFFFFF, MUTED = 0xFF9AA29E, ACCENT = 0xFFE0C060, TEXT = 0xFFFFFFFF;
-	private static final int BAR_H = 30, ROW_H = 24, CTRL_W = 200;
+	public static final int BG = dev.strafemc.client.ui.Style.BG;
+	private static final int LINE = dev.strafemc.client.ui.Style.LINE, MUTED = dev.strafemc.client.ui.Style.MUTED, ACCENT = dev.strafemc.client.ui.Style.GOLD,
+			TEXT = dev.strafemc.client.ui.Style.TEXT;
+	private static final int BAR_H = dev.strafemc.client.ui.Style.BAR_H, ROW_H = 24, CTRL_W = 200;
 	private static int lastTab;
 
 	private final Screen parent;
@@ -282,9 +283,7 @@ public final class StrafeSettingsScreen extends Screen implements dev.strafemc.c
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float delta) {
-		g.fill(0, 0, width, height, BG);
-		g.fill(0, 0, width, BAR_H, BAR);
-		g.fill(0, BAR_H, width, BAR_H + 1, LINE);
+		dev.strafemc.client.ui.Style.backdrop(g, width, height);
 		g.enableScissor(0, top, width, bottom);
 		for (Row r : rows) {
 			int yy = top + r.y - (int) scroll;
@@ -300,8 +299,7 @@ public final class StrafeSettingsScreen extends Screen implements dev.strafemc.c
 		g.disableScissor();
 		super.extractRenderState(g, mx, my, delta);
 		// the open tab: an accent line under it
-		Button t = tabButtons.get(tab);
-		g.fill(t.getX() + 4, t.getY() + t.getHeight() + 1, t.getX() + t.getWidth() - 4, t.getY() + t.getHeight() + 3, ACCENT);
+		dev.strafemc.client.ui.Style.underline(g, tabButtons.get(tab));
 		if (tab == 1 || tab == 2) { // the viewmodel and crosshair, live, beside their settings (a 16:9 view)
 			int px0 = x1 + 20, px1 = width - 20, py0 = top, py1 = Math.min(bottom, top + (px1 - px0) * 9 / 16);
 			if (px1 - px0 > 60) {
