@@ -61,6 +61,32 @@ public final class PerfBench {
 		mc.player.setYRot(0);
 		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
 		++ticks;
+		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
+			mc.player.getAbilities().flying = true;
+			mc.player.setDeltaMovement(Vec3.ZERO);
+			boolean side = ticks >= 80;
+			double eye = mc.player.getEyeHeight(); // spectating: the eyes may go anywhere
+			mc.player.setPos(c4At.x + (side ? 0.8 : 0), c4At.y + (side ? 0.3 : 0.75) - eye, c4At.z - (side ? 0 : 0.15));
+			mc.player.setYRot(side ? 90 : 0);
+			mc.player.setXRot(side ? 18 : 66);
+			mc.options.fov().set(40); // zoomed in on it
+			if (ticks == 70) shot(mc, "c4_top");
+			if (ticks == 150) shot(mc, "c4_side");
+			if (ticks == PHASE - 1) { // as it was: field of view, game mode, standing on the ground by the bomb
+				mc.options.fov().set(70);
+				var server = mc.getSingleplayerServer();
+				java.util.UUID id = mc.player.getUUID();
+				net.minecraft.world.level.GameType mode = c4Mode == null || c4Mode == net.minecraft.world.level.GameType.SPECTATOR
+						? net.minecraft.world.level.GameType.CREATIVE : c4Mode;
+				Vec3 back = c4At.add(0, 0, -2);
+				if (server != null) server.execute(() -> {
+					var p = server.getPlayerList().getPlayer(id);
+					if (p == null) return;
+					p.setGameMode(mode);
+					p.teleportTo(back.x, back.y, back.z);
+				});
+			}
+		}
 		if (PHASES[phase].equals("fire")) {
 			if (ticks < 104) {
 				mc.player.setPos(3.5, fireY, fireZ);
@@ -107,6 +133,7 @@ public final class PerfBench {
 		switch (PHASES[phase]) {
 			case "bullet_holes" -> holes(mc, 2048);
 			case "fire" -> fires(mc);
+			case "c4" -> c4(mc);
 			case "smoke" -> {
 				BlockPos g = ground(mc);
 				for (int k = 0; k < 2; k++)
@@ -146,6 +173,35 @@ public final class PerfBench {
 				for (int y = 1; y <= 3; y++) level.setBlockAndUpdate(g.offset(x, y, 9), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
 			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 0.5, g.getY() + 1, g.getZ() + 6.5), null, new Vec3(0, 0, 8), Float.NaN, false);
 			dev.strafemc.weapon.GrenadeZones.fire(level, new Vec3(g.getX() + 13.5, g.getY() + 1, g.getZ() + 7.5), null, new Vec3(0, 0, 8), Float.NaN, true);
+		});
+	}
+
+	private static Vec3 c4At = Vec3.ZERO;
+	private static net.minecraft.world.level.GameType c4Mode;
+
+	/** A planted C4 with three stickers and a charm, in front of the player. */
+	private static void c4(Minecraft mc) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		Perf.toggle(false); // the overlay would cover it
+		int x = mc.player.getBlockX(), z = mc.player.getBlockZ() + 2; // on the ground wherever the player is (they may be spectating)
+		c4At = new Vec3(x + 0.5, mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z), z + 0.5);
+		java.util.UUID id = mc.player.getUUID();
+		var dim = mc.player.level().dimension();
+		server.execute(() -> {
+			var level = server.getLevel(dim);
+			var p = server.getPlayerList().getPlayer(id);
+			if (level == null || p == null) return;
+			c4Mode = p.gameMode.getGameModeForPlayer();
+			p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+			var item = new net.minecraft.world.item.ItemStack(dev.strafemc.weapon.WeaponItems.C4);
+			item.set(dev.strafemc.weapon.StickerSlots.STICKERS, java.util.List.of("std_aces_high_holo", "", "std_fearsome_holo", "", "std_vigilance_holo"));
+			var charms = dev.strafemc.weapon.Charms.all();
+			if (!charms.isEmpty()) item.set(dev.strafemc.weapon.StickerSlots.CHARM, charms.get(0).id());
+			var bomb = new dev.strafemc.weapon.PlantedC4(level, p, item);
+			bomb.setPos(c4At);
+			bomb.setYRot(0);
+			level.addFreshEntity(bomb);
 		});
 	}
 

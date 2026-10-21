@@ -111,13 +111,13 @@ public final class Viewmodel {
 		Map<String, Attachment> attachments = new HashMap<>();
 	}
 
-	private record Attachment(String bone, org.joml.Vector3f offset, org.joml.Quaternionf rotation) {}
+	record Attachment(String bone, org.joml.Vector3f offset, org.joml.Quaternionf rotation) {}
 
 	/** Camera-space transforms (blocks; +X of the attachment = its forward) of the weapon's attachments this frame. */
 	public final Map<String, Matrix4f> attachmentTransforms = new java.util.concurrent.ConcurrentHashMap<>();
 
 	@SuppressWarnings("unchecked")
-	private static Map<String, Attachment> attachments(String vmdl) {
+	static Map<String, Attachment> attachments(String vmdl) {
 		Map<String, Attachment> out = new HashMap<>();
 		try {
 			String text = java.nio.file.Files.readString(AssetCache.block(vmdl, "MDAT"));
@@ -642,7 +642,7 @@ public final class Viewmodel {
 	/** The charm's frame: where the camera was, and where it is for the charm (moving CHARM_MOVE as far). */
 	private double[] charmCamPrev, charmCam;
 
-	private VmModel charmModel(String id) {
+	VmModel charmModel(String id) {
 		VmModel m = charmModels.get(id);
 		if (m != null || !charmLoading.add(id)) return m;
 		var c = dev.strafemc.weapon.Charms.get(id);
@@ -1471,6 +1471,11 @@ public final class Viewmodel {
 				return null;
 			}
 		});
+	}
+
+	/** Reads a texture ahead (any thread), so texture() doesn't decode it on the render thread. */
+	void predecode(Path png, boolean opaque) throws java.io.IOException {
+		if (png != null && !textures.containsKey(png) && !decoded.containsKey(png)) decoded.put(png, decode(png, opaque));
 	}
 
 	/** Reads a viewmodel texture (any thread). */
