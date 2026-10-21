@@ -432,6 +432,20 @@ public final class ConsoleActions {
 				ConsoleRelay.reply(p, "buy zone " + StrafeSettings.buyZone() + " blocks, bomb sites " + StrafeSettings.bombSite() + " blocks, overtime "
 						+ (StrafeSettings.overtime() ? "on" : "off"));
 			}
+			case "strafemc_shop_refresh" -> { // "[player]": that player's shop (default yours) to new offers now
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can refresh the shop."));
+					break;
+				}
+				String name = arg.trim();
+				ServerPlayer target = name.isEmpty() ? p : p.level().getServer().getPlayerList().getPlayerByName(name);
+				if (target == null) {
+					ConsoleRelay.reply(p, "No player named " + name + ".");
+					break;
+				}
+				dev.strafemc.weapon.Shop.refresh(target);
+				ConsoleRelay.reply(p, "Refreshed " + target.getScoreboardName() + "'s shop.");
+			}
 			case "strafemc_gamemode" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change the game mode."));

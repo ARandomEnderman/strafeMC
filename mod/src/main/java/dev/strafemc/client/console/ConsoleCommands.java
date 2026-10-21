@@ -350,6 +350,8 @@ public final class ConsoleCommands {
 				a -> { if (a.length > 0) action("strafemc_killcards_time", a[0], false); else ConsoleLog.info("strafemc_killcards_time = " + dev.strafemc.client.ClientGameplay.killCardTime()); });
 		local("strafemc_buytime", "Buy time in seconds (0 = no limit). Operators.",
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
+		local("strafemc_shop_refresh", "New shop offers now: yours, or a player's (strafemc_shop_refresh <player>). Operators.",
+				a -> action("strafemc_shop_refresh", a.length > 0 ? a[0] : "", false));
 		local("strafemc_buyzone", "Round modes: how far a side's buy zone reaches from its spawn blocks (blocks). Operators.",
 				a -> action("strafemc_buyzone", a.length > 0 ? a[0] : "", false));
 		local("strafemc_bombsite", "Round modes: how far from a Bomb Site block the C4 can be planted (blocks). Operators.",
