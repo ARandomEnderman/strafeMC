@@ -41,8 +41,8 @@ public final class Shop {
 	private static final double SWAP_TOOL_PRICE = 1.99;
 	/** The Bulk Unboxer (ours, not CS2's): FLAGGED ours. */
 	private static final double BULK_OPENER_PRICE = 2.49;
-	/** The Shop Refresh (ours): new offers at once. */
-	private static final double REFRESH_PRICE = 50;
+	/** The shop's Refresh button (ours): new offers at once, for $50. */
+	public static final long REFRESH_CENTS = 5000;
 	/**
 	 * A case costs this many times what opening one is worth on average: keys are cheap to craft, so a case alone must
 	 * lose. With the 80-110% price roll an opening returns ln(1.1/0.8)/0.3/1.2 = 88.5% on average (90% or
@@ -109,6 +109,17 @@ public final class Shop {
 		}
 	}
 
+	/** The shop's Refresh button: new offers for REFRESH_CENTS off the balance, if it covers it. */
+	public static void buyRefresh(ServerPlayer p) {
+		State s = get(p);
+		if (s.cents() < REFRESH_CENTS) {
+			dev.strafemc.server.Toasts.warn(p, "Not enough balance.");
+			return;
+		}
+		p.setAttached(DATA, new State(s.cents() - REFRESH_CENTS, s.rotation(), s.bought(), p.getAttachedOrElse(PROGRESS, 0)));
+		refresh(p);
+	}
+
 	/** The Shop Refresh: the player's shop rotates now (new offers, the half-hour starting again). */
 	public static void refresh(ServerPlayer p) {
 		State s = get(p);
@@ -153,13 +164,12 @@ public final class Shop {
 			Cases.Case c = boxes.get(rng.nextInt(boxes.size()));
 			out.add(new Offer(CaseItem.stack(WeaponItems.WEAPON_CASE, c.id()), price(capsuleWorth(c), rng), 1 + rng.nextInt(3)));
 		} else out.add(new Offer(CaseKeys.universal(), price(KEY_PRICE, rng), 1 + rng.nextInt(3)));
-		// one slot for the tools: a Charm Detachment, a Name Tag, a StatTrak Swap Tool, a Bulk Unboxer or a Shop Refresh
-		switch (rng.nextInt(5)) {
+		// one slot for the tools: a Charm Detachment, a Name Tag, a StatTrak Swap Tool or a Bulk Unboxer
+		switch (rng.nextInt(4)) {
 			case 0 -> out.add(new Offer(new ItemStack(WeaponItems.CHARM_DETACHMENT), price(DETACHMENT_PRICE, rng), 1 + rng.nextInt(3)));
 			case 1 -> out.add(new Offer(new ItemStack(WeaponItems.NAME_TAG), price(NAME_TAG_PRICE, rng), 1 + rng.nextInt(2)));
 			case 2 -> out.add(new Offer(new ItemStack(WeaponItems.STATTRAK_SWAP), price(SWAP_TOOL_PRICE, rng), 1));
-			case 3 -> out.add(new Offer(new ItemStack(WeaponItems.BULK_OPENER), price(BULK_OPENER_PRICE, rng), 1));
-			default -> out.add(new Offer(new ItemStack(WeaponItems.SHOP_REFRESH), Math.round(REFRESH_PRICE * 100), 1 + rng.nextInt(2)));
+			default -> out.add(new Offer(new ItemStack(WeaponItems.BULK_OPENER), price(BULK_OPENER_PRICE, rng), 1));
 		}
 		// the rest: gun skins, gloves and knife skins
 		List<SkinWraps.Wrap> wraps = new ArrayList<>();

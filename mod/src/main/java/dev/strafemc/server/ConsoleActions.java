@@ -248,6 +248,7 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
+			case "shop_refresh" -> dev.strafemc.weapon.Shop.buyRefresh(p);
 			case "shop_buy" -> {
 				try {
 					String[] a = arg.trim().split(" "); // offer and how many, for each offer bought

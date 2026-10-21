@@ -59,6 +59,12 @@ public final class ShopScreen extends Screen implements dev.strafemc.client.ui.U
 	protected void init() {
 		sell = addRenderableWidget(Button.builder(Component.literal("Sell"), b -> sell()).bounds(20, height - 52, colW(), 20).build());
 		buy = addRenderableWidget(Button.builder(Component.literal("Buy"), b -> buy()).bounds(offersX() + offersW() / 2 - 60, height - 52, 120, 20).build());
+		// new offers now, for Shop.REFRESH_PRICE off the balance
+		addRenderableWidget(Button.builder(Component.literal("Refresh \u2014 " + Shop.money(Shop.REFRESH_CENTS)), b -> {
+			send("shop_refresh", "");
+			picked.clear();
+			dev.strafemc.client.sound.CsSounds.playFile("sounds/ui/panorama/claim_gift_01", 0.3f);
+		}).bounds(offersX() + offersW() / 2 + 66, height - 52, 110, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		// withdraw: whole dollars off the balance, as a voucher to keep or give away (under the balance)
 		amount = addRenderableWidget(new net.minecraft.client.gui.components.EditBox(font, width - 20 - 130, 24, 56, 16, Component.literal("Dollars")));
