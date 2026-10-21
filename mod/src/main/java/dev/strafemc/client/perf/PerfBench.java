@@ -64,6 +64,7 @@ public final class PerfBench {
 		if (PHASES[phase].equals("effects")) for (int i = 0; i < 6; i++) effect(mc);
 		++ticks;
 		if (PHASES[phase].equals("armsrace")) armsRace(mc, ticks);
+		if (PHASES[phase].equals("modes")) modes(mc, ticks);
 		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
 			mc.player.getAbilities().flying = true;
 			mc.player.setDeltaMovement(Vec3.ZERO);
@@ -218,6 +219,62 @@ public final class PerfBench {
 		});
 		if (t == 1) Perf.toggle(false); // the overlay would cover the mode's HUD
 		if (t == 30 || t == 75) shot(mc, "armsrace_" + t);
+	}
+
+	/** Every game mode in turn with a bot: kills handed to the rules, a purchase, a death; logs and a HUD shot each. */
+	private static void modes(Minecraft mc, int t) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		if (t == 1) Perf.toggle(false);
+		java.util.UUID id = mc.player.getUUID();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayer(id);
+			if (p == null) return;
+			var bot = server.overworld().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity.class),
+					e -> dev.strafemc.weapon.Bots.isBot(e)).stream().findFirst().orElse(null);
+			switch (t) {
+				case 2 -> {
+					dev.strafemc.weapon.CsTeam.set(p, false);
+					dev.strafemc.mode.GameModes.set("armsrace");
+					dev.strafemc.weapon.Bots.add(true);
+				}
+				case 8 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 12, 14, 16 -> {
+					if (bot != null) dev.strafemc.mode.GameModes.kill(bot, p, "g3sg1");
+					log("modes: armsrace bot kill, bot holds " + (bot == null ? "-" : bot.getMainHandItem().getItem()));
+				}
+				case 24 -> log("modes: armsrace bot now holds " + (bot == null ? "-" : bot.getMainHandItem().getItem()));
+				case 30 -> {
+					dev.strafemc.mode.GameModes.set("deathmatch");
+					log("modes: deathmatch " + inv(p));
+				}
+				case 34 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 36 -> {
+					dev.strafemc.weapon.BuyMenu.buy(p, "ak47");
+					dev.strafemc.weapon.BuyMenu.buy(p, "hegrenade");
+					log("modes: bought ak47 + hegrenade " + inv(p));
+				}
+				case 38, 40 -> {
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, t == 38 ? "ak47" : "knife");
+				}
+				case 42 -> p.kill(server.overworld());
+				case 70 -> log("modes: deathmatch respawned " + inv(p));
+				case 90 -> dev.strafemc.mode.GameModes.set("teamdeathmatch");
+				case 94 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 96, 98 -> {
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47");
+				}
+				case 140 -> {
+					dev.strafemc.mode.GameModes.set("none");
+					dev.strafemc.weapon.Bots.kickAll();
+					log("modes: stopped " + inv(p));
+				}
+				default -> {}
+			}
+		});
+		if (t == 26) shot(mc, "modes_armsrace");
+		if (t == 75) shot(mc, "modes_deathmatch");
+		if (t == 110) shot(mc, "modes_teamdeathmatch");
 	}
 
 	private static String inv(net.minecraft.server.level.ServerPlayer p) {

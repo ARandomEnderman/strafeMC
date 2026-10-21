@@ -114,10 +114,12 @@ public final class ConsoleScreen extends Screen {
 		setting("Wear on drops", "strafemc_wear", "On", "Factory New");
 		row("Game mode", () -> {
 			double v = dev.strafemc.client.ClientGameplay.setting("strafemc_gamemode");
-			return Double.isNaN(v) || v < 1 ? "None" : "Arms Race";
+			var modes = dev.strafemc.mode.GameModes.MODES;
+			return Double.isNaN(v) || v < 0 || v >= modes.size() ? "?" : dev.strafemc.mode.GameModes.NAMES.get(modes.get((int) v));
 		}, () -> {
 			double v = dev.strafemc.client.ClientGameplay.setting("strafemc_gamemode");
-			ConsoleCommands.execute("strafemc_gamemode " + (Double.isNaN(v) || v < 1 ? "armsrace" : "none"));
+			var modes = dev.strafemc.mode.GameModes.MODES;
+			ConsoleCommands.execute("strafemc_gamemode " + modes.get(Double.isNaN(v) ? 1 : ((int) v + 1) % modes.size()));
 		});
 		setting("Respawn on spawn blocks", "strafemc_spawnblocks", "On", "Off");
 		row("C4 keypad", () -> onOff(dev.strafemc.client.ClientGameplay.c4Keypad()),

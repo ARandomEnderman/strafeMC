@@ -99,6 +99,13 @@ public final class BuyMenu {
 
 	/** Why this player can't buy right now (CS2's wording where it has one), or null if they can. */
 	public static String refusal(ServerPlayer p) {
+		return refusal(p, "");
+	}
+
+	/** Why this player can't buy this right now; a running game mode decides for its players. */
+	public static String refusal(ServerPlayer p, String what) {
+		String byMode = dev.strafemc.mode.GameModes.buyRefusal(p, what);
+		if (byMode != null) return byMode.isEmpty() ? null : byMode;
 		int mode = StrafeSettings.buyMode();
 		if (mode == StrafeSettings.BUY_OFF) return "You cannot buy (the buy menu is off on this server)";
 		if (mode == StrafeSettings.BUY_CREATIVE && !p.getAbilities().instabuild) return "You cannot buy (creative only on this server)";
@@ -111,7 +118,7 @@ public final class BuyMenu {
 	}
 
 	public static void buy(ServerPlayer p, String what) {
-		String no = refusal(p);
+		String no = refusal(p, what);
 		if (no != null) {
 			dev.strafemc.server.Toasts.warn(p, no);
 			return;
@@ -139,8 +146,9 @@ public final class BuyMenu {
 					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);
 					WeaponStats st = WeaponStats.of(gun.cls());
 					int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
-					if (mags > 0) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags), given);
+					if (mags > 0 && dev.strafemc.mode.GameModes.buyRefusal(p, what) == null) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags), given);
 					bought(p, what, given, null);
+					dev.strafemc.mode.GameModes.bought(p, gun.cls());
 					return;
 				}
 				Grenade g = null;

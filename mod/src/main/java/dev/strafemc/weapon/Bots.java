@@ -203,14 +203,24 @@ public final class Bots {
 		b.clip = -1;
 	}
 
-	/** CS2's default rifles: AK-47 for T, M4A4 for CT. */
+	/** CS2's default rifles: AK-47 for T, M4A4 for CT (or what the running game mode gives it). */
 	private static String weapon(Bot b) {
+		String m = b.e == null ? null : dev.strafemc.mode.GameModes.botWeapon(b.e);
+		if (m != null && WeaponItems.GUNS.containsKey(m)) return m;
 		return b.t ? "weapon_ak47" : "weapon_m4a1";
+	}
+
+	/** The bots in the world now (alive or not yet gone). */
+	public static synchronized List<LivingEntity> living(MinecraftServer server) {
+		List<LivingEntity> out = new ArrayList<>();
+		for (Bot b : BOTS) if (b.e != null && !b.e.isRemoved()) out.add(b.e);
+		return out;
 	}
 
 	private static boolean enemy(Bot b, LivingEntity o) {
 		if (o == b.e || !o.isAlive() || o.isSpectator()) return false;
-		boolean ffa = StrafeSettings.botFfa();
+		Boolean modeFfa = dev.strafemc.mode.GameModes.ffa();
+		boolean ffa = modeFfa != null ? modeFfa : StrafeSettings.botFfa();
 		if (o instanceof ServerPlayer p) return !p.isCreative() && (ffa || CsTeam.isT(p) != b.t);
 		if (isBot(o)) return ffa || CsTeam.isT(o) != b.t;
 		return false;
@@ -220,6 +230,10 @@ public final class Bots {
 		Mannequin e = b.e;
 		WeaponStats w = GunServer.stats(weapon(b));
 		if (w == null) return;
+		if (!(e.getMainHandItem().getItem() instanceof GunItem g) || !g.weaponClass.equals(weapon(b))) { // the game mode moved it to another gun
+			e.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
+			b.clip = -1;
+		}
 		if (b.clip < 0) b.clip = w.clip();
 		Vec3 eye = e.getEyePosition();
 		// hit by someone: it knows where they are

@@ -26,7 +26,10 @@ import java.util.List;
  * gear, nothing drops on death, hunger stays full and the mode's CS2 cvars apply.
  */
 public final class GameModes {
-	public static final List<String> MODES = List.of("none", "armsrace");
+	public static final List<String> MODES = List.of("none", "armsrace", "deathmatch", "teamdeathmatch");
+	/** The modes' names as CS2 shows them. */
+	public static final java.util.Map<String, String> NAMES = java.util.Map.of("none", "None", "armsrace", "Arms Race", "deathmatch", "Deathmatch",
+			"teamdeathmatch", "Team Deathmatch");
 
 	/** A player's own things while a mode runs. */
 	record Saved(List<ItemStack> items, int level, float progress, int total) {
@@ -41,7 +44,7 @@ public final class GameModes {
 			b -> b.persistent(Saved.CODEC).copyOnDeath());
 
 	private static MinecraftServer server;
-	private static ArmsRace race;
+	private static Mode race;
 
 	private GameModes() {}
 
@@ -95,7 +98,7 @@ public final class GameModes {
 	}
 
 	public static String mode() {
-		return race != null ? "armsrace" : "none";
+		return race != null ? race.id() : "none";
 	}
 
 	/** Switches the world's game mode (saved with the world). */
@@ -104,15 +107,22 @@ public final class GameModes {
 		stop();
 		StrafeSettings.setGameMode(mode);
 		start(mode);
-		if (server != null) server.getPlayerList().broadcastSystemMessage(Component.literal(mode.equals("none") ? "Game mode off." : "Game mode: Arms Race"), false);
+		if (server != null) server.getPlayerList().broadcastSystemMessage(Component.literal(mode.equals("none") ? "Game mode off." : "Game mode: " + NAMES.get(mode)), false);
 	}
 
 	private static void start(String mode) {
-		if (server == null || !mode.equals("armsrace")) return;
-		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(ArmsRace.CVARS);
-		race = new ArmsRace(server);
+		if (server == null) return;
+		race = switch (mode) {
+			case "armsrace" -> new ArmsRace(server);
+			case "deathmatch" -> new Deathmatch(server, false);
+			case "teamdeathmatch" -> new Deathmatch(server, true);
+			default -> null;
+		};
+		if (race == null) return;
+		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(race.cvars());
+		race.begin();
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) race.join(p);
-		StrafeMc.LOG.info("[strafemc] strafeGM: Arms Race started");
+		StrafeMc.LOG.info("[strafemc] strafeGM: {} started", NAMES.get(mode));
 	}
 
 	private static void stop() {
@@ -168,6 +178,31 @@ public final class GameModes {
 	/** Ends the warmup at once (tests). */
 	public static void skipWarmup() {
 		if (race != null) race.skipWarmup();
+	}
+
+	/** The weapon a bot carries in the running mode (null: its own). */
+	public static String botWeapon(net.minecraft.world.entity.LivingEntity bot) {
+		return race == null ? null : race.botWeapon(bot);
+	}
+
+	/** Whether everyone fights everyone in the running mode (null: no mode runs). */
+	public static Boolean ffa() {
+		return race == null ? null : race.ffa();
+	}
+
+	/** Why the player can't buy this in the running mode: null when no mode runs, "" when they can. */
+	public static String buyRefusal(ServerPlayer p, String what) {
+		if (race == null || !p.hasAttached(SAVED)) return null;
+		String no = race.buyRefusal(p);
+		if (no.isEmpty() && "0".equals(dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar("mp_buy_allow_grenades")) && dev.strafemc.weapon.WeaponTable.get("weapon_" + what) == null
+				&& !what.equals("kevlar") && !what.equals("assaultsuit") && !what.equals("knife"))
+			return "Grenades can't be bought in this game mode";
+		return no;
+	}
+
+	/** A gun bought in the running mode. */
+	public static void bought(ServerPlayer p, String cls) {
+		if (race != null && p.hasAttached(SAVED)) race.bought(p, cls);
 	}
 
 	/** The player fired: their spawn protection ends. */

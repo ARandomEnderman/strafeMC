@@ -350,7 +350,7 @@ public final class ConsoleCommands {
 				a -> { if (a.length > 0) action("strafemc_killcards_time", a[0], false); else ConsoleLog.info("strafemc_killcards_time = " + dev.strafemc.client.ClientGameplay.killCardTime()); });
 		local("strafemc_buytime", "Buy time in seconds (0 = no limit). Operators.",
 				a -> { if (a.length > 0) action("strafemc_buytime", a[0], false); else ConsoleLog.info("strafemc_buytime = " + dev.strafemc.client.ClientGameplay.buyTime()); });
-		local("strafemc_gamemode", "The game mode: none (strafeMC survival) or armsrace. Operators.",
+		local("strafemc_gamemode", "The game mode: none (strafeMC survival), armsrace, deathmatch or teamdeathmatch. Operators.",
 				a -> action("strafemc_gamemode", a.length > 0 ? a[0] : "", false));
 		local("strafemc_spawnblocks", "Respawn on spawn blocks (1) or not (0). Operators.",
 				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
