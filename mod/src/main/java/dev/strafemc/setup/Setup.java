@@ -139,7 +139,8 @@ public final class Setup {
 		vrf.decompile(List.of("scripts/weapons.vdata_c", "scripts/decalgroups.vdata_c", "surfaceproperties/surfaceproperties.vsurf_c",
 				"scripts/surfaceproperties_impact_effects.txt", "scripts/surfaceproperties_game.txt",
 				"soundevents/game_sounds_footsteps.vsndevts_c", "soundevents/game_sounds_player.vsndevts_c",
-				"soundevents/game_sounds_weapons.vsndevts_c", "soundevents/game_sounds_physics.vsndevts_c"), null, cache);
+				"soundevents/game_sounds_weapons.vsndevts_c", "soundevents/game_sounds_physics.vsndevts_c", "soundevents/game_sounds_ui.vsndevts_c",
+				"soundevents/vo/announcer/game_sounds_cs2_classic.vsndevts_c", "soundevents/music/valve_cs2_01/game_sounds_music.vsndevts_c"), null, cache);
 	}
 
 	private void sounds(double base, double span) throws IOException {

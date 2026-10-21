@@ -500,6 +500,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** The world's game mode zones (Zones), as JSON. */
+	public record ZoneList(String json) implements CustomPacketPayload {
+		public static final Type<ZoneList> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "zone_list"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, ZoneList> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, ZoneList::json, ZoneList::new);
+
+		@Override
+		public Type<ZoneList> type() {
+			return TYPE;
+		}
+	}
+
 	/** The running game mode as this player sees it (strafeGM), as JSON; "{}" when none runs. */
 	public record ModeState(String json) implements CustomPacketPayload {
 		public static final Type<ModeState> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "mode_state"));

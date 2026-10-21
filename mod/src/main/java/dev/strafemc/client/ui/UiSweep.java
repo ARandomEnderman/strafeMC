@@ -93,12 +93,14 @@ public final class UiSweep {
 	private static final boolean BENCH = System.getProperty("strafemc.perfBench") != null;
 	private static final boolean AUTO = System.getProperty("strafemc.uiSweep") != null || BENCH;
 	private static final String AUTO_WORLD = "strafemc_ui_sweep";
-	private static int autoPhase, autoTicks;
+	private static int autoPhase, autoTicks, waitLog;
 
 	private static void auto(Minecraft mc) {
 		if (BENCH && autoPhase >= 1) { // the bench window may be in the background: no pause menu in the way
 			mc.options.pauseOnLostFocus = false;
 			if (mc.screen instanceof net.minecraft.client.gui.screens.PauseScreen) mc.setScreen(null);
+			if (autoPhase == 1 && mc.player != null && mc.screen != null && ++waitLog % 200 == 0)
+				dev.strafemc.StrafeMc.LOG.info("[strafemc] bench waiting: screen {}", mc.screen.getClass().getName());
 		}
 		if (autoPhase == 0 && mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
 			autoPhase = 1;

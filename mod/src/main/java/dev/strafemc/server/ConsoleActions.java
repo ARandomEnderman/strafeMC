@@ -249,6 +249,20 @@ public final class ConsoleActions {
 				}
 			}
 			case "shop_refresh" -> dev.strafemc.weapon.Shop.buyRefresh(p);
+			case "jointeam" -> { // CS2's jointeam: t, ct or auto
+				String side = arg.trim().toLowerCase(java.util.Locale.ROOT);
+				if (side.equals("2")) side = "t";
+				if (side.equals("3")) side = "ct";
+				if (side.equals("t") || side.equals("ct") || side.equals("auto")) dev.strafemc.mode.GameModes.joinTeam(p, side);
+			}
+			case "mp_warmup_end", "mp_restartgame" -> {
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can do that."));
+					break;
+				}
+				if (cmd.equals("mp_warmup_end")) dev.strafemc.mode.GameModes.warmupEnd();
+				else dev.strafemc.mode.GameModes.restart();
+			}
 			case "shop_buy" -> {
 				try {
 					String[] a = arg.trim().split(" "); // offer and how many, for each offer bought

@@ -26,8 +26,35 @@ public final class ModeHud {
 	/** The players' name colours on each side (hudteamcounter: CT #a7e3ff, T #ffd063). */
 	private static final int CT = 0xFFA7E3FF, T = 0xFFFFD063;
 	private static volatile JsonObject state = new JsonObject();
+	/** CS2's HUD icons (RuntimePack draws them into gui/mode/): the buy zone cart, the bomb, the planted bomb, the MVP star. */
+	public static final String[][] ICONS = {{"buyzone", "icons/ui/buyzone"}, {"bomb_c4", "icons/ui/bomb_c4"},
+			{"bomb_planted", "hud/teamcounter/teamcounter_bomb-planted"}, {"mvp", "icons/ui/star"}};
+	/** hudmoney: added / taken money shows for AddMoneyTime 2.9 s in AddMoneyColor #8fff6f / RemoveMoneyColor #fd3535. */
+	private static final long MONEY_MS = 2900;
+	private static final int ADD = 0xFF8FFF6F, REMOVE = 0xFFFD3535;
+	private static int lastMoney = Integer.MIN_VALUE, moneyDelta;
+	private static long moneyAt;
+	/** The team menu opened once for this mode on its own (later: the team key). */
+	private static String teamMenuFor = "";
+	private static net.minecraft.client.KeyMapping TEAM_KEY;
 
 	private ModeHud() {}
+
+	public static JsonObject state() {
+		return state;
+	}
+
+	/** Players on each side now: [CT, T]. */
+	public static int[] teamCounts() {
+		int[] n = new int[2];
+		JsonObject s = state;
+		if (s.has("players")) for (JsonElement el : s.getAsJsonArray("players")) n[el.getAsJsonObject().get("t").getAsBoolean() ? 1 : 0]++;
+		return n;
+	}
+
+	private static Identifier icon(String name) {
+		return Identifier.fromNamespaceAndPath("strafemc", "textures/gui/mode/" + name + ".png");
+	}
 
 	/** A game mode runs: its HUD stands in for Minecraft's hearts, hunger, armor and experience. */
 	public static boolean active() {
@@ -48,6 +75,28 @@ public final class ModeHud {
 			} catch (Exception e) {
 				state = new JsonObject();
 			}
+			JsonObject s = state;
+			if (s.has("money")) { // what was added or taken, shown by the money for a moment
+				int m = s.get("money").getAsInt();
+				if (lastMoney != Integer.MIN_VALUE && m != lastMoney) {
+					moneyDelta = m - lastMoney;
+					moneyAt = System.currentTimeMillis();
+				}
+				lastMoney = m;
+			} else lastMoney = Integer.MIN_VALUE;
+			// a team mode joined without a side picked: CS2's team menu, once
+			String mode = s.has("mode") ? s.get("mode").getAsString() : "";
+			if (s.has("ffa") && !s.get("ffa").getAsBoolean() && s.has("picked") && !s.get("picked").getAsBoolean() && !mode.equals(teamMenuFor)) {
+				teamMenuFor = mode;
+				var mc = Minecraft.getInstance();
+				if (mc.screen == null) mc.setScreen(new TeamSelectScreen());
+			}
+			if (mode.isEmpty()) teamMenuFor = "";
+		});
+		TEAM_KEY = net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping("key.strafemc.team",
+				com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_M, dev.strafemc.client.console.ConsoleKeys.CATEGORY));
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			while (TEAM_KEY.consumeClick()) if (mc.screen == null && mc.player != null) mc.setScreen(new TeamSelectScreen());
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> state = new JsonObject());
 		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "game_mode"), ModeHud::draw);
@@ -75,8 +124,13 @@ public final class ModeHud {
 		g.fill(cx - bw / 2, top, cx + bw / 2, top + bh, 0xF0000000);
 		String clock = time / 60 + ":" + String.format("%02d", time % 60);
 		boolean bomb = s.has("bomb") && s.get("bomb").getAsBoolean();
-		if (bomb) text(g, "BOMB", cx, top + bh / 2, 24 * px, System.currentTimeMillis() / 500 % 2 == 0 ? 0xFFFF3030 : 0xFFB00000); // the planted bomb hides the clock
+		if (bomb) { // the planted bomb hides the clock (CS2's teamcounter_bomb-planted), blinking red
+			int ih = (int) Math.round(28 * px);
+			blitIcon(g, "bomb_planted", cx, top + (bh - ih) / 2, ih, System.currentTimeMillis() / 500 % 2 == 0 ? 0xFFFF3030 : 0xFFB00000);
+		}
 		else text(g, clock, cx, top + bh / 2, 28 * px, phase.equals("warmup") ? 0xFFB0B0B0 : phase.equals("freeze") ? 0xFFEAD18A : WHITE);
+		if (s.has("waiting") && s.get("waiting").getAsBoolean()) // a side has nobody: the round can't start
+			text(g, "Waiting for players on both teams", cx, top + bh + (int) Math.round(80 * px), 20 * px, 0xFFB0B0B0);
 		if (teams) {
 			g.fill(cx - bw / 2 - sw, top, cx - bw / 2, top + bh, 0xF0000000);
 			g.fill(cx + bw / 2, top, cx + bw / 2 + sw, top + bh, 0xF0000000);
@@ -112,7 +166,23 @@ public final class ModeHud {
 		}
 		if (s.has("money")) { // your money (hudmoney: lower left, 38 px bold white), above health and armor
 			String m = "$" + s.get("money").getAsInt();
-			left(g, m, (int) Math.round(20 * px), g.guiHeight() - (int) Math.round(110 * px), 38 * px, WHITE);
+			int mx = (int) Math.round(20 * px), my = g.guiHeight() - (int) Math.round(110 * px);
+			int end = left(g, m, mx, my, 38 * px, WHITE);
+			int ih = (int) Math.round(30 * px);
+			if (s.has("buyZone") && s.get("buyZone").getAsBoolean()) // money__in-buy-zone: the cart, washed light green
+				blitIcon(g, "buyzone", end + (int) Math.round(6 * px) + ih / 2, my - ih / 2, ih, 0xFF90EE90);
+			long since = System.currentTimeMillis() - moneyAt;
+			if (moneyDelta != 0 && since < MONEY_MS) { // +$300 / -$2700 rising off the money
+				float a = since < 300 ? since / 300f : since > MONEY_MS - 600 ? (MONEY_MS - since) / 600f : 1;
+				int mc2 = ((int) (a * 255) << 24) | ((moneyDelta > 0 ? ADD : REMOVE) & 0xFFFFFF);
+				left(g, (moneyDelta > 0 ? "+$" : "-$") + Math.abs(moneyDelta), mx, my - (int) Math.round((40 + 20 * Math.min(1, since / 400.0)) * px), 26 * px, mc2);
+			}
+		}
+		if (s.has("carrier") && s.get("carrier").getAsBoolean()) { // carrying the bomb: its icon, blinking inside a bomb site
+			boolean zone = s.has("bombZone") && s.get("bombZone").getAsBoolean();
+			int ih = (int) Math.round(36 * px);
+			if (!zone || System.currentTimeMillis() / 400 % 2 == 0)
+				blitIcon(g, "bomb_c4", (int) Math.round(40 * px), g.guiHeight() - (int) Math.round(170 * px), ih, zone ? 0xFFFF4040 : 0xFFE0E0E0);
 		}
 		if (phase.equals("roundover") || phase.equals("over")) { // the round's or the match's winner
 			String w = phase.equals("over") ? s.get("winner").getAsString() + " wins the match" : s.get("roundWinner").getAsString();
@@ -176,6 +246,31 @@ public final class ModeHud {
 		if (p.has("weapon"))
 			icon(g, p.get("weapon").getAsString().replace("weapon_", ""), x + col / 2, ly + lh + (int) Math.round(6 * px), Math.max(4, (int) Math.round(16 * px)),
 					gold ? color : WHITE);
+	}
+
+	/** One of ICONS, centred at x, h high, in a colour (its PNG is white). */
+	private static void blitIcon(GuiGraphicsExtractor g, String name, int x, int y, int h, int color) {
+		int[] sz = iconSize(name);
+		if (sz == null) return;
+		int w = Math.max(1, Math.round((float) sz[0] / sz[1] * h));
+		g.blit(RenderPipelines.GUI_TEXTURED, icon(name), x - w / 2, y, 0, 0, w, h, sz[0], sz[1], sz[0], sz[1], color);
+	}
+
+	private static final java.util.Map<String, int[]> SIZES = new java.util.concurrent.ConcurrentHashMap<>();
+
+	private static int[] iconSize(String name) {
+		return SIZES.computeIfAbsent(name, n -> {
+			var png = dev.strafemc.client.assets.RuntimePack.DIR.resolve("assets/strafemc/textures/gui/mode/" + n + ".png");
+			try (var in = javax.imageio.ImageIO.createImageInputStream(png.toFile())) {
+				var readers = javax.imageio.ImageIO.getImageReaders(in);
+				if (!readers.hasNext()) return null;
+				var r = readers.next();
+				r.setInput(in);
+				return new int[] {r.getWidth(0), r.getHeight(0)};
+			} catch (Exception e) {
+				return null;
+			}
+		});
 	}
 
 	/** A CS2 weapon icon centred at x, `h` high, with its 1 px shadow. */

@@ -133,6 +133,8 @@ public class StrafeMcClient implements ClientModInitializer {
 		dev.strafemc.client.weapon.GunClient.register();
 		dev.strafemc.client.weapon.AmmoHud.register();
 		dev.strafemc.client.ModeHud.register();
+		dev.strafemc.client.ZoneRender.register();
+		dev.strafemc.client.ModeScoreboard.register();
 		dev.strafemc.client.weapon.ScopeHud.register();
 		ShowPosHud.register();
 		JumpStats.register();

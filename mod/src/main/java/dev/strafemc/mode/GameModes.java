@@ -91,6 +91,16 @@ public final class GameModes {
 						ctx.getSource().sendSuccess(() -> Component.literal("Game mode: " + StrafeSettings.gameMode() + " (" + String.join(", ", MODES) + ")"), false);
 						return 1;
 					});
+			cmd.then(Commands.literal("warmup_end").executes(ctx -> {
+				warmupEnd();
+				ctx.getSource().sendSuccess(() -> Component.literal("Warmup ended"), true);
+				return 1;
+			}));
+			cmd.then(Commands.literal("restart").executes(ctx -> {
+				restart();
+				ctx.getSource().sendSuccess(() -> Component.literal("Match restarted"), true);
+				return 1;
+			}));
 			for (String m : MODES)
 				cmd.then(Commands.literal(m).executes(ctx -> {
 					set(m);
@@ -179,9 +189,34 @@ public final class GameModes {
 		if (ServerPlayNetworking.canSend(p, StrafePayloads.ModeState.TYPE)) ServerPlayNetworking.send(p, new StrafePayloads.ModeState(json));
 	}
 
-	/** A kill announced by the killfeed (any CS weapon): counts for the running mode. */
-	public static void kill(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String icon) {
-		if (race != null) race.kill(attacker, victim, icon);
+	/** A kill announced by the killfeed (any CS weapon): counts for the running mode and its scoreboard. */
+	public static void kill(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String icon,
+			net.minecraft.world.entity.LivingEntity assister) {
+		if (race == null) return;
+		race.record(attacker, victim, assister);
+		race.kill(attacker, victim, icon);
+	}
+
+	/** jointeam t | ct | auto (CS2's command; the team menu): in a mode, its rules decide; outside one, just the side. */
+	public static void joinTeam(ServerPlayer p, String side) {
+		if (race == null || !p.hasAttached(SAVED)) {
+			dev.strafemc.weapon.CsTeam.set(p, side.equals("t"));
+			return;
+		}
+		race.joinTeam(p, side);
+	}
+
+	/** Ends the warmup now (mp_warmup_end). */
+	public static void warmupEnd() {
+		if (race != null) race.skipWarmup();
+	}
+
+	/** A new match now (mp_restartgame). */
+	public static void restart() {
+		if (race == null) return;
+		String m = race.id();
+		stop();
+		start(m);
 	}
 
 	/** The player's HUD state (tests). */

@@ -71,6 +71,7 @@ final class Deathmatch extends Mode {
 	void reset() {
 		score.clear();
 		scoreT = scoreCt = 0;
+		stats.clear();
 		bonus = "";
 		nextBonus = now() + warmupTicks() + between();
 	}

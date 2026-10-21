@@ -77,6 +77,10 @@ public final class RuntimePack {
 			safe(() -> svgH("panorama/images/icons/ui/undo.vsvg_c", "panorama/images/icons/ui/undo.svg", tex.resolve("gui/buymenu/undo.png"), 64),
 					tex.resolve("gui/buymenu/undo.png"), Placeholders.Icon.BULLET, 32);
 			// the strafeMC menu wheel: CS2's own main menu / UI icons, white, 64 px
+			for (String[] m : dev.strafemc.client.ModeHud.ICONS) { // the game modes' HUD icons, 64 px high
+				Path out = tex.resolve("gui/mode/" + m[0] + ".png");
+				safe(() -> svgH("panorama/images/" + m[1] + ".vsvg_c", "panorama/images/" + m[1] + ".svg", out, 64), out, Placeholders.Icon.BULLET, 32);
+			}
 			for (String[] m : dev.strafemc.client.QuickMenuScreen.ICONS) {
 				Path out = tex.resolve("gui/menu/" + m[0] + ".png");
 				safe(() -> svg("panorama/images/" + m[1] + ".vsvg_c", "panorama/images/" + m[1] + ".svg", out, 64), out, Placeholders.Icon.BULLET, 32);

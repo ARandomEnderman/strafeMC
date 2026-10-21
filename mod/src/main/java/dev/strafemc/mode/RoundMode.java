@@ -74,6 +74,11 @@ final class RoundMode extends Mode {
 	private final Map<UUID, String> botGun = new HashMap<>();
 	private UUID bombBot;
 	private long botPlantStart = -1;
+	/** This round: kills per participant (for the MVP), who defused, whether the ten-second cues played. */
+	private final Map<UUID, Integer> roundKills = new HashMap<>();
+	private UUID defuser;
+	private boolean tenSecPlayed, bombTenPlayed;
+	private String site = "";
 
 	RoundMode(MinecraftServer server, Config c) {
 		super(server);
@@ -131,6 +136,19 @@ final class RoundMode extends Mode {
 		ot = 0;
 		botGun.clear();
 		bombBot = null;
+		stats.clear();
+	}
+
+	@Override
+	boolean counting() {
+		return !warmup() && over < 0;
+	}
+
+	@Override
+	void record(LivingEntity attacker, LivingEntity victim, LivingEntity assister) {
+		super.record(attacker, victim, assister);
+		if (counting() && phase == Phase.LIVE && attacker != null && attacker != victim && inMode(attacker) && CsTeam.isT(attacker) != CsTeam.isT(victim))
+			roundKills.merge(key(attacker), 1, Integer::sum);
 	}
 
 	private int money(UUID id) {
@@ -166,6 +184,11 @@ final class RoundMode extends Mode {
 		roundWinner = "";
 		removeBomb();
 		planter = null;
+		defuser = null;
+		roundKills.clear();
+		tenSecPlayed = bombTenPlayed = false;
+		site = "";
+		soundAll("Music.StartRound.valve_cs2_01");
 		for (ServerPlayer p : players()) {
 			if (p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
 		}
@@ -230,6 +253,28 @@ final class RoundMode extends Mode {
 		payTeam(!tWins, c.loserBonus() + c.loserConsecutive() * Math.max(0, Math.min(losses, 5) - 1));
 		if (!tWins && planter != null) payTeam(true, c.plantedDefused());
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) p.sendSystemMessage(Component.literal(roundWinner + " (" + why + ")"));
+		// CS2's announcer and the music kit's round end, then the round's MVP: whoever planted the bomb that went off,
+		// defused it, or else the winners' top fragger
+		if (!tWins && defuser != null) soundAll("Event.BombDefused");
+		soundAll(tWins ? "Event.TERWin" : "Event.CTWin");
+		for (ServerPlayer p : players()) sound(p, CsTeam.isT(p) == tWins ? "Music.WonRound.valve_cs2_01" : "Music.LostRound.valve_cs2_01");
+		UUID mvp = why.contains("exploded") ? planter : defuser;
+		if (mvp == null) {
+			int best = 0;
+			for (LivingEntity e : participants())
+				if (CsTeam.isT(e) == tWins && roundKills.getOrDefault(key(e), 0) > best) {
+					best = roundKills.get(key(e));
+					mvp = key(e);
+				}
+		}
+		if (mvp != null) {
+			stats.computeIfAbsent(mvp, k -> new int[4])[3]++;
+			for (LivingEntity e : participants())
+				if (key(e).equals(mvp)) {
+					for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("MVP: " + name(e)));
+					if (e instanceof ServerPlayer mp) sound(mp, "Music.MVPAnthem.valve_cs2_01");
+				}
+		}
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: round {} to {} ({}), {}-{}", round, tWins ? "T" : "CT", why, scoreCt, scoreT);
 		sendAll();
 	}
@@ -286,6 +331,15 @@ final class RoundMode extends Mode {
 		}
 	}
 
+	/** Someone on each side (players or bots). */
+	private boolean bothSides() {
+		boolean t = false, ct = false;
+		for (LivingEntity e : participants())
+			if (CsTeam.isT(e)) t = true;
+			else ct = true;
+		return t && ct;
+	}
+
 	private int alive(boolean t) {
 		int n = 0;
 		for (LivingEntity e : participants())
@@ -300,7 +354,12 @@ final class RoundMode extends Mode {
 			super.tick();
 			return;
 		}
-		if (round == 0 && over < 0) { // the warmup is over: the first round
+		if (round == 0 && over < 0) { // the warmup is over: the first round, once both sides have someone (CS2 waits for players)
+			if (!bothSides()) {
+				start = t - warmupTicks() + 20; // another second of warmup
+				super.tick();
+				return;
+			}
 			money.clear();
 			startRound();
 		}
@@ -325,8 +384,18 @@ final class RoundMode extends Mode {
 		} else if (phase == Phase.FREEZE && t - phaseStart >= c.freeze() * 20L) {
 			phase = Phase.LIVE;
 			phaseStart = t;
+			soundAll("Music.StartAction.valve_cs2_01");
 		} else if (phase == Phase.LIVE) {
 			boolean planted = bomb != null && !bomb.isRemoved() && !bomb.defused();
+			// the music kit's ten-second count: the round's last ten seconds, or the bomb's
+			if (!planted && !tenSecPlayed && c.roundTime() * 20L - (t - phaseStart) <= 200) {
+				tenSecPlayed = true;
+				soundAll("Music.TenSecCount.valve_cs2_01");
+			}
+			if (planted && !bombTenPlayed && bomb.secondsLeft() <= 10) {
+				bombTenPlayed = true;
+				soundAll("Music.BombTenSecCount.valve_cs2_01");
+			}
 			int ta = alive(true), cta = alive(false);
 			if (cta == 0 && ta > 0) endRound(true, c.teamElimination(), "Counter-Terrorists eliminated");
 			else if (ta == 0 && !planted && cta > 0) endRound(false, c.teamElimination(), "Terrorists eliminated");
@@ -478,7 +547,11 @@ final class RoundMode extends Mode {
 		bomb = b;
 		planter = key(p);
 		pay(p, c.playerPlant());
-		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("The bomb has been planted."));
+		site = BombSites.siteLetter(p);
+		for (ServerPlayer o : server.getPlayerList().getPlayers())
+			o.sendSystemMessage(Component.literal("The bomb has been planted" + (site.isEmpty() ? "." : " at bomb site " + site + ".")));
+		soundAll("Event.BombPlanted");
+		soundAll("Music.BombPlanted.valve_cs2_01");
 	}
 
 	void exploded(PlantedC4 b) {
@@ -488,6 +561,7 @@ final class RoundMode extends Mode {
 	void defused(LivingEntity by, PlantedC4 b) {
 		if (b != bomb || phase != Phase.LIVE || over >= 0) return;
 		pay(by, c.playerDefuse());
+		defuser = key(by);
 		endRound(false, c.teamDefuse(), "the bomb was defused");
 	}
 
@@ -661,10 +735,19 @@ final class RoundMode extends Mode {
 		o.addProperty("frozen", frozen());
 		o.addProperty("teams", true);
 		o.addProperty("ot", ot);
+		o.addProperty("site", site);
+		o.addProperty("waiting", warmup() && now() - start >= warmupTicks() - 40 && !bothSides());
+		// CS2's money panel cart: you can buy here and now; the bomb icon: you carry it inside a bomb site
+		o.addProperty("buyZone", p.isAlive() && !p.isSpectator() && buyRefusal(p).isEmpty());
+		boolean carrying = false;
+		for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(WeaponItems.C4)) carrying = true;
+		o.addProperty("bombZone", carrying && BombSites.near(p));
+		o.addProperty("carrier", carrying);
 	}
 
 	@Override
 	void entry(LivingEntity e, JsonObject o) {
 		o.addProperty("value", "");
+		o.addProperty("money", money(key(e))); // the scoreboard shows it to teammates only (the client filters)
 	}
 }

@@ -83,6 +83,7 @@ final class ArmsRace extends Mode {
 		weapons = w;
 		kills.clear();
 		reached.clear();
+		stats.clear();
 		leader = null;
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: Arms Race weapons {}", weapons);
 	}

@@ -67,6 +67,7 @@ public final class PerfBench {
 		if (PHASES[phase].equals("modes")) modes(mc, ticks);
 		if (PHASES[phase].equals("rounds")) rounds(mc, ticks);
 		if (PHASES[phase].equals("botplant")) botPlant(mc, ticks);
+		if (PHASES[phase].equals("zones")) zones(mc, ticks);
 		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
 			mc.player.getAbilities().flying = true;
 			mc.player.setDeltaMovement(Vec3.ZERO);
@@ -121,7 +122,7 @@ public final class PerfBench {
 				for (String l : dev.strafemc.client.weapon.InfernoClient.describe()) log(l);
 			}
 		}
-		if (ticks < (PHASES[phase].equals("botplant") ? 1400 : PHASE)) return;
+		if (ticks < (PHASES[phase].equals("botplant") ? 1400 : PHASES[phase].equals("zones") ? 520 : PHASE)) return;
 		log("== " + PHASES[phase]);
 		shot(mc, PHASES[phase]);
 		for (String l : Perf.lines()) log(l);
@@ -206,7 +207,7 @@ public final class PerfBench {
 				case 20, 22, 24, 26, 28 -> {
 					var bot = server.overworld().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity.class),
 							e -> dev.strafemc.weapon.Bots.isBot(e)).stream().findFirst().orElse(null);
-					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47");
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47", null);
 					log("arms race: kill " + t + " bot " + (bot != null) + " " + inv(p));
 				}
 				case 40 -> p.kill(server.overworld());
@@ -242,7 +243,7 @@ public final class PerfBench {
 				}
 				case 8 -> dev.strafemc.mode.GameModes.skipWarmup();
 				case 12, 14, 16 -> {
-					if (bot != null) dev.strafemc.mode.GameModes.kill(bot, p, "g3sg1");
+					if (bot != null) dev.strafemc.mode.GameModes.kill(bot, p, "g3sg1", null);
 					log("modes: armsrace bot kill, bot holds " + (bot == null ? "-" : bot.getMainHandItem().getItem()));
 				}
 				case 24 -> log("modes: armsrace bot now holds " + (bot == null ? "-" : bot.getMainHandItem().getItem()));
@@ -257,14 +258,14 @@ public final class PerfBench {
 					log("modes: bought ak47 + hegrenade " + inv(p));
 				}
 				case 38, 40 -> {
-					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, t == 38 ? "ak47" : "knife");
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, t == 38 ? "ak47" : "knife", null);
 				}
 				case 42 -> p.kill(server.overworld());
 				case 70 -> log("modes: deathmatch respawned " + inv(p));
 				case 90 -> dev.strafemc.mode.GameModes.set("teamdeathmatch");
 				case 94 -> dev.strafemc.mode.GameModes.skipWarmup();
 				case 96, 98 -> {
-					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47");
+					if (bot != null) dev.strafemc.mode.GameModes.kill(p, bot, "ak47", null);
 				}
 				case 140 -> {
 					dev.strafemc.mode.GameModes.set("none");
@@ -330,7 +331,7 @@ public final class PerfBench {
 				}
 				case 100 -> {
 					if (bot != null) {
-						dev.strafemc.mode.GameModes.kill(p, bot, "glock");
+						dev.strafemc.mode.GameModes.kill(p, bot, "glock", null);
 						bot.kill((net.minecraft.server.level.ServerLevel) level);
 					}
 				}
@@ -376,6 +377,7 @@ public final class PerfBench {
 					level.setBlockAndUpdate(ct, sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.CT));
 					dev.strafemc.weapon.CsTeam.set(p, false);
 					dev.strafemc.mode.GameModes.set("competitive");
+					dev.strafemc.mode.GameModes.joinTeam(p, "ct");
 					dev.strafemc.weapon.Bots.add(true);
 				}
 				case 6 -> dev.strafemc.mode.GameModes.skipWarmup();
@@ -400,6 +402,73 @@ public final class PerfBench {
 	}
 
 	private static BlockPos botBase = BlockPos.ZERO;
+
+	/**
+	 * Zones: a bomb site A and both buy zones drawn with the Zone Tool's code, shown while the tool is held; then
+	 * Competitive with a T bot that plants inside the drawn site, the team menu on joining, and the Tab scoreboard.
+	 */
+	private static void zones(Minecraft mc, int t) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		if (t == 1) Perf.toggle(false);
+		java.util.UUID id = mc.player.getUUID();
+		if (t == 4) { // look along the zones
+			mc.player.setYRot(-90);
+			mc.player.setXRot(30);
+		}
+		if (t == 12) shot(mc, "zones_tool");
+		if (t == 40) shot(mc, "zones_teammenu");
+		if (t == 44 && mc.screen != null) mc.setScreen(null);
+		if (t == 300) mc.options.keyPlayerList.setDown(true);
+		if (t == 304) shot(mc, "zones_scoreboard");
+		if (t == 306) mc.options.keyPlayerList.setDown(false);
+		if (t == 360) shot(mc, "zones_hud");
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayer(id);
+			if (p == null) return;
+			var level = p.level();
+			switch (t) {
+				case 2 -> {
+					BlockPos g = p.blockPosition().below();
+					botBase = g;
+					var sp = dev.strafemc.weapon.WeaponItems.SPAWN_POINT.defaultBlockState();
+					level.setBlockAndUpdate(g.offset(3, 0, 0), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.T));
+					BlockPos ct = g.offset(40, 0, 0);
+					for (int x = -2; x <= 2; x++)
+						for (int z = -2; z <= 2; z++)
+							for (int y = 1; y <= 4; y++)
+								if (Math.abs(x) == 2 || Math.abs(z) == 2 || y == 4) level.setBlockAndUpdate(ct.offset(x, y, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+					level.setBlockAndUpdate(ct, sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.CT));
+					dev.strafemc.mode.Zones.clear();
+					dev.strafemc.mode.Zones.add(p, dev.strafemc.mode.Zones.Type.SITE_A, g.offset(8, 0, -3), g.offset(13, 0, 3));
+					dev.strafemc.mode.Zones.add(p, dev.strafemc.mode.Zones.Type.BUY_T, g.offset(1, 0, -2), g.offset(5, 0, 2));
+					dev.strafemc.mode.Zones.add(p, dev.strafemc.mode.Zones.Type.BUY_CT, g.offset(37, 0, -3), g.offset(43, 0, 3));
+					p.getInventory().setItem(p.getInventory().getSelectedSlot(), new net.minecraft.world.item.ItemStack(dev.strafemc.weapon.WeaponItems.ZONE_TOOL));
+				}
+				case 20 -> {
+					dev.strafemc.weapon.CsTeam.set(p, false);
+					dev.strafemc.mode.GameModes.set("competitive");
+					dev.strafemc.mode.GameModes.joinTeam(p, "ct");
+					dev.strafemc.weapon.Bots.add(true);
+				}
+				case 50 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 60 -> {
+					dev.strafemc.mode.GameModes.skipWarmup(); // freeze over
+					log("zones: live " + state(p).replaceAll("\"players\".*", ""));
+				}
+				default -> {}
+			}
+			if (t > 60 && t % 60 == 0) {
+				var bombs = level.getEntitiesOfClass(dev.strafemc.weapon.PlantedC4.class, new net.minecraft.world.phys.AABB(botBase).inflate(60));
+				log("zones: t=" + t + " bombs " + bombs.size() + (bombs.isEmpty() ? "" : " at " + bombs.get(0).blockPosition().toShortString()) + " "
+						+ state(p).replaceAll("\"players\".*", ""));
+			}
+			if (t == 510) {
+				dev.strafemc.mode.GameModes.set("none");
+				dev.strafemc.weapon.Bots.kickAll();
+			}
+		});
+	}
 
 	private static String state(net.minecraft.server.level.ServerPlayer p) {
 		return dev.strafemc.mode.GameModes.stateOf(p);

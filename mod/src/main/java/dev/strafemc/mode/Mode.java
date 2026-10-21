@@ -36,6 +36,10 @@ abstract class Mode {
 
 	final MinecraftServer server;
 	final Map<UUID, Long> immuneUntil = new HashMap<>(), respawnAt = new HashMap<>();
+	/** Kills, assists, deaths and MVPs this match, per participant (Mode.key). */
+	final Map<UUID, int[]> stats = new HashMap<>();
+	/** Players who picked their side themselves (the rest are balanced when they join). */
+	final java.util.Set<UUID> picked = new java.util.HashSet<>();
 	long start, over = -1;
 	String winner = "";
 
@@ -141,8 +145,72 @@ abstract class Mode {
 		}
 	}
 
+	int[] stat(LivingEntity e) {
+		return stats.computeIfAbsent(key(e), k -> new int[4]);
+	}
+
+	/** Whether kills count now (the match is on). */
+	boolean counting() {
+		return live();
+	}
+
+	/** The scoreboard's count of a kill: the killer's kill (an enemy, or anyone in a free-for-all), the victim's death, the assist. */
+	void record(LivingEntity attacker, LivingEntity victim, LivingEntity assister) {
+		if (!counting()) return;
+		if (inMode(victim)) stat(victim)[2]++;
+		if (attacker != null && attacker != victim && inMode(attacker) && (ffa() || CsTeam.isT(attacker) != CsTeam.isT(victim))) stat(attacker)[0]++;
+		if (assister != null && assister != attacker && inMode(assister)) stat(assister)[1]++;
+	}
+
+	/** A CS2 sound event to everyone in the mode. */
+	void soundAll(String event) {
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) sound(p, event);
+	}
+
+	/** The smaller side (by players and bots), T on a tie. */
+	boolean smallerSideT() {
+		int t = 0, ct = 0;
+		for (LivingEntity e : participants())
+			if (CsTeam.isT(e)) t++;
+			else ct++;
+		return t <= ct;
+	}
+
+	/** CS2's mp_limitteams 2: a side can't get two more players than the other. */
+	boolean sideFull(boolean t, ServerPlayer joining) {
+		int mine = 0, other = 0;
+		for (LivingEntity e : participants()) {
+			if (e == joining) continue;
+			if (CsTeam.isT(e) == t) mine++;
+			else other++;
+		}
+		return mine + 1 - other > 2;
+	}
+
+	/** A side picked (jointeam, the team menu): refused when it's full; mid-match the switch costs your life, as in CS2. */
+	void joinTeam(ServerPlayer p, String side) {
+		boolean t = side.equals("auto") ? smallerSideT() : side.equals("t");
+		if (!side.equals("auto") && !ffa() && sideFull(t, p)) {
+			dev.strafemc.server.Toasts.warn(p, "That team is full");
+			return;
+		}
+		picked.add(p.getUUID());
+		if (CsTeam.isT(p) == t) return;
+		CsTeam.set(p, t);
+		p.sendSystemMessage(Component.literal("You are now " + (t ? "a Terrorist" : "a Counter-Terrorist")));
+		if (p.isAlive() && !p.isSpectator()) {
+			if (live() && !ffa()) p.kill((net.minecraft.server.level.ServerLevel) p.level());
+			else {
+				toSpawn(p);
+				spawned(p);
+			}
+		}
+		sendAll();
+	}
+
 	void join(ServerPlayer p) {
 		GameModes.putAway(p);
+		if (!ffa() && !picked.contains(p.getUUID())) CsTeam.set(p, smallerSideT()); // balanced until they pick (mp_autoteambalance)
 		if (p.isAlive()) {
 			toSpawn(p);
 			spawned(p);
@@ -217,6 +285,7 @@ abstract class Mode {
 	void win(String who) {
 		over = now();
 		winner = who;
+		soundAll("Music.MatchEnd.valve_cs2_01");
 		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal(who + " wins!"));
 		sendAll();
 	}
@@ -271,6 +340,9 @@ abstract class Mode {
 		o.addProperty("winner", winner);
 		o.addProperty("you", p.getUUID().toString());
 		o.addProperty("immune", Math.max(0, immuneUntil.getOrDefault(p.getUUID(), 0L) - now()) / 20.0);
+		o.addProperty("ffa", ffa());
+		o.addProperty("t", CsTeam.isT(p));
+		o.addProperty("picked", picked.contains(p.getUUID()));
 		state(p, o);
 		JsonArray arr = new JsonArray();
 		for (LivingEntity e : ranking()) {
@@ -280,6 +352,11 @@ abstract class Mode {
 			x.addProperty("t", CsTeam.isT(e));
 			x.addProperty("bot", Bots.isBot(e));
 			x.addProperty("hp", e.isAlive() ? e.getHealth() / e.getMaxHealth() : 0);
+			int[] st = stats.getOrDefault(key(e), new int[4]);
+			x.addProperty("k", st[0]);
+			x.addProperty("a", st[1]);
+			x.addProperty("d", st[2]);
+			x.addProperty("mvp", st[3]);
 			entry(e, x);
 			arr.add(x);
 		}

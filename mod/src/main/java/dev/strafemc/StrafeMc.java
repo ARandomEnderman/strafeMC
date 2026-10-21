@@ -41,6 +41,8 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(dev.strafemc.world.SpawnPoints::load);
 		dev.strafemc.weapon.StructureLoot.register();
 		dev.strafemc.mode.GameModes.register(); // after StrafeSettings' SERVER_STARTED: it reads the world's mode
+		dev.strafemc.mode.Zones.register();
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ZoneList.TYPE, dev.strafemc.net.StrafePayloads.ZoneList.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ModeState.TYPE, dev.strafemc.net.StrafePayloads.ModeState.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.server.WorldCvars.unload());
@@ -134,7 +136,7 @@ public class StrafeMc implements ModInitializer {
 					ServerPlayNetworking.send(o, out);
 		});
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE,
-				(msg, ctx) -> dev.strafemc.weapon.CsTeam.set(ctx.player(), msg.t()));
+				(msg, ctx) -> dev.strafemc.mode.GameModes.joinTeam(ctx.player(), msg.t() ? "t" : "ct"));
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Throw.TYPE,
 				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "throw", 5)) dev.strafemc.weapon.GunServer.throwGrenade(ctx.player(), msg); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {

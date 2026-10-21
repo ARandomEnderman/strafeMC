@@ -18,7 +18,8 @@ import java.util.Random;
  */
 public final class CsSoundEvents {
 	public static final String[] FILES = {"soundevents/game_sounds_footsteps.vsndevts_c", "soundevents/game_sounds_player.vsndevts_c",
-			"soundevents/game_sounds_weapons.vsndevts_c", "soundevents/game_sounds_physics.vsndevts_c"};
+			"soundevents/game_sounds_weapons.vsndevts_c", "soundevents/game_sounds_physics.vsndevts_c", "soundevents/game_sounds_ui.vsndevts_c",
+			"soundevents/vo/announcer/game_sounds_cs2_classic.vsndevts_c", "soundevents/music/valve_cs2_01/game_sounds_music.vsndevts_c"};
 
 	/**
 	 * CS2's sound mixer lifts some mix groups well above their events' own volume (its mix data isn't readable here):
@@ -80,8 +81,12 @@ public final class CsSoundEvents {
 	public static void load() throws Exception {
 		Map<String, Map<String, Object>> raw = new LinkedHashMap<>();
 		for (String f : FILES) {
-			Map<String, Object> root = Kv3.parseObject(Files.readString(AssetCache.decompiled(f)));
-			for (var e : root.entrySet()) if (e.getValue() instanceof Map) raw.put(e.getKey(), (Map<String, Object>) e.getValue());
+			try { // one file missing (an older setup, no converter at hand) leaves the others playing
+				Map<String, Object> root = Kv3.parseObject(Files.readString(AssetCache.decompiled(f)));
+				for (var e : root.entrySet()) if (e.getValue() instanceof Map) raw.put(e.getKey(), (Map<String, Object>) e.getValue());
+			} catch (Exception e) {
+				StrafeMc.LOG.warn("[strafemc] sound events {}: {}", f, e.toString());
+			}
 		}
 		Map<String, Event> out = new HashMap<>();
 		for (String name : raw.keySet()) {
