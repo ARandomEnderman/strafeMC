@@ -197,8 +197,10 @@ final class RoundMode extends Mode {
 		for (ServerPlayer p : players()) {
 			if (p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
 		}
+		watching.clear();
 		for (ServerPlayer p : players()) {
 			p.setGameMode(GameType.ADVENTURE);
+			p.setCamera(p);
 			SpawnPoints.respawn(p, CsTeam.isT(p) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
 			p.setHealth(p.getMaxHealth());
 			if (diedThisRound.contains(p.getUUID()) || round == 1) {
@@ -357,9 +359,40 @@ final class RoundMode extends Mode {
 		return n;
 	}
 
+	/** Dead players watching a living teammate (CS2's mp_forcecamera 1): whom each watches. */
+	private final Map<UUID, UUID> watching = new HashMap<>();
+
+	/**
+	 * Keeps a dead (spectating) player's view on a living teammate, as CS2's competitive camera does (no free camera):
+	 * step 0 stays on the one watched while they live, 1 / -1 go to the next / previous one (mouse 1 / mouse 2).
+	 * With no teammate alive the view stays where it is.
+	 */
+	void spectate(ServerPlayer p, int step) {
+		if (!p.isSpectator() || warmup()) return;
+		List<LivingEntity> mates = new ArrayList<>();
+		for (LivingEntity e : participants())
+			if (e != p && e.isAlive() && CsTeam.isT(e) == CsTeam.isT(p) && !(e instanceof ServerPlayer sp && sp.isSpectator())) mates.add(e);
+		mates.sort(java.util.Comparator.comparing(Mode::name));
+		UUID cur = watching.get(p.getUUID());
+		if (mates.isEmpty()) {
+			if (p.getCamera() != p) p.setCamera(p);
+			if (watching.remove(p.getUUID()) != null) GameModes.send(p, state(p));
+			return;
+		}
+		int at = -1;
+		for (int i = 0; i < mates.size(); i++) if (mates.get(i).getUUID().equals(cur)) at = i;
+		LivingEntity target = mates.get(at < 0 ? 0 : Math.floorMod(at + step, mates.size()));
+		if (p.getCamera() != target) p.setCamera(target);
+		if (!target.getUUID().equals(cur)) {
+			watching.put(p.getUUID(), target.getUUID());
+			GameModes.send(p, state(p));
+		}
+	}
+
 	@Override
 	void tick() {
 		long t = now();
+		if (!warmup() && t % 5 == 0) for (ServerPlayer p : players()) if (p.isSpectator()) spectate(p, 0);
 		if (warmup()) {
 			super.tick();
 			return;
@@ -424,8 +457,9 @@ final class RoundMode extends Mode {
 			p.setGameMode(GameType.ADVENTURE);
 			return;
 		}
-		if (diedThisRound.contains(p.getUUID()) && phase != Phase.FREEZE) { // dead until the next round: watching
+		if (diedThisRound.contains(p.getUUID()) && phase != Phase.FREEZE) { // dead until the next round: watching a teammate
 			p.setGameMode(GameType.SPECTATOR);
+			spectate(p, 0);
 			return;
 		}
 		p.setGameMode(GameType.ADVENTURE);
@@ -448,6 +482,7 @@ final class RoundMode extends Mode {
 		diedThisRound.add(p.getUUID()); // joined mid-round: in from the next one
 		p.setGameMode(GameType.SPECTATOR);
 		SpawnPoints.respawn(p, CsTeam.isT(p) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
+		spectate(p, 0);
 	}
 
 	@Override
@@ -753,6 +788,10 @@ final class RoundMode extends Mode {
 		for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(WeaponItems.C4)) carrying = true;
 		o.addProperty("bombZone", carrying && BombSites.near(p));
 		o.addProperty("carrier", carrying);
+		LivingEntity watched = null;
+		UUID w = p.isSpectator() ? watching.get(p.getUUID()) : null;
+		if (w != null) for (LivingEntity e : participants()) if (e.getUUID().equals(w)) watched = e;
+		if (watched != null) o.addProperty("watching", name(watched));
 	}
 
 	@Override

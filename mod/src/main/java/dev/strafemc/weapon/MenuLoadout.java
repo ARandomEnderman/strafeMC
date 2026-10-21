@@ -114,6 +114,20 @@ public final class MenuLoadout {
 		return e == null ? null : e.cls();
 	}
 
+	/**
+	 * Whether a weapon is in one of the player's buy menu slots for their side, as CS2 only sells what your loadout
+	 * shows. Weapons outside the three slotted columns (the Zeus) always are.
+	 */
+	public static boolean inBuyMenu(Player p, String cls) {
+		WeaponTable.Entry e = WeaponTable.get(cls);
+		if (e == null || e.slot() == null) return true;
+		String category = e.slot().substring(0, e.slot().length() - 1); // "rifle3" -> "rifle"
+		if (!CATEGORIES.contains(category)) return true;
+		boolean t = CsTeam.isT(p);
+		for (int i = 0; i < SLOTS; i++) if (cls.equals(buySlot(p, category + i, t))) return true;
+		return false;
+	}
+
 	/** The pistol a player starts a round with: their side's first pistol slot (CS2: the Glock, or the P2000 / USP-S). */
 	public static String startPistol(Player p) {
 		boolean t = CsTeam.isT(p);

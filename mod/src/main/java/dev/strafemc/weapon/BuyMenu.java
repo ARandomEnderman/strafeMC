@@ -160,6 +160,10 @@ public final class BuyMenu {
 			default -> {
 				WeaponTable.Entry gun = WeaponTable.get("weapon_" + what);
 				if (gun != null && !gun.knife()) { // a gun with CS2's reserve: m_nPrimaryReserveAmmoMax magazines (shells for shotguns)
+					if (!MenuLoadout.inBuyMenu(p, gun.cls())) { // CS2 sells only what your loadout puts in the buy menu
+						dev.strafemc.server.Toasts.warn(p, WeaponTable.name(gun.cls()) + " isn't in your loadout");
+						return;
+					}
 					if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
 					paid = price(gun.cls(), 0);
 					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);

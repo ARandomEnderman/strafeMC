@@ -193,6 +193,7 @@ public final class GameModes {
 		p.experienceProgress = s.progress();
 		p.totalExperience = s.total();
 		p.setGameMode(net.minecraft.world.level.GameType.byName(s.gameType(), net.minecraft.world.level.GameType.SURVIVAL));
+		p.setCamera(p); // a round mode's dead were watching a teammate
 		p.removeAttached(SAVED);
 		p.inventoryMenu.broadcastChanges();
 	}
@@ -221,6 +222,11 @@ public final class GameModes {
 	/** The player is in the running mode (their own things put away, the mode's gear in hand). */
 	public static boolean playing(ServerPlayer p) {
 		return race != null && p.hasAttached(SAVED);
+	}
+
+	/** A dead player in a round mode switches whom they watch (1 next, -1 previous). */
+	public static void spectate(ServerPlayer p, int step) {
+		if (race instanceof RoundMode r && p.hasAttached(SAVED)) r.spectate(p, step);
 	}
 
 	/** Ends the warmup now (mp_warmup_end). */

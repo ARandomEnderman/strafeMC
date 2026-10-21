@@ -260,6 +260,8 @@ public final class ConsoleActions {
 				}
 			}
 			case "shop_refresh" -> dev.strafemc.weapon.Shop.buyRefresh(p);
+			case "spec_next" -> dev.strafemc.mode.GameModes.spectate(p, 1);
+			case "spec_prev" -> dev.strafemc.mode.GameModes.spectate(p, -1);
 			case "jointeam" -> { // CS2's jointeam: t, ct or auto
 				String side = arg.trim().toLowerCase(java.util.Locale.ROOT);
 				if (side.equals("2")) side = "t";
