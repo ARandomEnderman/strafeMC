@@ -97,12 +97,6 @@ public final class MyLoadout {
 		changed();
 	}
 
-	/** Back to CS2's default buy menu for a side. */
-	public static void resetBuy(boolean t) {
-		obj(root(), "buy").remove(t ? "t" : "ct");
-		changed();
-	}
-
 	// skins
 
 	/** A skin entry ("weapon_ak47", "knife", "gloves"): {"wrap"/"kit", "wear", "seed", "st"}, or null for the default look. */

@@ -86,7 +86,6 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 		if (tab == 0) {
 			addRenderableWidget(Button.builder(Component.literal("Terrorist"), b -> side(true)).bounds(20, TOP, 90, 20).build());
 			addRenderableWidget(Button.builder(Component.literal("Counter-Terrorist"), b -> side(false)).bounds(112, TOP, 110, 20).build());
-			addRenderableWidget(Button.builder(Component.literal("Reset"), b -> MyLoadout.resetBuy(t)).bounds(224, TOP, 60, 20).build());
 		} else skinWidgets();
 	}
 
@@ -132,7 +131,7 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 	}
 
 	private void renderBuy(GuiGraphicsExtractor g, int mx, int my) {
-		g.text(font, t ? "Terrorist" : "Counter-Terrorist", 296, TOP + 6, GOLD, false);
+		g.text(font, t ? "Terrorist" : "Counter-Terrorist", 234, TOP + 6, GOLD, false);
 		for (int c = 0; c < 3; c++) {
 			int[] h = buyTile(c, 0);
 			g.text(font, TITLES[c], h[0], h[1] - 12, GOLD, false);
