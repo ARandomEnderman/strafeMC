@@ -61,6 +61,11 @@ public final class CaseImages {
 		loadPaths(bases);
 	}
 
+	/** Loads several pictures by panorama path (as image()) in one converter run. */
+	public static void images(List<String> bases) {
+		loadPaths(bases);
+	}
+
 	private static void loadPaths(List<String> bases) {
 		List<String> todo = new ArrayList<>();
 		for (String b : bases) if (REQUESTED.add(b)) todo.add(b);

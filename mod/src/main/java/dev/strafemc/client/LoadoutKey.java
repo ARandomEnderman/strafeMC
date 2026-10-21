@@ -46,8 +46,13 @@ public final class LoadoutKey {
 		return true;
 	}
 
-	/** The loadout itself: the server opens its menu. */
+	/** The loadout itself: the server opens its menu; on a server using menu loadouts, the main menu's loadout screen. */
 	public static void open() {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (dev.strafemc.weapon.MenuLoadout.client) {
+			mc.setScreen(new MenuLoadoutScreen(fromMenu ? new QuickMenuScreen(false) : null));
+			return;
+		}
 		if (ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.Action.TYPE))
 			ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.Action("loadout", ""));
 	}

@@ -4,10 +4,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <CssApi>C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive - MINECRAFT INTEGRATION\game\csgo\addons\counterstrikesharp\api</CssApi>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CounterStrikeSharp.API"><HintPath>$(CssApi)\CounterStrikeSharp.API.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Microsoft.Extensions.Logging.Abstractions"><HintPath>$(CssApi)\Microsoft.Extensions.Logging.Abstractions.dll</HintPath><Private>false</Private></Reference>
+    <!-- CounterStrikeSharp ships its API with the server: compile against the package, don't copy it -->
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 </Project>

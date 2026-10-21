@@ -12,7 +12,7 @@ public final class WrapChoice {
 
 	private static ItemStack knifeWrap() {
 		var p = Minecraft.getInstance().player;
-		return p == null ? ItemStack.EMPTY : Loadout.get(p, "knife");
+		return p == null ? ItemStack.EMPTY : Loadout.worn(p, "knife");
 	}
 
 	/** The paint kit for this knife (its own version of the wrap's skin, else another knife's), or null for none. */
@@ -29,7 +29,7 @@ public final class WrapChoice {
 
 	private static ItemStack gunWrap(String cls) {
 		var p = Minecraft.getInstance().player;
-		return p == null ? ItemStack.EMPTY : Loadout.get(p, cls);
+		return p == null ? ItemStack.EMPTY : Loadout.worn(p, cls);
 	}
 
 	/** The paint kit of the wrap in this gun's loadout slot, or null for none. */

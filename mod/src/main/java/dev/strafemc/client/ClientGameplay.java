@@ -30,6 +30,8 @@ public final class ClientGameplay {
 	/** The server's kill card time (strafemc_killcards_time): seconds, 0 until you die. */
 	private static volatile int killCardTime = 0;
 	private static volatile boolean loadoutKeep = true, drops = true, c4Keypad = false;
+	/** The server's ServerRules as they apply now ("menuLoadout", "levels", "shop", ...); empty until it says. */
+	private static volatile Map<String, Boolean> rules = Map.of();
 	private static volatile java.util.Map<String, Boolean> movementPersonal = java.util.Map.of();
 	/** Other server settings by their console command (strafemc_knockback, bot_quota, ...), as numbers. */
 	private static volatile java.util.Map<String, Double> settings = java.util.Map.of();
@@ -59,6 +61,10 @@ public final class ClientGameplay {
 			loadoutKeep = !Boolean.FALSE.equals(root.get("loadoutKeep"));
 			c4Keypad = Boolean.TRUE.equals(root.get("c4Keypad"));
 			drops = !Boolean.FALSE.equals(root.get("drops"));
+			Map<String, Boolean> ru = new java.util.HashMap<>();
+			if (root.get("rules") instanceof Map<?, ?> rm) rm.forEach((k, v) -> { if (v instanceof Boolean b) ru.put(String.valueOf(k), b); });
+			rules = ru;
+			dev.strafemc.weapon.MenuLoadout.client = rule("menuLoadout", false);
 			java.util.Map<String, Boolean> pers = new java.util.HashMap<>();
 			if (root.get("movementPersonal") instanceof java.util.Map<?, ?> pm)
 				pm.forEach((k, v) -> { if (v instanceof Boolean b) pers.put(String.valueOf(k), b); });
@@ -89,6 +95,8 @@ public final class ClientGameplay {
 		buyTime = 0;
 		killCardTime = 0;
 		movementPersonal = java.util.Map.of();
+		rules = Map.of();
+		dev.strafemc.weapon.MenuLoadout.client = false;
 		STATS.clear();
 		RECOIL.clear();
 		MERGED.clear();
@@ -176,6 +184,12 @@ public final class ClientGameplay {
 	/** Care packages are on on this server. */
 	public static boolean drops() {
 		return drops;
+	}
+
+	/** A server rule (ServerRules: "menuLoadout", "levels", "shop", "upgrader", "tradeup", "modeServer"), or def before it says. */
+	public static boolean rule(String name, boolean def) {
+		Boolean b = rules.get(name);
+		return b != null ? b : def;
 	}
 
 	/** The server's strafemc_c4_keypad: plant and defuse the C4 on a keypad. */

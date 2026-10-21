@@ -112,6 +112,7 @@ public final class GameplaySync {
 		root.put("loadoutKeep", StrafeSettings.loadoutKeep());
 		root.put("c4Keypad", StrafeSettings.c4Keypad());
 		root.put("drops", StrafeSettings.drops());
+		root.put("rules", ServerRules.effective());
 		root.put("movementPersonal", StrafeSettings.personal());
 		// the rest of the server's settings, for the console quick menu
 		Map<String, Object> st = new LinkedHashMap<>();
@@ -126,6 +127,7 @@ public final class GameplaySync {
 		st.put("strafemc_buyzone", StrafeSettings.buyZone());
 		st.put("strafemc_bombsite", StrafeSettings.bombSite());
 		st.put("strafemc_overtime", StrafeSettings.overtime() ? 1 : 0);
+		st.put("strafemc_gamemode_server", ServerRules.modeServer() ? 1 : 0);
 		st.put("strafemc_gamemode", dev.strafemc.mode.GameModes.MODES.indexOf(StrafeSettings.gameMode()));
 		root.put("settings", st);
 		String json = GSON.toJson(root);

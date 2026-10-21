@@ -18,7 +18,7 @@ public final class GloveChoice {
 
 	private static ItemStack worn() {
 		var p = Minecraft.getInstance().player;
-		return p == null ? ItemStack.EMPTY : Loadout.get(p, "gloves");
+		return p == null ? ItemStack.EMPTY : Loadout.worn(p, "gloves");
 	}
 
 	public static String model() {

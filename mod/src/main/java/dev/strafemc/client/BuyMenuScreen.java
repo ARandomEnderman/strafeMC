@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The defuse kit is shown but not for sale (no C4 yet). The server decides
  * whether you may buy (strafemc_buymenu, strafemc_buytime) and applies CS2's grenade limits. Weapon columns show CS2's
  * default loadout for your side (items_game flexible_loadout_default). FLAGGED: Minecraft's font for CS2's Stratum; no
- * agent model; no way yet to pick a non-default weapon for a slot (CS2's loadout screen).
+ * agent model. The weapons in each slot are chosen in the main menu's loadout (MenuLoadoutScreen).
  */
 public final class BuyMenuScreen extends Screen {
 	/** CS2 equipment icons the runtime pack converts for this menu. */
@@ -98,11 +98,11 @@ public final class BuyMenuScreen extends Screen {
 						new Slot("decoy", "Decoy Grenade", "decoy", "weapon_decoy")}};
 	}
 
-	/** A weapon column: CS2's loadout slots <group>0..4 for your side (WeaponTable.inSlot). */
+	/** A weapon column: loadout slots <group>0..4 for your side, as set in the main menu's loadout (MyLoadout; else CS2's defaults). */
 	private static Slot[] column(String group, boolean t) {
 		Slot[] out = new Slot[5];
 		for (int i = 0; i < 5; i++) {
-			var e = dev.strafemc.weapon.WeaponTable.inSlot(group + i, t);
+			var e = dev.strafemc.weapon.WeaponTable.get(MyLoadout.buy(group + i, t));
 			if (e != null) out[i] = new Slot(e.shortName(), dev.strafemc.weapon.WeaponTable.name(e.cls()), e.shortName(), e.cls());
 		}
 		return out;
@@ -280,7 +280,7 @@ public final class BuyMenuScreen extends Screen {
 		pose.popMatrix();
 	}
 
-	private static void icon(GuiGraphicsExtractor g, String name, double cx, double cy, double h, int color) {
+	static void icon(GuiGraphicsExtractor g, String name, double cx, double cy, double h, int color) {
 		int[] sz = SIZES.computeIfAbsent(name, n -> {
 			Path png = dev.strafemc.client.assets.RuntimePack.DIR.resolve("assets/strafemc/textures/gui/buymenu/" + n + ".png");
 			if (!Files.exists(png)) return new int[] {0, 0};

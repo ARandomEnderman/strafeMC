@@ -256,8 +256,9 @@ public final class StrafeSettings {
 		return loadoutKeep;
 	}
 
+	/** Care packages: this world's switch (strafemc_drops), and the server's (ServerRules). */
 	public static boolean drops() {
-		return drops;
+		return drops && ServerRules.drops();
 	}
 
 	public static void setDrops(boolean on) {

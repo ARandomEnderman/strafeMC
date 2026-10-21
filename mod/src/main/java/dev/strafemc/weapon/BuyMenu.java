@@ -144,7 +144,7 @@ public final class BuyMenu {
 				bought(p, what, given, before);
 			}
 			case "knife" -> {
-				give(p, new ItemStack(WeaponItems.KNIVES.get(CsTeam.isT(p) ? "weapon_knife_t" : "weapon_knife")), given);
+				give(p, MenuLoadout.knife(p), given);
 				bought(p, what, given, null);
 			}
 			default -> {

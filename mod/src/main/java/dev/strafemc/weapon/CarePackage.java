@@ -129,6 +129,7 @@ public final class CarePackage {
 	 * their Minecraft XP, peaceful ones just their Minecraft XP: a pig is 1-3), times 1.5 per modifier.
 	 */
 	static void kill(ServerPlayer p, net.minecraft.world.entity.LivingEntity victim, String icon, int flags) {
+		if (!dev.strafemc.server.ServerRules.levels()) return; // no XP or ranks on this server
 		double base;
 		if (victim instanceof ServerPlayer || Bots.isBot(victim)) base = PLAYER_XP;
 		else {

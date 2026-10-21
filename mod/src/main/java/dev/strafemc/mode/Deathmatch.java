@@ -85,7 +85,7 @@ final class Deathmatch extends Mode {
 	void gear(ServerPlayer p) {
 		String[] l = loadout.get(p.getUUID());
 		String primary = l == null ? null : l[0];
-		String secondary = l != null && l[1] != null ? l[1] : CsTeam.isT(p) ? "weapon_glock" : "weapon_hkp2000";
+		String secondary = l != null && l[1] != null ? l[1] : dev.strafemc.weapon.MenuLoadout.startPistol(p);
 		if (primary != null) give(p, 0, primary);
 		give(p, 1, secondary);
 		knife(p);

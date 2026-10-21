@@ -101,6 +101,18 @@ public final class GameModes {
 				ctx.getSource().sendSuccess(() -> Component.literal("Match restarted"), true);
 				return 1;
 			}));
+			// a dedicated game mode server (ServerRules): menu loadouts, no loadout items / levels / drops / shop / upgrader / trade ups
+			var server = Commands.literal("server").executes(ctx -> {
+				ctx.getSource().sendSuccess(() -> Component.literal("Game mode server: " + (dev.strafemc.server.ServerRules.modeServer() ? "on" : "off")), false);
+				return 1;
+			});
+			for (String v : new String[] {"on", "off"})
+				server.then(Commands.literal(v).executes(ctx -> {
+					dev.strafemc.server.ServerRules.setModeServer(v.equals("on"));
+					ctx.getSource().sendSuccess(() -> Component.literal("Game mode server: " + v), true);
+					return 1;
+				}));
+			cmd.then(server);
 			for (String m : MODES)
 				cmd.then(Commands.literal(m).executes(ctx -> {
 					set(m);

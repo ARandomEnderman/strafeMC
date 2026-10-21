@@ -364,6 +364,8 @@ public final class ConsoleCommands {
 				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		local("strafemc_drops", "Care packages on (1) or off (0). Operators.",
 				a -> action("strafemc_drops", bool(a, !dev.strafemc.client.ClientGameplay.drops()) ? "1" : "0", false));
+		local("strafemc_gamemode_server", "Game mode server (1): everyone's main menu loadout; no loadout items, levels, drops, shop, upgrader, trade ups. Operators.",
+				a -> action("strafemc_gamemode_server", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
 		local("strafemc_loadout_keep", "Keep loadout on death (1) or drop it (0). Operators.",
 				a -> action("strafemc_loadout_keep", bool(a, !dev.strafemc.client.ClientGameplay.loadoutKeep()) ? "1" : "0", false));
 		local("loadout", "Open your loadout.", a -> dev.strafemc.client.LoadoutKey.open());

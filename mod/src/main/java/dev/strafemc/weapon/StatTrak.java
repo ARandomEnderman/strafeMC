@@ -27,12 +27,12 @@ public final class StatTrak {
 
 	/** A kill with the weapon of this loadout slot (a gun's class, or "knife"): its wrap counts it if it's StatTrak. */
 	static void kill(ServerPlayer p, String slot) {
-		ItemStack wrap = Loadout.get(p, slot);
+		ItemStack wrap = Loadout.worn(p, slot);
 		int k = kills(wrap);
 		if (k < 0 || k >= MAX) return;
 		wrap = wrap.copy();
 		wrap.set(WeaponItems.STATTRAK, k + 1);
-		Loadout.set(p, slot, wrap);
+		Loadout.setWorn(p, slot, wrap);
 		if (k + 1 >= 10) Advancements.award(p, "stattrak_10");
 		if (k + 1 >= 100) Advancements.award(p, "century");
 		if (k + 1 >= 1000) Advancements.award(p, "stattrak_1000");

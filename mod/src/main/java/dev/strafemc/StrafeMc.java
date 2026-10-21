@@ -22,6 +22,8 @@ public class StrafeMc implements ModInitializer {
 	public void onInitialize() {
 		dev.strafemc.weapon.WeaponItems.register();
 		dev.strafemc.weapon.Loadout.register();
+		dev.strafemc.weapon.MenuLoadout.register();
+		dev.strafemc.server.ServerRules.register();
 		dev.strafemc.weapon.CarePackage.register();
 		dev.strafemc.weapon.Shop.register();
 		dev.strafemc.weapon.SprayLog.register();
@@ -135,6 +137,9 @@ public class StrafeMc implements ModInitializer {
 				if (o != p && o.distanceToSqr(p) < 64 * 64 && ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.MoveSound.TYPE))
 					ServerPlayNetworking.send(o, out);
 		});
+		PayloadTypeRegistry.serverboundPlay().register(dev.strafemc.net.StrafePayloads.MenuLoadoutChoice.TYPE, dev.strafemc.net.StrafePayloads.MenuLoadoutChoice.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.MenuLoadoutChoice.TYPE,
+				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "menuloadout", 4)) dev.strafemc.weapon.MenuLoadout.receive(ctx.player(), msg.json()); });
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TeamChoice.TYPE,
 				(msg, ctx) -> dev.strafemc.mode.GameModes.joinTeam(ctx.player(), msg.t() ? "t" : "ct"));
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Throw.TYPE,

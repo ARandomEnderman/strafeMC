@@ -308,6 +308,18 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** The loadout picked in strafeMC's main menu (MenuLoadout's JSON), sent on joining and on every change. */
+	public record MenuLoadoutChoice(String json) implements CustomPacketPayload {
+		public static final Type<MenuLoadoutChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "menu_loadout"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, MenuLoadoutChoice> CODEC =
+				StreamCodec.composite(ByteBufCodecs.stringUtf8(1 << 16), MenuLoadoutChoice::json, MenuLoadoutChoice::new);
+
+		@Override
+		public Type<MenuLoadoutChoice> type() {
+			return TYPE;
+		}
+	}
+
 	public record TeamChoice(boolean t) implements CustomPacketPayload {
 		public static final Type<TeamChoice> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "team"));
 		public static final StreamCodec<RegistryFriendlyByteBuf, TeamChoice> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, TeamChoice::t, TeamChoice::new);

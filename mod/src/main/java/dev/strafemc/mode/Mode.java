@@ -251,7 +251,7 @@ abstract class Mode {
 	}
 
 	static void knife(ServerPlayer p) {
-		p.getInventory().setItem(2, new ItemStack(WeaponItems.KNIVES.get(CsTeam.isT(p) ? "weapon_knife_t" : "weapon_knife")));
+		p.getInventory().setItem(2, dev.strafemc.weapon.MenuLoadout.knife(p));
 	}
 
 	static void select(ServerPlayer p, int slot) {

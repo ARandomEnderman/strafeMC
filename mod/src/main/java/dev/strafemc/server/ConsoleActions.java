@@ -18,6 +18,17 @@ public final class ConsoleActions {
 	public static void run(ServerPlayer p, String cmd, String arg) {
 		boolean op = Access.isOperator(p);
 		boolean cheat = op && Access.cheats(); // cheat commands: operator AND sv_cheats 1, checked here, not just on the client
+		String off = ServerRules.refusal(switch (cmd) {
+			case "loadout" -> "loadout";
+			case "shop_buy", "shop_sell", "shop_withdraw", "shop_refresh" -> "shop";
+			case "upgrade", "upgrade_claim" -> "upgrader";
+			case "tradeup" -> "tradeup";
+			default -> "";
+		});
+		if (off != null) {
+			Toasts.warn(p, off);
+			return;
+		}
 		switch (cmd) {
 			case "strafemc_movement_choice" -> {
 				if (!op) {
@@ -472,6 +483,19 @@ public final class ConsoleActions {
 					break;
 				}
 				dev.strafemc.mode.GameModes.set(m);
+			}
+			case "strafemc_gamemode_server" -> {
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can change that."));
+					break;
+				}
+				if (arg.isBlank()) {
+					ConsoleRelay.reply(p, "strafemc_gamemode_server = " + (ServerRules.modeServer() ? 1 : 0));
+					break;
+				}
+				ServerRules.setModeServer(!arg.trim().equals("0"));
+				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Game mode server: "
+						+ (ServerRules.modeServer() ? "on" : "off") + " (set by " + p.getScoreboardName() + ")"), false);
 			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {

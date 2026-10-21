@@ -34,17 +34,21 @@ public final class QuickMenuScreen extends Screen {
 
 	@Override
 	protected void init() {
+		boolean menuLoadout = dev.strafemc.weapon.MenuLoadout.client, shop = ClientGameplay.rule("shop", true), tradeup = ClientGameplay.rule("tradeup", true),
+				upgrader = ClientGameplay.rule("upgrader", true);
 		entries = java.util.List.of(
-				new Entry("loadout", "Loadout", "Gloves, knife and gun wraps", () -> {
+				new Entry("loadout", "Loadout", menuLoadout ? "Your main menu skins and buy menu" : "Gloves, knife and gun wraps", () -> {
 					// the wheel stays up until the server's loadout replaces it (closing to the game first re-centres the mouse)
 					LoadoutKey.fromMenu = true; // its Done comes back here
 					LoadoutKey.open();
 				}, true),
 				new Entry("care_package", "Care Package", !ClientGameplay.drops() ? "Off on this server" : CarePackageScreen.claimable() ? "Rewards waiting!"
 						: "Free rewards for every rank", () -> minecraft.setScreen(new CarePackageScreen(this)), ClientGameplay.drops()),
-				new Entry("shop", "Shop", "New offers every 30 min; sell skins", () -> minecraft.setScreen(new ShopScreen(this)), true),
-				new Entry("tradeup", "Trade Up", "10 skins for one a quality higher", () -> minecraft.setScreen(new TradeUpScreen(this)), true),
-				new Entry("upgrader", "Upgrader", "Stake skins for a better one", () -> minecraft.setScreen(new UpgraderScreen(this)), true),
+				new Entry("shop", "Shop", shop ? "New offers every 30 min; sell skins" : "Off on this server", () -> minecraft.setScreen(new ShopScreen(this)), shop),
+				new Entry("tradeup", "Trade Up", tradeup ? "10 skins for one a quality higher" : "Off on this server", () -> minecraft.setScreen(new TradeUpScreen(this)),
+						tradeup),
+				new Entry("upgrader", "Upgrader", upgrader ? "Stake skins for a better one" : "Off on this server", () -> minecraft.setScreen(new UpgraderScreen(this)),
+						upgrader),
 				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
 	}

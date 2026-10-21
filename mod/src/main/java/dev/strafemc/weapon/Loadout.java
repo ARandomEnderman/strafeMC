@@ -85,6 +85,20 @@ public final class Loadout {
 		return s == null ? ItemStack.EMPTY : s;
 	}
 
+	/**
+	 * What the player wears in a slot: their main-menu loadout's finish while the server uses menu loadouts
+	 * (MenuLoadout), else the item in the slot. Skins shown on weapons go by this; trading and staking by get().
+	 */
+	public static ItemStack worn(Player p, String slot) {
+		return MenuLoadout.on(p) ? MenuLoadout.get(p, slot) : get(p, slot);
+	}
+
+	/** Puts back a changed worn item (a StatTrak kill) where it came from. */
+	static void setWorn(Player p, String slot, ItemStack stack) {
+		if (MenuLoadout.on(p)) MenuLoadout.set(p, slot, stack);
+		else set(p, slot, stack);
+	}
+
 	public static void set(Player p, String slot, ItemStack stack) {
 		Map<String, ItemStack> m = new HashMap<>(p.getAttachedOrElse(DATA, Map.of()));
 		if (stack.isEmpty()) m.remove(slot);
@@ -105,6 +119,7 @@ public final class Loadout {
 	}
 
 	public static void open(ServerPlayer p) {
+		if (refused(p)) return;
 		p.openMenu(new SimpleMenuProvider((id, inv, pl) -> new Menu(id, inv, (ServerPlayer) pl), Component.literal("Loadout")));
 	}
 
@@ -141,6 +156,7 @@ public final class Loadout {
 	 * (or the inventory when more are held).
 	 */
 	private static void equip(ServerPlayer p, String slot, ItemStack held) {
+		if (refused(p)) return;
 		ItemStack old = get(p, slot);
 		set(p, slot, held.copyWithCount(1));
 		if (held.getCount() == 1 && !old.isEmpty()) {
@@ -156,15 +172,23 @@ public final class Loadout {
 
 	/** Sneak + right-click with gloves: take off the worn ones (back to your side's default gloves). */
 	public static void takeOffGloves(ServerPlayer p) {
+		if (refused(p)) return;
 		ItemStack old = get(p, "gloves");
 		if (old.isEmpty()) return;
 		set(p, "gloves", ItemStack.EMPTY);
 		if (!p.getInventory().add(old)) p.drop(old, false);
 	}
 
+	/** The server uses menu loadouts: loadout items can't be put on or taken off (they wait for a normal server). */
+	private static boolean refused(ServerPlayer p) {
+		String no = dev.strafemc.server.ServerRules.refusal("loadout");
+		if (no != null) dev.strafemc.server.Toasts.warn(p, no);
+		return no != null;
+	}
+
 	/** On death: drop the loadout unless the server keeps it (strafemc_loadout_keep) or keepInventory is on. */
 	public static void onDeath(ServerPlayer p) {
-		if (dev.strafemc.server.StrafeSettings.loadoutKeep() || keepInventory(p)) return;
+		if (dev.strafemc.server.StrafeSettings.loadoutKeep() || keepInventory(p) || MenuLoadout.on(p)) return;
 		Map<String, ItemStack> m = p.getAttachedOrElse(DATA, Map.of());
 		if (m.isEmpty()) return;
 		for (ItemStack s : m.values()) p.drop(s.copy(), true, false);

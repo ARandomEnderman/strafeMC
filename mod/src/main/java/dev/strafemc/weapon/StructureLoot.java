@@ -36,7 +36,18 @@ public final class StructureLoot {
 
 	private StructureLoot() {}
 
+	/** Items that are worth money in strafeMC (what the shop, upgrader and trade ups deal in). */
+	static boolean economy(net.minecraft.world.item.ItemStack s) {
+		var i = s.getItem();
+		return i instanceof CaseItem || i instanceof KeyItem || i instanceof VoucherItem || i instanceof SkinWrapItem || i instanceof GloveItem
+				|| i instanceof StickerItem || i instanceof CharmItem || i instanceof SprayItem;
+	}
+
 	public static void register() {
+		// a server without drops (ServerRules): chests keep their gear but no CS2 cases, keys, capsules, vouchers or skins
+		net.fabricmc.fabric.api.loot.v3.LootTableEvents.MODIFY_DROPS.register((table, context, drops) -> {
+			if (!dev.strafemc.server.ServerRules.drops()) drops.removeIf(StructureLoot::economy);
+		});
 		net.fabricmc.fabric.api.loot.v3.LootTableEvents.MODIFY.register((key, table, source, registries) -> {
 			if (!source.isBuiltin() || !key.identifier().getNamespace().equals("minecraft")) return;
 			Map<String, Float> chances = CHESTS.contains(key.identifier().getPath()) ? CHANCE : VAULTS.get(key.identifier().getPath());

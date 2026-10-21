@@ -92,8 +92,14 @@ public class StrafeMcClient implements ClientModInitializer {
 					String p = SetupScreen.progressLine();
 					if (p != null) g.centeredText(mc.font, p, s.width / 2, 2, 0xFFFFFFFF);
 				});
-			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) SetupScreen.offer(screen);
+			if (screen instanceof net.minecraft.client.gui.screens.TitleScreen) {
+				SetupScreen.offer(screen);
+				// your loadout (buy menu slots, skins, agents) before joining anything
+				net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(net.minecraft.client.gui.components.Button.builder(
+						net.minecraft.network.chat.Component.literal("strafeMC Loadout"), b -> mc.setScreen(new MenuLoadoutScreen(screen))).bounds(4, 14, 110, 20).build());
+			}
 		});
+		MyLoadout.register();
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.MagPouchItem.MENU, net.minecraft.client.gui.screens.inventory.ContainerScreen::new);
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.StorageUnitItem.MENU, StorageUnitScreen::new);

@@ -199,7 +199,7 @@ final class RoundMode extends Mode {
 			if (diedThisRound.contains(p.getUUID()) || round == 1) {
 				var inv = p.getInventory();
 				for (int i = 0; i < inv.getContainerSize(); i++) if (!inv.getItem(i).isEmpty() && !(inv.getItem(i).getItem() instanceof KnifeItem)) inv.setItem(i, ItemStack.EMPTY);
-				give(p, 1, CsTeam.isT(p) ? "weapon_glock" : "weapon_hkp2000");
+				give(p, 1, dev.strafemc.weapon.MenuLoadout.startPistol(p));
 				knife(p);
 				select(p, 1);
 				CsArmor.set(p, c.freeArmor() ? 100 : 0, c.freeArmor());
@@ -423,7 +423,7 @@ final class RoundMode extends Mode {
 
 	@Override
 	void gear(ServerPlayer p) {
-		give(p, 1, CsTeam.isT(p) ? "weapon_glock" : "weapon_hkp2000");
+		give(p, 1, dev.strafemc.weapon.MenuLoadout.startPistol(p));
 		knife(p);
 		select(p, 1);
 	}

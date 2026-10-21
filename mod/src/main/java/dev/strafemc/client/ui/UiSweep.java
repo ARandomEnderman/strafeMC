@@ -245,6 +245,8 @@ public final class UiSweep {
 			m.put("settings" + t, () -> new dev.strafemc.client.StrafeSettingsScreen(null, tab));
 		}
 		m.put("console", dev.strafemc.client.console.ConsoleScreen::new);
+		m.put("menu_loadout", () -> new dev.strafemc.client.MenuLoadoutScreen(null, 0));
+		m.put("menu_loadout1", () -> new dev.strafemc.client.MenuLoadoutScreen(null, 1));
 		m.put("console_menu", () -> {
 			dev.strafemc.client.console.ConsoleScreen.showMenu();
 			return new dev.strafemc.client.console.ConsoleScreen();

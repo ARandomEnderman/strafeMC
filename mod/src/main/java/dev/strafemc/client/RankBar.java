@@ -14,7 +14,7 @@ public final class RankBar {
 	/** Draws it centred on cx, its top at y, the bar w wide. */
 	public static void draw(GuiGraphicsExtractor g, int cx, int y, int w) {
 		var mc = Minecraft.getInstance();
-		if (mc.player == null) return;
+		if (mc.player == null || !ClientGameplay.rule("levels", true)) return;
 		var font = mc.font;
 		CarePackage.State s = CarePackage.get(mc.player);
 		int rank = s.rank(), icon = 24, x0 = cx - w / 2;
