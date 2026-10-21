@@ -45,7 +45,7 @@ public final class WeaponItems {
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item STRAFE_PEARL;
-	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT, NAME_TAG, STATTRAK_SWAP, C4, DEFUSE_KIT, BULK_OPENER;
+	public static Item KEVLAR, ASSAULTSUIT, HEALTHSHOT, GUN_WRAP, KNIFE_WRAP, WEAPON_CASE, CASE_KEY, GUN_BASE, MAG_POUCH, STORAGE_UNIT, SPRAY, VOUCHER_ITEM, STICKER, CHARM, CHARM_DETACHMENT, NAME_TAG, STATTRAK_SWAP, C4, DEFUSE_KIT, BULK_OPENER, SHOP_REFRESH;
 	public static final java.util.Map<GloveItem.Kind, Item> GLOVES = new java.util.EnumMap<>(GloveItem.Kind.class);
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
@@ -102,6 +102,7 @@ public final class WeaponItems {
 		NAME_TAG = item("name_tag", p -> new NameTagItem(p.stacksTo(64)));
 		STATTRAK_SWAP = item("stattrak_swap_tool", p -> new NameTagItem(p.stacksTo(64), true));
 		BULK_OPENER = item("bulk_opener", p -> new NameTagItem(p.stacksTo(64), 2));
+		SHOP_REFRESH = item("shop_refresh", p -> new ShopRefreshItem(p.stacksTo(64)));
 		C4 = item(C4Item.CLS, p -> new C4Item(p.stacksTo(1)));
 		DEFUSE_KIT = item("defuse_kit", p -> new Item(p.stacksTo(1)));
 		StorageUnitItem.register();
@@ -178,7 +179,7 @@ public final class WeaponItems {
 		sectioned("utility", () -> new ItemStack(GRENADES.get(Grenade.SMOKE)), List.of(
 				new CreativeSections.Section("grenades", "Grenades", l -> { for (Item g : GRENADES.values()) l.add(new ItemStack(g)); }),
 				new CreativeSections.Section("other", "Other", l -> {
-					for (Item i : new Item[] {C4, DEFUSE_KIT, KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP, BULK_OPENER,
+					for (Item i : new Item[] {C4, DEFUSE_KIT, KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP, BULK_OPENER, SHOP_REFRESH,
 							SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, BOMB_SITE_ITEM})
 						l.add(new ItemStack(i));
 					for (int d : new int[] {10, 50, 100, 500, 1000}) l.add(VoucherItem.stack(VOUCHER_ITEM, d));
