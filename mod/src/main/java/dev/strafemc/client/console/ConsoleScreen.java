@@ -121,6 +121,7 @@ public final class ConsoleScreen extends Screen {
 			var modes = dev.strafemc.mode.GameModes.MODES;
 			ConsoleCommands.execute("strafemc_gamemode " + modes.get(Double.isNaN(v) ? 1 : ((int) v + 1) % modes.size()));
 		});
+		setting("Overtime", "strafemc_overtime", "On", "Off");
 		setting("Respawn on spawn blocks", "strafemc_spawnblocks", "On", "Off");
 		row("C4 keypad", () -> onOff(dev.strafemc.client.ClientGameplay.c4Keypad()),
 				() -> ConsoleCommands.execute("strafemc_c4_keypad " + (dev.strafemc.client.ClientGameplay.c4Keypad() ? 0 : 1)));

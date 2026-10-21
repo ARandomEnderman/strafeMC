@@ -51,8 +51,10 @@ final class RoundMode extends Mode {
 			false, 120, 7, 0, 0.33, 0.85, 0.4, 2, 4);
 	static final Config CASUAL = new Config("casual", 15, false, 5, 45, 180, 1000, 10000, 200, 0.5, 2700, 2700, 2700, 2700, 2400, 0, 200, 200, 200,
 			true, 90, 10, 0, 0, 0, 0, 1, 3);
-	/** How near a side's spawn blocks its players can buy (CS2's buy zones are drawn per map). FLAGGED ours. */
-	static final double BUY_ZONE = 12;
+	/** CS2's overtime: halves of mp_overtime_maxrounds / 2 rounds with mp_overtime_startmoney each (when strafemc_overtime is on). */
+	static final int OT_ROUNDS = 6, OT_MONEY = 10000;
+	/** How long a bot holds still to plant (CS2's C4 arming time). */
+	static final int BOT_PLANT_TICKS = 60;
 
 	enum Phase { FREEZE, LIVE, OVER }
 
@@ -66,6 +68,12 @@ final class RoundMode extends Mode {
 	private PlantedC4 bomb;
 	private UUID planter;
 	private String roundWinner = "";
+	/** Overtimes played (0: regulation). */
+	private int ot;
+	/** What each bot carries (its bought gun or the side's pistol), which bot has the bomb, its planting. */
+	private final Map<UUID, String> botGun = new HashMap<>();
+	private UUID bombBot;
+	private long botPlantStart = -1;
 
 	RoundMode(MinecraftServer server, Config c) {
 		super(server);
@@ -120,19 +128,28 @@ final class RoundMode extends Mode {
 		diedThisRound.clear();
 		removeBomb();
 		phase = Phase.FREEZE;
+		ot = 0;
+		botGun.clear();
+		bombBot = null;
 	}
 
 	private int money(UUID id) {
 		return money.getOrDefault(id, c.startMoney());
 	}
 
+	/** Money goes to players and bots alike (bots spend theirs at the start of a round). */
 	private void pay(LivingEntity e, int amount) {
-		if (!(e instanceof ServerPlayer p)) return;
-		money.put(p.getUUID(), Math.max(0, Math.min(c.maxMoney(), money(p.getUUID()) + amount)));
+		if (e == null) return;
+		UUID k = key(e);
+		money.put(k, Math.max(0, Math.min(maxMoney(), money(k) + amount)));
+	}
+
+	private int maxMoney() {
+		return ot > 0 ? Math.max(c.maxMoney(), OT_MONEY) : c.maxMoney();
 	}
 
 	private void payTeam(boolean t, int amount) {
-		for (ServerPlayer p : players()) if (CsTeam.isT(p) == t) pay(p, amount);
+		for (LivingEntity e : participants()) if (CsTeam.isT(e) == t) pay(e, amount);
 	}
 
 	// ---------------------------------------------------------------- rounds
@@ -167,18 +184,24 @@ final class RoundMode extends Mode {
 			removeC4(p);
 			p.inventoryMenu.broadcastChanges();
 		}
-		diedThisRound.clear();
-		for (LivingEntity b : Bots.living(server)) { // bots back to their side's spawn
+		for (LivingEntity b : Bots.living(server)) { // bots back to their side's spawn, buying with their money
 			var pick = SpawnPoints.pick(CsTeam.isT(b) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
 			if (pick != null && b.isAlive()) b.teleportTo(pick.pos().x, pick.pos().y, pick.pos().z);
 			if (b.isAlive()) b.setHealth(b.getMaxHealth());
+			if (diedThisRound.contains(key(b)) || round == 1) botGun.remove(key(b));
+			botBuy(b);
 		}
-		List<ServerPlayer> ts = new ArrayList<>();
-		for (ServerPlayer p : players()) if (CsTeam.isT(p)) ts.add(p);
+		diedThisRound.clear();
+		bombBot = null;
+		botPlantStart = -1;
+		List<LivingEntity> ts = new ArrayList<>();
+		for (LivingEntity e : participants()) if (CsTeam.isT(e) && e.isAlive()) ts.add(e);
 		if (!ts.isEmpty()) { // one T carries the bomb
-			ServerPlayer carrier = ts.get(new java.util.Random().nextInt(ts.size()));
-			ItemStack c4 = new ItemStack(WeaponItems.C4);
-			if (!carrier.getInventory().add(c4)) carrier.drop(c4, false);
+			LivingEntity carrier = ts.get(new java.util.Random().nextInt(ts.size()));
+			if (carrier instanceof ServerPlayer cp) {
+				ItemStack c4 = new ItemStack(WeaponItems.C4);
+				if (!cp.getInventory().add(c4)) cp.drop(c4, false);
+			} else bombBot = key(carrier);
 		}
 		sendAll();
 	}
@@ -211,20 +234,38 @@ final class RoundMode extends Mode {
 		sendAll();
 	}
 
-	/** After a round's end: the next round, halftime, or the match's end. */
+	/**
+	 * After a round's end: the next round, halftime, or the match's end. With overtime on, a tie on the last round
+	 * plays overtimes of OT_ROUNDS (CS2's mp_overtime_maxrounds 6), each half starting everyone on OT_MONEY
+	 * (mp_overtime_startmoney 10000) with sides swapped at its middle; the wins needed go up by half an overtime each
+	 * time. FLAGGED: the sides stay as they ended regulation for the first overtime half.
+	 */
 	private void afterRound() {
-		int half = c.maxRounds() / 2, toWin = half + 1;
+		int half = c.maxRounds() / 2, toWin = half + 1 + ot * OT_ROUNDS / 2;
 		if (scoreT >= toWin || scoreCt >= toWin) {
-			swapIfHalf(false);
 			win(scoreT > scoreCt ? "Terrorists" : "Counter-Terrorists");
 			return;
 		}
-		if (round >= c.maxRounds()) {
-			win("Nobody (draw)");
-			return;
+		int last = c.maxRounds() + ot * OT_ROUNDS;
+		if (round >= last) {
+			if (!dev.strafemc.server.StrafeSettings.overtime()) {
+				win("Nobody (draw)");
+				return;
+			}
+			ot++;
+			overtimeMoney();
+			for (ServerPlayer p : players()) p.sendSystemMessage(Component.literal("Overtime " + ot));
+		} else if (c.halftime() && round == half) swapIfHalf(true);
+		else if (ot > 0 && round == last - OT_ROUNDS / 2) {
+			swapIfHalf(true);
+			overtimeMoney();
 		}
-		if (c.halftime() && round == half) swapIfHalf(true);
 		startRound();
+	}
+
+	private void overtimeMoney() {
+		for (LivingEntity e : participants()) money.put(key(e), OT_MONEY);
+		lossT = lossCt = 0;
 	}
 
 	/** Halftime: everyone to the other side, money back to the start, the scores go with the teams. */
@@ -237,6 +278,8 @@ final class RoundMode extends Mode {
 		lossT = lossCt = c.startingLosses();
 		money.clear();
 		diedThisRound.clear();
+		botGun.clear();
+		for (LivingEntity e : Bots.living(server)) diedThisRound.add(key(e));
 		for (ServerPlayer p : players()) {
 			diedThisRound.add(p.getUUID()); // a fresh start: the pistol round again
 			p.sendSystemMessage(Component.literal("Halftime: you are now " + (CsTeam.isT(p) ? "a Terrorist" : "a Counter-Terrorist")));
@@ -334,18 +377,49 @@ final class RoundMode extends Mode {
 		respawnAt.put(p.getUUID(), now() + RESPAWN);
 	}
 
-	/** The guns and the C4 drop where a player dies (mp_death_drop_gun 1: CS2 drops the best gun; ours drops both). */
+	/**
+	 * What drops where a player dies, as CS2's round modes set it: the best gun (mp_death_drop_gun 1: the primary, else
+	 * the pistol), the grenade in hand or else the best one (mp_death_drop_grenade 2), the defuse kit
+	 * (mp_death_drop_defuser 1) and the bomb. The best grenade's order is ours (FLAGGED): molotov / incendiary, HE,
+	 * smoke, flash, decoy.
+	 */
 	void deathDrops(ServerPlayer p) {
 		if (warmup()) return;
 		var inv = p.getInventory();
+		int primary = -1, pistol = -1, grenade = -1, grenadeRank = 99;
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
-			if (s.is(WeaponItems.C4) || s.getItem() instanceof GunItem && !(s.getItem() instanceof KnifeItem)
-					&& !(s.getItem() instanceof dev.strafemc.weapon.GrenadeItem)) {
+			if (s.is(WeaponItems.C4) || s.is(WeaponItems.DEFUSE_KIT)) {
 				p.drop(s.copy(), true, false);
 				inv.setItem(i, ItemStack.EMPTY);
+			} else if (s.getItem() instanceof dev.strafemc.weapon.GrenadeItem g) {
+				int rank = i == inv.getSelectedSlot() ? -1 : grenadeRank(g.weaponClass);
+				if (rank < grenadeRank) {
+					grenadeRank = rank;
+					grenade = i;
+				}
+			} else if (s.getItem() instanceof GunItem g && !(s.getItem() instanceof KnifeItem) && dev.strafemc.weapon.WeaponTable.get(g.weaponClass) != null) {
+				if (Deathmatch.pistol(g.weaponClass)) {
+					if (pistol < 0) pistol = i;
+				} else if (primary < 0) primary = i;
 			}
 		}
+		for (int i : new int[] {primary >= 0 ? primary : pistol, grenade})
+			if (i >= 0) {
+				ItemStack s = inv.getItem(i);
+				p.drop(s.copyWithCount(1), true, false);
+				s.shrink(1);
+			}
+	}
+
+	private static int grenadeRank(String cls) {
+		return switch (cls) {
+			case "weapon_molotov", "weapon_incgrenade" -> 0;
+			case "weapon_hegrenade" -> 1;
+			case "weapon_smokegrenade" -> 2;
+			case "weapon_flashbang" -> 3;
+			default -> 4;
+		};
 	}
 
 	@Override
@@ -357,7 +431,17 @@ final class RoundMode extends Mode {
 
 	@Override
 	void kill(LivingEntity attacker, LivingEntity victim, String icon) {
-		if (warmup() || over >= 0 || attacker == null || attacker == victim || !inMode(attacker) || !inMode(victim)) return;
+		if (warmup() || over >= 0) return;
+		if (Bots.isBot(victim)) { // a bot's death: its gun is gone, and the bomb drops where it fell
+			diedThisRound.add(key(victim));
+			botGun.remove(key(victim));
+			if (key(victim).equals(bombBot)) {
+				bombBot = null;
+				botPlantStart = -1;
+				victim.spawnAtLocation((net.minecraft.server.level.ServerLevel) victim.level(), new ItemStack(WeaponItems.C4));
+			}
+		}
+		if (attacker == null || attacker == victim || !inMode(attacker) || !inMode(victim)) return;
 		scored(attacker, victim, icon);
 		sendAll();
 	}
@@ -389,10 +473,10 @@ final class RoundMode extends Mode {
 		return BombSites.near(p) ? "" : "You must be at a bomb site to plant";
 	}
 
-	void planted(ServerPlayer p, PlantedC4 b) {
+	void planted(LivingEntity p, PlantedC4 b) {
 		if (warmup()) return;
 		bomb = b;
-		planter = p.getUUID();
+		planter = key(p);
 		pay(p, c.playerPlant());
 		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("The bomb has been planted."));
 	}
@@ -401,7 +485,7 @@ final class RoundMode extends Mode {
 		if (b == bomb && phase == Phase.LIVE && over < 0) endRound(true, c.teamBomb(), "the bomb exploded");
 	}
 
-	void defused(ServerPlayer by, PlantedC4 b) {
+	void defused(LivingEntity by, PlantedC4 b) {
 		if (b != bomb || phase != Phase.LIVE || over >= 0) return;
 		pay(by, c.playerDefuse());
 		endRound(false, c.teamDefuse(), "the bomb was defused");
@@ -412,6 +496,68 @@ final class RoundMode extends Mode {
 	void skipWarmup() {
 		if (warmup()) super.skipWarmup();
 		else if (phase == Phase.FREEZE) phaseStart -= c.freeze() * 20L;
+	}
+
+	// ---------------------------------------------------------------- bots
+
+	/**
+	 * A bot's buy at the start of a round, with its own money: the side's rifle if it can afford it, else the cheaper
+	 * rifle, else an SMG; a bot that kept its gun keeps it. FLAGGED ours (CS2's bots buy by their own scripts): no armor
+	 * or grenades.
+	 */
+	private void botBuy(LivingEntity b) {
+		UUID k = key(b);
+		String have = botGun.get(k);
+		if (have != null && !Deathmatch.pistol(have)) return;
+		String[] options = CsTeam.isT(b) ? new String[] {"weapon_ak47", "weapon_galilar", "weapon_mac10"}
+				: new String[] {"weapon_m4a1", "weapon_famas", "weapon_mp9"};
+		for (String o : options) {
+			int price = dev.strafemc.weapon.BuyMenu.price(o, 0);
+			if (price > 0 && money(k) >= price) {
+				money.put(k, money(k) - price);
+				botGun.put(k, o);
+				return;
+			}
+		}
+	}
+
+	@Override
+	String botWeapon(LivingEntity bot) {
+		if (warmup()) return null;
+		String g = botGun.get(key(bot));
+		return g != null ? g : CsTeam.isT(bot) ? "weapon_glock" : "weapon_hkp2000";
+	}
+
+	/** The bomb carrier heads for the nearest bomb site; once it's planted, CTs head for the bomb. */
+	net.minecraft.world.phys.Vec3 botGoal(LivingEntity bot) {
+		if (warmup() || over >= 0 || phase != Phase.LIVE) return null;
+		boolean planted = bomb != null && !bomb.isRemoved() && !bomb.defused();
+		if (CsTeam.isT(bot) && !planted && key(bot).equals(bombBot)) {
+			var site = BombSites.nearest(bot);
+			if (site != null && bot.position().distanceToSqr(site) > 2.25) botPlantStart = -1; // walked off: start again
+			return site;
+		}
+		if (!CsTeam.isT(bot) && planted) return bomb.position();
+		return null;
+	}
+
+	/** At its objective: the carrier plants after CS2's arming time; a CT defuses (the bomb's own timing). */
+	void botAtGoal(LivingEntity bot) {
+		if (warmup() || phase != Phase.LIVE) return;
+		if (CsTeam.isT(bot) && key(bot).equals(bombBot) && BombSites.near(bot)) {
+			if (botPlantStart < 0) {
+				botPlantStart = now();
+				dev.strafemc.weapon.GunServer.soundAt((net.minecraft.server.level.ServerLevel) bot.level(), "c4.plant", bot.position(), bot);
+			} else if (now() - botPlantStart >= BOT_PLANT_TICKS) {
+				PlantedC4 b = new PlantedC4(bot.level(), null, new ItemStack(WeaponItems.C4));
+				b.setPos(bot.getX(), bot.getY(), bot.getZ());
+				b.setYRot(bot.getYRot());
+				bot.level().addFreshEntity(b);
+				bombBot = null;
+				botPlantStart = -1;
+				planted(bot, b);
+			}
+		} else if (!CsTeam.isT(bot) && bomb != null && !bomb.isRemoved()) bomb.defusePing(bot);
 	}
 
 	boolean botMayRespawn() {
@@ -431,7 +577,7 @@ final class RoundMode extends Mode {
 			long since = now() - phaseStart + (phase == Phase.LIVE ? c.freeze() * 20L : 0);
 			if (phase == Phase.LIVE && since > (c.freeze() + c.buy()) * 20L) return "The " + c.buy() + " second buy period has expired";
 		}
-		return BombSites.inBuyZone(p, BUY_ZONE) ? "" : "You are not in a buy zone";
+		return BombSites.inBuyZone(p, dev.strafemc.server.StrafeSettings.buyZone()) ? "" : "You are not in a buy zone";
 	}
 
 	/** Takes the price; false (and a message) when they can't afford it. */
@@ -514,6 +660,7 @@ final class RoundMode extends Mode {
 		o.addProperty("bomb", bomb != null && !bomb.isRemoved() && !bomb.defused());
 		o.addProperty("frozen", frozen());
 		o.addProperty("teams", true);
+		o.addProperty("ot", ot);
 	}
 
 	@Override

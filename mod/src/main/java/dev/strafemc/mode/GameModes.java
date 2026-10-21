@@ -232,8 +232,23 @@ public final class GameModes {
 		if (race instanceof RoundMode r) r.exploded(bomb);
 	}
 
-	public static void defused(ServerPlayer by, dev.strafemc.weapon.PlantedC4 bomb) {
+	public static void defused(net.minecraft.world.entity.LivingEntity by, dev.strafemc.weapon.PlantedC4 bomb) {
 		if (race instanceof RoundMode r) r.defused(by, bomb);
+	}
+
+	/** Freeze time: bots hold still. */
+	public static boolean botFrozen() {
+		return race instanceof RoundMode r && r.frozen();
+	}
+
+	/** Where a bot's objective is (the bomb site for the bomb carrier, the planted bomb for a CT), or null. */
+	public static net.minecraft.world.phys.Vec3 botGoal(net.minecraft.world.entity.LivingEntity bot) {
+		return race instanceof RoundMode r ? r.botGoal(bot) : null;
+	}
+
+	/** A bot standing at its objective: planting or defusing. */
+	public static void botAtGoal(net.minecraft.world.entity.LivingEntity bot) {
+		if (race instanceof RoundMode r) r.botAtGoal(bot);
 	}
 
 	/** Whether dead bots may come back now (round modes: only between rounds). */

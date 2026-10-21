@@ -415,6 +415,23 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
+			case "strafemc_buyzone", "strafemc_bombsite", "strafemc_overtime" -> {
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can change the game mode's settings."));
+					break;
+				}
+				try {
+					String v = arg.trim();
+					switch (cmd) {
+						case "strafemc_buyzone" -> { if (!v.isEmpty()) StrafeSettings.setBuyZone(Integer.parseInt(v)); }
+						case "strafemc_bombsite" -> { if (!v.isEmpty()) StrafeSettings.setBombSite(Integer.parseInt(v)); }
+						default -> { if (!v.isEmpty()) StrafeSettings.setOvertime(!v.equals("0")); }
+					}
+				} catch (NumberFormatException ignored) {
+				}
+				ConsoleRelay.reply(p, "buy zone " + StrafeSettings.buyZone() + " blocks, bomb sites " + StrafeSettings.bombSite() + " blocks, overtime "
+						+ (StrafeSettings.overtime() ? "on" : "off"));
+			}
 			case "strafemc_gamemode" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change the game mode."));

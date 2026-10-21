@@ -66,6 +66,7 @@ public final class PerfBench {
 		if (PHASES[phase].equals("armsrace")) armsRace(mc, ticks);
 		if (PHASES[phase].equals("modes")) modes(mc, ticks);
 		if (PHASES[phase].equals("rounds")) rounds(mc, ticks);
+		if (PHASES[phase].equals("botplant")) botPlant(mc, ticks);
 		if (PHASES[phase].equals("c4")) { // close over the planted bomb, then from its side
 			mc.player.getAbilities().flying = true;
 			mc.player.setDeltaMovement(Vec3.ZERO);
@@ -120,7 +121,7 @@ public final class PerfBench {
 				for (String l : dev.strafemc.client.weapon.InfernoClient.describe()) log(l);
 			}
 		}
-		if (ticks < PHASE) return;
+		if (ticks < (PHASES[phase].equals("botplant") ? 1400 : PHASE)) return;
 		log("== " + PHASES[phase]);
 		shot(mc, PHASES[phase]);
 		for (String l : Perf.lines()) log(l);
@@ -346,6 +347,59 @@ public final class PerfBench {
 		if (t == 95) shot(mc, "rounds_bomb");
 		if (t == 110) shot(mc, "rounds_over");
 	}
+
+	/**
+	 * Bots and the bomb: a T spawn with a bomb site 6 blocks off, the CT spawn 40 blocks away in a stone box with the
+	 * player (a CT) in it; a T bot gets the bomb, walks to the site and plants; the log shows the round's events.
+	 */
+	private static void botPlant(Minecraft mc, int t) {
+		var server = mc.getSingleplayerServer();
+		if (server == null) return;
+		if (t == 1) Perf.toggle(false);
+		java.util.UUID id = mc.player.getUUID();
+		server.execute(() -> {
+			var p = server.getPlayerList().getPlayer(id);
+			if (p == null) return;
+			var level = p.level();
+			switch (t) {
+				case 2 -> {
+					BlockPos g = p.blockPosition().below();
+					botBase = g;
+					var sp = dev.strafemc.weapon.WeaponItems.SPAWN_POINT.defaultBlockState();
+					level.setBlockAndUpdate(g.offset(0, 0, 0), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.T));
+					level.setBlockAndUpdate(g.offset(6, 0, 0), dev.strafemc.weapon.WeaponItems.BOMB_SITE.defaultBlockState());
+					BlockPos ct = g.offset(40, 0, 0);
+					for (int x = -2; x <= 2; x++)
+						for (int z = -2; z <= 2; z++)
+							for (int y = 1; y <= 4; y++)
+								if (Math.abs(x) == 2 || Math.abs(z) == 2 || y == 4) level.setBlockAndUpdate(ct.offset(x, y, z), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+					level.setBlockAndUpdate(ct, sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.CT));
+					dev.strafemc.weapon.CsTeam.set(p, false);
+					dev.strafemc.mode.GameModes.set("competitive");
+					dev.strafemc.weapon.Bots.add(true);
+				}
+				case 6 -> dev.strafemc.mode.GameModes.skipWarmup();
+				case 30 -> {
+					dev.strafemc.mode.GameModes.skipWarmup(); // freeze over
+					log("botplant: live " + state(p));
+				}
+				default -> {}
+			}
+			if (t > 30 && t % 40 == 0) {
+				var bot = level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.LivingEntity.class),
+						e -> dev.strafemc.weapon.Bots.isBot(e)).stream().findFirst().orElse(null);
+				var bombs = level.getEntitiesOfClass(dev.strafemc.weapon.PlantedC4.class, new net.minecraft.world.phys.AABB(botBase).inflate(60));
+				log("botplant: t=" + t + " bot " + (bot == null ? "-" : bot.blockPosition().toShortString() + " " + bot.getMainHandItem().getItem())
+						+ " bombs " + bombs.size() + " " + state(p).replaceAll("\\\"players\\\".*", ""));
+			}
+			if (t == 1390) {
+				dev.strafemc.mode.GameModes.set("none");
+				dev.strafemc.weapon.Bots.kickAll();
+			}
+		});
+	}
+
+	private static BlockPos botBase = BlockPos.ZERO;
 
 	private static String state(net.minecraft.server.level.ServerPlayer p) {
 		return dev.strafemc.mode.GameModes.stateOf(p);

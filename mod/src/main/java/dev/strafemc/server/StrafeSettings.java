@@ -54,6 +54,13 @@ public final class StrafeSettings {
 	private static volatile int maxUnlagMs = 300;
 	/** strafemc_gamemode: the game mode running in this world ("none": plain strafeMC survival; "armsrace"). */
 	private static volatile String gameMode = "none";
+	/**
+	 * Round modes: how far from a side's spawn blocks its buy zone reaches, and from a bomb site block its plant area
+	 * (blocks; CS2 maps draw both by hand), and whether a tie on the last round goes to overtime (CS2's
+	 * mp_overtime_enable, off in its Competitive config).
+	 */
+	private static volatile int buyZone = 12, bombSite = 5;
+	private static volatile boolean overtime = false;
 	private static Path file;
 
 	private StrafeSettings() {}
@@ -115,6 +122,33 @@ public final class StrafeSettings {
 		buyMode = Math.max(BUY_OFF, Math.min(BUY_EVERYONE, mode));
 		save();
 		GameplaySync.resendAll();
+	}
+
+	public static int buyZone() {
+		return buyZone;
+	}
+
+	public static void setBuyZone(int blocks) {
+		buyZone = Math.max(1, Math.min(256, blocks));
+		save();
+	}
+
+	public static int bombSite() {
+		return bombSite;
+	}
+
+	public static void setBombSite(int blocks) {
+		bombSite = Math.max(1, Math.min(64, blocks));
+		save();
+	}
+
+	public static boolean overtime() {
+		return overtime;
+	}
+
+	public static void setOvertime(boolean on) {
+		overtime = on;
+		save();
 	}
 
 	public static String gameMode() {
@@ -308,6 +342,9 @@ public final class StrafeSettings {
 		playerChoice = false;
 		PERSONAL.clear();
 		gameMode = "none";
+		buyZone = 12;
+		bombSite = 5;
+		overtime = false;
 		try {
 			if (Files.exists(file)) {
 				JsonObject o = GSON.fromJson(Files.readString(file), JsonObject.class);
@@ -335,6 +372,9 @@ public final class StrafeSettings {
 				if (o != null && o.has("wearOff")) for (var e : o.getAsJsonArray("wearOff")) WEAR_OFF.add(e.getAsString());
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("gameMode")) gameMode = o.get("gameMode").getAsString();
+				if (o != null && o.has("buyZone")) buyZone = o.get("buyZone").getAsInt();
+				if (o != null && o.has("bombSite")) bombSite = o.get("bombSite").getAsInt();
+				if (o != null && o.has("overtime")) overtime = o.get("overtime").getAsBoolean();
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
 					for (var e : o.getAsJsonObject("personal").entrySet()) PERSONAL.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsBoolean());
@@ -372,6 +412,9 @@ public final class StrafeSettings {
 		o.addProperty("maxUnlagMs", maxUnlagMs);
 		o.addProperty("playerChoice", playerChoice);
 		o.addProperty("gameMode", gameMode);
+		o.addProperty("buyZone", buyZone);
+		o.addProperty("bombSite", bombSite);
+		o.addProperty("overtime", overtime);
 		JsonObject pers = new JsonObject();
 		PERSONAL.forEach((k, v) -> pers.addProperty(k.toString(), v));
 		o.add("personal", pers);

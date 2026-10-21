@@ -193,7 +193,7 @@ public final class BuyMenu {
 	private static int paid;
 
 	/** CS2's price of an item (weapons.vdata m_nPrice). */
-	static int price(String cls, int fallback) {
+	public static int price(String cls, int fallback) {
 		var w = dev.strafemc.data.WeaponData.get(cls);
 		Object v = w == null ? null : w.get("m_nPrice");
 		return v instanceof Number n ? n.intValue() : fallback;

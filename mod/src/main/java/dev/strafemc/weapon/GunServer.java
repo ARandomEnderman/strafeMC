@@ -208,7 +208,7 @@ public final class GunServer {
 	}
 
 	/** A CS2 sound at a position for every player in range, following an entity (bounces follow the grenade). */
-	static void soundAt(net.minecraft.server.level.ServerLevel level, String event, Vec3 at, Entity follow) {
+	public static void soundAt(net.minecraft.server.level.ServerLevel level, String event, Vec3 at, Entity follow) {
 		var msg = new dev.strafemc.net.StrafePayloads.CsSound(event, at.x, at.y, at.z, false, follow == null ? -1 : follow.getId());
 		for (ServerPlayer o : level.players())
 			if (o.distanceToSqr(at) < SOUND_SEND_RANGE * SOUND_SEND_RANGE

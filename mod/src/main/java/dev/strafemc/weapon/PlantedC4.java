@@ -166,13 +166,14 @@ public class PlantedC4 extends Entity {
 	private void tickDefuse(ServerLevel sl) {
 		int id = defuser();
 		if (id < 0) return;
-		if (tickCount - lastPing > DEFUSE_GRACE || !(sl.getEntity(id) instanceof ServerPlayer p) || p.distanceTo(this) > 3) {
+		if (tickCount - lastPing > DEFUSE_GRACE || !(sl.getEntity(id) instanceof LivingEntity p) || p.distanceTo(this) > 3) {
 			stopDefuse();
 			return;
 		}
 		getEntityData().set(DEFUSE_DONE, tickCount - defuseStart);
 		// keypad mode: only typing the keys defuses it
-		if (!dev.strafemc.server.StrafeSettings.c4Keypad() && tickCount - defuseStart >= getEntityData().get(DEFUSE_LEN)) defuse(sl, p);
+		if ((!dev.strafemc.server.StrafeSettings.c4Keypad() || !(p instanceof ServerPlayer)) && tickCount - defuseStart >= getEntityData().get(DEFUSE_LEN))
+			defuse(sl, p);
 	}
 
 	private void stopDefuse() {
@@ -182,7 +183,7 @@ public class PlantedC4 extends Entity {
 	}
 
 	/** A defuse message from p (holding use on it): starts their defuse, or keeps it going. */
-	public void defusePing(ServerPlayer p) {
+	public void defusePing(LivingEntity p) {
 		if (defused() || gone >= 0 || p.distanceTo(this) > 3 || !p.isAlive()) return;
 		int id = defuser();
 		if (id >= 0 && id != p.getId()) return; // someone else is on it
@@ -190,7 +191,7 @@ public class PlantedC4 extends Entity {
 		if (id < 0) {
 			defuseStart = tickCount;
 			getEntityData().set(DEFUSER, p.getId());
-			getEntityData().set(DEFUSE_LEN, (int) Math.round((hasKit(p) ? DEFUSE_KIT : DEFUSE) * 20));
+			getEntityData().set(DEFUSE_LEN, (int) Math.round((p instanceof ServerPlayer sp && hasKit(sp) ? DEFUSE_KIT : DEFUSE) * 20));
 			getEntityData().set(DEFUSE_DONE, 0);
 			GunServer.soundAt((ServerLevel) level(), "c4.disarmstart", position(), this);
 		}
@@ -208,13 +209,13 @@ public class PlantedC4 extends Entity {
 		return false;
 	}
 
-	private void defuse(ServerLevel sl, ServerPlayer by) {
+	private void defuse(ServerLevel sl, LivingEntity by) {
 		getEntityData().set(DEFUSED, true);
 		getEntityData().set(DEFUSE_DONE, getEntityData().get(DEFUSE_LEN));
 		gone = 60;
 		GunServer.soundAt(sl, "c4.disarmfinish", position(), this);
 		dev.strafemc.mode.GameModes.defused(by, this);
-		dev.strafemc.server.Toasts.send(by, "The bomb has been defused.", dev.strafemc.server.Toasts.GOOD);
+		if (by instanceof ServerPlayer p) dev.strafemc.server.Toasts.send(p, "The bomb has been defused.", dev.strafemc.server.Toasts.GOOD);
 	}
 
 	private void explode(ServerLevel level) {

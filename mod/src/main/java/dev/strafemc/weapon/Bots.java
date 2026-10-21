@@ -235,6 +235,11 @@ public final class Bots {
 			e.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
 			b.clip = -1;
 		}
+		if (dev.strafemc.mode.GameModes.botFrozen()) { // freeze time: nobody moves
+			e.zza = 0;
+			e.xxa = 0;
+			return;
+		}
 		if (b.clip < 0) b.clip = w.clip();
 		Vec3 eye = e.getEyePosition();
 		// hit by someone: it knows where they are
@@ -307,6 +312,12 @@ public final class Bots {
 					}
 					side = b.strafe;
 				}
+			}
+		} else if (dev.strafemc.mode.GameModes.botGoal(e) instanceof Vec3 goal) { // the round's objective: plant at a site, defuse the bomb
+			if (e.position().distanceToSqr(goal) < 2.25) dev.strafemc.mode.GameModes.botAtGoal(e);
+			else {
+				walk(b, level, net.minecraft.core.BlockPos.containing(goal), now);
+				faceMove(e);
 			}
 		} else if (b.lastKnown != null) { // where it last saw or heard an enemy (no knowing where anyone is through walls)
 			walk(b, level, net.minecraft.core.BlockPos.containing(b.lastKnown), now);

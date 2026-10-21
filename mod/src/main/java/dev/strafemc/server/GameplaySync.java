@@ -123,6 +123,9 @@ public final class GameplaySync {
 		st.put("strafemc_bot_ffa", StrafeSettings.botFfa() ? 1 : 0);
 		st.put("strafemc_wear", StrafeSettings.wear() ? 1 : 0);
 		st.put("strafemc_spawnblocks", StrafeSettings.spawnBlocks() ? 1 : 0);
+		st.put("strafemc_buyzone", StrafeSettings.buyZone());
+		st.put("strafemc_bombsite", StrafeSettings.bombSite());
+		st.put("strafemc_overtime", StrafeSettings.overtime() ? 1 : 0);
 		st.put("strafemc_gamemode", dev.strafemc.mode.GameModes.MODES.indexOf(StrafeSettings.gameMode()));
 		root.put("settings", st);
 		String json = GSON.toJson(root);
