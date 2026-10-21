@@ -20,7 +20,9 @@ public final class DeathCam {
 	private static long diedAt;
 	/** Seconds after the death when the killer was known (-1: not yet). */
 	private static double killerSince = -1;
+	/** The death screen held back (null: Minecraft makes it when it's let through); holding: the camera is on. */
 	private static Screen pending;
+	private static boolean holding;
 	private static float fromYaw, fromPitch;
 	private static boolean released;
 	/** The server's death panel details (who, with what skin, their health, damage both ways). */
@@ -56,7 +58,7 @@ public final class DeathCam {
 	private static void panel(net.minecraft.client.gui.GuiGraphicsExtractor g) {
 		var mc = Minecraft.getInstance();
 		StrafePayloads.DeathInfo m = info;
-		if (pending == null || m == null || mc.player == null) return;
+		if (!holding || m == null || mc.player == null) return;
 		var font = mc.font;
 		float u = g.guiHeight() / 1080f * 2; // our GUI units are 2 screen px at the usual scale
 		int w = Math.round(410 * u / 2), pic = Math.round(128 * u / 2), h = Math.round(150 * u / 2), x = g.guiWidth() / 2 - (w + pic) / 2, y = Math.round(60 * u / 2);
@@ -96,7 +98,8 @@ public final class DeathCam {
 	public static boolean hold(Screen deathScreen) {
 		var mc = Minecraft.getInstance();
 		if (released || mc.level == null || mc.player == null || killer >= 0 && mc.level.getEntity(killer) == null) return false;
-		if (pending == null) {
+		if (!holding) {
+			holding = true;
 			pending = deathScreen;
 			diedAt = System.nanoTime();
 			fromYaw = mc.player.getYRot();
@@ -107,7 +110,13 @@ public final class DeathCam {
 
 	/** Every frame while dead: turn toward the killer; then let the death screen through. */
 	public static void frame(Minecraft mc) {
-		if (pending == null) {
+		if (holding && mc.player != null && mc.player.isAlive()) { // respawned before the camera was done (a mode's respawn)
+			holding = false;
+			pending = null;
+			killerSince = -1;
+			info = null;
+		}
+		if (!holding) {
 			if (mc.player != null && mc.player.isAlive()) { // alive again: ready for the next death
 				killer = -1;
 				released = false;
@@ -133,10 +142,11 @@ public final class DeathCam {
 		if (since >= HOLD || k == null) {
 			Screen s = pending;
 			pending = null;
+			holding = false;
 			killerSince = -1;
 			released = true;
 			info = null;
-			mc.execute(() -> mc.setScreen(s)); // not from inside the frame being drawn
+			mc.execute(() -> mc.setScreen(s)); // not from inside the frame being drawn (null: Minecraft makes the death screen)
 		}
 	}
 }

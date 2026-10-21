@@ -359,6 +359,9 @@ final class RoundMode extends Mode {
 		return n;
 	}
 
+	/** Seconds of death camera before a dead player (out until the next round) starts watching a teammate. FLAGGED ours. */
+	static final int WATCH_AFTER = 4 * 20;
+
 	/** Dead players watching a living teammate (CS2's mp_forcecamera 1): whom each watches. */
 	private final Map<UUID, UUID> watching = new HashMap<>();
 
@@ -488,7 +491,7 @@ final class RoundMode extends Mode {
 	@Override
 	void died(ServerPlayer p) {
 		if (!warmup()) diedThisRound.add(p.getUUID());
-		respawnAt.put(p.getUUID(), now() + RESPAWN);
+		respawnAt.put(p.getUUID(), now() + (warmup() ? RESPAWN : WATCH_AFTER)); // the death camera first, then watching a teammate
 	}
 
 	/**
