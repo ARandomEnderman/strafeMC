@@ -299,6 +299,10 @@ public final class ConsoleCommands {
 			StrafeConfig.grenadeCrosshairTickLabels = bool(a, !StrafeConfig.grenadeCrosshairTickLabels);
 			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
 		});
+		local("strafemc_agent_models", "Show players and bots as CS2 agents (1) or Minecraft players (0).", a -> {
+			StrafeConfig.agentModels = bool(a, !StrafeConfig.agentModels);
+			saved("strafemc_agent_models", StrafeConfig.agentModels);
+		});
 		local("cl_righthand", "Right hand (1) or left hand (0).", a -> {
 			boolean was = StrafeConfig.rightHand;
 			StrafeConfig.rightHand = bool(a, !StrafeConfig.rightHand);

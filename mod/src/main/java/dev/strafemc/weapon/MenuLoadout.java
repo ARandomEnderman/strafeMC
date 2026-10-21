@@ -43,6 +43,17 @@ public final class MenuLoadout {
 			b -> b.copyOnDeath().initializer(Map::of)
 					.syncWith(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, ItemStack.STREAM_CODEC), AttachmentSyncPredicate.all()));
 
+	/** The agents a player picked ("tId|ctId", either may be empty), synced to everyone for third-person agent models. */
+	public static final AttachmentType<String> AGENTS = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "agents"),
+			b -> b.copyOnDeath().initializer(() -> "|").syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.all()));
+
+	/** The agent id a player picked for a side, or "" for none (CS2's default agent of that side). */
+	public static String agent(Player p, boolean t) {
+		String s = p.getAttachedOrElse(AGENTS, "|");
+		int bar = s.indexOf('|');
+		return bar < 0 ? "" : t ? s.substring(0, bar) : s.substring(bar + 1);
+	}
+
 	/** On the client: the server it's on uses menu loadouts (from the gameplay sync). */
 	public static volatile boolean client;
 
@@ -168,6 +179,8 @@ public final class MenuLoadout {
 			buy.put(side, Map.copyOf(m));
 		}
 		CHOICES.put(p.getUUID(), new Choice(knife, Map.copyOf(buy)));
+		String agents = agentId(str(o, "agentT")) + "|" + agentId(str(o, "agentCT"));
+		if (!agents.equals(p.getAttachedOrElse(AGENTS, "|"))) p.setAttached(AGENTS, agents);
 		// in a mode the knife held is the mode's (never the player's own): the chosen one takes its place at once
 		if (on(p) && dev.strafemc.mode.GameModes.playing(p)) {
 			ItemStack k = knife(p);
@@ -227,6 +240,11 @@ public final class MenuLoadout {
 		double[] r = Wear.range(skin.kit());
 		float wear = (float) Math.max(r[0], Math.min(r[1], num(s, "wear", r[0])));
 		return GloveItem.stack(WeaponItems.GLOVES.get(skin.kind()), skin.kit(), wear);
+	}
+
+	/** An agent id as items_game names them (customplayer_...), else "". */
+	private static String agentId(String id) {
+		return id != null && id.length() < 64 && id.matches("customplayer_[a-z0-9_]+") ? id : "";
 	}
 
 	private static String str(JsonObject o, String k) {

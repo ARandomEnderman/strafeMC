@@ -112,6 +112,7 @@ public final class StrafeSettingsScreen extends Screen implements dev.strafemc.c
 	private void viewmodel() {
 		header("Agent");
 		button("Agents", "Choose...", () -> minecraft.setScreen(new AgentScreen(this)));
+		toggle("Agents on players", () -> StrafeConfig.agentModels, v -> StrafeConfig.agentModels = v);
 		header("Viewmodel");
 		toggle("Right-handed", () -> StrafeConfig.rightHand, v -> StrafeConfig.rightHand = v);
 		slider("Field of view", 60, 68, 1, () -> StrafeConfig.viewmodelFov, v -> StrafeConfig.viewmodelFov = v);

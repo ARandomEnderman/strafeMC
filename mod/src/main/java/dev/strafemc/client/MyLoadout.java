@@ -65,9 +65,17 @@ public final class MyLoadout {
 		sendAt = System.currentTimeMillis() + 400;
 	}
 
+	/** What goes to the server: the loadout and the agents picked (they're settings, so they're added here). */
+	private static JsonObject withAgents() {
+		JsonObject o = root().deepCopy();
+		o.addProperty("agentT", StrafeConfig.agentT);
+		o.addProperty("agentCT", StrafeConfig.agentCT);
+		return o;
+	}
+
 	public static void send() {
 		if (ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.MenuLoadoutChoice.TYPE))
-			ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.MenuLoadoutChoice(GSON.toJson(root())));
+			ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.MenuLoadoutChoice(GSON.toJson(withAgents())));
 	}
 
 	// buy menu

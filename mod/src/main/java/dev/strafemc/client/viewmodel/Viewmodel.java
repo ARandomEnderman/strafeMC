@@ -579,7 +579,8 @@ public final class Viewmodel {
 		if (m != null || !sleevesLoading.add(model)) return m;
 		Thread t = new Thread(() -> {
 			try {
-				VmModel s = VmModel.load(Glb.read(AssetCache.exportGlb(model, true, false)), ".firstperson_sleeves");
+				// with its skeleton (the converter writes one only along with a clip), small: never the full export of every clip
+				VmModel s = VmModel.load(Glb.read(AgentModels.skinnedGlb(a.model())), ".firstperson_sleeves");
 				for (VmModel.Part part : s.parts) armsOnly(s, part);
 				for (VmModel.Part part : s.parts) {
 					if (part.texture == null) continue;

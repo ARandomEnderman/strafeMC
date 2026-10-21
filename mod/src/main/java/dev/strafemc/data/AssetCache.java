@@ -154,6 +154,35 @@ public final class AssetCache {
 		}
 	}
 
+	/**
+	 * A model's skeleton with only the named animation clips (no meshes) as binary glTF in cache/<dir>, once: CS2's
+	 * agents carry about 2000 clips (over 1 GB exported), the third-person player models need a few dozen of them.
+	 */
+	public static Path exportClips(String vpkPath, String dir, List<String> clips) throws IOException {
+		return exportWithClips(vpkPath, dir, clips, false);
+	}
+
+	/**
+	 * As exportClips, with the meshes and their materials: the converter writes a model's skeleton (and skins) only
+	 * along with its animations, so a skinned agent is exported with one short clip.
+	 */
+	public static Path exportWithClips(String vpkPath, String dir, List<String> clips, boolean meshes) throws IOException {
+		synchronized (lock("gltf export")) {
+			Path out = StrafeConfig.cacheDir().resolve(dir);
+			String base = vpkPath.substring(0, vpkPath.lastIndexOf('.'));
+			Path glb = out.resolve(base + ".glb");
+			if (Files.exists(glb)) return glb;
+			Files.createDirectories(out);
+			List<String> args = new java.util.ArrayList<>(List.of("-i", vpk().toString(), "--vpk_filepath", vpkPath, "-o", out.toString(), "-d",
+					"--gltf_export_format", "glb", "--gltf_export_animations", "--gltf_animation_list", String.join(",", clips)));
+			if (meshes) args.add("--gltf_export_materials");
+			else args.addAll(List.of("--gltf_mesh_list", "none"));
+			runVrf(args);
+			if (!Files.exists(glb)) throw new IOException("VRF produced no " + glb);
+			return glb;
+		}
+	}
+
 	/** Every image a .glb names (glTF "images" uris) exists next to it. */
 	static boolean texturesPresent(Path glb) {
 		try (var in = Files.newInputStream(glb)) {

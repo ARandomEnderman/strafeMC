@@ -23,6 +23,7 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.weapon.WeaponItems.register();
 		dev.strafemc.weapon.Loadout.register();
 		dev.strafemc.weapon.MenuLoadout.register();
+		dev.strafemc.weapon.CsTeam.register();
 		dev.strafemc.server.ServerRules.register();
 		dev.strafemc.weapon.CarePackage.register();
 		dev.strafemc.weapon.Shop.register();

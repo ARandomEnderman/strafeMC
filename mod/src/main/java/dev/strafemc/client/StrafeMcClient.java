@@ -59,6 +59,9 @@ public class StrafeMcClient implements ClientModInitializer {
 				});
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.ui.UiSweep::tick);
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (mc.level != null && mc.level.getGameTime() % 200 == 0) dev.strafemc.client.viewmodel.AgentModels.tidy();
+		});
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "perf"),
 				(g, delta) -> dev.strafemc.client.perf.Perf.hud(g));
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.perf.PerfBench::tick);

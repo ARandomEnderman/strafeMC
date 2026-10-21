@@ -25,6 +25,11 @@ public final class VmClip {
 	private final Map<String, Integer> index = new HashMap<>();
 
 	public VmClip(String name, Glb g) {
+		this(name, g, 0);
+	}
+
+	/** The file's animation number anim (a file with several clips: CS2's third-person player clips). */
+	public VmClip(String name, Glb g, int anim) {
 		this.name = name;
 		var nodes = g.arr("nodes");
 		int n = nodes.size();
@@ -47,8 +52,8 @@ public final class VmClip {
 			if (o.has("children")) for (JsonElement c : o.getAsJsonArray("children")) parent[c.getAsInt()] = i;
 		}
 		float dur = 0;
-		if (g.arr("animations").size() > 0) {
-			JsonObject an = g.obj("animations", 0);
+		if (g.arr("animations").size() > anim) {
+			JsonObject an = g.obj("animations", anim);
 			var samplers = an.getAsJsonArray("samplers");
 			for (JsonElement ce : an.getAsJsonArray("channels")) {
 				JsonObject c = ce.getAsJsonObject(), t = c.getAsJsonObject("target");
@@ -77,6 +82,15 @@ public final class VmClip {
 
 	public Integer node(String boneName) {
 		return index.get(boneName);
+	}
+
+	/** Node i's parent node (-1: a root). */
+	public int parent(int i) {
+		return parent[i];
+	}
+
+	public int size() {
+		return names.length;
 	}
 
 	/** Model-space matrix of every clip node at time t (seconds, clamped). */

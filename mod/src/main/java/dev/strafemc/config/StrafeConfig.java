@@ -94,6 +94,8 @@ public final class StrafeConfig {
 	public static String team = "ct";
 	/** The CS2 agent picked for each side (client.Agents id; "" for none): the viewmodel wears its sleeves. */
 	public static String agentT = "", agentCT = "";
+	/** Players and bots shown as CS2 agents (their picked agent, else their side's default) instead of Minecraft's model. */
+	public static boolean agentModels = false;
 	/** The viewmodel skinned on the GPU from static buffers (false: on the CPU every frame, the older and slower path). */
 	public static boolean gpuSkinning = true;
 	/** CS2's cl_righthand: the viewmodel in the right hand (false: mirrored into the left). switchhands flips it. */
@@ -154,6 +156,7 @@ public final class StrafeConfig {
 			jumpStats = Boolean.parseBoolean(p.getProperty("jumpStats", String.valueOf(jumpStats)));
 			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
 			agentT = p.getProperty("agentT", agentT);
+			agentModels = Boolean.parseBoolean(p.getProperty("agentModels", String.valueOf(agentModels)));
 			agentCT = p.getProperty("agentCT", agentCT);
 			rightHand = Boolean.parseBoolean(p.getProperty("rightHand", String.valueOf(rightHand)));
 			gpuSkinning = Boolean.parseBoolean(p.getProperty("gpuSkinning", String.valueOf(gpuSkinning)));
@@ -209,6 +212,7 @@ public final class StrafeConfig {
 		p.setProperty("gpuSkinning", String.valueOf(gpuSkinning));
 		p.setProperty("team", team);
 		p.setProperty("agentT", agentT);
+		p.setProperty("agentModels", String.valueOf(agentModels));
 		p.setProperty("agentCT", agentCT);
 		p.setProperty("rightHand", String.valueOf(rightHand));
 		p.setProperty("glove", glove);
