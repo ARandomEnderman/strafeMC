@@ -238,11 +238,24 @@ public final class GrenadeClient {
 		Camera cam = mc.gameRenderer.getMainCamera();
 		Vec3 c = cam.position();
 		Vector3f up = new Vector3f(cam.upVector()), right = new Vector3f(cam.forwardVector()).cross(up).normalize();
-		ctx.submitNodeCollector().submitCustomGeometry(ctx.poseStack(), RenderTypes.entityTranslucentEmissive(puff()), (pose, vc) -> {
-			for (int i = 3; i < path.size(); i += 3) dot(vc, pose, path.get(i).subtract(c), right, up, 0.035f, 0xC0FFFFFF);
-			dot(vc, pose, path.get(path.size() - 1).subtract(c), right, up, 0.12f, 0xE0FFFFFF);
+		// grenade practice (grenadecam): the path as a red line, a red mark where it ends
+		ctx.submitNodeCollector().submitCustomGeometry(ctx.poseStack(), RenderTypes.lines(), (pose, vc) -> {
+			for (int i = 1; i < path.size(); i++) {
+				Vec3 a = path.get(i - 1).subtract(c), b = path.get(i).subtract(c), d = b.subtract(a);
+				double len = d.length();
+				if (len < 1e-5) continue;
+				float nx = (float) (d.x / len), ny = (float) (d.y / len), nz = (float) (d.z / len);
+				vc.addVertex(pose, (float) a.x, (float) a.y, (float) a.z).setColor(PATH_RED).setNormal(pose, nx, ny, nz).setLineWidth(PATH_WIDTH);
+				vc.addVertex(pose, (float) b.x, (float) b.y, (float) b.z).setColor(PATH_RED).setNormal(pose, nx, ny, nz).setLineWidth(PATH_WIDTH);
+			}
 		});
+		ctx.submitNodeCollector().submitCustomGeometry(ctx.poseStack(), RenderTypes.entityTranslucentEmissive(puff()), (pose, vc) ->
+				dot(vc, pose, path.get(path.size() - 1).subtract(c), right, up, 0.14f, PATH_RED));
 	}
+
+	/** The practice path's colour and line width (ours: CS2's look in its practice preview, FLAGGED). */
+	private static final int PATH_RED = 0xF0FF3A30;
+	private static final float PATH_WIDTH = 2.5f;
 
 	private static void dot(com.mojang.blaze3d.vertex.VertexConsumer vc, PoseStack.Pose pose, Vec3 p, Vector3f right, Vector3f up, float sz, int col) {
 		float[][] corners = {{-1, -1, 0, 1}, {1, -1, 1, 1}, {1, 1, 1, 0}, {-1, 1, 0, 0}};

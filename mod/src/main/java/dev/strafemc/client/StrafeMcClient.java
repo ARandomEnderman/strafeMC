@@ -48,6 +48,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Flashed.TYPE,
 				(msg, ctx) -> dev.strafemc.client.weapon.GrenadeClient.onFlashed(msg));
 		dev.strafemc.client.weapon.GrenadeClient.registerHud();
+		dev.strafemc.client.weapon.GrenadeCam.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.ArmorSync.TYPE,
 				(msg, ctx) -> { armor = msg.value(); helmet = msg.helmet(); });
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> armor = 0);

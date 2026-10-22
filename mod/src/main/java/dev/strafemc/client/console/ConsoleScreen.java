@@ -100,6 +100,7 @@ public final class ConsoleScreen extends Screen {
 		row("Performance overlay", () -> onOff(dev.strafemc.client.perf.Perf.on), () -> ConsoleCommands.execute("strafemc_perf"));
 		row("CS2 server log", () -> onOff(StrafeConfig.showServerLog), () -> ConsoleCommands.execute("strafemc_serverlog"));
 		row("Crosshair", () -> "Edit...", () -> minecraft.setScreen(dev.strafemc.client.StrafeSettingsScreen.at(this, "crosshair")));
+		row("Grenade practice (grenadecam)", () -> onOff(StrafeConfig.grenadeCam), () -> ConsoleCommands.execute("grenadecam"));
 		row("Movement presets", () -> "Open...", () -> minecraft.setScreen(new PresetScreen(this)));
 
 		header("Server");

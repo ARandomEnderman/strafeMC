@@ -299,6 +299,12 @@ public final class ConsoleCommands {
 			StrafeConfig.grenadeCrosshairTickLabels = bool(a, !StrafeConfig.grenadeCrosshairTickLabels);
 			saved("cl_grenadecrosshair_ticklabels", StrafeConfig.grenadeCrosshairTickLabels);
 		});
+		local("grenadecam", "Grenade practice: the red path of a charged grenade and a camera riding your thrown one (1) or off (0). Singleplayer, or sv_cheats 1.", a -> {
+			StrafeConfig.grenadeCam = bool(a, !StrafeConfig.grenadeCam);
+			saved("grenadecam", StrafeConfig.grenadeCam);
+			if (StrafeConfig.grenadeCam && !dev.strafemc.client.weapon.GrenadeCam.allowed())
+				ConsoleLog.add("grenadecam works in singleplayer, or on a server with sv_cheats 1.", ConsoleLog.WARN);
+		});
 		local("strafemc_agent_models", "Show players and bots as CS2 agents (1) or Minecraft players (0).", a -> {
 			StrafeConfig.agentModels = bool(a, !StrafeConfig.agentModels);
 			saved("strafemc_agent_models", StrafeConfig.agentModels);

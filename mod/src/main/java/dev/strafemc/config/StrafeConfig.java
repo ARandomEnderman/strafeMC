@@ -96,6 +96,8 @@ public final class StrafeConfig {
 	public static String agentT = "", agentCT = "";
 	/** Players and bots shown as CS2 agents (their picked agent, else their side's default) instead of Minecraft's model. */
 	public static boolean agentModels = false;
+	/** Grenade practice (grenadecam): the red path of a charged grenade, and the camera riding a thrown one. */
+	public static boolean grenadeCam = false;
 	/** The viewmodel skinned on the GPU from static buffers (false: on the CPU every frame, the older and slower path). */
 	public static boolean gpuSkinning = true;
 	/** CS2's cl_righthand: the viewmodel in the right hand (false: mirrored into the left). switchhands flips it. */
@@ -157,6 +159,7 @@ public final class StrafeConfig {
 			team = "t".equalsIgnoreCase(p.getProperty("team", team)) ? "t" : "ct";
 			agentT = p.getProperty("agentT", agentT);
 			agentModels = Boolean.parseBoolean(p.getProperty("agentModels", String.valueOf(agentModels)));
+			grenadeCam = Boolean.parseBoolean(p.getProperty("grenadeCam", String.valueOf(grenadeCam)));
 			agentCT = p.getProperty("agentCT", agentCT);
 			rightHand = Boolean.parseBoolean(p.getProperty("rightHand", String.valueOf(rightHand)));
 			gpuSkinning = Boolean.parseBoolean(p.getProperty("gpuSkinning", String.valueOf(gpuSkinning)));
@@ -213,6 +216,7 @@ public final class StrafeConfig {
 		p.setProperty("team", team);
 		p.setProperty("agentT", agentT);
 		p.setProperty("agentModels", String.valueOf(agentModels));
+		p.setProperty("grenadeCam", String.valueOf(grenadeCam));
 		p.setProperty("agentCT", agentCT);
 		p.setProperty("rightHand", String.valueOf(rightHand));
 		p.setProperty("glove", glove);

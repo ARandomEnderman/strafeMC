@@ -488,8 +488,6 @@ public final class GunClient {
 	public dev.strafemc.weapon.Grenade pinGrenade() {
 		return grenadeState == GRENADE_PULLING || grenadeState == GRENADE_CHARGED ? pinType : null;
 	}
-	/** Show the trajectory preview after holding a charged grenade this long (seconds). */
-	private static final double PREVIEW_AFTER = 2.0;
 
 	/**
 	 * CS grenade handling: holding left and/or right pulls the pin (its animation and sounds); while held, the charge pose
@@ -549,7 +547,7 @@ public final class GunClient {
 					return;
 				}
 				lightRag(g, now);
-				if (now - chargedSince >= sec(PREVIEW_AFTER)) { // the path this throw would take, as the server will fly it
+				if (GrenadeCam.active()) { // grenade practice: the path this throw would take, as the server will fly it
 					var l = dev.strafemc.weapon.GrenadeFlight.launch(p.level(), p, eye(p), p.getYRot(), p.getXRot(), throwStrength,
 							dev.strafemc.client.movement.MovementController.INSTANCE.velocityUnits(p), 750);
 					GrenadeClient.preview(dev.strafemc.weapon.GrenadeFlight.simulate(p.level(), p, l, dev.strafemc.weapon.GrenadeFlight.gravity(), 4, g.type));

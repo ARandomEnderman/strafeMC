@@ -16,6 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRendererMixin {
 	@Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
 	private void strafemc$viewmodel(float partial, PoseStack ps, SubmitNodeCollector out, LocalPlayer player, int light, CallbackInfo ci) {
+		if (dev.strafemc.client.weapon.GrenadeCam.following()) { // riding a grenade: no hands in its view
+			ci.cancel();
+			return;
+		}
 		var holder = Viewmodel.holder(); // you, or the player you watch while dead
 		if (!(holder != null && holder.getMainHandItem().getItem() instanceof GunItem g)) {
 			if (Viewmodel.watching()) ci.cancel(); // never your own (empty) hands over their view
