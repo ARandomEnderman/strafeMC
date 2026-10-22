@@ -358,7 +358,7 @@ public final class ConsoleCommands {
 				a -> action("strafemc_shop_refresh", a.length > 0 ? a[0] : "", false));
 		local("strafemc_buyzone", "Round modes: how far a side's buy zone reaches from its spawn blocks (blocks). Operators.",
 				a -> action("strafemc_buyzone", a.length > 0 ? a[0] : "", false));
-		local("strafemc_bombsite", "Round modes: how far from a Bomb Site block the C4 can be planted (blocks). Operators.",
+		local("strafemc_bombsite", "Round modes: how wide and deep a Bomb Site block's plant area is (blocks; 6 tall from the block's top). Operators.",
 				a -> action("strafemc_bombsite", a.length > 0 ? a[0] : "", false));
 		local("strafemc_overtime", "Round modes: a tie on the last round goes to overtime (1) or is a draw (0, CS2 Competitive). Operators.",
 				a -> action("strafemc_overtime", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
@@ -368,6 +368,10 @@ public final class ConsoleCommands {
 				a -> action("strafemc_spawnblocks", a.length > 0 ? (bool(a, true) ? "1" : "0") : "1", false));
 		local("strafemc_drops", "Care packages on (1) or off (0). Operators.",
 				a -> action("strafemc_drops", bool(a, !dev.strafemc.client.ClientGameplay.drops()) ? "1" : "0", false));
+		local("mp_forcecamera", "Who the dead may watch in round modes: 0 anyone (and a free camera), 1 own team, 2 nobody; default: the mode's. Operators.",
+				a -> action("mp_forcecamera", a.length > 0 ? a[0] : "", false));
+		local("spec_freeze_time", "Seconds the death camera holds on your killer; default: the mode's. Operators.",
+				a -> action("spec_freeze_time", a.length > 0 ? a[0] : "", false));
 		local("strafemc_gamemode_server", "Game mode server (1): everyone's main menu loadout; no loadout items, levels, drops, shop, upgrader, trade ups. Operators.",
 				a -> action("strafemc_gamemode_server", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
 		local("strafemc_loadout_keep", "Keep loadout on death (1) or drop it (0). Operators.",

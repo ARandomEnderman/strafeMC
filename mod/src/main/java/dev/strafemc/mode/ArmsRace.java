@@ -37,7 +37,7 @@ final class ArmsRace extends Mode {
 	static final String KNIFE = "weapon_knifegg";
 	static final int KILLS_PER_LEVEL = 2;
 	static final Map<String, String> CVARS = Map.of("sv_infinite_ammo", "2", "mp_free_armor", "2", "mp_respawn_immunitytime", "10",
-			"mp_buy_anywhere", "0", "mp_buytime", "0", "mp_teammates_are_enemies", "0", "ammo_grenade_limit_total", "3");
+			"mp_buy_anywhere", "0", "mp_buytime", "0", "mp_teammates_are_enemies", "0", "ammo_grenade_limit_total", "3", "spec_freeze_time", "2");
 
 	private final Random rng = new Random();
 	private List<String> weapons;

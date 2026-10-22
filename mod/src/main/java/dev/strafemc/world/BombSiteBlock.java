@@ -14,8 +14,9 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * A bomb site (A or B, right-click to switch): in round-based game modes the C4 can only be planted near one
- * (BombSites.RADIUS), as CS2's bomb target areas.
+ * A bomb site (A or B, right-click to switch): in round-based game modes the C4 can only be planted in the box over
+ * one (BombSites.inBox: strafemc_bombsite wide and deep, 6 tall from its top, so it can be hidden under the floor), as
+ * CS2's bomb target areas.
  */
 public class BombSiteBlock extends Block {
 	public enum Site implements StringRepresentable {

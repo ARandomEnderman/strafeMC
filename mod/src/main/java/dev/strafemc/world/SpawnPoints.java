@@ -88,7 +88,23 @@ public final class SpawnPoints {
 	}
 
 	/**
-	 * On top of a random spawn block of a side (T or CT; blocks set to anyone count for both when a side has none of
+	 * Where a player stands over a marker block: the first place above it with room for them (up to 8 blocks), so the
+	 * block can be hidden under the floor; on the block itself when there's none.
+	 */
+	public static net.minecraft.world.phys.Vec3 standOn(ServerLevel level, BlockPos pos) {
+		for (int dy = 1; dy <= 8; dy++) {
+			BlockPos feet = pos.above(dy);
+			if (free(level, feet) && free(level, feet.above())) return new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, feet.getY(), pos.getZ() + 0.5);
+		}
+		return new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5);
+	}
+
+	private static boolean free(ServerLevel level, BlockPos p) {
+		return level.getBlockState(p).getCollisionShape(level, p).isEmpty();
+	}
+
+	/**
+	 * Over a random spawn block of a side (T or CT; blocks set to anyone count for both when a side has none of
 	 * its own), or any spawn block for null; null if there's none.
 	 */
 	public static synchronized Pick pick(SpawnBlock.Side side) {
@@ -99,7 +115,7 @@ public final class SpawnPoints {
 				if (!(m.state().getBlock() instanceof SpawnBlock)) continue;
 				SpawnBlock.Side s = m.state().getValue(SpawnBlock.SIDE);
 				if (side != null && s != (pass == 0 ? side : SpawnBlock.Side.ANY)) continue;
-				return new Pick(m.level(), new net.minecraft.world.phys.Vec3(m.pos().getX() + 0.5, m.pos().getY() + 1, m.pos().getZ() + 0.5));
+				return new Pick(m.level(), standOn(m.level(), m.pos()));
 			}
 		return null;
 	}

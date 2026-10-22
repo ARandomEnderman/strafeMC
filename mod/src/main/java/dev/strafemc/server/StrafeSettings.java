@@ -61,6 +61,9 @@ public final class StrafeSettings {
 	 */
 	private static volatile int buyZone = 12, bombSite = 5;
 	private static volatile boolean overtime = false;
+	/** CS2 cvars operators set over the game modes' configs (mp_forcecamera, spec_freeze_time), kept with the world. */
+	private static final java.util.Map<String, String> MODE_CVARS = new java.util.concurrent.ConcurrentHashMap<>();
+	public static final java.util.List<String> MODE_CVAR_NAMES = java.util.List.of("mp_forcecamera", "spec_freeze_time");
 	private static Path file;
 
 	private StrafeSettings() {}
@@ -139,6 +142,17 @@ public final class StrafeSettings {
 
 	public static void setBombSite(int blocks) {
 		bombSite = Math.max(1, Math.min(64, blocks));
+		save();
+	}
+
+	public static java.util.Map<String, String> modeCvars() {
+		return java.util.Map.copyOf(MODE_CVARS);
+	}
+
+	/** Sets one (an empty value: back to the game mode's own). */
+	public static void setModeCvar(String name, String value) {
+		if (value == null || value.isBlank()) MODE_CVARS.remove(name);
+		else MODE_CVARS.put(name, value.trim());
 		save();
 	}
 
@@ -346,6 +360,7 @@ public final class StrafeSettings {
 		buyZone = 12;
 		bombSite = 5;
 		overtime = false;
+		MODE_CVARS.clear();
 		try {
 			if (Files.exists(file)) {
 				JsonObject o = GSON.fromJson(Files.readString(file), JsonObject.class);
@@ -376,6 +391,8 @@ public final class StrafeSettings {
 				if (o != null && o.has("buyZone")) buyZone = o.get("buyZone").getAsInt();
 				if (o != null && o.has("bombSite")) bombSite = o.get("bombSite").getAsInt();
 				if (o != null && o.has("overtime")) overtime = o.get("overtime").getAsBoolean();
+				if (o != null && o.has("modeCvars"))
+					for (var e : o.getAsJsonObject("modeCvars").entrySet()) if (MODE_CVAR_NAMES.contains(e.getKey())) MODE_CVARS.put(e.getKey(), e.getValue().getAsString());
 				if (o != null && o.has("playerChoice")) playerChoice = o.get("playerChoice").getAsBoolean();
 				if (o != null && o.has("personal"))
 					for (var e : o.getAsJsonObject("personal").entrySet()) PERSONAL.put(java.util.UUID.fromString(e.getKey()), e.getValue().getAsBoolean());
@@ -416,6 +433,9 @@ public final class StrafeSettings {
 		o.addProperty("buyZone", buyZone);
 		o.addProperty("bombSite", bombSite);
 		o.addProperty("overtime", overtime);
+		JsonObject mc = new JsonObject();
+		MODE_CVARS.forEach(mc::addProperty);
+		o.add("modeCvars", mc);
 		JsonObject pers = new JsonObject();
 		PERSONAL.forEach((k, v) -> pers.addProperty(k.toString(), v));
 		o.add("personal", pers);

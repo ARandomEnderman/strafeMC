@@ -100,7 +100,7 @@ public final class ModeHud {
 		});
 		// dead in a round mode: mouse 1 / mouse 2 watch the next / previous teammate (before Minecraft's spectator clicks see them)
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(mc -> {
-			if (mc.player == null || mc.screen != null || !mc.player.isSpectator() || !state.has("watching")) return;
+			if (mc.player == null || mc.screen != null || !mc.player.isSpectator() || !state.has("watching") && !state.has("freeCam")) return;
 			while (mc.options.keyAttack.consumeClick()) spectate("spec_next");
 			while (mc.options.keyUse.consumeClick()) spectate("spec_prev");
 		});
@@ -139,12 +139,17 @@ public final class ModeHud {
 			blitIcon(g, "bomb_planted", cx, top + (bh - ih) / 2, ih, System.currentTimeMillis() / 500 % 2 == 0 ? 0xFFFF3030 : 0xFFB00000);
 		}
 		else text(g, clock, cx, top + bh / 2, 28 * px, phase.equals("warmup") ? 0xFFB0B0B0 : phase.equals("freeze") ? 0xFFEAD18A : WHITE);
-		if (s.has("watching") && mc.player.isSpectator()) { // dead: whose view this is, and how to change it
+		if (s.has("blackout") && mc.player.isSpectator()) // mp_forcecamera 2: no watching, CS2 fades to black
+			g.fill(0, 0, g.guiWidth(), g.guiHeight(), 0xFF000000);
+		if ((s.has("watching") || s.has("freeCam")) && mc.player.isSpectator()) { // dead: whose view this is, and how to change it
 			int pw = (int) Math.round(420 * px), ph = (int) Math.round(56 * px), py = g.guiHeight() - (int) Math.round(140 * px);
 			g.fill(cx - pw / 2, py, cx + pw / 2, py + ph, 0xC0000000);
 			g.fill(cx - pw / 2, py, cx + pw / 2, py + Math.max(1, (int) Math.round(2 * px)), GOLD);
-			text(g, "Spectating " + s.get("watching").getAsString(), cx, py + (int) Math.round(20 * px), 22 * px, WHITE);
-			text(g, "[Mouse 1] Next     [Mouse 2] Previous", cx, py + (int) Math.round(42 * px), 16 * px, 0xFFB0B0B0);
+			text(g, s.has("watching") ? "Spectating " + s.get("watching").getAsString() : "Free camera", cx, py + (int) Math.round(20 * px), 22 * px, WHITE);
+			boolean free = "0".equals(dev.strafemc.client.ClientGameplay.cvar("mp_forcecamera")); // mp_forcecamera 0: sneak lets go
+			String hint = !s.has("watching") ? "[Mouse 1] Watch a player" : free ? "[Mouse 1] Next     [Mouse 2] Previous     [Sneak] Free camera"
+					: "[Mouse 1] Next     [Mouse 2] Previous";
+			text(g, hint, cx, py + (int) Math.round(42 * px), 16 * px, 0xFFB0B0B0);
 		}
 		if (s.has("waiting") && s.get("waiting").getAsBoolean()) // a side has nobody: the round can't start
 			text(g, "Waiting for players on both teams", cx, top + bh + (int) Math.round(80 * px), 20 * px, 0xFFB0B0B0);

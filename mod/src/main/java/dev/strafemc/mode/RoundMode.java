@@ -111,6 +111,8 @@ final class RoundMode extends Mode {
 		m.put("ff_damage_reduction_bullets", String.valueOf(c.ffBullets()));
 		m.put("ff_damage_reduction_grenade", String.valueOf(c.ffGrenade()));
 		m.put("ff_damage_reduction_other", String.valueOf(c.ffOther()));
+		m.put("mp_forcecamera", id().equals("casual") ? "0" : "1"); // gamemode_casual.cfg 0, competitive / competitive2v2 1
+		m.put("spec_freeze_time", id().equals("casual") ? "3.0" : "2.0");
 		return m;
 	}
 
@@ -198,6 +200,7 @@ final class RoundMode extends Mode {
 			if (p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
 		}
 		watching.clear();
+		freeCam.clear();
 		for (ServerPlayer p : players()) {
 			p.setGameMode(GameType.ADVENTURE);
 			p.setCamera(p);
@@ -362,21 +365,48 @@ final class RoundMode extends Mode {
 	/** Seconds of death camera before a dead player (out until the next round) starts watching a teammate. FLAGGED ours. */
 	static final int WATCH_AFTER = 4 * 20;
 
-	/** Dead players watching a living teammate (CS2's mp_forcecamera 1): whom each watches. */
+	/** Dead players watching someone: whom each watches. */
 	private final Map<UUID, UUID> watching = new HashMap<>();
+	/** Dead players flying free (mp_forcecamera 0, after letting go with sneak): until they click onto someone. */
+	private final Set<UUID> freeCam = new HashSet<>();
+
+	/** CS2's mp_forcecamera: 0 anyone (and a free camera), 1 own team only, 2 nobody (the screen goes black). */
+	int forceCamera() {
+		try {
+			return (int) Double.parseDouble(String.valueOf(dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar("mp_forcecamera")));
+		} catch (NumberFormatException e) {
+			return 1;
+		}
+	}
 
 	/**
-	 * Keeps a dead (spectating) player's view on a living teammate, as CS2's competitive camera does (no free camera):
-	 * step 0 stays on the one watched while they live, 1 / -1 go to the next / previous one (mouse 1 / mouse 2).
-	 * With no teammate alive the view stays where it is.
+	 * Keeps a dead (spectating) player's view on a living player as CS2's mp_forcecamera allows: step 0 stays on the
+	 * one watched while they live, 1 / -1 go to the next / previous one (mouse 1 / mouse 2). Teammates come first; with
+	 * nobody to watch the view stays where it is.
 	 */
 	void spectate(ServerPlayer p, int step) {
 		if (!p.isSpectator() || warmup()) return;
+		int mode = forceCamera();
+		UUID cur = watching.get(p.getUUID());
+		if (mode >= 2) { // nobody: their own view, blacked out by the HUD
+			if (p.getCamera() != p) p.setCamera(p);
+			if (watching.remove(p.getUUID()) != null) GameModes.send(p, state(p));
+			return;
+		}
+		if (mode == 0) {
+			if (step == 0 && cur != null && p.getCamera() == p) { // let go (sneak): a free camera until they click
+				watching.remove(p.getUUID());
+				freeCam.add(p.getUUID());
+				GameModes.send(p, state(p));
+				return;
+			}
+			if (step == 0 && freeCam.contains(p.getUUID())) return;
+		}
+		freeCam.remove(p.getUUID());
 		List<LivingEntity> mates = new ArrayList<>();
 		for (LivingEntity e : participants())
-			if (e != p && e.isAlive() && CsTeam.isT(e) == CsTeam.isT(p) && !(e instanceof ServerPlayer sp && sp.isSpectator())) mates.add(e);
-		mates.sort(java.util.Comparator.comparing(Mode::name));
-		UUID cur = watching.get(p.getUUID());
+			if (e != p && e.isAlive() && (mode == 0 || CsTeam.isT(e) == CsTeam.isT(p)) && !(e instanceof ServerPlayer sp && sp.isSpectator())) mates.add(e);
+		mates.sort(java.util.Comparator.comparing((LivingEntity e) -> CsTeam.isT(e) != CsTeam.isT(p)).thenComparing(Mode::name));
 		if (mates.isEmpty()) {
 			if (p.getCamera() != p) p.setCamera(p);
 			if (watching.remove(p.getUUID()) != null) GameModes.send(p, state(p));
@@ -795,6 +825,10 @@ final class RoundMode extends Mode {
 		UUID w = p.isSpectator() ? watching.get(p.getUUID()) : null;
 		if (w != null) for (LivingEntity e : participants()) if (e.getUUID().equals(w)) watched = e;
 		if (watched != null) o.addProperty("watching", name(watched));
+		if (p.isSpectator() && !warmup()) {
+			if (freeCam.contains(p.getUUID())) o.addProperty("freeCam", true);
+			if (forceCamera() >= 2) o.addProperty("blackout", true);
+		}
 	}
 
 	@Override

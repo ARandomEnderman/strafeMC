@@ -486,6 +486,25 @@ public final class ConsoleActions {
 				}
 				dev.strafemc.mode.GameModes.set(m);
 			}
+			case "mp_forcecamera", "spec_freeze_time" -> { // over the game modes' configs, kept with the world
+				String v = arg.trim();
+				if (v.isEmpty()) {
+					String now = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(cmd);
+					ConsoleRelay.reply(p, cmd + " = " + (now == null ? "?" : now) + (StrafeSettings.modeCvars().containsKey(cmd) ? "" : " (the game mode's)"));
+					break;
+				}
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can change that."));
+					break;
+				}
+				String bad = dev.strafemc.mode.GameModes.cvarRefusal(cmd, v);
+				if (bad != null) {
+					ConsoleRelay.reply(p, bad);
+					break;
+				}
+				dev.strafemc.mode.GameModes.setCvar(cmd, v.equalsIgnoreCase("default") ? "" : v);
+				ConsoleRelay.reply(p, cmd + " = " + (v.equalsIgnoreCase("default") ? "the game mode's" : v));
+			}
 			case "strafemc_gamemode_server" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change that."));

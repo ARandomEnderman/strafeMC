@@ -120,6 +120,22 @@ public final class GameModes {
 					return 1;
 				}));
 			dispatcher.register(cmd);
+			for (String cvar : StrafeSettings.MODE_CVAR_NAMES) // CS2's own commands, on the server console too
+				dispatcher.register(Commands.literal(cvar).requires(src -> src.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+						.executes(ctx -> {
+							ctx.getSource().sendSuccess(() -> Component.literal(cvar + " = " + dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(cvar)), false);
+							return 1;
+						})
+						.then(Commands.argument("value", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(ctx -> {
+							String v = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "value"), bad = cvarRefusal(cvar, v);
+							if (bad != null) {
+								ctx.getSource().sendFailure(Component.literal(bad));
+								return 0;
+							}
+							setCvar(cvar, v.equalsIgnoreCase("default") ? "" : v);
+							ctx.getSource().sendSuccess(() -> Component.literal(cvar + " = " + v), true);
+							return 1;
+						})));
 		});
 	}
 
@@ -148,10 +164,38 @@ public final class GameModes {
 			default -> null;
 		};
 		if (race == null) return;
-		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(race.cvars());
+		applyCvars();
 		race.begin();
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) race.join(p);
 		StrafeMc.LOG.info("[strafemc] strafeGM: {} started", NAMES.get(mode));
+	}
+
+	/** The running mode's cvars (its CS2 gamemode config) with the operators' own (mp_forcecamera, spec_freeze_time) on top. */
+	private static void applyCvars() {
+		if (race == null) return;
+		java.util.Map<String, String> m = new java.util.HashMap<>(race.cvars());
+		m.putAll(StrafeSettings.modeCvars());
+		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(m);
+		dev.strafemc.server.GameplaySync.resendAll();
+	}
+
+	/** Why a value doesn't fit (mp_forcecamera 0-2, spec_freeze_time 0-10 s, or "default"), or null. */
+	public static String cvarRefusal(String name, String value) {
+		if (value.equalsIgnoreCase("default")) return null;
+		try {
+			double d = Double.parseDouble(value);
+			if (name.equals("mp_forcecamera") && (d != Math.floor(d) || d < 0 || d > 2)) return "mp_forcecamera: 0, 1 or 2";
+			if (name.equals("spec_freeze_time") && (d < 0 || d > 10)) return "spec_freeze_time: 0 to 10 seconds";
+			return null;
+		} catch (NumberFormatException e) {
+			return name + ": a number, or default";
+		}
+	}
+
+	/** An operator's mp_forcecamera / spec_freeze_time (empty: the mode's own), kept with the world. */
+	public static void setCvar(String name, String value) {
+		StrafeSettings.setModeCvar(name, value);
+		applyCvars();
 	}
 
 	private static void stop() {

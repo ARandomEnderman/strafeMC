@@ -8,18 +8,24 @@ import net.minecraft.server.level.ServerPlayer;
 
 /** Where the round modes' bomb sites and buy zones are: around the bomb site and spawn blocks. */
 final class BombSites {
-	/** How far up or down from a bomb site block the C4 can be planted (across: strafemc_bombsite). FLAGGED ours. */
-	static final double HEIGHT = 3;
+	/**
+	 * A bomb site block's plant area: a box on top of it, strafemc_bombsite blocks wide and deep (5) around it and HEIGHT
+	 * tall from its top, so the block can sit hidden under the floor. FLAGGED ours: CS2 maps draw their sites.
+	 */
+	static final double HEIGHT = 6;
+
+	/** Whether an entity's feet are in a bomb site block's box. */
+	static boolean inBox(net.minecraft.world.entity.Entity e, net.minecraft.core.BlockPos block) {
+		double half = dev.strafemc.server.StrafeSettings.bombSite() / 2.0, dy = e.getY() - (block.getY() + 1);
+		return Math.abs(e.getX() - (block.getX() + 0.5)) <= half && Math.abs(e.getZ() - (block.getZ() + 0.5)) <= half && dy >= -0.01 && dy < HEIGHT;
+	}
 
 	private BombSites() {}
 
 	static boolean near(net.minecraft.world.entity.Entity p) {
 		if (Zones.any(Zones.Type::site)) return Zones.in(p, Zones.Type::site) != null; // drawn sites, when the world has them
 		for (SpawnPoints.Marker m : SpawnPoints.markers()) {
-			if (!(m.state().getBlock() instanceof BombSiteBlock) || m.level() != p.level()) continue;
-			double dx = p.getX() - (m.pos().getX() + 0.5), dz = p.getZ() - (m.pos().getZ() + 0.5), dy = p.getY() - (m.pos().getY() + 1);
-			double r = dev.strafemc.server.StrafeSettings.bombSite();
-			if (dx * dx + dz * dz <= r * r && Math.abs(dy) <= HEIGHT) return true;
+			if (m.state().getBlock() instanceof BombSiteBlock && m.level() == p.level() && inBox(p, m.pos())) return true;
 		}
 		return false;
 	}
@@ -34,7 +40,7 @@ final class BombSites {
 		if (best != null) return best;
 		for (SpawnPoints.Marker m : SpawnPoints.markers()) {
 			if (!(m.state().getBlock() instanceof BombSiteBlock) || m.level() != e.level()) continue;
-			var top = new net.minecraft.world.phys.Vec3(m.pos().getX() + 0.5, m.pos().getY() + 1, m.pos().getZ() + 0.5);
+			var top = SpawnPoints.standOn(m.level(), m.pos()); // a buried block: the floor over it
 			if (best == null || top.distanceToSqr(e.position()) < best.distanceToSqr(e.position())) best = top;
 		}
 		return best;
@@ -45,9 +51,7 @@ final class BombSites {
 		Zones.Zone z = Zones.in(e, Zones.Type::site);
 		if (z != null) return z.type() == Zones.Type.SITE_A ? "A" : "B";
 		for (SpawnPoints.Marker m : SpawnPoints.markers()) {
-			if (!(m.state().getBlock() instanceof BombSiteBlock) || m.level() != e.level()) continue;
-			double r = dev.strafemc.server.StrafeSettings.bombSite() + 1;
-			if (e.position().distanceToSqr(m.pos().getX() + 0.5, m.pos().getY() + 1, m.pos().getZ() + 0.5) <= r * r)
+			if (m.state().getBlock() instanceof BombSiteBlock && m.level() == e.level() && inBox(e, m.pos()))
 				return m.state().getValue(BombSiteBlock.SITE) == BombSiteBlock.Site.A ? "A" : "B";
 		}
 		return "";

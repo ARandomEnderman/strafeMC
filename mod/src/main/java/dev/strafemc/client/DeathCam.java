@@ -8,11 +8,22 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * CS2's death camera (freezecam): when you're killed, your view turns to your killer over spec_freeze_traveltime and
- * holds on them for spec_freeze_time before the death screen shows. FLAGGED: CS:GO's defaults (0.4 s, 3.0 s); CS2's
- * aren't in our cached cvars. A headshot death turns faster (half the travel time). FLAGGED ours.
+ * holds on them for spec_freeze_time before the death screen shows. spec_freeze_time is the server's (the game modes set
+ * CS2's gamemode configs: competitive 2.0, casual 3.0, deathmatch / arms race 2), else 3.0; the travel time is CS:GO's
+ * 0.4 (FLAGGED). A headshot death turns faster (half the travel time). FLAGGED ours.
  */
 public final class DeathCam {
-	private static final double TRAVEL = 0.4, HOLD = 3.0;
+	private static final double TRAVEL = 0.4, DEFAULT_HOLD = 3.0;
+
+	/** How long the camera holds on the killer: the server's spec_freeze_time. */
+	private static double hold() {
+		try {
+			String v = ClientGameplay.cvar("spec_freeze_time");
+			return v == null ? DEFAULT_HOLD : Math.max(0, Math.min(10, Double.parseDouble(v)));
+		} catch (NumberFormatException e) {
+			return DEFAULT_HOLD;
+		}
+	}
 	/** The death screen comes before the server says who killed us (the killfeed line, the death panel): wait this long for it. */
 	private static final double WAIT_KILLER = 0.75;
 	private static int killer = -1;
@@ -139,7 +150,7 @@ public final class DeathCam {
 			mc.player.yRotO = mc.player.getYRot();
 			mc.player.xRotO = mc.player.getXRot();
 		}
-		if (since >= HOLD || k == null) {
+		if (since >= hold() || k == null) {
 			Screen s = pending;
 			pending = null;
 			holding = false;
