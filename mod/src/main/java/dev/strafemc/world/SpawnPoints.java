@@ -88,11 +88,11 @@ public final class SpawnPoints {
 	}
 
 	/**
-	 * Where a player stands over a marker block: the first place above it with room for them (up to 8 blocks), so the
-	 * block can be hidden under the floor; on the block itself when there's none.
+	 * Where a player stands over a marker block: the first place above it with room for them, however deep it's buried
+	 * (up to the build limit), so the block can be hidden under the floor; on the block itself when there's none.
 	 */
 	public static net.minecraft.world.phys.Vec3 standOn(ServerLevel level, BlockPos pos) {
-		for (int dy = 1; dy <= 8; dy++) {
+		for (int dy = 1; pos.getY() + dy + 1 <= level.getMaxY(); dy++) {
 			BlockPos feet = pos.above(dy);
 			if (free(level, feet) && free(level, feet.above())) return new net.minecraft.world.phys.Vec3(pos.getX() + 0.5, feet.getY(), pos.getZ() + 0.5);
 		}
