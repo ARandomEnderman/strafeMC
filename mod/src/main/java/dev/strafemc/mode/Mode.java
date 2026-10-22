@@ -228,6 +228,36 @@ abstract class Mode {
 		return moves > 0;
 	}
 
+	/**
+	 * CS2's end of match line-up for one player (endofmatch-characters): free for all, the top three; else the player's
+	 * own side, them first, then by kills, five at most. Each with their name, side and agent (bots: none, the side's).
+	 */
+	com.google.gson.JsonArray eom(ServerPlayer viewer) {
+		List<LivingEntity> line = new ArrayList<>();
+		if (ffa()) for (LivingEntity e : ranking()) {
+			if (line.size() >= 3) break;
+			line.add(e);
+		}
+		else {
+			boolean t = CsTeam.isT(viewer);
+			if (participants().contains(viewer)) line.add(viewer);
+			List<LivingEntity> side = new ArrayList<>(participants().stream().filter(e -> e != viewer && CsTeam.isT(e) == t).toList());
+			side.sort((a, b) -> Integer.compare(stat(b)[0], stat(a)[0]));
+			for (LivingEntity e : side) if (line.size() < 5) line.add(e);
+		}
+		com.google.gson.JsonArray out = new com.google.gson.JsonArray();
+		for (LivingEntity e : line) {
+			JsonObject x = new JsonObject();
+			x.addProperty("name", name(e));
+			x.addProperty("t", CsTeam.isT(e));
+			x.addProperty("agent", e instanceof ServerPlayer sp ? dev.strafemc.weapon.MenuLoadout.agent(sp, CsTeam.isT(e)) : "");
+			x.addProperty("k", stat(e)[0]);
+			x.addProperty("d", stat(e)[2]);
+			out.add(x);
+		}
+		return out;
+	}
+
 	/** The planted bomb (round modes), or null. */
 	net.minecraft.world.entity.Entity plantedBomb() {
 		return null;
@@ -440,6 +470,7 @@ abstract class Mode {
 		o.addProperty("ffa", ffa());
 		o.addProperty("t", CsTeam.isT(p));
 		o.addProperty("picked", picked.contains(p.getUUID()));
+		if (over >= 0) o.add("eom", eom(p));
 		state(p, o);
 		JsonArray arr = new JsonArray();
 		for (LivingEntity e : ranking()) {

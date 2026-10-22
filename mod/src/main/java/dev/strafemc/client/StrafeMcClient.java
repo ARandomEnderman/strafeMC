@@ -156,6 +156,7 @@ public class StrafeMcClient implements ClientModInitializer {
 			return l == null ? 0 : l.getGameTime();
 		};
 		LoadoutPreview.register();
+		EomScreen.register();
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register(
 				(handler, sender, mc) -> dev.strafemc.client.console.ConsoleCommands.sendTeam()); // your side, for your smokes' colour

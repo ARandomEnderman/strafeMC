@@ -23,22 +23,21 @@ import java.util.Map;
 /**
  * CS2's radar (hudradar), drawn top left in game modes: its round radar (250 px at 1080p, a 1 px white edge, in a
  * 300 px panel 40 px down) that turns with your view, the map under it, teammates as dots (icon-on-map) in their
- * teammate colour in Competitive and Wingman (CS2's cl_teammate_color_1-5) with the colour's letter on it, else in
+ * teammate colour in Competitive and Wingman (CS2's cl_teammate_color_1-5; no letters: cl_teammate_colors_show 1), else in
  * their side's colour (CT #1ed2ff, T #ffdd23), each with CS2's white arrow toward where they look; enemies the server
  * says are spotted as red diamonds, crosses where teammates died, the bomb (carried, dropped with CS2's pulsing ring,
  * planted blinking red), the bomb site letters, and teammates past the edge as arrows on it. A marker above or below
  * a dot when they're a floor up or down. What's on it comes from the server (mode/Radar); the map is read from the
  * blocks around the camera, as CS2 maps have a drawn overview and Minecraft worlds don't.
  * FLAGGED ours: the scale (RANGE blocks to the edge), how the block map looks, a spotted enemy fading for a second
- * once it's lost, the background's darkness, the letters (the colour's initial).
+ * once it's lost, the background's darkness.
  */
 public final class RadarHud {
 	/** Blocks from the middle to the edge. */
 	private static final double RANGE = 32;
 	private static final int CT = 0xFF1ED2FF, T = 0xFFFFDD23, SITE = 0xFFFFCC00;
-	/** CS2's cl_teammate_color_1-5 defaults: blue, green, yellow, orange, purple; and their letters. */
+	/** CS2's cl_teammate_color_1-5 defaults: blue, green, yellow, orange, purple. */
 	private static final int[] COLOURS = {0xFF88CEF5, 0xFF009E80, 0xFFF1E441, 0xFFE6802A, 0xFFBD2C96};
-	private static final String[] LETTERS = {"B", "G", "Y", "O", "P"};
 	private static final long LOST_MS = 1000;
 
 	private record Mark(int id, double x, double y, double z, float yaw, boolean t, boolean dead, boolean enemy, boolean bomb, int c) {}
@@ -200,14 +199,13 @@ public final class RadarHud {
 		boolean ffa = ModeHud.state().has("ffa") && ModeHud.state().get("ffa").getAsBoolean();
 		int mine = me >= 0 ? COLOURS[me] : ffa ? 0xFFFFFFFF : meT ? T : CT;
 		if (has("view_angle")) icon(g, tex("view_angle"), 128, 64, cx, cy - 32 * u * 1.4f, 128 * u * 1.4f, 64 * u * 1.4f, 0, 0x14FFFFFF);
-		dot(g, cx, cy, 0, mine, me >= 0 ? LETTERS[me] : null, u, 1f);
+		dot(g, cx, cy, 0, mine, u, 1f);
 	}
 
 	private static void drawMark(GuiGraphicsExtractor g, Mark m, double mx, double my, double mz, float myaw, double camX, double camY, double camZ,
 			float yaw, double cos, double sin, float s, float cx, float cy, int size, float u, float alpha) {
 		float[] p = screen(mx - camX, mz - camZ, cos, sin, s);
 		int col = m.enemy ? 0xFFFF1919 : m.c >= 0 ? COLOURS[m.c] : m.t ? T : CT;
-		String letter = m.c >= 0 && !m.enemy ? LETTERS[m.c] : null;
 		float rot = (float) Math.toRadians(myaw - yaw);
 		if (m.dead) {
 			if (!inside(p, size)) return;
@@ -220,14 +218,14 @@ public final class RadarHud {
 			float ang = (float) Math.atan2(p[1], p[0]);
 			clamp(p, size, 9 * u);
 			if (has("offmap")) icon(g, tex("offmap"), 45, 44,cx + p[0], cy + p[1], 22 * u, 22 * u, ang + (float) (Math.PI / 2), withAlpha(col, 0.8f * alpha));
-			else dot(g, cx + p[0], cy + p[1], 0, col, null, u * 0.7f, alpha);
+			else dot(g, cx + p[0], cy + p[1], 0, col, u * 0.7f, alpha);
 			return;
 		}
 		float x = cx + p[0], y = cy + p[1];
 		if (m.enemy) {
 			if (has("enemy-on-map")) icon(g, tex("enemy-on-map"), 32, 32, x, y, 13 * u * 1.4f, 13 * u * 1.4f, 0, withAlpha(0xFFFFFFFF, 0.95f * alpha));
-			else dot(g, x, y, 0, col, null, u, alpha);
-		} else dot(g, x, y, rot, col, letter, u, alpha);
+			else dot(g, x, y, 0, col, u, alpha);
+		} else dot(g, x, y, rot, col, u, alpha);
 		double dy = my - camY;
 		if (Math.abs(dy) > 2.5) { // a floor up or down
 			String n = dy > 0 ? "above" : "below";
@@ -236,8 +234,8 @@ public final class RadarHud {
 		if (m.bomb && has("c4_sml")) icon(g, tex("c4_sml"), 55, 39, x + 9 * u, y + 7 * u, 16 * u, 12 * u, 0, withAlpha(0xFFFFFFFF, alpha));
 	}
 
-	/** A player's dot (icon-on-map washed in their colour, its letter on it) and CS2's arrow toward where they look. */
-	private static void dot(GuiGraphicsExtractor g, float x, float y, float rot, int col, String letter, float u, float alpha) {
+	/** A player's dot (icon-on-map washed in their colour) and CS2's white arrow toward where they look. */
+	private static void dot(GuiGraphicsExtractor g, float x, float y, float rot, int col, float u, float alpha) {
 		float d = 11 * u * 1.4f;
 		if (has("direction")) {
 			var pose = g.pose();
@@ -249,16 +247,6 @@ public final class RadarHud {
 		}
 		if (has("on-map")) icon(g, tex("on-map"), 20, 20, x, y, d, d, 0, withAlpha(col, alpha));
 		else g.fill(Math.round(x - d / 2), Math.round(y - d / 2), Math.round(x + d / 2), Math.round(y + d / 2), withAlpha(col, alpha));
-		if (letter != null) { // PI_Text: 10 px, black, in the middle
-			var font = Minecraft.getInstance().font;
-			var pose = g.pose();
-			pose.pushMatrix();
-			pose.translate(x, y);
-			float k = 10 * u * 1.4f / font.lineHeight;
-			pose.scale(k, k);
-			g.text(font, letter, -font.width(letter) / 2, -font.lineHeight / 2 + 1, withAlpha(0xFF000000, alpha), false);
-			pose.popMatrix();
-		}
 	}
 
 	private static int withAlpha(int argb, float a) {

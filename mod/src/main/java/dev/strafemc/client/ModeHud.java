@@ -107,6 +107,7 @@ public final class ModeHud {
 				if (mc.screen == null) mc.setScreen(new TeamSelectScreen());
 			}
 			if (mode.isEmpty()) teamMenuFor = "";
+			ctx.client().execute(() -> EomScreen.update(s)); // the match's end: CS2's end of match screen
 		});
 		TEAM_KEY = net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(new net.minecraft.client.KeyMapping("key.strafemc.team",
 				com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM, org.lwjgl.glfw.GLFW.GLFW_KEY_M, dev.strafemc.client.console.ConsoleKeys.CATEGORY));
@@ -228,7 +229,7 @@ public final class ModeHud {
 			if (!zone || System.currentTimeMillis() / 400 % 2 == 0)
 				blitIcon(g, "bomb_c4", (int) Math.round(40 * px), g.guiHeight() - (int) Math.round(170 * px), ih, zone ? 0xFFFF4040 : 0xFFE0E0E0);
 		}
-		if (phase.equals("roundover") || phase.equals("over")) WinPanel.draw(g, s, phase.equals("over"), px); // the round's or the match's winner
+		if (phase.equals("roundover")) WinPanel.draw(g, s, false, px); // the round's winner (the match's: EomScreen)
 		else WinPanel.hide();
 	}
 
