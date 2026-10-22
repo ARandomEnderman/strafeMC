@@ -45,6 +45,8 @@ public final class StrafeSettings {
 	private static volatile boolean wear = true;
 	/** Bots: how many (CS2's bot_quota; 0 by default), whether they fight everyone, whose skins they wear (empty: random). */
 	private static volatile int botQuota = 0;
+	/** The end of match camera's place (strafemc_eom_spot): "dimension|x|y|z|yaw", or "" (in front of each player). */
+	private static volatile String eomSpot = "";
 	private static volatile boolean botFfa = false;
 	/** Bot skill, 1 (easy) to 10 (hard); 5 by default. */
 	private static volatile int botDifficulty = 5;
@@ -180,6 +182,15 @@ public final class StrafeSettings {
 
 	public static int botQuota() {
 		return botQuota;
+	}
+
+	public static String eomSpot() {
+		return eomSpot;
+	}
+
+	public static void setEomSpot(String s) {
+		eomSpot = s == null ? "" : s;
+		save();
 	}
 
 	public static void setBotQuota(int n) {
@@ -351,6 +362,7 @@ public final class StrafeSettings {
 		wear = true;
 		WEAR_OFF.clear();
 		botQuota = 0;
+		eomSpot = "";
 		botFfa = false;
 		botDifficulty = 5;
 		botSkins = java.util.List.of();
@@ -378,6 +390,7 @@ public final class StrafeSettings {
 				if (o != null && o.has("spawnBlocks")) spawnBlocks = o.get("spawnBlocks").getAsBoolean();
 				if (o != null && o.has("wear")) wear = o.get("wear").getAsBoolean();
 				if (o != null && o.has("botQuota")) botQuota = o.get("botQuota").getAsInt();
+				if (o != null && o.has("eomSpot")) eomSpot = o.get("eomSpot").getAsString();
 				if (o != null && o.has("botFfa")) botFfa = o.get("botFfa").getAsBoolean();
 				if (o != null && o.has("botDifficulty")) botDifficulty = o.get("botDifficulty").getAsInt();
 				if (o != null && o.has("botSkins")) {
@@ -419,6 +432,7 @@ public final class StrafeSettings {
 		o.addProperty("spawnBlocks", spawnBlocks);
 		o.addProperty("wear", wear);
 		o.addProperty("botQuota", botQuota);
+		o.addProperty("eomSpot", eomSpot);
 		o.addProperty("botFfa", botFfa);
 		o.addProperty("botDifficulty", botDifficulty);
 		var skins = new com.google.gson.JsonArray();

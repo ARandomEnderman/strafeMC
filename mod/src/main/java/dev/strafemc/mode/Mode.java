@@ -253,9 +253,40 @@ abstract class Mode {
 			x.addProperty("agent", e instanceof ServerPlayer sp ? dev.strafemc.weapon.MenuLoadout.agent(sp, CsTeam.isT(e)) : "");
 			x.addProperty("k", stat(e)[0]);
 			x.addProperty("d", stat(e)[2]);
+			x.addProperty("id", e.getId());
+			var held = e.getMainHandItem();
+			x.addProperty("w", held.getItem() instanceof GunItem g ? g.weaponClass : held.getItem() instanceof dev.strafemc.weapon.KnifeItem ? "weapon_knife"
+					: Bots.isBot(e) ? Bots.weaponOf(e) : "weapon_knife");
 			out.add(x);
 		}
 		return out;
+	}
+
+	/**
+	 * Where CS2's end_of_match prefab goes for a player: its origin and facing (MC degrees), so that the camera's middle
+	 * spot (prefab 32, -300) is where the operator stood for strafemc_eom_spot (same dimension), else where the player
+	 * stands, looking the way they look: the team lines up about 5 blocks ahead.
+	 */
+	JsonObject eomSpot(ServerPlayer p) {
+		double x = p.getX(), y = p.getY(), z = p.getZ();
+		float yaw = p.getYRot();
+		String[] s = dev.strafemc.server.StrafeSettings.eomSpot().split("\\|");
+		if (s.length == 5 && s[0].equals(p.level().dimension().identifier().toString())) {
+			try {
+				x = Double.parseDouble(s[1]);
+				y = Double.parseDouble(s[2]);
+				z = Double.parseDouble(s[3]);
+				yaw = Float.parseFloat(s[4]);
+			} catch (NumberFormatException ignored) {}
+		}
+		double r = Math.toRadians(yaw), k = 1 / dev.strafemc.config.StrafeConfig.unitsPerBlock;
+		double fx = -Math.sin(r), fz = Math.cos(r), rx = -Math.cos(r), rz = -Math.sin(r);
+		JsonObject o = new JsonObject();
+		o.addProperty("x", x - rx * 32 * k + fx * 300 * k);
+		o.addProperty("y", y);
+		o.addProperty("z", z - rz * 32 * k + fz * 300 * k);
+		o.addProperty("yaw", yaw);
+		return o;
 	}
 
 	/** The planted bomb (round modes), or null. */
@@ -470,7 +501,10 @@ abstract class Mode {
 		o.addProperty("ffa", ffa());
 		o.addProperty("t", CsTeam.isT(p));
 		o.addProperty("picked", picked.contains(p.getUUID()));
-		if (over >= 0) o.add("eom", eom(p));
+		if (over >= 0) {
+			o.add("eom", eom(p));
+			o.add("eomSpot", eomSpot(p));
+		}
 		state(p, o);
 		JsonArray arr = new JsonArray();
 		for (LivingEntity e : ranking()) {

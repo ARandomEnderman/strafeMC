@@ -105,7 +105,7 @@ public final class AgentModels {
 		return true;
 	}
 
-	private static void part(VmModel.Part p, float[] pos, float[] nrm, PoseStack ps, SubmitNodeCollector out, int light) {
+	static void part(VmModel.Part p, float[] pos, float[] nrm, PoseStack ps, SubmitNodeCollector out, int light) {
 		if (p.texture == null || p.idx == null || p.alphaMode.equals("BLEND")) return;
 		boolean mask = p.alphaMode.equals("MASK");
 		Identifier tex = Viewmodel.INSTANCE.texture(p.texture, !mask);

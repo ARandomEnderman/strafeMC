@@ -182,6 +182,19 @@ public final class ConsoleActions {
 				if (a.length >= 2 && StrafeSettings.WEAR_RARITIES.contains(a[0])) StrafeSettings.setWearFor(a[0], on);
 				else StrafeSettings.setWear(on);
 			}
+			case "strafemc_eom_spot" -> { // where the end of match camera stands: here, looking at where the team will line up
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can set the end of match spot."));
+					break;
+				}
+				if (arg.trim().equalsIgnoreCase("clear")) {
+					StrafeSettings.setEomSpot("");
+					ConsoleRelay.reply(p, "End of match: in front of each player");
+				} else {
+					StrafeSettings.setEomSpot(p.level().dimension().identifier() + "|" + p.getX() + "|" + p.getY() + "|" + p.getZ() + "|" + p.getYRot());
+					ConsoleRelay.reply(p, "End of match camera set here; the team lines up about 5 blocks ahead");
+				}
+			}
 			case "bot_add", "bot_add_t", "bot_add_ct", "bot_kick", "bot_quota", "bot_difficulty", "strafemc_bot_ffa", "strafemc_bot_skins" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change bots."));

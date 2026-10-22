@@ -161,6 +161,8 @@ public final class ConsoleCommands {
 		});
 		local("crosshair_editor", "Edit your crosshair.", a -> Minecraft.getInstance().execute(() ->
 				Minecraft.getInstance().setScreen(dev.strafemc.client.StrafeSettingsScreen.at(Minecraft.getInstance().screen, "crosshair"))));
+		local("strafemc_eom_spot", "End of match camera: stand here looking where the team should line up (clear: in front of each player). Operators.",
+				a -> action("strafemc_eom_spot", a.length == 0 ? "" : a[0], false));
 		local("bot_add", "Add a bot. Operators.", a -> action("bot_add", "", false));
 		local("bot_add_t", "Add a T bot. Operators.", a -> action("bot_add_t", "", false));
 		local("bot_add_ct", "Add a CT bot. Operators.", a -> action("bot_add_ct", "", false));

@@ -156,7 +156,9 @@ public class StrafeMcClient implements ClientModInitializer {
 			return l == null ? 0 : l.getGameTime();
 		};
 		LoadoutPreview.register();
-		EomScreen.register();
+		// the end of match line-up, in the world (EomScene / EomScreen)
+		net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.COLLECT_SUBMITS.register(dev.strafemc.client.viewmodel.EomScene::render);
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> dev.strafemc.client.viewmodel.EomScene.stop());
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SetupScreen.offer(null));
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register(
 				(handler, sender, mc) -> dev.strafemc.client.console.ConsoleCommands.sendTeam()); // your side, for your smokes' colour

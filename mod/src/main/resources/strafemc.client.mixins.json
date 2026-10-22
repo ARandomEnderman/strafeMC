@@ -32,7 +32,7 @@
     "MouseHandlerZoomMixin",
     "RenderPipelinesAccessor",
     "RenderTypeInvoker",
-    "GameRendererHandMixin", "GameRendererHurtTiltMixin", "ChannelSpatializeMixin", "CreativeSectionsMixin", "MinecraftUiFitMixin", "ToastManagerMixin", "AgentModelMixin", "EntityRendererInvoker"
+    "GameRendererHandMixin", "GameRendererHurtTiltMixin", "ChannelSpatializeMixin", "CreativeSectionsMixin", "MinecraftUiFitMixin", "ToastManagerMixin", "AgentModelMixin", "EntityRendererInvoker", "CameraEomMixin"
   ],
   "injectors": {
     "defaultRequire": 1

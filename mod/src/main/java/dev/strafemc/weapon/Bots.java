@@ -221,6 +221,12 @@ public final class Bots {
 	}
 
 	/** CS2's default rifles: AK-47 for T, M4A4 for CT (or what the running game mode gives it). */
+	/** The weapon class a bot entity carries (the end of match line-up's). */
+	public static synchronized String weaponOf(LivingEntity e) {
+		for (Bot b : BOTS) if (b.e == e) return weapon(b);
+		return "weapon_knife";
+	}
+
 	private static String weapon(Bot b) {
 		String m = b.e == null ? null : dev.strafemc.mode.GameModes.botWeapon(b.e);
 		if (m != null && WeaponItems.GUNS.containsKey(m)) return m;
