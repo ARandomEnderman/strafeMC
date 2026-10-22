@@ -19,16 +19,40 @@ public class StrafeMcClient implements ClientModInitializer {
 	static volatile int armor;
 	static volatile boolean helmet;
 
+	/** Essential's Multiplayer tabs (its own buttons, found by their labels). */
+	private static final java.util.Set<String> ESSENTIAL_TABS = java.util.Set.of("Favorites", "Friends", "Discover");
+
 	/**
-	 * Your loadout (buy menu slots, skins, agents) before joining a server: a button at the top of the Multiplayer
-	 * screen, right of its title.
+	 * Your loadout (buy menu slots, skins, agents) before joining a server: a button on the Multiplayer screen. With
+	 * Essential it sits in the row of its Favorites / Friends / Discover tabs (right of them, else left, if there's room);
+	 * otherwise at the top right. Essential rebuilds its buttons when you switch tabs, so it's put back if it's gone.
 	 */
 	private static void loadoutButton(net.minecraft.client.gui.screens.Screen screen) {
 		var mc = net.minecraft.client.Minecraft.getInstance();
-		int w = 110;
-		net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(net.minecraft.client.gui.components.Button.builder(
-				net.minecraft.network.chat.Component.literal("strafeMC Loadout"), b -> mc.setScreen(new MenuLoadoutScreen(screen))).bounds(screen.width - w - 6, 6, w, 20)
-				.build());
+		var widgets = net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen);
+		var button = net.minecraft.client.gui.components.Button.builder(net.minecraft.network.chat.Component.literal("strafeMC Loadout"),
+				b -> mc.setScreen(new MenuLoadoutScreen(screen))).build();
+		place(button, widgets, screen.width);
+		widgets.add(button);
+		net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterTick(screen).register(s -> {
+			var now = net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(s);
+			if (now.contains(button)) return;
+			place(button, now, s.width);
+			now.add(button);
+		});
+	}
+
+	private static void place(net.minecraft.client.gui.components.Button button, java.util.List<net.minecraft.client.gui.components.AbstractWidget> widgets, int screenW) {
+		int left = Integer.MAX_VALUE, right = Integer.MIN_VALUE, y = -1, w = 100;
+		for (var wd : widgets)
+			if (wd != button && ESSENTIAL_TABS.contains(wd.getMessage().getString())) {
+				left = Math.min(left, wd.getX());
+				right = Math.max(right, wd.getX() + wd.getWidth());
+				y = wd.getY();
+			}
+		if (y >= 0 && right + 4 + w <= screenW - 4) button.setRectangle(w, 20, right + 4, y);
+		else if (y >= 0 && left - 4 - w >= 4) button.setRectangle(w, 20, left - 4 - w, y);
+		else button.setRectangle(110, 20, screenW - 116, 6); // no Essential, or no room beside its tabs
 	}
 
 	@Override
