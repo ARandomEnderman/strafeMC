@@ -34,6 +34,8 @@ public final class OldBannerPattern {
 			roots.add(Path.of(home, "curseforge", "minecraft", "Install", "versions"));
 			roots.add(Path.of(home, ".minecraft", "versions"));
 			roots.add(Path.of(home, "Library", "Application Support", "minecraft", "versions"));
+			roots.add(Path.of(home, "Library", "Application Support", "ModrinthApp", "meta", "libraries", "net", "minecraft", "client"));
+			roots.add(Path.of(home, "Library", "Application Support", "PrismLauncher", "libraries", "com", "mojang", "minecraft"));
 		}
 		for (Path root : roots) {
 			if (!Files.isDirectory(root)) continue;

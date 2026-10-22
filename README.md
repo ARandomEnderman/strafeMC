@@ -75,12 +75,13 @@ The first-time setup is built in: when you join a world, strafeMC offers to conv
 | Minecraft | 26.1.2 |
 | Loader | Fabric Loader 0.19.5 or newer and Fabric API 0.155.3 or newer |
 | Java | 25 or newer |
-| Also needs | Counter-Strike 2, installed through Steam on the same PC |
-| Tested on | Windows |
+| Also needs | Counter-Strike 2, installed through Steam on the same computer (on a Mac: the Windows CS2 in Windows Steam under Sikarugir, CrossOver or Whisky, see [On a Mac](docs/MANUAL_SETUP.md#on-a-mac)) |
+| Tested on | Windows (macOS on Apple Silicon is supported but not yet tested) |
 
 ## Installation
 
-1. Install Counter-Strike 2 through Steam (it's free).
+1. Install Counter-Strike 2 through Steam (it's free). On a Mac, install the Windows CS2 with Windows Steam in a
+   Sikarugir bottle: see [On a Mac](docs/MANUAL_SETUP.md#on-a-mac).
 2. Put the strafeMC jar into the `mods` folder of a Fabric profile for Minecraft 26.1.2.
 3. Do the first-time setup below, so strafeMC can convert the CS2 files it needs.
 

@@ -103,7 +103,33 @@ public final class ConverterDownload {
 		}
 		Path exe = executable(dir);
 		if (!exe.toString().endsWith(".exe")) exe.toFile().setExecutable(true);
+		if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) macSign(dir, exe);
 		return exe;
+	}
+
+	/**
+	 * Apple Silicon Macs only run signed code: if the converter or its libraries aren't signed, they get the local
+	 * ad-hoc signature (codesign -s -, the same a build on that Mac gets). Files we download are never quarantined
+	 * (only browsers mark downloads), so Gatekeeper doesn't stop them.
+	 */
+	private static void macSign(Path dir, Path exe) {
+		java.util.List<Path> files = new java.util.ArrayList<>(java.util.List.of(exe));
+		try (var s = Files.walk(dir)) {
+			s.filter(p -> p.toString().endsWith(".dylib")).forEach(files::add);
+		} catch (IOException ignored) {
+		}
+		for (Path f : files) {
+			try {
+				if (run("codesign", "--verify", f.toString()) != 0) run("codesign", "--force", "--sign", "-", f.toString());
+			} catch (Exception e) { // no codesign: an Intel Mac runs unsigned code anyway
+				return;
+			}
+		}
+	}
+
+	private static int run(String... cmd) throws Exception {
+		Process p = new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+		return p.waitFor(60, java.util.concurrent.TimeUnit.SECONDS) ? p.exitValue() : -1;
 	}
 
 	private static void unzip(Path zip, Path dir) throws IOException {

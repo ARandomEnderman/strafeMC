@@ -60,6 +60,30 @@ sound can take a moment; after that it's instant.
 
 Give yourself the weapons from the **strafeMC Weapons** creative tab.
 
+## On a Mac
+
+Counter-Strike 2 has no Mac version, and the Mac Steam app can't install it. strafeMC reads the **Windows** CS2 instead,
+installed with Windows Steam inside a Wine bottle. You never need to play CS2 there; strafeMC only reads its files.
+
+1. Install [Sikarugir](https://github.com/Sikarugir-App/Sikarugir) (free). CrossOver or Whisky work too.
+2. Make a wrapper (a bottle) and install **Windows Steam** in it (`SteamSetup.exe` from the Steam website).
+3. Sign in to that Steam and install **Counter-Strike 2** (around 60 GB).
+4. Open that Steam now and then so it keeps CS2 up to date. After a CS2 update, run the strafeMC setup again
+   (Options > strafeMC > Open setup...).
+
+strafeMC finds CS2 there by itself: it looks through Sikarugir, Kegworks and Wineskin wrapper apps (in
+`~/Applications`, `/Applications` and their `Sikarugir` folders), CrossOver and Whisky bottles, and `~/.wine`,
+including Steam libraries on other drives of the bottle. If it doesn't, pick the wrapper app or bottle on the setup
+screen, or paste the CS2 folder. The Mac folder picker can't open apps, so a wrapper's folder has to be pasted:
+
+```
+~/Applications/Sikarugir/Steam.app/Contents/SharedSupport/prefix/drive_c/Program Files (x86)/Steam/steamapps/common/Counter-Strike Global Offensive
+```
+
+The converter has its own Apple Silicon (and Intel) Mac build, which the setup downloads by itself. For a manual
+setup, download the `cli-macos-arm64` zip (`cli-macos-x64` on an Intel Mac). Hosting a CS2 server from inside
+Minecraft is Windows only.
+
 ## Troubleshooting
 
 - **No gun model, only the flat item:** `cs2Path` or `vrfPath` is wrong. Check that `cs2Path` contains

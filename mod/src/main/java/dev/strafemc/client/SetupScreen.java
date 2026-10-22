@@ -25,6 +25,9 @@ import java.util.List;
 public final class SetupScreen extends Screen implements dev.strafemc.client.ui.UiFit.Sized {
 	public static final String STORE = "https://store.steampowered.com/app/730/";
 	public static final String GUIDE = "https://github.com/ARandomEnderman/strafeMC/blob/main/docs/MANUAL_SETUP.md";
+	/** CS2 on a Mac: the Windows CS2 through Windows Steam in a Wine bottle (there's no Mac version). */
+	public static final String MAC_GUIDE = GUIDE + "#on-a-mac";
+	private static final boolean MAC = Cs2Finder.MAC;
 	/** Rough size of a full setup (all guns and knives, shrunk textures, effects, sounds); see setup.json for the real files. */
 	private static final String SIZE = "about 10 GB";
 
@@ -116,9 +119,7 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 		int cx = width / 2, bottom = height - 32;
 		switch (page) {
 			case INTRO -> {
-				if (cs2 == null)
-					addRenderableWidget(Button.builder(Component.literal("Get CS2 on Steam (free)"), b -> Util.getPlatform().openUri(STORE))
-							.bounds(cx - 155, bottom - 52, 310, 20).build());
+				if (cs2 == null) addRenderableWidget(getCs2().bounds(cx - 155, bottom - 52, 310, 20).build());
 				addRenderableWidget(Button.builder(Component.literal(cs2 == null ? "I have CS2: pick its folder" : "Set up automatically"), b -> toConfirm())
 						.bounds(cx - 155, bottom - 26, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Do it myself (guide)"), b -> Util.getPlatform().openUri(GUIDE))
@@ -134,16 +135,15 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 				folder = new EditBox(font, cx - 155, 74, 236, 20, Component.literal("CS2 folder"));
 				folder.setMaxLength(400);
 				folder.setValue(cs2 != null ? cs2.toString() : typed);
-				folder.setHint(Component.literal("…\\steamapps\\common\\" + Cs2Finder.FOLDER));
+				folder.setHint(Component.literal(MAC ? "…/drive_c/Program Files (x86)/Steam/steamapps/common/" + Cs2Finder.FOLDER
+						: "…\\steamapps\\common\\" + Cs2Finder.FOLDER));
 				folder.setResponder(v -> {
 					typed = v;
 					error = null;
 				});
 				addRenderableWidget(folder);
 				addRenderableWidget(Button.builder(Component.literal("Browse…"), b -> browse()).bounds(cx + 85, 74, 70, 20).build());
-				if (cs2 == null)
-					addRenderableWidget(Button.builder(Component.literal("Get CS2 on Steam (free)"), b -> Util.getPlatform().openUri(STORE))
-							.bounds(cx - 155, bottom - 26, 310, 20).build());
+				if (cs2 == null) addRenderableWidget(getCs2().bounds(cx - 155, bottom - 26, 310, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("§aStart"), b -> start()).bounds(cx - 155, bottom, 150, 20).build());
 				addRenderableWidget(Button.builder(Component.literal("Back"), b -> {
 					page = Page.INTRO;
@@ -158,6 +158,11 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 			}
 			case FAILED -> addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		}
+	}
+
+	private static Button.Builder getCs2() {
+		return MAC ? Button.builder(Component.literal("How to get CS2 on a Mac"), b -> Util.getPlatform().openUri(MAC_GUIDE))
+				: Button.builder(Component.literal("Get CS2 on Steam (free)"), b -> Util.getPlatform().openUri(STORE));
 	}
 
 	private void toConfirm() {
@@ -188,7 +193,10 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 	private void start() {
 		Path chosen = Cs2Finder.normalize(folder.getValue());
 		if (chosen == null) {
-			error = "No CS2 game files there. In Steam: right-click Counter-Strike 2 → Manage → Browse local files, and pick that folder.";
+			error = Cs2Finder.macSteam(Cs2Finder.normalize0(folder.getValue()))
+					? "That's the Mac Steam's folder: CS2 has no Mac version. Install the Windows CS2 with Windows Steam in a Sikarugir or CrossOver bottle (How to get CS2 on a Mac)."
+					: MAC ? "No CS2 game files there. Pick the Sikarugir / CrossOver bottle (or its wrapper app) that has Windows Steam with CS2 in it."
+					: "No CS2 game files there. In Steam: right-click Counter-Strike 2 → Manage → Browse local files, and pick that folder.";
 			return;
 		}
 		cs2 = chosen;
@@ -274,9 +282,14 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 							+ (status.missingFiles() > 0 ? " (" + status.missingFiles() + " files are missing)." : " (new weapons or effects)."));
 				else lines.add("strafeMC needs files from your own Counter-Strike 2 install before guns, sounds and effects work.");
 				lines.add("");
-				if (cs2 == null) {
+				if (cs2 == null && MAC) {
+					lines.add("§eNo Windows Counter-Strike 2 found on this Mac.");
+					lines.add("§7CS2 has no Mac version, so strafeMC reads the Windows one: install Windows Steam with Sikarugir (free; CrossOver or Whisky work too), install CS2 in it and let that Steam keep it up to date. strafeMC finds it there by itself. It's around 60 GB.");
+				} else if (cs2 == null) {
 					lines.add("§eCounter-Strike 2 doesn't seem to be installed on this PC.");
 					lines.add("§7It's free on Steam (a large download, around 60 GB). Install it, then restart Minecraft and this screen comes back. If it's installed somewhere unusual, pick its folder instead.");
+				}
+				if (cs2 == null) {
 					lines.add("§7Without it you can still play: CS2 movement works, and guns, knives and sounds use placeholders. On a server, its gameplay values still apply to you.");
 					lines.add("§c§lHeads up:§r§c strafeMC is built around CS2's files. Without them it's a much worse experience: no real guns, knives, sounds or effects.");
 					lines.add("");
@@ -293,7 +306,10 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 				Path n = Cs2Finder.normalize(folder == null ? "" : folder.getValue());
 				g.text(font, n != null ? "§a✔ CS2 found" + (n.toString().equals(folder.getValue().trim()) ? "" : ": " + n) : "§c✘ no CS2 game files here", x, 98, 0xFFFFFFFF, false);
 				y = 114;
-				if (cs2 == null) {
+				if (cs2 == null && MAC) {
+					lines.add("§7Pick the Wine bottle Windows Steam is in: the Sikarugir wrapper app itself (Browse… can't open apps), a CrossOver bottle, or the CS2 folder inside it.");
+					lines.add("§7No Windows CS2 yet? See How to get CS2 on a Mac.");
+				} else if (cs2 == null) {
 					lines.add("§7In Steam: right-click Counter-Strike 2 → Manage → Browse local files. Use Browse… to pick that folder (or paste it).");
 					lines.add("§7Don't have CS2? It's free on Steam; install it, then come back here.");
 				}
