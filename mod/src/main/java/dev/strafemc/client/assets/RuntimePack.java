@@ -351,8 +351,10 @@ public final class RuntimePack {
 				if (cases.length() > 0) cases.append(',');
 				cases.append("{\"when\":\"").append(w.id()).append("\",\"model\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/wrap/").append(f).append("\"}}");
 			}
-			Files.writeString(items.resolve(base + ".json"), "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\","
-					+ "\"index\":0,\"cases\":[" + cases + "],\"fallback\":{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/" + base + "\"}}}");
+			String plain = "{\"type\":\"minecraft:model\",\"model\":\"strafemc:item/" + base + "\"}";
+			// no pictures yet (setup not run): a select with no cases is refused, so just the plain picture
+			Files.writeString(items.resolve(base + ".json"), cases.isEmpty() ? "{\"model\":" + plain + "}"
+					: "{\"model\":{\"type\":\"minecraft:select\",\"property\":\"minecraft:custom_model_data\",\"index\":0,\"cases\":[" + cases + "],\"fallback\":" + plain + "}}");
 		}
 		Files.createDirectories(marker.getParent());
 		Files.writeString(marker, kind);

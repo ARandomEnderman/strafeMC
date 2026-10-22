@@ -88,7 +88,7 @@ vec4 volume(sampler2D tex, float slot, vec3 uvw) {
 }
 
 // the 128^3 noise, wrapping: 16 x 8 slices of 130x130 (128 + a 1-texel wrapped border)
-vec4 noise3(vec3 p) {
+vec4 smokeNoise(vec3 p) {
     vec3 w = fract(p);
     float z = w.z * 128.0 - 0.5;
     float z0 = mod(floor(z), 128.0), z1 = mod(z0 + 1.0, 128.0), f = z - floor(z);
@@ -100,7 +100,7 @@ vec4 noise3(vec3 p) {
 
 // CS2's noise value: pow, remapped between g_flNoiseMin/Max (or the wispy curve), R + 0.95 G, x 4.6
 float noiseValue(vec3 p) {
-    vec4 n = pow(noise3(p * 0.07), vec4(NOISE_POWER));
+    vec4 n = pow(smokeNoise(p * 0.07), vec4(NOISE_POWER));
     vec4 m = mix(mix(vec4(NOISE_MIN), vec4(NOISE_MAX), n), mix(vec4(0.25), vec4(-1.5), n), WISPY);
     return (m.x + m.y * 0.95) * 4.6;
 }
