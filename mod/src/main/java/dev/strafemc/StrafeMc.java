@@ -134,6 +134,7 @@ public class StrafeMc implements ModInitializer {
 			var p = ctx.player();
 			if (!dev.strafemc.server.RateLimit.allow(p, "movesound", 30) || p.position().distanceToSqr(msg.x(), msg.y(), msg.z()) > 16) return;
 			var out = new dev.strafemc.net.StrafePayloads.MoveSound(msg.event(), msg.x(), msg.y(), msg.z(), Math.min(1, msg.gain()), p.getId());
+			dev.strafemc.weapon.Bots.step(p); // enemy bots near enough hear it
 			for (var o : p.level().players())
 				if (o != p && o.distanceToSqr(p) < 64 * 64 && ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.MoveSound.TYPE))
 					ServerPlayNetworking.send(o, out);

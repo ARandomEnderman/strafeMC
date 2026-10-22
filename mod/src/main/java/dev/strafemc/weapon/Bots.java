@@ -65,10 +65,19 @@ public final class Bots {
 	private static final double HEARING = 25;
 
 	/** A shot: bots within earshot know where the shooter is (even behind them). */
-	public static synchronized void noise(LivingEntity source) {
+	public static void noise(LivingEntity source) {
+		noise(source, HEARING);
+	}
+
+	/** Footsteps, a jump or a landing: heard closer than shots, 8 blocks at difficulty 1 to 16 at 10 (FLAGGED: ours). */
+	public static void step(LivingEntity source) {
+		noise(source, 8 + 8 * skill());
+	}
+
+	private static synchronized void noise(LivingEntity source, double range) {
 		long now = System.currentTimeMillis();
 		for (Bot b : BOTS)
-			if (b.e != null && b.e.isAlive() && b.e.level() == source.level() && enemy(b, source) && b.e.distanceToSqr(source) < HEARING * HEARING) {
+			if (b.e != null && b.e.isAlive() && b.e.level() == source.level() && enemy(b, source) && b.e.distanceToSqr(source) < range * range) {
 				b.aware = source;
 				b.lastKnown = source.position();
 				b.awareUntil = now + 8000;
@@ -342,8 +351,10 @@ public final class Bots {
 			if (b.move == null && e.position().distanceToSqr(b.lastKnown) < 4) b.awareUntil = 0; // got there: nobody
 			faceMove(e);
 		} else { // wander to random spots
-			if (now >= b.wanderUntil || b.pathGoal == null) {
-				b.pathGoal = e.blockPosition().offset(RNG.nextInt(25) - 12, 0, RNG.nextInt(25) - 12);
+			// a new one when it's been a while or it got as far as it can (an unreachable spot leaves it at the nearest wall)
+			boolean there = b.pathGoal != null && !b.path.isEmpty() && b.pathIdx >= b.path.size();
+			if (now >= b.wanderUntil || b.pathGoal == null || there) {
+				b.pathGoal = wanderGoal(level, e.blockPosition());
 				b.wanderUntil = now + 4000 + RNG.nextInt(4000);
 				b.pathAt = 0;
 			}
@@ -390,6 +401,19 @@ public final class Bots {
 		if (d.lengthSqr() < 1e-4) return;
 		b.move = d.normalize();
 		b.climb = p.getY() > e.getBlockY() && d.lengthSqr() < 1.6 * 1.6;
+	}
+
+	/** Somewhere 6-16 blocks off it can stand (a few tries, then any spot that far). */
+	private static net.minecraft.core.BlockPos wanderGoal(ServerLevel level, net.minecraft.core.BlockPos from) {
+		net.minecraft.core.BlockPos any = null;
+		for (int i = 0; i < 8; i++) {
+			double a = RNG.nextDouble() * Math.PI * 2, r = 6 + RNG.nextDouble() * 10;
+			var p = from.offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r));
+			if (any == null) any = p;
+			var g = BotPath.ground(level, p);
+			if (g != null) return g;
+		}
+		return any;
 	}
 
 	/** Faces where it walks (no one to look at). */

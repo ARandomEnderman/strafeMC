@@ -89,7 +89,7 @@ final class BotPath {
 	}
 
 	/** The standable position at or just below p (feet in the air for a moment), or null. */
-	private static BlockPos ground(ServerLevel level, BlockPos p) {
+	static BlockPos ground(ServerLevel level, BlockPos p) {
 		for (int d = 0; d <= 3; d++) if (standable(level, p.below(d))) return p.below(d);
 		return standable(level, p.above()) ? p.above() : null;
 	}
