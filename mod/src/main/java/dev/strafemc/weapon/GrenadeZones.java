@@ -108,6 +108,8 @@ public final class GrenadeZones {
 		boolean marked = e.hurtMarked;
 		boolean wasAlive = e.isAlive();
 		ServerPlayer burner = f.owner != null ? f.level.getServer().getPlayerList().getPlayer(f.owner) : null;
+		damage *= dev.strafemc.mode.GameModes.teamDamage(burner, e, "grenade"); // the mode's friendly fire (none in Casual)
+		if (damage <= 0) return;
 		if (burner != null) KillFeed.damaged(burner, e, Math.min(damage, e.getHealth() / StrafeConfig.hpScale));
 		e.hurtServer(f.level, f.level.damageSources().inFire(), (float) (damage * StrafeConfig.hpScale));
 		if (wasAlive && e.isDeadOrDying() && burner != null) KillFeed.notice(burner, e, "inferno", 0);
