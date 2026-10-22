@@ -76,7 +76,8 @@ public final class DeathCam {
 		if (!holding || m == null || mc.player == null) return;
 		var font = mc.font;
 		float u = g.guiHeight() / 1080f * 2; // our GUI units are 2 screen px at the usual scale
-		int w = Math.round(410 * u / 2), pic = Math.round(128 * u / 2), h = Math.round(150 * u / 2), x = g.guiWidth() / 2 - (w + pic) / 2, y = Math.round(60 * u / 2);
+		int w = Math.round(410 * u / 2), pic = Math.round(128 * u / 2), h = Math.round(150 * u / 2), x = g.guiWidth() / 2 - (w + pic) / 2;
+		int y = Math.max(Math.round(60 * u / 2), ModeHud.topBottom + 6); // under the strafeGM HUD's top
 		g.fill(x, y, x + w + pic, y + h, 0xAA000000);
 		int av = Math.round(80 * u / 2);
 		g.fill(x + 6, y + 6, x + 6 + av, y + 6 + av, 0x80000000);
@@ -123,8 +124,15 @@ public final class DeathCam {
 		return true;
 	}
 
+	/** The camera is the death cam's: no mouse look (MouseHandlerZoomMixin). */
+	public static boolean locked() {
+		return holding;
+	}
+
 	/** Every frame while dead: turn toward the killer; then let the death screen through. */
 	public static void frame(Minecraft mc) {
+		// it starts with the death itself, not only when Minecraft asks for the death screen
+		if (!holding && !released && mc.player != null && mc.level != null && mc.player.isDeadOrDying()) hold(null);
 		if (holding && mc.player != null && mc.player.isAlive()) { // respawned before the camera was done (a mode's respawn)
 			holding = false;
 			pending = null;

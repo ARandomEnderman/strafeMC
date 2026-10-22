@@ -40,6 +40,9 @@ public final class ModeHud {
 
 	private ModeHud() {}
 
+	/** The lowest point of the top of the HUD this frame (GUI units; 0 when it isn't drawn): panels go under it. */
+	public static volatile int topBottom;
+
 	public static JsonObject state() {
 		return state;
 	}
@@ -133,6 +136,7 @@ public final class ModeHud {
 	private static void draw(GuiGraphicsExtractor g, net.minecraft.client.DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		JsonObject s = state;
+		topBottom = 0;
 		if (mc.player == null || mc.options.hideGui || !s.has("mode") || !s.has("players")) return;
 		String mode = s.get("mode").getAsString();
 		double px = mc.getWindow().getHeight() / 1080.0 / mc.getWindow().getGuiScale(); // one CS2 1080p pixel in GUI units
@@ -141,6 +145,7 @@ public final class ModeHud {
 		String phase = s.get("phase").getAsString();
 		int time = s.get("time").getAsInt();
 		boolean teams = s.has("scoreT");
+		int cardY = top;
 		// the clock (and in team modes the two scores beside it, CT left, T right)
 		int bw = (int) Math.round(84 * px), bh = (int) Math.round(34 * px), sw = (int) Math.round(42 * px);
 		g.fill(cx - bw / 2, top, cx + bw / 2, top + bh, 0xF0000000);
@@ -190,14 +195,19 @@ public final class ModeHud {
 		} else {
 			int n = Math.min(players.size(), 12);
 			int x0 = cx - (n * col + (n - 1) * gap) / 2, y0 = top + bh + (int) Math.round(4 * px);
+			cardY = y0;
 			for (int i = 0; i < n; i++) player(g, mc, players.get(i).getAsJsonObject(), x0 + i * (col + gap), y0, col, px, pulse);
 		}
+		// how far down the top of the HUD reaches (a card: face, health, value, weapon), for what goes under it
+		int bottom = players.isEmpty() ? top + bh : cardY + col + (int) Math.round(62 * px);
 		// Deathmatch's bonus weapon of the moment, under the clock
 		if (s.has("bonus") && !s.get("bonus").getAsString().isEmpty()) {
 			int by = teams ? top + bh + (int) Math.round(6 * px) : top + bh + (int) Math.round(130 * px);
+			bottom = Math.max(bottom, by + (int) Math.round(36 * px));
 			text(g, "BONUS", cx, by + (int) Math.round(6 * px), 14 * px, GOLD);
 			icon(g, s.get("bonus").getAsString().replace("weapon_", ""), cx, by + (int) Math.round(14 * px), (int) Math.round(20 * px), GOLD);
 		}
+		topBottom = bottom;
 		if (s.has("money")) { // your money (hudmoney: lower left, 38 px bold white), above health and armor
 			String m = "$" + s.get("money").getAsInt();
 			int mx = (int) Math.round(20 * px), my = g.guiHeight() - (int) Math.round(110 * px);
