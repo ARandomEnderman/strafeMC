@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Baked weapon finishes in the cache (cache/weapon_skins/v33/<weapon>/<kit>_<pattern>.png; the pixels in its
+ * Baked weapon finishes in the cache (cache/weapon_skins/v34/<weapon>/<kit>_<pattern>.png; the pixels in its
  * ".vm1024b.png" sibling, the metalness left after painting in ".vm1024m.png"), made once from the user's CS2 files by
  * WeaponSkinBaker. Blocking: call from a loader thread.
  */
@@ -77,6 +77,7 @@ public final class WeaponSkinCache {
 	private static final Pattern NUM = Pattern.compile("m_(?:flValueFloatX|nValueIntX) = (-?[0-9.eE+-]+)");
 	private static final Pattern BOOL = Pattern.compile("m_bValueBoolean = (true|false)");
 	private static final Pattern TEMPLATE = Pattern.compile("templates/([a-z]+)[a-z_]*_template\\.vmat"); // gs_template, so_extended_template...
+	private static final Pattern TEMPLATE_PATH = Pattern.compile("workshop/paintkits/templates/[a-z0-9_]+_template\\.vmat");
 
 	/**
 	 * A paint kit's material parameters: its paints/vmats material, or for newer kits (composites only) the composite's
@@ -111,6 +112,14 @@ public final class WeaponSkinCache {
 			default -> 6;
 		};
 		p.values.put("F_PAINT_STYLE", new double[] {f});
+		// the template's other shader features (F_CASE_HARDENING, F_OVERLAY_*...): what its style alone doesn't say
+		Matcher full = TEMPLATE_PATH.matcher(text);
+		if (full.find()) try {
+			var tp = GloveSkinBaker.Params.parse(Files.readAllLines(AssetCache.dataBlock(full.group() + "_c")));
+			for (var e : tp.values.entrySet()) if (e.getKey().startsWith("F_") && !e.getKey().equals("F_PAINT_STYLE")) p.values.put(e.getKey(), e.getValue());
+		} catch (Exception e) {
+			dev.strafemc.StrafeMc.LOG.debug("[strafemc] template {} unreadable: {}", full.group(), e.toString());
+		}
 		Matcher v = LOOSE.matcher(text);
 		while (v.find()) {
 			String name = v.group(1), body = v.group(2);
@@ -201,7 +210,7 @@ public final class WeaponSkinCache {
 	}
 
 	public static Path texture(String cls, String kit, int pattern) {
-		return StrafeConfig.cacheDir().resolve("weapon_skins/v33/" + cls + "/" + kit + "_" + pattern + ".png");
+		return StrafeConfig.cacheDir().resolve("weapon_skins/v34/" + cls + "/" + kit + "_" + pattern + ".png");
 	}
 
 	/**

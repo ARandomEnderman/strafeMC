@@ -135,6 +135,11 @@ public final class WeaponSkinBaker {
 		// coordinates or the mesh's, colour x brightness, alpha x strength, worn off by its own durability, blended by
 		// F_OVERLAY_BLEND_MODE (0 translucent / 4 layer: over it; 1 colour / 2 multiply: recoloured within CS2's albedo
 		// levels; 3 add) where F_OVERLAY_MASK allows
+		// case hardening (gunsmith F_CASE_HARDENING): its colour ramp and pattern / geometric influence, ramp offset
+		boolean caseHard = style == 8 && p.f("F_CASE_HARDENING", 0) != 0;
+		BufferedImage rampTex = caseHard ? load(tex, p, "g_tCaseHardeningColorRamp") : null;
+		double chPat = p.f("g_flCaseHardeningPatternInfluence", 0.5), chGeo = p.f("g_flCaseHardeningGeometricInfluence", 1),
+				chOff = p.f("g_flCaseHardeningRampOffset", 0);
 		BufferedImage overlay = p.f("g_bUseOverlay", 0) != 0 ? load(tex, p, "g_tOverlay") : null;
 		int ovMode = (int) p.f("F_OVERLAY_BLEND_MODE", 0), ovMask = (int) p.f("F_OVERLAY_MASK", 0);
 		boolean ovPatternUv = p.f("g_bOverlayUsesPatternUVs", 0) != 0;
@@ -270,11 +275,38 @@ public final class WeaponSkinBaker {
 				}
 				if (style == 8) { // gunsmith (csgo_customweapon style 8, decoded)
 					// the artwork's alpha is its durability: below 0.5 it scales how easily the paint breaks, 0.5-1 a band
-					double durable = smooth(0, 0.5, pa), occ = in.ao == null ? 1 : (aoc >> 8 & 255) / 255.0;
+					double occ = in.ao == null ? 1 : (aoc >> 8 & 255) / 255.0;
+					// case hardening (F_CASE_HARDENING, csgo_customweapon decoded): heat-treated colour from the colour ramp over
+					// mask G (the parts the artwork marks), the ramp read at a cavity / AO / position term and the artwork's channels
+					double[] art = lin(pt);
+					double chMix = 0;
+					if (caseHard && rampTex != null && mg > 0.002) {
+						double geo = chGeo, pat = chPat;
+						double[] n = chPosition(in, positions, u, v);
+						double edgeX = smooth(0.85, 0.2, Math.min(n[0], 1 - n[0])), edgeY = smooth(0.85, 0.2, Math.min(n[1], 1 - n[1]));
+						double cavT = Math.pow(Math.pow(cav, 1.5) * 0.96, 0.85);
+						double baseCh = (0.5 + (cavT - 0.5) * geo) * (1 + (occ * Math.min(edgeX, edgeY) * 2 - 1) * geo);
+						double rampV = Math.max(art[1] * pat, (1 - occ) * 0.2 * geo) + chOff;
+						// five ramp reads around the artwork's red, a texel (1 / 2048) apart diagonally, averaged
+						double ru = address(xf0[0] * pu + xf0[1] * pv + xf0[2], sampU), rv = address(xf1[0] * pu + xf1[1] * pv + xf1[2], sampV);
+						double[] sum = new double[4];
+						for (double[] d : CH_TAPS) {
+							double r = d[0] == 0 && d[1] == 0 ? art[0] : lin(GloveSkinBaker.unpack(GloveSkinBaker.sampleBilinear(pattern, ru + d[0], rv + d[1])))[0];
+							int rc = GloveSkinBaker.sampleBilinear(rampTex, wrap(baseCh * 2 + (baseCh + r - baseCh * 2) * pat), wrap(rampV));
+							double[] rl = lin(GloveSkinBaker.unpack(rc));
+							for (int k = 0; k < 3; k++) sum[k] += rl[k] / CH_TAPS.length;
+							sum[3] += (rc >>> 24) / 255.0 / CH_TAPS.length;
+						}
+						chMix = mg;
+						for (int k = 0; k < 3; k++) art[k] += (sum[k] - art[k]) * mg;
+						pa += (sum[3] - pa) * mg;
+						band = smooth(0.5, 0.6, pa) * smooth(1, 0.9, pa); // the heat colour's alpha in the artwork's place
+					}
+					double durable = smooth(0, 0.5, pa);
 					double brk = ((Math.min(edge, 1 - mr) + wt * cav) * (6 * wearAmt + 1) + band) * durable;
 					double off = mr > 0.99 ? brk : smooth(0.58 - soft * durable, 0.68 + soft * durable, brk);
 					// brightness on mask R, or everywhere with g_nColorAdjustmentMode 1
-					double[] lp = GloveSkinBaker.scale(lin(pt), 1 + (bright - 1) * Math.max(mr, p.f("g_nColorAdjustmentMode", 0)));
+					double[] lp = GloveSkinBaker.scale(art, 1 + (bright - 1) * Math.max(mr, p.f("g_nColorAdjustmentMode", 0)));
 					double[] grimeRgb = GloveSkinBaker.unpack(gc);
 					double gl = Math.max(0, Math.min(1, cav * occ - wearAmt * 0.1)) - Math.max(0, Math.min(1, grimeRgb[0] * grimeRgb[1] * grimeRgb[2])) * 0.23;
 					double clean = smooth(0, 0.15, gl + 0.08), scuff = smooth(0.1, 0.2, wt * occ * cav * cav * wearAmt);
@@ -291,6 +323,8 @@ public final class WeaponSkinBaker {
 					out.setRGB(x, y, GloveSkinBaker.rgb(srgb(fin)));
 					paint[y * SIZE + x] = (float) (k + ((1 - ovMetal) - k) * ovA * ovMat);
 					double r = Math.min(1, paintRough + (1 - grimeA) * wearAmt * wearAmt * 0.5);
+					// case hardened parts: smoother where the heat colour is bright (CS2: r x (1 - 0.25 luma) over mask G)
+					if (chMix > 0) r *= 1 - 0.25 * chMix * (0.2125 * art[0] + 0.7154 * art[1] + 0.0721 * art[2]);
 					rough[y * SIZE + x] = (float) (r + (ovRough - r) * ovA * ovMat);
 					cover[y * SIZE + x] = (float) Math.max(k, ovA * ovMat);
 					continue;
@@ -536,6 +570,29 @@ public final class WeaponSkinBaker {
 			}
 			default -> t;
 		};
+	}
+
+	/** The case hardening's five reads of the artwork: the texel and its diagonal neighbours 1 / 2048 away (CS2's offsets). */
+	private static final double[][] CH_TAPS = {{0, 0}, {1 / 2048.0, -1 / 2048.0}, {1 / 2048.0, 1 / 2048.0}, {-1 / 2048.0, -1 / 2048.0}, {-1 / 2048.0, 1 / 2048.0}};
+
+	private static double wrap(double t) {
+		return t - Math.floor(t);
+	}
+
+	/**
+	 * Where a texel is on the weapon for the case hardening (x, y): CS2's own position map as stored (its shader reads it
+	 * raw here), else the mesh's positions across their bounds (FLAGGED: the same range is assumed).
+	 */
+	private static double[] chPosition(Inputs in, Positions pp, double u, double v) {
+		float[] pm = in.posMap();
+		if (pm != null) {
+			int side = (int) pm[0], tx = Math.min(side - 1, (int) (u * side)), ty = Math.min(side - 1, (int) (v * side)), o = 1 + 4 * (ty * side + tx);
+			return new double[] {pm[o], pm[o + 1]};
+		}
+		if (pp == null) return new double[] {0.5, 0.5};
+		int o = Positions.STRIDE * (Math.min(pp.size - 1, (int) (v * pp.size)) * pp.size + Math.min(pp.size - 1, (int) (u * pp.size)));
+		if (Float.isNaN(pp.pos[o])) return new double[] {0.5, 0.5};
+		return new double[] {(pp.pos[o] - pp.min[0]) / Math.max(1e-6, pp.max[0] - pp.min[0]), (pp.pos[o + 1] - pp.min[1]) / Math.max(1e-6, pp.max[1] - pp.min[1])};
 	}
 
 	private static BufferedImage load(Function<String, BufferedImage> tex, GloveSkinBaker.Params p, String name) {
