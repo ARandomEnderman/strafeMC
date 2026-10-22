@@ -228,12 +228,8 @@ public final class ModeHud {
 			if (!zone || System.currentTimeMillis() / 400 % 2 == 0)
 				blitIcon(g, "bomb_c4", (int) Math.round(40 * px), g.guiHeight() - (int) Math.round(170 * px), ih, zone ? 0xFFFF4040 : 0xFFE0E0E0);
 		}
-		if (phase.equals("roundover") || phase.equals("over")) { // the round's or the match's winner
-			String w = phase.equals("over") ? s.get("winner").getAsString() + " wins the match" : s.get("roundWinner").getAsString();
-			int y = g.guiHeight() / 4, h = (int) Math.round(60 * px), w2 = Math.max(font.width(w) * 3, (int) Math.round(500 * px));
-			g.fill(cx - w2 / 2, y - h / 2, cx + w2 / 2, y + h / 2, 0xC0000000);
-			text(g, w, cx, y, 34 * px, GOLD);
-		}
+		if (phase.equals("roundover") || phase.equals("over")) WinPanel.draw(g, s, phase.equals("over"), px); // the round's or the match's winner
+		else WinPanel.hide();
 	}
 
 	/**

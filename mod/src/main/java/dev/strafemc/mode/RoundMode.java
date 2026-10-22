@@ -73,6 +73,10 @@ final class RoundMode extends Mode {
 	private PlantedC4 bomb;
 	private UUID planter;
 	private String roundWinner = "";
+	/** The win panel's: the side that won, CS2's end line (winpanel_end_*), the MVP (name, entity, CS2's reason). */
+	private boolean roundWinT;
+	private String endReason = "", mvpName = "", mvpReason = "";
+	private int mvpEntity = -1;
 	/** Overtimes played (0: regulation). */
 	private int ot;
 	/** What each bot carries (its bought gun or the side's pistol), which bot has the bomb, its planting. */
@@ -192,6 +196,8 @@ final class RoundMode extends Mode {
 		phase = Phase.FREEZE;
 		phaseStart = now();
 		roundWinner = "";
+		endReason = mvpName = mvpReason = "";
+		mvpEntity = -1;
 		removeBomb();
 		planter = null;
 		defuser = null;
@@ -265,6 +271,14 @@ final class RoundMode extends Mode {
 		if (tWins) scoreT++;
 		else scoreCt++;
 		roundWinner = (tWins ? "Terrorists" : "Counter-Terrorists") + " win";
+		roundWinT = tWins;
+		endReason = switch (why) { // csgo_english winpanel_end_*
+			case "the bomb exploded" -> "Bomb detonated";
+			case "the bomb was defused" -> "Bomb defused";
+			case "Counter-Terrorists eliminated" -> "CTs eliminated";
+			case "time ran out" -> "Bombing failed";
+			default -> "Terrorists eliminated";
+		};
 		// the winners' reward; the losers' bonus by their losses in a row (a win takes one off, as in CS2)
 		payTeam(tWins, reward);
 		int losses = tWins ? ++lossCt : ++lossT;
@@ -272,7 +286,6 @@ final class RoundMode extends Mode {
 		else lossCt = Math.max(0, lossCt - 1);
 		payTeam(!tWins, c.loserBonus() + c.loserConsecutive() * Math.max(0, Math.min(losses, 5) - 1));
 		if (!tWins && planter != null) payTeam(true, c.plantedDefused());
-		for (ServerPlayer p : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(p, roundWinner + " (" + why + ")");
 		if (needsBalance()) // CS2 says it at the round's end and moves players when the next round starts
 			for (ServerPlayer p : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(p, "Auto-team balance next round");
 		// CS2's announcer and the music kit's round end, then the round's MVP: whoever planted the bomb that went off,
@@ -281,6 +294,8 @@ final class RoundMode extends Mode {
 		soundAll(tWins ? "Event.TERWin" : "Event.CTWin");
 		for (ServerPlayer p : players()) sound(p, CsTeam.isT(p) == tWins ? "Music.WonRound.valve_cs2_01" : "Music.LostRound.valve_cs2_01");
 		UUID mvp = why.contains("exploded") ? planter : defuser;
+		// CS2's MVP reasons (Panorama_winpanel_mvp_award_*): the plant, the defuse, else kills (3k, 4k, an ace)
+		mvpReason = why.contains("exploded") ? "MVP for planting the bomb" : mvp != null ? "MVP for defusing the bomb" : "MVP";
 		if (mvp == null) {
 			int best = 0;
 			for (LivingEntity e : participants())
@@ -288,15 +303,19 @@ final class RoundMode extends Mode {
 					best = roundKills.get(key(e));
 					mvp = key(e);
 				}
+			int enemies = (int) participants().stream().filter(e -> CsTeam.isT(e) != tWins).count();
+			// an ace: every enemy, five or more of them (FLAGGED: the 5 floor is ours)
+			mvpReason = best >= enemies && enemies >= 5 ? "MVP for an Ace Round" : best == 4 ? "MVP for most kills (4k)" : best == 3 ? "MVP for most kills (3k)" : "MVP";
 		}
 		if (mvp != null) {
 			stats.computeIfAbsent(mvp, k -> new int[4])[3]++;
 			for (LivingEntity e : participants())
 				if (key(e).equals(mvp)) {
-					for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, "MVP: " + name(e));
+					mvpName = name(e);
+					mvpEntity = e.getId();
 					if (e instanceof ServerPlayer mp) sound(mp, "Music.MVPAnthem.valve_cs2_01");
 				}
-		}
+		} else mvpReason = "";
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: round {} to {} ({}), {}-{}", round, tWins ? "T" : "CT", why, scoreCt, scoreT);
 		sendAll();
 	}
@@ -829,6 +848,15 @@ final class RoundMode extends Mode {
 		o.addProperty("round", round);
 		o.addProperty("rounds", c.maxRounds());
 		o.addProperty("roundWinner", roundWinner);
+		if (!roundWinner.isEmpty()) {
+			o.addProperty("winT", roundWinT);
+			o.addProperty("endReason", endReason);
+			if (!mvpName.isEmpty()) {
+				o.addProperty("mvp", mvpName);
+				o.addProperty("mvpId", mvpEntity);
+				o.addProperty("mvpReason", mvpReason);
+			}
+		}
 		o.addProperty("bomb", bomb != null && !bomb.isRemoved() && !bomb.defused());
 		o.addProperty("frozen", frozen());
 		o.addProperty("teams", true);
