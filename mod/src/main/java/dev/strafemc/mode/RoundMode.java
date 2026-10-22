@@ -362,9 +362,6 @@ final class RoundMode extends Mode {
 		return n;
 	}
 
-	/** Seconds of death camera before a dead player (out until the next round) starts watching a teammate. FLAGGED ours. */
-	static final int WATCH_AFTER = 4 * 20;
-
 	/** Dead players watching someone: whom each watches. */
 	private final Map<UUID, UUID> watching = new HashMap<>();
 	/** Dead players flying free (mp_forcecamera 0, after letting go with sneak): until they click onto someone. */
@@ -521,7 +518,7 @@ final class RoundMode extends Mode {
 	@Override
 	void died(ServerPlayer p) {
 		if (!warmup()) diedThisRound.add(p.getUUID());
-		respawnAt.put(p.getUUID(), now() + (warmup() ? RESPAWN : WATCH_AFTER)); // the death camera first, then watching a teammate
+		respawnAt.put(p.getUUID(), now() + respawnTicks()); // the death camera first, then watching (or back in, in the warmup)
 	}
 
 	/**
@@ -626,6 +623,7 @@ final class RoundMode extends Mode {
 		planter = key(p);
 		pay(p, c.playerPlant());
 		site = BombSites.siteLetter(p);
+		b.setSite(site);
 		for (ServerPlayer o : server.getPlayerList().getPlayers())
 			o.sendSystemMessage(Component.literal("The bomb has been planted" + (site.isEmpty() ? "." : " at bomb site " + site + ".")));
 		soundAll("Event.BombPlanted");

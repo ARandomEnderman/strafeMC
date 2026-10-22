@@ -86,18 +86,27 @@ public final class CsSounds {
 	public static boolean play(String event, double x, double y, double z, double gain, boolean suppressed,
 							   net.minecraft.world.entity.Entity follow) {
 		if (dev.strafemc.client.Placeholders.active()) return dev.strafemc.client.Placeholders.sound(event, x, y, z, gain);
-		return play(event, x, y, z, gain, suppressed, follow, 0);
+		return play(event, x, y, z, gain, suppressed, follow, 0, 1);
+	}
+
+	/**
+	 * At a point, with CS2's public.distance_multiplier: the distance the event's falloff is read at is scaled by it
+	 * (under 1: heard from further away).
+	 */
+	public static boolean playScaled(String event, double x, double y, double z, double gain, double distanceMultiplier) {
+		if (dev.strafemc.client.Placeholders.active()) return dev.strafemc.client.Placeholders.sound(event, x, y, z, gain);
+		return play(event, x, y, z, gain, false, null, 0, distanceMultiplier);
 	}
 
 	private static boolean play(String event, double x, double y, double z, double gain, boolean suppressed,
-								net.minecraft.world.entity.Entity follow, int depth) {
+								net.minecraft.world.entity.Entity follow, int depth, double distanceMultiplier) {
 		if (!CsAudio.ready()) return true;
 		CsSoundEvents.Event e = CsSoundEvents.get(event);
 		if (e == null) {
 			if (StrafeConfig.debug) StrafeMc.LOG.info("[strafemc] unknown CS2 sound event {}", event);
 			return false;
 		}
-		if (depth < 4) for (String child : e.children()) play(child, x, y, z, gain, suppressed, follow, depth + 1);
+		if (depth < 4) for (String child : e.children()) play(child, x, y, z, gain, suppressed, follow, depth + 1, distanceMultiplier);
 		var mc = Minecraft.getInstance();
 		double u = StrafeConfig.unitsPerBlock;
 		var cam = mc.gameRenderer.getMainCamera().position();
@@ -105,7 +114,7 @@ public final class CsSounds {
 		double dist = Math.sqrt(sq(cam.x - x) + sq(cam.y - sy) + sq(cam.z - z)) * u;
 		boolean sup = suppressed && e.suppression();
 		double falloff = sup ? Math.max(1e-3, e.suppressionFalloff()) : 1;
-		float vol = (float) (e.volume() * e.volumeAt(dist / falloff) * gain * (sup ? e.suppressionVolume() : 1));
+		float vol = (float) (e.volume() * e.volumeAt(dist * distanceMultiplier / falloff) * gain * (sup ? e.suppressionVolume() : 1));
 		String file = e.pickFile();
 		if (vol <= 0.001f || file == null) return true;
 		mc.getSoundManager().play(new CsSoundInstance(CsAudio.id(file), Math.min(1f, vol), (float) e.randomPitch(), x, sy, z, follow,

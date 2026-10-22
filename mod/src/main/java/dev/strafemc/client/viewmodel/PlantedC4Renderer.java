@@ -34,7 +34,7 @@ public final class PlantedC4Renderer extends EntityRenderer<PlantedC4, PlantedC4
 	 * parts stickers go on (and their material and texture), and the charm's spot on its face (null: none found).
 	 */
 	private record Model(VmModel model, float[][] pos, float[][] nrm, float cx, float minY, float cz, int[][] led,
-			java.util.List<VmModel.Part> paintable, String material, java.nio.file.Path base, float[] keychain) {}
+			java.util.List<VmModel.Part> paintable, String material, java.nio.file.Path base, float[] keychain, float[] ledPoint) {}
 
 	/** Sticker sets (joined entries) -> the C4's texture with them on, baked as for the one in hand. */
 	private static final java.util.Map<String, java.nio.file.Path> STICKERED = new java.util.concurrent.ConcurrentHashMap<>();
@@ -46,6 +46,24 @@ public final class PlantedC4Renderer extends EntityRenderer<PlantedC4, PlantedC4
 	private static final long BLINK_NS = 150_000_000L;
 
 	/** A beep at `at`: the bomb there blinks. */
+	/** The planted bomb at a point (an effect message's position), or null. */
+	public static PlantedC4 bombAt(net.minecraft.world.phys.Vec3 at) {
+		var level = net.minecraft.client.Minecraft.getInstance().level;
+		if (level == null) return null;
+		var l = level.getEntitiesOfClass(PlantedC4.class, new net.minecraft.world.phys.AABB(at, at).inflate(1));
+		return l.isEmpty() ? null : l.get(0);
+	}
+
+	/** Where its LED is in the world (the model's "led" attachment, as CS2 puts its timer light), else just over its middle. */
+	public static net.minecraft.world.phys.Vec3 ledAt(PlantedC4 bomb, net.minecraft.world.phys.Vec3 fallback) {
+		Model m = model;
+		if (bomb == null || m == null || m.ledPoint() == null) return fallback.add(0, 0.1, 0);
+		float k = (float) (39.3701 / StrafeConfig.unitsPerBlock) * WORLD_SCALE;
+		org.joml.Vector3f p = new org.joml.Vector3f(m.ledPoint()[0] - m.cx(), m.ledPoint()[1] - m.minY(), m.ledPoint()[2] - m.cz()).mul(k)
+				.rotateY((float) Math.toRadians(-bomb.getYRot()));
+		return bomb.position().add(p.x, p.y, p.z);
+	}
+
 	public static void beeped(net.minecraft.world.phys.Vec3 at) {
 		var level = net.minecraft.client.Minecraft.getInstance().level;
 		if (level == null) return;
@@ -247,8 +265,17 @@ public final class PlantedC4Renderer extends EntityRenderer<PlantedC4, PlantedC4
 					org.joml.Vector3f at = skins[si][j].transformPosition(vm.skins.get(si).bind(j).transformPosition(new org.joml.Vector3f(a.offset())));
 					keychain = new float[] {at.x, max[1], at.z};
 				}
+				// the timer light's spot: the "led" attachment in the rest pose
+				float[] ledPoint = null;
+				var la = Viewmodel.attachments(C4Item.MODEL).get("led");
+				for (int si = 0; la != null && si < vm.skins.size() && ledPoint == null; si++) {
+					int j = vm.skins.get(si).indexOf(la.bone());
+					if (j < 0 || si >= skins.length || j >= skins[si].length) continue;
+					org.joml.Vector3f at = skins[si][j].transformPosition(vm.skins.get(si).bind(j).transformPosition(new org.joml.Vector3f(la.offset())));
+					ledPoint = new float[] {at.x, at.y, at.z};
+				}
 				model = new Model(vm, pos, nrm, (min[0] + max[0]) / 2, min[1], (min[2] + max[2]) / 2, led, paintable,
-						paintMat == null ? null : paintMat.material(), base, keychain);
+						paintMat == null ? null : paintMat.material(), base, keychain, ledPoint);
 			} catch (Exception e) {
 				StrafeMc.LOG.warn("[strafemc] C4 model failed: {}", e.toString());
 			}

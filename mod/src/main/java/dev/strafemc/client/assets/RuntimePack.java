@@ -81,6 +81,12 @@ public final class RuntimePack {
 				Path out = tex.resolve("gui/mode/" + m[0] + ".png");
 				safe(() -> svgH("panorama/images/" + m[1] + ".vsvg_c", "panorama/images/" + m[1] + ".svg", out, 64), out, Placeholders.Icon.BULLET, 32);
 			}
+			// the team menu: CS2's team logos in their own colours, 192 px high
+			for (String side : new String[] {"ct", "t"}) {
+				Path out = tex.resolve("gui/mode/" + side + "_logo.png");
+				safe(() -> svgH("panorama/images/icons/" + side + "_logo.vsvg_c", "panorama/images/icons/" + side + "_logo.svg", out, 192), out,
+						Placeholders.Icon.BULLET, 32);
+			}
 			for (String[] m : dev.strafemc.client.QuickMenuScreen.ICONS) {
 				Path out = tex.resolve("gui/menu/" + m[0] + ".png");
 				safe(() -> svg("panorama/images/" + m[1] + ".vsvg_c", "panorama/images/" + m[1] + ".svg", out, 64), out, Placeholders.Icon.BULLET, 32);

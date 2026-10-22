@@ -52,6 +52,18 @@ public final class ModeHud {
 		return n;
 	}
 
+	/** The names on a side (T or CT) as the mode's state lists them. */
+	public static java.util.List<String> teamNames(boolean t) {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		JsonObject s = state;
+		if (s.has("players"))
+			for (JsonElement el : s.getAsJsonArray("players")) {
+				JsonObject p = el.getAsJsonObject();
+				if (p.get("t").getAsBoolean() == t) out.add(p.get("name").getAsString());
+			}
+		return out;
+	}
+
 	private static Identifier icon(String name) {
 		return Identifier.fromNamespaceAndPath("strafemc", "textures/gui/mode/" + name + ".png");
 	}

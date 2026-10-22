@@ -177,7 +177,7 @@ public final class ConsoleScreen extends Screen {
 
 	/** A row: its name, and a control showing value (clicking runs action). */
 	private void row(String name, Supplier<String> value, Runnable action) {
-		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> action.run()).bounds(0, 0, CTRL_W, ROW_H).build());
+		Button b = addRenderableWidget(Button.builder(label(value.get()), x -> action.run()).bounds(0, 0, CTRL_W, ROW_H).build());
 		items.add(new MenuItem(name, value, b, null, null, false, false));
 	}
 
@@ -205,14 +205,14 @@ public final class ConsoleScreen extends Screen {
 			double v = dev.strafemc.client.ClientGameplay.setting(command);
 			return Double.isNaN(v) ? "?" : String.valueOf((long) v);
 		};
-		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> startEdit(command, x, value.get())).bounds(0, 0, CTRL_W, ROW_H).build());
+		Button b = addRenderableWidget(Button.builder(label(value.get()), x -> startEdit(command, x, value.get())).bounds(0, 0, CTRL_W, ROW_H).build());
 		items.add(new MenuItem(name, value, b, null, command, true, false));
 	}
 
 	/** Boolean CS2 cvar with a reset button; inverted = shows the opposite (e.g. "speed cap On" = enablebunnyhopping 0). */
 	private void cvarToggle(String name, String cvar, boolean inverted) {
 		Supplier<String> value = () -> onOff(cvBool(cvar) != inverted);
-		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()),
+		Button b = addRenderableWidget(Button.builder(label(value.get()),
 				x -> ConsoleCommands.quiet(cvar + " " + (cvBool(cvar) ? 0 : 1))).bounds(0, 0, CTRL_W, ROW_H).build());
 		b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(cvar)));
 		items.add(new MenuItem(name, value, b, resetButton(cvar), cvar, false, false));
@@ -221,7 +221,7 @@ public final class ConsoleScreen extends Screen {
 	/** Numeric CS2 cvar: click to type a value; the reset button restores the server default. */
 	private void number(String name, String cvar) {
 		Supplier<String> value = () -> cvStr(cvar);
-		Button b = addRenderableWidget(Button.builder(Component.literal(value.get()), x -> startEdit(cvar, x, cvStr(cvar))).bounds(0, 0, CTRL_W, ROW_H).build());
+		Button b = addRenderableWidget(Button.builder(label(value.get()), x -> startEdit(cvar, x, cvStr(cvar))).bounds(0, 0, CTRL_W, ROW_H).build());
 		b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(cvar)));
 		items.add(new MenuItem(name, value, b, resetButton(cvar), cvar, true, false));
 	}
@@ -297,6 +297,13 @@ public final class ConsoleScreen extends Screen {
 
 	private static String capital(String s) {
 		return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+	}
+
+	/** A row's value as its button shows it: On green, Off red, anything else plain. */
+	private static Component label(String v) {
+		if ("On".equals(v)) return Component.literal(v).withColor(0x55FF55);
+		if ("Off".equals(v)) return Component.literal(v).withColor(0xFF5555);
+		return Component.literal(v);
 	}
 
 	private static String onOff(boolean b) {
@@ -529,7 +536,7 @@ public final class ConsoleScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partial) {
-		for (MenuItem it : items) if (it.button != null) it.button.setMessage(Component.literal(it.value.get()));
+		for (MenuItem it : items) if (it.button != null) it.button.setMessage(label(it.value.get()));
 
 		g.fill(wx - 1, wy - 1, wx + ww + 1, wy + wh + 1, BORDER);
 		g.fill(wx, wy, wx + ww, wy + wh, BG);

@@ -45,7 +45,7 @@ public final class Setup {
 		m.put("graphs", 1);
 		m.put("models", 2); // 2: AO baked into the colour + metalness mask
 		m.put("icons", 2); // 2: armor icons
-		m.put("effects", 5); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks
+		m.put("effects", 6); // 2: HE explosion, 3: all grenade effects, 4: fire per flame + lit molotov, 5: decoy sparks, 6: C4 timer lights
 		m.put("decals", 1);
 		m.put("smoke", 1); // volumetric smoke: CS2's 3D smoke noise and the blue noise its raymarch is jittered with
 		m.put("stickers", 1); // every sticker's picture (tournament, autograph, community) and every capsule's

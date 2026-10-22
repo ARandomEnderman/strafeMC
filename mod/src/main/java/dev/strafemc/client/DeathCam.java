@@ -7,21 +7,25 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * CS2's death camera (freezecam): when you're killed, your view turns to your killer over spec_freeze_traveltime and
- * holds on them for spec_freeze_time before the death screen shows. spec_freeze_time is the server's (the game modes set
- * CS2's gamemode configs: competitive 2.0, casual 3.0, deathmatch / arms race 2), else 3.0; the travel time is CS:GO's
- * 0.4 (FLAGGED). A headshot death turns faster (half the travel time). FLAGGED ours.
+ * CS2's death camera (freezecam): when you're killed, the view stays on your own death for spec_freeze_deathanim_time,
+ * turns to your killer over spec_freeze_traveltime and holds on them for spec_freeze_time before the death screen shows.
+ * All three are the server's cvars (the game modes set CS2's gamemode configs' spec_freeze_time: competitive 2.0,
+ * casual 3.0, deathmatch / arms race 2), else CS2's defaults 0.8 / 0.3 / 3.0. A headshot death turns faster (half the
+ * travel time). FLAGGED ours.
  */
 public final class DeathCam {
-	private static final double TRAVEL = 0.4, DEFAULT_HOLD = 3.0;
-
 	/** How long the camera holds on the killer: the server's spec_freeze_time. */
 	private static double hold() {
+		return cvar("spec_freeze_time", 3.0);
+	}
+
+	/** A spec_freeze_ cvar (seconds, 0-10) as the server has it, else CS2's default. */
+	private static double cvar(String name, double def) {
 		try {
-			String v = ClientGameplay.cvar("spec_freeze_time");
-			return v == null ? DEFAULT_HOLD : Math.max(0, Math.min(10, Double.parseDouble(v)));
+			String v = ClientGameplay.cvar(name);
+			return v == null ? def : Math.max(0, Math.min(10, Double.parseDouble(v)));
 		} catch (NumberFormatException e) {
-			return DEFAULT_HOLD;
+			return def;
 		}
 	}
 	/** The death screen comes before the server says who killed us (the killfeed line, the death panel): wait this long for it. */
@@ -136,13 +140,14 @@ public final class DeathCam {
 		}
 		double t = (System.nanoTime() - diedAt) / 1e9;
 		if (killer < 0 && t < WAIT_KILLER) return; // the server hasn't said who yet
-		if (killer >= 0 && killerSince < 0) killerSince = t; // the camera's turn starts once we know who
-		double since = killerSince < 0 ? 0 : t - killerSince;
+		// the camera's turn starts once we know who, and not before it has watched the death (spec_freeze_deathanim_time)
+		if (killer >= 0 && killerSince < 0) killerSince = Math.max(t, cvar("spec_freeze_deathanim_time", 0.8));
+		double since = killerSince < 0 || t < killerSince ? 0 : t - killerSince;
 		Entity k = mc.level == null || killer < 0 ? null : mc.level.getEntity(killer);
 		if (k != null && mc.player != null) {
 			Vec3 eye = mc.player.getEyePosition(), to = k.getEyePosition().subtract(eye);
 			float yaw = (float) Math.toDegrees(Math.atan2(-to.x, to.z)), pitch = (float) -Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)));
-			double travel = headshot ? TRAVEL / 2 : TRAVEL, f = Math.min(1, since / travel);
+			double travel = Math.max(0.01, (headshot ? 0.5 : 1) * cvar("spec_freeze_traveltime", 0.3)), f = Math.min(1, since / travel);
 			f = 1 - Math.pow(1 - f, 3);
 			float dy = net.minecraft.util.Mth.wrapDegrees(yaw - fromYaw);
 			mc.player.setYRot(fromYaw + (float) (dy * f));
@@ -150,7 +155,7 @@ public final class DeathCam {
 			mc.player.yRotO = mc.player.getYRot();
 			mc.player.xRotO = mc.player.getXRot();
 		}
-		if (since >= hold() || k == null) {
+		if (killerSince >= 0 && t >= killerSince && since >= cvar("spec_freeze_traveltime", 0.3) + hold() || k == null && t >= WAIT_KILLER) {
 			Screen s = pending;
 			pending = null;
 			holding = false;

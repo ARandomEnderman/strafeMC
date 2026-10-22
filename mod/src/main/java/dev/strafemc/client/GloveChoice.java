@@ -17,12 +17,15 @@ public final class GloveChoice {
 	private GloveChoice() {}
 
 	private static ItemStack worn() {
-		var p = Minecraft.getInstance().player;
+		var p = dev.strafemc.client.viewmodel.Viewmodel.holder(); // you, or the player you watch
 		return p == null ? ItemStack.EMPTY : Loadout.worn(p, "gloves");
 	}
 
 	public static String model() {
-		return worn().getItem() instanceof GloveItem g ? g.kind.model : "t".equals(StrafeConfig.team) ? T_DEFAULT : CT_DEFAULT;
+		if (worn().getItem() instanceof GloveItem g) return g.kind.model;
+		boolean t = dev.strafemc.client.viewmodel.Viewmodel.watching() ? dev.strafemc.weapon.CsTeam.isT(dev.strafemc.client.viewmodel.Viewmodel.holder())
+				: "t".equals(StrafeConfig.team);
+		return t ? T_DEFAULT : CT_DEFAULT;
 	}
 
 	/** The worn finish (paint kit, "kit@band" past Factory New: its exterior's wear), empty for the default gloves. */

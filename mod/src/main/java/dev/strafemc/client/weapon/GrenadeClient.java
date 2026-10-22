@@ -75,11 +75,20 @@ public final class GrenadeClient {
 				CsSounds.play("c4.explode", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_C4_BEEP, GrenadeEffects.EV_C4_BEEP_B, GrenadeEffects.EV_C4_BEEP_10, GrenadeEffects.EV_C4_BEEP_B_10 -> {
-				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_LIGHT_EFFECT, at.add(0, 0.1, 0), up);
+				var bomb = dev.strafemc.client.viewmodel.PlantedC4Renderer.bombAt(at);
+				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_LIGHT_EFFECT, dev.strafemc.client.viewmodel.PlantedC4Renderer.ledAt(bomb, at), up);
 				boolean b = m.kind() == GrenadeEffects.EV_C4_BEEP_B || m.kind() == GrenadeEffects.EV_C4_BEEP_B_10;
-				boolean last10 = m.kind() == GrenadeEffects.EV_C4_BEEP_10 || m.kind() == GrenadeEffects.EV_C4_BEEP_B_10;
-				CsSounds.play("C4.PlantSound" + (b ? "B" : "") + (last10 ? "_10sec" : ""), at.x, at.y, at.z, 1.0);
+				boolean last11 = m.kind() == GrenadeEffects.EV_C4_BEEP_10 || m.kind() == GrenadeEffects.EV_C4_BEEP_B_10;
+				// CS2: heard further as the time runs out (public.distance_multiplier), the _10sec beep on top near the end
+				double reach = Math.min(1, 0.2 + 0.8 * (bomb == null ? 1 : Math.max(0, Math.min(1, bomb.fractionLeft()))));
+				CsSounds.playScaled("C4.PlantSound" + (b ? "B" : ""), at.x, at.y, at.z, 1.0, reach);
+				if (last11) CsSounds.playScaled("C4.PlantSound" + (b ? "B" : "") + "_10sec", at.x, at.y, at.z, 1.0, reach);
 				dev.strafemc.client.viewmodel.PlantedC4Renderer.beeped(at); // its LED blinks
+			}
+			case GrenadeEffects.EV_C4_TRIP -> {
+				var bomb = dev.strafemc.client.viewmodel.PlantedC4Renderer.bombAt(at);
+				dev.strafemc.client.particle.Effects.at(GrenadeEffects.C4_TRIGGER_EFFECT, dev.strafemc.client.viewmodel.PlantedC4Renderer.ledAt(bomb, at), up);
+				CsSounds.play("C4.ExplodeTriggerTrip", at.x, at.y, at.z, 1.0);
 			}
 			case GrenadeEffects.EV_FLASH -> {
 				dev.strafemc.client.smoke.SmokeVolumes.flash(at);

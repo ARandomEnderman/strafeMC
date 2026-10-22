@@ -6,12 +6,15 @@ import dev.strafemc.weapon.SkinWraps;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
 
-/** Which finish your viewmodel weapon wears: the knife wrap in your loadout on any knife, a gun's own slot's wrap on that gun. */
+/**
+ * Which finish the viewmodel weapon wears: the knife wrap in the loadout on any knife, a gun's own slot's wrap on that
+ * gun; the loadout is yours, or that of the player you watch (Viewmodel.holder).
+ */
 public final class WrapChoice {
 	private WrapChoice() {}
 
 	private static ItemStack knifeWrap() {
-		var p = Minecraft.getInstance().player;
+		var p = dev.strafemc.client.viewmodel.Viewmodel.holder();
 		return p == null ? ItemStack.EMPTY : Loadout.worn(p, "knife");
 	}
 
@@ -28,7 +31,7 @@ public final class WrapChoice {
 	}
 
 	private static ItemStack gunWrap(String cls) {
-		var p = Minecraft.getInstance().player;
+		var p = dev.strafemc.client.viewmodel.Viewmodel.holder();
 		return p == null ? ItemStack.EMPTY : Loadout.worn(p, cls);
 	}
 

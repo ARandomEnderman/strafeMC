@@ -30,9 +30,6 @@ import java.util.UUID;
 abstract class Mode {
 	/** CS2's mp_match_restart_delay default. */
 	static final int RESTART = 25 * 20;
-	/** Respawn after the death cam (spec_freeze_time 2 in the modes' configs). */
-	static final int RESPAWN = 2 * 20;
-	static final int IMMUNITY = 10 * 20;
 
 	final MinecraftServer server;
 	final Map<UUID, Long> immuneUntil = new HashMap<>(), respawnAt = new HashMap<>();
@@ -230,7 +227,7 @@ abstract class Mode {
 	/** (Re)spawned: protection, kevlar and helmet, full health, the mode's gear. */
 	void spawned(ServerPlayer p) {
 		GameModes.putAway(p);
-		immuneUntil.put(p.getUUID(), now() + IMMUNITY);
+		immuneUntil.put(p.getUUID(), now() + Math.round(cvar("mp_respawn_immunitytime", 4) * 20)); // the modes' configs: 10
 		CsArmor.set(p, 100, true);
 		p.setHealth(p.getMaxHealth());
 		clearGuns(p);
@@ -261,7 +258,24 @@ abstract class Mode {
 	}
 
 	void died(ServerPlayer p) {
-		respawnAt.put(p.getUUID(), now() + RESPAWN);
+		respawnAt.put(p.getUUID(), now() + respawnTicks());
+	}
+
+	/**
+	 * Ticks from a death to the respawn: CS2's freeze cam runs first (spec_freeze_deathanim_time + spec_freeze_traveltime
+	 * + spec_freeze_time; CS2's defaults 0.8 / 0.3 / 3.0, the modes' configs set the hold).
+	 */
+	static int respawnTicks() {
+		return (int) Math.round((cvar("spec_freeze_deathanim_time", 0.8) + cvar("spec_freeze_traveltime", 0.3) + cvar("spec_freeze_time", 3.0)) * 20);
+	}
+
+	private static double cvar(String name, double def) {
+		try {
+			String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(name);
+			return v == null ? def : Math.max(0, Math.min(10, Double.parseDouble(v)));
+		} catch (NumberFormatException e) {
+			return def;
+		}
 	}
 
 	void fired(ServerPlayer p) {

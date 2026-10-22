@@ -168,6 +168,10 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.CsSound.TYPE,
 				(msg, ctx) -> { // weapon sounds follow the player who made them
 					var src = ctx.client().level == null ? null : ctx.client().level.getEntity(msg.entity());
+					// the player you watch fires: their viewmodel shoots too
+					if (src != null && src == dev.strafemc.client.viewmodel.Viewmodel.holder() && dev.strafemc.client.viewmodel.Viewmodel.watching()
+							&& msg.event().startsWith("Weapon_") && (msg.event().contains("Single") || msg.event().contains("Silenced")))
+						dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.play("shoot1");
 					// sounds on you (being hit, your own feedback) play as your own, not from a spot above your head
 					if (src != null && src == ctx.client().player) dev.strafemc.client.sound.CsSounds.playOn(msg.event(), src, 1.0, msg.suppressed());
 					else dev.strafemc.client.sound.CsSounds.play(msg.event(), msg.x(), msg.y(), msg.z(), 1.0, msg.suppressed(), null);

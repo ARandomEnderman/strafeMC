@@ -558,13 +558,32 @@ public final class Viewmodel {
 		emit(m.display, new Matrix4f[0][], place, cam, ps, out, knife ? light : 0xF000F0, rigid); // the gun display glows (F_SELF_ILLUM)
 	}
 
+	/**
+	 * Whose viewmodel is drawn: the player you're watching while dead in a game mode (spectating them in first person,
+	 * as CS2 shows a teammate's view), else you.
+	 */
+	public static net.minecraft.world.entity.player.Player holder() {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (mc.player != null && mc.player.isSpectator() && mc.getCameraEntity() instanceof net.minecraft.world.entity.player.Player p && p != mc.player)
+			return p;
+		return mc.player;
+	}
+
+	/** Spectating someone in first person (holder() isn't you). */
+	public static boolean watching() {
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		return mc.player != null && holder() != mc.player;
+	}
+
 	/** Agents' first-person sleeves by model, loaded in the background on first use. */
 	private final Map<String, VmModel> sleeveModels = new java.util.concurrent.ConcurrentHashMap<>();
 	private final java.util.Set<String> sleevesLoading = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 	/** The sleeves of the agent picked for your side (its model's firstperson_sleeves mesh), or null. */
 	private VmModel sleeves() {
-		return sleeves(dev.strafemc.client.Agents.current());
+		if (!watching()) return sleeves(dev.strafemc.client.Agents.current());
+		var p = holder(); // the watched player's agent of their side
+		return sleeves(dev.strafemc.client.Agents.get(dev.strafemc.weapon.MenuLoadout.agent(p, dev.strafemc.weapon.CsTeam.isT(p))));
 	}
 
 	/** Starts loading an agent's sleeves (picked in the agent menu), so they're ready when worn. */
@@ -677,7 +696,7 @@ public final class Viewmodel {
 	 */
 	private void charm(Loaded l, Matrix4f cam, PoseStack ps, SubmitNodeCollector out, int light) {
 		boolean knife = l.cls.contains("knife") || l.cls.equals("weapon_bayonet");
-		var holder = net.minecraft.client.Minecraft.getInstance().player;
+		var holder = holder();
 		String entry = knife ? null : l.cls.equals(dev.strafemc.weapon.C4Item.CLS) // the C4's charm is on the one in your hand
 				? (holder == null ? null : emptyToNull(dev.strafemc.weapon.StickerSlots.charm(holder.getMainHandItem())))
 				: dev.strafemc.client.WrapChoice.gunCharm(l.cls);
@@ -994,7 +1013,7 @@ public final class Viewmodel {
 		Matrix4f[][] armSkin = skins(arms, clip, pose, null);
 		Matrix4f[][] gunSkin = skins(l.gun, clip, pose, wpn);
 		hideSilencer(l, gunSkin);
-		var player = net.minecraft.client.Minecraft.getInstance().player;
+		var player = watching() ? null : net.minecraft.client.Minecraft.getInstance().player; // a watched player's view: no bob / sway of yours
 		// CS2's viewmodel_offset_x/y/z (units right / forward / up), then bob + sway, then the model
 		float upb = (float) StrafeConfig.unitsPerBlock;
 		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,

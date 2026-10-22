@@ -21,9 +21,12 @@ import net.minecraft.world.phys.Vec3;
  * A planted C4: it beeps faster as its timer (CS2's mp_c4timer, 40 s) runs out and then explodes: 500 damage with a
  * Gaussian falloff over 3.5 x 500 units (sigma = radius / 3, as the HE), only to whoever the blast can see. Defusing is
  * holding use on it: 10 s, 5 s with a defuse kit; the defuser keeps going while their client keeps telling the server
- * (C4Client), so looking away or letting go stops it. FLAGGED (CS:GO's bomb as we know it, not in CS2's data files):
- * the beep rate max(0.1 + 0.9 x fraction left, 0.15) s, the warning 1.5 s and the trigger click 1 s before it blows,
- * the damage falloff.
+ * (C4Client), so looking away or letting go stops it. CS2's planted bomb does the rest: a beep and LED flash
+ * every max(0.1 + 0.9 x fraction left, 0.15) s while more than 1 s is left, the _10sec beep on top in the last 11 s,
+ * the trigger's click and flash under 1 s, the arm_bomb warning once the timer passes 0; the beep is heard further as
+ * time runs out (its public.distance_multiplier min(0.2 + 0.8 x fraction left, 1)), and the site's own beep (B for
+ * bomb site B). FLAGGED: the damage falloff (CS:GO's), and the blast at the timer's end (when CS2's server sets it off
+ * against that timer wasn't found).
  */
 public class PlantedC4 extends Entity {
 	public static EntityType<PlantedC4> TYPE;
@@ -49,11 +52,8 @@ public class PlantedC4 extends Entity {
 	private ServerPlayer planter;
 	private double nextBeep;
 	private boolean tripped, warned;
-	/**
-	 * Which site's beep it plays: CS2 has a beep for A (C4.PlantSound) and one for B (C4.PlantSoundB). Until bomb sites
-	 * exist, each bomb picks one at random.
-	 */
-	private final boolean siteB = Math.random() < 0.5;
+	/** Which site's beep it plays: CS2's C4.PlantSound for bomb site A (and anywhere without one), C4.PlantSoundB for B. */
+	private boolean siteB;
 	private int lastPing, defuseStart, gone = -1;
 
 	public PlantedC4(EntityType<? extends PlantedC4> type, Level level) {
@@ -92,6 +92,11 @@ public class PlantedC4 extends Entity {
 	/** Seconds until it blows. */
 	public double secondsLeft() {
 		return getEntityData().get(LEFT) / 20.0;
+	}
+
+	/** The bomb site it was planted at ("A", "B" or "" for none: A's beep). */
+	public void setSite(String letter) {
+		siteB = "B".equals(letter);
 	}
 
 	public double fractionLeft() {
@@ -144,20 +149,19 @@ public class PlantedC4 extends Entity {
 		int left = getEntityData().get(LEFT) - 1;
 		getEntityData().set(LEFT, Math.max(0, left));
 		double t = tickCount / 20.0, fraction = fractionLeft();
-		if (t >= nextBeep) {
-			boolean last10 = left <= 200; // CS2's _10sec beeps for the last ten seconds
-			GrenadeEffects.event(sl, siteB ? (last10 ? GrenadeEffects.EV_C4_BEEP_B_10 : GrenadeEffects.EV_C4_BEEP_B)
-					: (last10 ? GrenadeEffects.EV_C4_BEEP_10 : GrenadeEffects.EV_C4_BEEP), position());
+		if (t >= nextBeep && left > 20) { // beeps (and the LED) only while more than a second is left
+			boolean last11 = left <= 220; // CS2 adds the _10sec beep with 11 s to go
+			GrenadeEffects.event(sl, siteB ? (last11 ? GrenadeEffects.EV_C4_BEEP_B_10 : GrenadeEffects.EV_C4_BEEP_B)
+					: (last11 ? GrenadeEffects.EV_C4_BEEP_10 : GrenadeEffects.EV_C4_BEEP), position());
 			nextBeep = t + Math.max(0.1 + 0.9 * fraction, 0.15);
 		}
-		// the about-to-blow warning (C4.ExplodeWarning, CS2's 1.24 s arm_bomb sound) runs out into the blast (FLAGGED: its start)
-		if (!warned && left <= 30) {
+		if (!tripped && left <= 20) { // under a second: the trigger trips (C4.ExplodeTriggerTrip and its flash on the LED)
+			tripped = true;
+			GrenadeEffects.event(sl, GrenadeEffects.EV_C4_TRIP, position());
+		}
+		if (!warned && left <= 0) { // the timer has run out: C4.ExplodeWarning (arm_bomb)
 			warned = true;
 			GunServer.soundAt(sl, "C4.ExplodeWarning", position(), this);
-		}
-		if (!tripped && left <= 20) {
-			tripped = true;
-			GunServer.soundAt(sl, "C4.ExplodeTriggerTrip", position(), this);
 		}
 		tickDefuse(sl);
 		if (left <= 0 && gone < 0) explode(sl);

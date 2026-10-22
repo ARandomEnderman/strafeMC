@@ -327,6 +327,7 @@ public final class GameModes {
 	}
 
 	public static void planted(ServerPlayer p, dev.strafemc.weapon.PlantedC4 bomb) {
+		bomb.setSite(BombSites.siteLetter(p)); // its beep is the site's (drawn sites or site blocks; none: A's)
 		if (race instanceof RoundMode r) r.planted(p, bomb);
 	}
 
