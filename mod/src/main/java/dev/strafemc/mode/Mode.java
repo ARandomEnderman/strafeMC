@@ -174,15 +174,63 @@ abstract class Mode {
 		return t <= ct;
 	}
 
-	/** CS2's mp_limitteams 2: a side can't get two more players than the other. */
+	/** CS2's mp_limitteams (default 2, 0 = no limit): a side can't get more than that many players over the other. */
 	boolean sideFull(boolean t, ServerPlayer joining) {
+		int limit = (int) cvar("mp_limitteams", 2);
+		if (limit <= 0) return false;
 		int mine = 0, other = 0;
 		for (LivingEntity e : participants()) {
 			if (e == joining) continue;
 			if (CsTeam.isT(e) == t) mine++;
 			else other++;
 		}
-		return mine + 1 - other > 2;
+		return mine + 1 - other > limit;
+	}
+
+	/** When each participant (Mode.key) first took part: CS2's auto-balance moves whoever joined last. */
+	final Map<UUID, Long> joinOrder = new HashMap<>();
+	private long joins;
+
+	long joinOrder(LivingEntity e) {
+		return joinOrder.computeIfAbsent(key(e), k -> joins++);
+	}
+
+	/** T minus CT, players and bots. */
+	int sideDifference() {
+		int d = 0;
+		for (LivingEntity e : participants()) d += CsTeam.isT(e) ? 1 : -1;
+		return d;
+	}
+
+	/** mp_autoteambalance is on and one side has two or more players over the other (FLAGGED: CS2's threshold). */
+	boolean needsBalance() {
+		return !ffa() && cvar("mp_autoteambalance", 0) >= 1 && Math.abs(sideDifference()) >= 2;
+	}
+
+	/**
+	 * CS2's auto-balance: half the difference moves from the bigger side to the smaller, whoever joined last first
+	 * (bots added after the players are newest); the bomb carrier stays. True if anyone moved.
+	 */
+	boolean balance() {
+		if (!needsBalance()) return false;
+		int diff = sideDifference();
+		boolean fromT = diff > 0;
+		List<LivingEntity> side = new ArrayList<>();
+		for (LivingEntity e : participants()) if (CsTeam.isT(e) == fromT && !carriesBomb(e)) side.add(e);
+		side.sort((a, b) -> Long.compare(joinOrder(b), joinOrder(a)));
+		int moves = Math.min(Math.abs(diff) / 2, side.size());
+		for (int i = 0; i < moves; i++) {
+			LivingEntity e = side.get(i);
+			CsTeam.set(e, !fromT);
+			if (e instanceof ServerPlayer p) p.sendSystemMessage(Component.literal("You have been moved to the other team for game balance"));
+		}
+		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("The teams have been balanced"));
+		return moves > 0;
+	}
+
+	/** Whether this participant has the bomb (only round modes have one). */
+	boolean carriesBomb(LivingEntity e) {
+		return false;
 	}
 
 	/** A side picked (jointeam, the team menu): refused when it's full; mid-match the switch costs your life, as in CS2. */
@@ -208,6 +256,7 @@ abstract class Mode {
 
 	void join(ServerPlayer p) {
 		GameModes.putAway(p);
+		joinOrder(p);
 		if (!ffa() && !picked.contains(p.getUUID())) CsTeam.set(p, smallerSideT()); // balanced until they pick (mp_autoteambalance)
 		if (p.isAlive()) {
 			toSpawn(p);
@@ -269,7 +318,7 @@ abstract class Mode {
 		return (int) Math.round((cvar("spec_freeze_deathanim_time", 0.8) + cvar("spec_freeze_traveltime", 0.3) + cvar("spec_freeze_time", 3.0)) * 20);
 	}
 
-	private static double cvar(String name, double def) {
+	static double cvar(String name, double def) {
 		try {
 			String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(name);
 			return v == null ? def : Math.max(0, Math.min(10, Double.parseDouble(v)));

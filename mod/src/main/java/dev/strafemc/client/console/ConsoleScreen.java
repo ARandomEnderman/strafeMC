@@ -122,6 +122,8 @@ public final class ConsoleScreen extends Screen {
 			ConsoleCommands.execute("strafemc_gamemode " + modes.get(Double.isNaN(v) ? 1 : ((int) v + 1) % modes.size()));
 		});
 		setting("Overtime", "strafemc_overtime", "On", "Off");
+		row("Auto team balance", () -> onOff(cvBool("mp_autoteambalance")),
+				() -> ConsoleCommands.execute("mp_autoteambalance " + (cvBool("mp_autoteambalance") ? 0 : 1)));
 		setting("Game mode server", "strafemc_gamemode_server", "On", "Off");
 		setting("Respawn on spawn blocks", "strafemc_spawnblocks", "On", "Off");
 		row("C4 keypad", () -> onOff(dev.strafemc.client.ClientGameplay.c4Keypad()),

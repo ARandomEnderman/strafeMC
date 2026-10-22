@@ -61,9 +61,9 @@ public final class StrafeSettings {
 	 */
 	private static volatile int buyZone = 12, bombSite = 5;
 	private static volatile boolean overtime = false;
-	/** CS2 cvars operators set over the game modes' configs (mp_forcecamera, spec_freeze_time), kept with the world. */
+	/** CS2 cvars operators set over the game modes' configs (mp_forcecamera, spec_freeze_time, team balance), kept with the world. */
 	private static final java.util.Map<String, String> MODE_CVARS = new java.util.concurrent.ConcurrentHashMap<>();
-	public static final java.util.List<String> MODE_CVAR_NAMES = java.util.List.of("mp_forcecamera", "spec_freeze_time");
+	public static final java.util.List<String> MODE_CVAR_NAMES = java.util.List.of("mp_forcecamera", "spec_freeze_time", "mp_autoteambalance", "mp_limitteams");
 	private static Path file;
 
 	private StrafeSettings() {}

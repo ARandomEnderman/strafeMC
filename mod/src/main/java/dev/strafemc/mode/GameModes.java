@@ -186,6 +186,8 @@ public final class GameModes {
 			double d = Double.parseDouble(value);
 			if (name.equals("mp_forcecamera") && (d != Math.floor(d) || d < 0 || d > 2)) return "mp_forcecamera: 0, 1 or 2";
 			if (name.equals("spec_freeze_time") && (d < 0 || d > 10)) return "spec_freeze_time: 0 to 10 seconds";
+			if (name.equals("mp_autoteambalance") && d != 0 && d != 1) return "mp_autoteambalance: 0 or 1";
+			if (name.equals("mp_limitteams") && (d != Math.floor(d) || d < 0 || d > 10)) return "mp_limitteams: 0 (no limit) to 10";
 			return null;
 		} catch (NumberFormatException e) {
 			return name + ": a number, or default";

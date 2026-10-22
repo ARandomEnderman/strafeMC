@@ -113,6 +113,8 @@ final class RoundMode extends Mode {
 		m.put("ff_damage_reduction_other", String.valueOf(c.ffOther()));
 		m.put("mp_forcecamera", id().equals("casual") ? "0" : "1"); // gamemode_casual.cfg 0, competitive / competitive2v2 1
 		m.put("spec_freeze_time", id().equals("casual") ? "3.0" : "2.0");
+		m.put("mp_limitteams", "2"); // CS2's default (its round mode configs don't set it)
+		m.put("mp_autoteambalance", "0"); // ours: off unless an operator turns it on (CS2's default is 1)
 		return m;
 	}
 
@@ -268,6 +270,8 @@ final class RoundMode extends Mode {
 		payTeam(!tWins, c.loserBonus() + c.loserConsecutive() * Math.max(0, Math.min(losses, 5) - 1));
 		if (!tWins && planter != null) payTeam(true, c.plantedDefused());
 		for (ServerPlayer p : server.getPlayerList().getPlayers()) p.sendSystemMessage(Component.literal(roundWinner + " (" + why + ")"));
+		if (needsBalance()) // CS2 says it at the round's end and moves players when the next round starts
+			for (ServerPlayer p : server.getPlayerList().getPlayers()) p.sendSystemMessage(Component.literal("Auto-team balance next round"));
 		// CS2's announcer and the music kit's round end, then the round's MVP: whoever planted the bomb that went off,
 		// defused it, or else the winners' top fragger
 		if (!tWins && defuser != null) soundAll("Event.BombDefused");
@@ -320,7 +324,17 @@ final class RoundMode extends Mode {
 			swapIfHalf(true);
 			overtimeMoney();
 		}
+		balance();
 		startRound();
+	}
+
+	@Override
+	boolean carriesBomb(LivingEntity e) {
+		if (e instanceof ServerPlayer p) {
+			for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(WeaponItems.C4)) return true;
+			return false;
+		}
+		return key(e).equals(bombBot);
 	}
 
 	private void overtimeMoney() {
