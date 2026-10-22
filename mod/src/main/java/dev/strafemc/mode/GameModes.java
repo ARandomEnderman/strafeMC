@@ -355,6 +355,19 @@ public final class GameModes {
 	}
 
 	/** A bot standing at its objective: planting or defusing. */
+	/** In a round mode the bomb is the Terrorists' and the defuse kit the Counter-Terrorists' to pick up. */
+	public static boolean mayPickUp(net.minecraft.world.entity.player.Player p, net.minecraft.world.item.ItemStack s) {
+		if (!(race instanceof RoundMode) || !(p instanceof ServerPlayer sp) || !Mode.inMode(sp)) return true;
+		if (s.is(dev.strafemc.weapon.WeaponItems.C4)) return dev.strafemc.weapon.CsTeam.isT(p);
+		if (s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return !dev.strafemc.weapon.CsTeam.isT(p);
+		return true;
+	}
+
+	/** Whether a bot carries a defuse kit in the running round mode. */
+	public static boolean botHasKit(net.minecraft.world.entity.LivingEntity bot) {
+		return race instanceof RoundMode r && r.botHasKit(bot);
+	}
+
 	public static void botAtGoal(net.minecraft.world.entity.LivingEntity bot) {
 		if (race instanceof RoundMode r) r.botAtGoal(bot);
 	}

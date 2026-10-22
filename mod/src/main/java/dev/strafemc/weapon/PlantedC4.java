@@ -203,7 +203,7 @@ public class PlantedC4 extends Entity {
 		if (id < 0) {
 			defuseStart = tickCount;
 			getEntityData().set(DEFUSER, p.getId());
-			getEntityData().set(DEFUSE_LEN, (int) Math.round((p instanceof ServerPlayer sp && hasKit(sp) ? DEFUSE_KIT : DEFUSE) * 20));
+			getEntityData().set(DEFUSE_LEN, (int) Math.round(((p instanceof ServerPlayer sp ? hasKit(sp) : dev.strafemc.mode.GameModes.botHasKit(p)) ? DEFUSE_KIT : DEFUSE) * 20));
 			getEntityData().set(DEFUSE_DONE, 0);
 			GunServer.soundAt((ServerLevel) level(), "c4.disarmstart", position(), this);
 		}

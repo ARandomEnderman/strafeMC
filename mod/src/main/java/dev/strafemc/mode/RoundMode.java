@@ -81,6 +81,8 @@ final class RoundMode extends Mode {
 	private int ot;
 	/** What each bot carries (its bought gun or the side's pistol), which bot has the bomb, its planting. */
 	private final Map<UUID, String> botGun = new HashMap<>();
+	/** CT bots with a defuse kit (bought, or Casual's free one; kept while they live, as a player's). */
+	private final java.util.Set<UUID> botKit = new java.util.HashSet<>();
 	private UUID bombBot;
 	private long botPlantStart = -1;
 	/** This round: kills per participant (for the MVP), who defused, whether the ten-second cues played. */
@@ -235,7 +237,12 @@ final class RoundMode extends Mode {
 			var pick = SpawnPoints.pick(CsTeam.isT(b) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
 			if (pick != null && b.isAlive()) b.teleportTo(pick.pos().x, pick.pos().y, pick.pos().z);
 			if (b.isAlive()) b.setHealth(b.getMaxHealth());
-			if (diedThisRound.contains(key(b)) || round == 1) botGun.remove(key(b));
+			if (diedThisRound.contains(key(b)) || round == 1) {
+				botGun.remove(key(b));
+				botKit.remove(key(b));
+			}
+			if (CsTeam.isT(b)) botKit.remove(key(b));
+			else if (c.freeDefuser()) botKit.add(key(b)); // mp_defuser_allocation 2
 			botBuy(b);
 		}
 		diedThisRound.clear();
@@ -348,6 +355,14 @@ final class RoundMode extends Mode {
 		}
 		balance();
 		startRound();
+	}
+
+	/** The bomb lying on the ground in a level (dropped by its carrier), or null; nobody carries it then. */
+	private net.minecraft.world.entity.item.ItemEntity droppedBomb(LivingEntity near) {
+		if (!(near.level() instanceof net.minecraft.server.level.ServerLevel level)) return null;
+		for (ServerPlayer p : players()) if (carriesBomb(p)) return null;
+		var found = level.getEntities(net.minecraft.world.entity.EntityType.ITEM, i -> i.getItem().is(WeaponItems.C4));
+		return found.isEmpty() ? null : found.get(0);
 	}
 
 	@Override
@@ -617,9 +632,10 @@ final class RoundMode extends Mode {
 	@Override
 	void kill(LivingEntity attacker, LivingEntity victim, String icon) {
 		if (warmup() || over >= 0) return;
-		if (Bots.isBot(victim)) { // a bot's death: its gun is gone, and the bomb drops where it fell
+		if (Bots.isBot(victim)) { // a bot's death: its gun is gone, the bomb and its kit drop where it fell
 			diedThisRound.add(key(victim));
 			botGun.remove(key(victim));
+			if (botKit.remove(key(victim))) victim.spawnAtLocation((net.minecraft.server.level.ServerLevel) victim.level(), new ItemStack(WeaponItems.DEFUSE_KIT));
 			if (key(victim).equals(bombBot)) {
 				bombBot = null;
 				botPlantStart = -1;
@@ -707,9 +723,24 @@ final class RoundMode extends Mode {
 			if (price > 0 && money(k) >= price) {
 				money.put(k, money(k) - price);
 				botGun.put(k, o);
-				return;
+				break;
 			}
 		}
+		botBuyKit(b);
+	}
+
+	/** A CT bot with a rifle and money left over buys a defuse kit (FLAGGED ours: CS2's bots weigh it by their budget). */
+	private void botBuyKit(LivingEntity b) {
+		UUID k = key(b);
+		int price = dev.strafemc.weapon.BuyMenu.price("item_defuser", 400);
+		if (CsTeam.isT(b) || botKit.contains(k) || Deathmatch.pistol(botGun.getOrDefault(k, "weapon_hkp2000")) || money(k) < price) return;
+		money.put(k, money(k) - price);
+		botKit.add(k);
+	}
+
+	/** Whether a bot carries a defuse kit (its defuse takes the kit's time). */
+	boolean botHasKit(LivingEntity b) {
+		return botKit.contains(key(b));
 	}
 
 	@Override
@@ -723,6 +754,23 @@ final class RoundMode extends Mode {
 	net.minecraft.world.phys.Vec3 botGoal(LivingEntity bot) {
 		if (warmup() || over >= 0 || phase != Phase.LIVE) return null;
 		boolean planted = bomb != null && !bomb.isRemoved() && !bomb.defused();
+		if (CsTeam.isT(bot) && !planted && bombBot == null) { // the bomb lies somewhere: the nearest T bot goes for it
+			net.minecraft.world.entity.item.ItemEntity c4 = droppedBomb(bot);
+			if (c4 != null) {
+				LivingEntity nearest = null;
+				for (LivingEntity e : Bots.living(server))
+					if (e.isAlive() && CsTeam.isT(e) && e.level() == c4.level() && (nearest == null || e.distanceToSqr(c4) < nearest.distanceToSqr(c4))) nearest = e;
+				if (nearest == bot) {
+					if (bot.distanceToSqr(c4) < 1.5 * 1.5) { // picked up
+						c4.discard();
+						bombBot = key(bot);
+						botPlantStart = -1;
+						return BombSites.nearest(bot);
+					}
+					return c4.position();
+				}
+			}
+		}
 		if (CsTeam.isT(bot) && !planted && key(bot).equals(bombBot)) {
 			var site = BombSites.nearest(bot);
 			if (site != null && bot.position().distanceToSqr(site) > 2.25) botPlantStart = -1; // walked off: start again
