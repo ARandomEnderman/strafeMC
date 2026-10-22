@@ -269,9 +269,9 @@ final class RoundMode extends Mode {
 		else lossCt = Math.max(0, lossCt - 1);
 		payTeam(!tWins, c.loserBonus() + c.loserConsecutive() * Math.max(0, Math.min(losses, 5) - 1));
 		if (!tWins && planter != null) payTeam(true, c.plantedDefused());
-		for (ServerPlayer p : server.getPlayerList().getPlayers()) p.sendSystemMessage(Component.literal(roundWinner + " (" + why + ")"));
+		for (ServerPlayer p : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(p, roundWinner + " (" + why + ")");
 		if (needsBalance()) // CS2 says it at the round's end and moves players when the next round starts
-			for (ServerPlayer p : server.getPlayerList().getPlayers()) p.sendSystemMessage(Component.literal("Auto-team balance next round"));
+			for (ServerPlayer p : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(p, "Auto-team balance next round");
 		// CS2's announcer and the music kit's round end, then the round's MVP: whoever planted the bomb that went off,
 		// defused it, or else the winners' top fragger
 		if (!tWins && defuser != null) soundAll("Event.BombDefused");
@@ -290,7 +290,7 @@ final class RoundMode extends Mode {
 			stats.computeIfAbsent(mvp, k -> new int[4])[3]++;
 			for (LivingEntity e : participants())
 				if (key(e).equals(mvp)) {
-					for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("MVP: " + name(e)));
+					for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, "MVP: " + name(e));
 					if (e instanceof ServerPlayer mp) sound(mp, "Music.MVPAnthem.valve_cs2_01");
 				}
 		}
@@ -318,7 +318,7 @@ final class RoundMode extends Mode {
 			}
 			ot++;
 			overtimeMoney();
-			for (ServerPlayer p : players()) p.sendSystemMessage(Component.literal("Overtime " + ot));
+			for (ServerPlayer p : players()) dev.strafemc.server.Toasts.info(p, "Overtime " + ot);
 		} else if (c.halftime() && round == half) swapIfHalf(true);
 		else if (ot > 0 && round == last - OT_ROUNDS / 2) {
 			swapIfHalf(true);
@@ -356,7 +356,7 @@ final class RoundMode extends Mode {
 		for (LivingEntity e : Bots.living(server)) diedThisRound.add(key(e));
 		for (ServerPlayer p : players()) {
 			diedThisRound.add(p.getUUID()); // a fresh start: the pistol round again
-			p.sendSystemMessage(Component.literal("Halftime: you are now " + (CsTeam.isT(p) ? "a Terrorist" : "a Counter-Terrorist")));
+			dev.strafemc.server.Toasts.info(p, "Halftime: you are now " + (CsTeam.isT(p) ? "a Terrorist" : "a Counter-Terrorist"));
 		}
 	}
 
@@ -639,7 +639,7 @@ final class RoundMode extends Mode {
 		site = BombSites.siteLetter(p);
 		b.setSite(site);
 		for (ServerPlayer o : server.getPlayerList().getPlayers())
-			o.sendSystemMessage(Component.literal("The bomb has been planted" + (site.isEmpty() ? "." : " at bomb site " + site + ".")));
+			dev.strafemc.server.Toasts.info(o, "The bomb has been planted" + (site.isEmpty() ? "." : " at bomb site " + site + "."));
 		soundAll("Event.BombPlanted");
 		soundAll("Music.BombPlanted.valve_cs2_01");
 	}

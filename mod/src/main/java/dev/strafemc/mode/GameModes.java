@@ -149,7 +149,7 @@ public final class GameModes {
 		stop();
 		StrafeSettings.setGameMode(mode);
 		start(mode);
-		if (server != null) server.getPlayerList().broadcastSystemMessage(Component.literal(mode.equals("none") ? "Game mode off." : "Game mode: " + NAMES.get(mode)), false);
+		if (server != null) for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, mode.equals("none") ? "Game mode off" : "Game mode: " + NAMES.get(mode));
 	}
 
 	private static void start(String mode) {

@@ -75,7 +75,7 @@ public final class StrafeOps {
 						}
 						save();
 						ctx.getSource().sendSuccess(() -> Component.literal("Made " + t.getScoreboardName() + " a strafeMC op"), true);
-						t.sendSystemMessage(Component.literal("You are now a strafeMC op: you can use the CS2 console."));
+						dev.strafemc.server.Toasts.info(t, "You are now a strafeMC op: you can use the CS2 console.");
 						return 1;
 					})));
 			dispatcher.register(Commands.literal("strafedeop")
@@ -88,7 +88,7 @@ public final class StrafeOps {
 						}
 						save();
 						ctx.getSource().sendSuccess(() -> Component.literal("Removed " + t.getScoreboardName() + " from the strafeMC ops"), true);
-						t.sendSystemMessage(Component.literal("You are no longer a strafeMC op."));
+						dev.strafemc.server.Toasts.info(t, "You are no longer a strafeMC op.");
 						return 1;
 					})));
 		});

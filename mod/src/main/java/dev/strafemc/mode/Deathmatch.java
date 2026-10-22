@@ -163,7 +163,7 @@ final class Deathmatch extends Mode {
 				bonus = guns.get(rng.nextInt(guns.size()));
 				bonusUntil = t + 30 * 20;
 				for (ServerPlayer p : players())
-					p.sendSystemMessage(net.minecraft.network.chat.Component.literal("Bonus weapon: " + dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(bonus, bonus)));
+					dev.strafemc.server.Toasts.info(p, "Bonus weapon: " + dev.strafemc.weapon.SkinWraps.WEAPON_NAMES.getOrDefault(bonus, bonus));
 			}
 		}
 	}

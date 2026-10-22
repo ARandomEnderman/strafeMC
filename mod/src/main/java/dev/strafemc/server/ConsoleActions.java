@@ -36,9 +36,9 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setPlayerChoice(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal(StrafeSettings.playerChoice()
-						? "Everyone can now turn Source movement on or off for themselves (strafemc_movement). Set by " + p.getScoreboardName()
-						: "Operators decide Source movement for everyone again: " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + ". Set by " + p.getScoreboardName()), false);
+				ConsoleRelay.reply(p, StrafeSettings.playerChoice()
+						? "Everyone can now turn Source movement on or off for themselves (strafemc_movement)"
+						: "Operators decide Source movement for everyone again: " + (StrafeSettings.sourceMovement() ? "ON" : "OFF"));
 			}
 			case "strafemc_movement" -> {
 				if (StrafeSettings.playerChoice()) { // players choose: this only changes your own
@@ -51,8 +51,7 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setSourceMovement(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(
-						Component.literal("Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Source movement " + (StrafeSettings.sourceMovement() ? "ON" : "OFF"));
 			}
 			case "strafemc_pattern" -> { // a skin wrap's pattern template: a cheat (sv_cheats 1, operator, creative); cases will roll it
 				var held = p.getMainHandItem();
@@ -230,8 +229,8 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setMcKnockback(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Gun/knife hits: "
-						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Gun/knife hits: "
+						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)"));
 			}
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
 			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
@@ -515,8 +514,8 @@ public final class ConsoleActions {
 					break;
 				}
 				ServerRules.setModeServer(!arg.trim().equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Game mode server: "
-						+ (ServerRules.modeServer() ? "on" : "off") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Game mode server: "
+						+ (ServerRules.modeServer() ? "on" : "off"));
 			}
 			case "strafemc_spawnblocks" -> {
 				if (!op) {
@@ -531,8 +530,8 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setDrops(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Care packages: "
-						+ (StrafeSettings.drops() ? "on" : "off") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Care packages: "
+						+ (StrafeSettings.drops() ? "on" : "off"));
 			}
 			case "strafemc_loadout_keep" -> {
 				if (!op) {
@@ -540,8 +539,8 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setLoadoutKeep(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Loadout on death: "
-						+ (StrafeSettings.loadoutKeep() ? "kept" : "dropped (unless keepInventory)") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Loadout on death: "
+						+ (StrafeSettings.loadoutKeep() ? "kept" : "dropped (unless keepInventory)"));
 			}
 			case "healthshot" -> dev.strafemc.weapon.HealthshotItem.inject(p);
 			case "strafemc_buymenu" -> {
@@ -556,8 +555,8 @@ public final class ConsoleActions {
 					mode = (StrafeSettings.buyMode() + 1) % 3;
 				}
 				StrafeSettings.setBuyMode(mode);
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy menu: "
-						+ dev.strafemc.weapon.BuyMenu.modeName(StrafeSettings.buyMode()) + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Buy menu: "
+						+ dev.strafemc.weapon.BuyMenu.modeName(StrafeSettings.buyMode()));
 			}
 			case "strafemc_killcards_time" -> {
 				if (!op) {
@@ -570,8 +569,8 @@ public final class ConsoleActions {
 					ConsoleRelay.reply(p, ("strafemc_killcards_time <seconds; 0 = until death>"));
 					break;
 				}
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Kill card time: "
-						+ (StrafeSettings.killCardTime() == 0 ? "until death" : StrafeSettings.killCardTime() + " s") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Kill card time: "
+						+ (StrafeSettings.killCardTime() == 0 ? "until death" : StrafeSettings.killCardTime() + " s"));
 			}
 			case "strafemc_buytime" -> {
 				if (!op) {
@@ -584,8 +583,8 @@ public final class ConsoleActions {
 					ConsoleRelay.reply(p, ("strafemc_buytime <seconds after respawning; 0 = no limit>"));
 					break;
 				}
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Buy time: "
-						+ (StrafeSettings.buyTime() == 0 ? "no limit" : StrafeSettings.buyTime() + " s after respawning") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Buy time: "
+						+ (StrafeSettings.buyTime() == 0 ? "no limit" : StrafeSettings.buyTime() + " s after respawning"));
 			}
 			case "strafemc_slabstep" -> {
 				if (!op) {
@@ -593,8 +592,8 @@ public final class ConsoleActions {
 					break;
 				}
 				StrafeSettings.setSlabStep(!arg.equals("0"));
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Step up slabs: "
-						+ (StrafeSettings.slabStep() ? "ON (half a block)" : "OFF (CS2's 18 units)") + " (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Step up slabs: "
+						+ (StrafeSettings.slabStep() ? "ON (half a block)" : "OFF (CS2's 18 units)"));
 			}
 			case "strafemc_lagcomp", "strafemc_maxunlag" -> {
 				if (!op) {
@@ -608,8 +607,8 @@ public final class ConsoleActions {
 					ConsoleRelay.reply(p, ("strafemc_maxunlag <milliseconds>"));
 					break;
 				}
-				p.level().getServer().getPlayerList().broadcastSystemMessage(Component.literal("Lag compensation " + (StrafeSettings.lagComp() ? "ON" : "OFF")
-						+ ", max rewind " + StrafeSettings.maxUnlagMs() + " ms (set by " + p.getScoreboardName() + ")"), false);
+				ConsoleRelay.reply(p, "Lag compensation " + (StrafeSettings.lagComp() ? "ON" : "OFF")
+						+ ", max rewind " + StrafeSettings.maxUnlagMs() + " ms");
 			}
 			case "sv_rethrow_last_grenade" -> {
 				if (!cheat) break;

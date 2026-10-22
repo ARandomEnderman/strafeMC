@@ -222,9 +222,9 @@ abstract class Mode {
 		for (int i = 0; i < moves; i++) {
 			LivingEntity e = side.get(i);
 			CsTeam.set(e, !fromT);
-			if (e instanceof ServerPlayer p) p.sendSystemMessage(Component.literal("You have been moved to the other team for game balance"));
+			if (e instanceof ServerPlayer p) dev.strafemc.server.Toasts.info(p, "You have been moved to the other team for game balance");
 		}
-		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal("The teams have been balanced"));
+		for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, "The teams have been balanced");
 		return moves > 0;
 	}
 
@@ -243,7 +243,7 @@ abstract class Mode {
 		picked.add(p.getUUID());
 		if (CsTeam.isT(p) == t) return;
 		CsTeam.set(p, t);
-		p.sendSystemMessage(Component.literal("You are now " + (t ? "a Terrorist" : "a Counter-Terrorist")));
+		dev.strafemc.server.Toasts.info(p, "You are now " + (t ? "a Terrorist" : "a Counter-Terrorist"));
 		if (p.isAlive() && !p.isSpectator()) {
 			if (live() && !ffa()) p.kill((net.minecraft.server.level.ServerLevel) p.level());
 			else {
@@ -350,7 +350,7 @@ abstract class Mode {
 		over = now();
 		winner = who;
 		soundAll("Music.MatchEnd.valve_cs2_01");
-		for (ServerPlayer o : server.getPlayerList().getPlayers()) o.sendSystemMessage(Component.literal(who + " wins!"));
+		for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, who + " wins!");
 		sendAll();
 	}
 

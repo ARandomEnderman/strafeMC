@@ -80,7 +80,7 @@ public final class BuyMenuScreen extends Screen {
 
 	public static void open(Minecraft mc) {
 		if (ClientGameplay.buyMode() == 0) {
-			mc.gui.getChat().addClientSystemMessage(Component.literal("You cannot buy (the buy menu is off on this server)"));
+			StrafeToasts.show("You cannot buy (the buy menu is off on this server)", dev.strafemc.server.Toasts.WARN);
 			return;
 		}
 		mc.setScreen(new BuyMenuScreen());

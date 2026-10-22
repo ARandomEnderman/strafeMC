@@ -233,9 +233,8 @@ public final class SetupScreen extends Screen implements dev.strafemc.client.ui.
 			minecraft.execute(() -> {
 				rebuildWidgets();
 				if (!(minecraft.screen instanceof SetupScreen)) { // closed while it ran: say it in chat and bring the result page up
-					minecraft.gui.getChat().addClientSystemMessage(Component.literal(page == Page.DONE
-							? "§a[strafeMC] Setup done. Restart Minecraft to load the converted CS2 files."
-							: "§c[strafeMC] Setup stopped: " + error));
+					StrafeToasts.show(page == Page.DONE ? "Setup done. Restart Minecraft to load the converted CS2 files." : "Setup stopped: " + error,
+							page == Page.DONE ? dev.strafemc.server.Toasts.GOOD : dev.strafemc.server.Toasts.WARN);
 					SetupScreen result = new SetupScreen(status, minecraft.screen);
 					result.page = page;
 					result.error = error;
