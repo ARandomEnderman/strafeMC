@@ -111,6 +111,7 @@ final class RoundMode extends Mode {
 		m.put("ff_damage_reduction_bullets", String.valueOf(c.ffBullets()));
 		m.put("ff_damage_reduction_grenade", String.valueOf(c.ffGrenade()));
 		m.put("ff_damage_reduction_other", String.valueOf(c.ffOther()));
+		m.put("ff_damage_reduction_grenade_self", id().equals("casual") ? "0" : "1"); // gamemode_casual.cfg 0, competitive / competitive2v2 1
 		m.put("mp_forcecamera", id().equals("casual") ? "0" : "1"); // gamemode_casual.cfg 0, competitive / competitive2v2 1
 		m.put("spec_freeze_time", id().equals("casual") ? "3.0" : "2.0");
 		m.put("mp_limitteams", "2"); // CS2's default (its round mode configs don't set it)
@@ -236,8 +237,10 @@ final class RoundMode extends Mode {
 		botPlantStart = -1;
 		List<LivingEntity> ts = new ArrayList<>();
 		for (LivingEntity e : participants()) if (CsTeam.isT(e) && e.isAlive()) ts.add(e);
-		if (!ts.isEmpty()) { // one T carries the bomb
-			LivingEntity carrier = ts.get(new java.util.Random().nextInt(ts.size()));
+		List<LivingEntity> humans = ts.stream().filter(e -> e instanceof ServerPlayer).toList();
+		if (!ts.isEmpty()) { // one T carries the bomb: a player when there is one, else a bot
+			List<LivingEntity> from = humans.isEmpty() ? ts : humans;
+			LivingEntity carrier = from.get(new java.util.Random().nextInt(from.size()));
 			if (carrier instanceof ServerPlayer cp) {
 				ItemStack c4 = new ItemStack(WeaponItems.C4);
 				if (!cp.getInventory().add(c4)) cp.drop(c4, false);

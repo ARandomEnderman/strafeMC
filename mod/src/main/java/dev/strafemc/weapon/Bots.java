@@ -511,6 +511,8 @@ public final class Bots {
 			default -> 1.0;
 		};
 		dmg = CsArmor.apply(target, dmg, w.armorRatio(), group);
+		dmg *= dev.strafemc.mode.GameModes.teamDamage(b.e, target, "bullets"); // a teammate in the way: the mode's friendly fire
+		if (dmg <= 0) return;
 		Vec3 motion = target.getDeltaMovement();
 		boolean marked = target.hurtMarked, wasAlive = target.isAlive();
 		target.invulnerableTime = 0;

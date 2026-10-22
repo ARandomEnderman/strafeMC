@@ -381,8 +381,9 @@ public final class GameModes {
 	 * outside modes). kind: "bullets", "grenade" or "other".
 	 */
 	public static double teamDamage(net.minecraft.world.entity.LivingEntity attacker, net.minecraft.world.entity.LivingEntity victim, String kind) {
-		if (race == null || race.ffa() || attacker == null || victim == null || !Mode.inMode(victim) || !Mode.inMode(attacker)) return 1;
+		if (race == null || attacker == null || victim == null || !Mode.inMode(victim) || !Mode.inMode(attacker)) return 1;
 		if (attacker == victim) return kind.equals("grenade") ? cvar("ff_damage_reduction_grenade_self", 1) : 1;
+		if (race.ffa()) return 1; // everyone's an enemy: no cut
 		if (dev.strafemc.weapon.CsTeam.isT(attacker) != dev.strafemc.weapon.CsTeam.isT(victim)) return 1;
 		return cvar("ff_damage_reduction_" + kind, 0);
 	}

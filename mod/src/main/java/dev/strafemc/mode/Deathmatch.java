@@ -48,9 +48,10 @@ final class Deathmatch extends Mode {
 
 	@Override
 	Map<String, String> cvars() {
-		return Map.of("sv_infinite_ammo", "2", "mp_free_armor", "2", "mp_respawn_immunitytime", "10", "mp_buy_anywhere", "1", "mp_buytime", "0",
-				"mp_buy_during_immunity", "1", "mp_teammates_are_enemies", teams ? "0" : "1", "mp_buy_allow_grenades", "0", "mp_forcecamera", "0",
-				"spec_freeze_time", "2");
+		return Map.ofEntries(Map.entry("sv_infinite_ammo", "2"), Map.entry("mp_free_armor", "2"), Map.entry("mp_respawn_immunitytime", "10"),
+				Map.entry("mp_buy_anywhere", "1"), Map.entry("mp_buytime", "0"), Map.entry("mp_buy_during_immunity", "1"),
+				Map.entry("mp_teammates_are_enemies", teams ? "0" : "1"), Map.entry("mp_buy_allow_grenades", "0"), Map.entry("mp_forcecamera", "0"),
+				Map.entry("spec_freeze_time", "2"), Map.entry("ff_damage_reduction_grenade_self", "0"));
 	}
 
 	@Override
