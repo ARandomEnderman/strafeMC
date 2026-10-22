@@ -25,8 +25,8 @@ import net.minecraft.world.phys.Vec3;
  * every max(0.1 + 0.9 x fraction left, 0.15) s while more than 1 s is left, the _10sec beep on top in the last 11 s,
  * the trigger's click and flash under 1 s, the arm_bomb warning once the timer passes 0; the beep is heard further as
  * time runs out (its public.distance_multiplier min(0.2 + 0.8 x fraction left, 1)), and the site's own beep (B for
- * bomb site B). FLAGGED: the damage falloff (CS:GO's), and the blast at the timer's end (when CS2's server sets it off
- * against that timer wasn't found).
+ * bomb site B). The blast comes a second after the timer (CS2: m_flC4Blow + 1), and a defuse still going when the
+ * timer runs out stops. FLAGGED: the damage falloff (CS:GO's).
  */
 public class PlantedC4 extends Entity {
 	public static EntityType<PlantedC4> TYPE;
@@ -55,6 +55,9 @@ public class PlantedC4 extends Entity {
 	/** Which site's beep it plays: CS2's C4.PlantSound for bomb site A (and anywhere without one), C4.PlantSoundB for B. */
 	private boolean siteB;
 	private int lastPing, defuseStart, gone = -1;
+	/** Ticks since the timer ran out: CS2 blows the bomb a second after (BLOW_DELAY). */
+	private int afterTimer;
+	private static final int BLOW_DELAY = 20;
 
 	public PlantedC4(EntityType<? extends PlantedC4> type, Level level) {
 		super(type, level);
@@ -163,8 +166,12 @@ public class PlantedC4 extends Entity {
 			warned = true;
 			GunServer.soundAt(sl, "C4.ExplodeWarning", position(), this);
 		}
+		if (left <= 0) { // the timer has run out: no more defusing, and the blast a second later
+			if (afterTimer++ == 0 && defuser() >= 0) stopDefuse();
+			if (afterTimer >= BLOW_DELAY && gone < 0) explode(sl);
+			return;
+		}
 		tickDefuse(sl);
-		if (left <= 0 && gone < 0) explode(sl);
 	}
 
 	private void tickDefuse(ServerLevel sl) {
@@ -188,6 +195,7 @@ public class PlantedC4 extends Entity {
 
 	/** A defuse message from p (holding use on it): starts their defuse, or keeps it going. */
 	public void defusePing(LivingEntity p) {
+		if (getEntityData().get(LEFT) <= 0) return; // out of time: CS2 stops defusing when the timer runs out
 		if (defused() || gone >= 0 || p.distanceTo(this) > 3 || !p.isAlive()) return;
 		int id = defuser();
 		if (id >= 0 && id != p.getId()) return; // someone else is on it
@@ -203,6 +211,7 @@ public class PlantedC4 extends Entity {
 
 	/** Keypad mode: p typed the defuse code; it's defused if they've been at it long enough. */
 	public void defuseTyped(ServerPlayer p) {
+		if (getEntityData().get(LEFT) <= 0) return; // out of time
 		if (!dev.strafemc.server.StrafeSettings.c4Keypad() || defuser() != p.getId() || !(level() instanceof ServerLevel sl)) return;
 		if ((tickCount - defuseStart) / 20.0 >= KEYPAD_DEFUSE) defuse(sl, p);
 	}
