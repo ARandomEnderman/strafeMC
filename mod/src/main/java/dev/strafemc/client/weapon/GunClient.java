@@ -180,9 +180,7 @@ public final class GunClient {
 			resetZoom(); // and unzooms (the server does the same)
 			burstLeft = 0;
 			revolverReadyAt = 0;
-			recoilIndex = 0;
-			aimPunch.reset(now / 1e9);
-			viewPunch[0] = viewPunch[1] = 0;
+			recoilIndex = 0; // the spray starts over with the next gun; the punch is the player's and eases back on its own
 			reloadSounds.clear();
 			if (!(held.getItem() instanceof GunItem)) dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.stop(); // put away: draw again next time
 			if (held.getItem() instanceof GunItem g) { // (knives have no WeaponStats: m_flDeployDuration 1.0 from their vdata)
@@ -200,6 +198,11 @@ public final class GunClient {
 		if (planting && !(held.getItem() instanceof dev.strafemc.weapon.C4Item)) cancelPlant(); // put away mid-plant
 		// CS2: inspect held while the weapon comes out inspects it straight away (over the draw)
 		if (equipped && INSPECT.isDown()) inspect();
+		// the aim and view punch keep easing back whatever is held (CS2 keeps them on the player, not the weapon)
+		aimPunch.advance(now / 1e9);
+		double vd = Math.exp(-viewPunchDecay() * dt);
+		viewPunch[0] *= vd;
+		viewPunch[1] *= vd;
 		playDue(p, now);
 		inspectHold(now);
 		updateReload(p, now, dt);
@@ -225,11 +228,7 @@ public final class GunClient {
 		if (w == null) return;
 		updatePenalty(w, dt);
 		double t = now / 1e9;
-		aimPunch.advance(t);
 		if (now >= nextFire) recoilIndex = dev.strafemc.weapon.Recoil.decayIndex(recoilIndex, dt);
-		double vd = Math.exp(-viewPunchDecay() * dt);
-		viewPunch[0] *= vd;
-		viewPunch[1] *= vd;
 
 		boolean trigger = mc.screen == null && mc.options.keyAttack.isDown();
 		// right-click on a USP-S / M4A1-S: screw the silencer on or off (CS2's secondary attack); it flips at the clip's

@@ -354,8 +354,7 @@ abstract class Mode {
 	void win(String who) {
 		over = now();
 		winner = who;
-		soundAll("Music.MatchEnd.valve_cs2_01");
-		for (ServerPlayer o : server.getPlayerList().getPlayers()) dev.strafemc.server.Toasts.info(o, who + " wins!");
+		soundAll("Music.MatchEnd.valve_cs2_01"); // the win panel shows who
 		sendAll();
 	}
 
@@ -374,6 +373,7 @@ abstract class Mode {
 			p.getFoodData().setFoodLevel(20);
 			p.getFoodData().setSaturation(5);
 		}
+		if (t % 20 == 0) unstick(t);
 		if (over < 0 && t - start >= warmupTicks() + matchTicks()) {
 			String lead = leaderName();
 			if (lead != null) win(lead);
@@ -388,6 +388,34 @@ abstract class Mode {
 			sendAll();
 		}
 		if (t % 20 == 0) sendAll();
+	}
+
+	/** When each player was first seen dead with no respawn coming (unstick). */
+	private final Map<UUID, Long> deadSince = new java.util.HashMap<>();
+
+	/**
+	 * A player left dead with no respawn coming (seen once: the client played on while the server had them dead, so
+	 * bots ignored them and their shots did nothing): after 5 s, logged with what state they're in, and respawned.
+	 */
+	private void unstick(long t) {
+		for (ServerPlayer p : players()) {
+			UUID id = p.getUUID();
+			if (p.isAlive() || p.isSpectator() || respawnAt.containsKey(id)) {
+				deadSince.remove(id);
+				continue;
+			}
+			long since = deadSince.computeIfAbsent(id, k -> t);
+			if (t - since < 100) continue;
+			deadSince.remove(id);
+			dev.strafemc.StrafeMc.LOG.warn("[strafemc] strafeGM: {} stuck dead (health {}, removed {} {}, dying {}), respawning", name(p), p.getHealth(),
+					p.isRemoved(), p.getRemovalReason(), p.isDeadOrDying());
+			if (p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
+			else {
+				p.setHealth(p.getMaxHealth());
+				toSpawn(p);
+				spawned(p);
+			}
+		}
 	}
 
 	void sound(ServerPlayer p, String event) {

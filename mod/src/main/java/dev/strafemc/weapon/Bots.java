@@ -160,6 +160,10 @@ public final class Bots {
 				if ((b.e == null || now - b.deadSince > RESPAWN_MS) && (b.e == null || dev.strafemc.mode.GameModes.botMayRespawn())) spawn(server, b);
 				continue;
 			}
+			// the ground under a bot stays loaded (a pearl's ticket, renewed each second): with nobody else near, a
+			// player's death unloads their chunks a second later, which took every bot with it
+			if (b.e.tickCount % 20 == 0)
+				((ServerLevel) b.e.level()).getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.ENDER_PEARL, b.e.chunkPosition(), 2);
 			try {
 				think(b, (ServerLevel) b.e.level(), now);
 			} catch (RuntimeException ex) {
@@ -305,7 +309,7 @@ public final class Bots {
 		if (seen != null) {
 			if (b.burstLeft <= 0 && now >= b.burstPause) { // a new burst: 3-6 shots, the head one time in four
 				b.burstLeft = 3 + RNG.nextInt(4);
-				b.aimHead = RNG.nextDouble() < 0.05 + 0.45 * skill();
+				b.aimHead = !sniper && RNG.nextDouble() < 0.05 + 0.45 * skill(); // a sniper goes for the body, as CS2's bots do
 			}
 			Vec3 aim = (b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0)).add(b.aimErr);
 			// it has to notice first: no turning until its reaction time has passed
@@ -320,7 +324,8 @@ public final class Bots {
 					b.resumeZoom = 0;
 					b.zoomedAt = 0; // already in: no zoom time
 				} else if (b.zoom == 0 && firing && !moving) zoom(b, level, w, 1);
-				ready = b.zoom > 0 && now - b.zoomedAt >= w.q().zoomTime()[1] * 1000;
+				// then the crosshair settles on the target: 900 ms at difficulty 1 to 300 ms at 10 (FLAGGED: ours)
+				ready = b.zoom > 0 && now - b.zoomedAt >= w.q().zoomTime()[1] * 1000 + (b.zoomedAt == 0 ? 0 : Math.round(900 - 600 * skill()));
 			}
 			if (firing && aimed && ready && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
 				// the shot leaves along the view plus the spray's climb the bot didn't pull down (scoped: the scoped numbers)

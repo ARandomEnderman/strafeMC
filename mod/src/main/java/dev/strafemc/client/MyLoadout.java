@@ -39,15 +39,15 @@ public final class MyLoadout {
 	}
 
 	/**
-	 * StatTrak kills a server counted on your finishes (its built wraps, synced back) go into this file, so the counts
-	 * follow you to every server; only for the same finish, and only upwards (a reset here is sent before it counts).
+	 * StatTrak kills a server counted on your guns (its built wraps, synced back) go into this file, so the counts
+	 * follow you to every server; only upwards (a reset here is sent before it counts).
 	 */
 	private static void takeKills(net.minecraft.world.entity.player.Player p) {
 		boolean any = false;
 		for (var e : p.getAttachedOrElse(MenuLoadout.DATA, java.util.Map.<String, net.minecraft.world.item.ItemStack>of()).entrySet()) {
 			Integer kills = e.getValue().get(dev.strafemc.weapon.WeaponItems.STATTRAK);
 			String key = killKey(e.getKey());
-			if (kills == null || key == null || !key.endsWith("/" + dev.strafemc.weapon.SkinWrapItem.skin(e.getValue()))) continue;
+			if (kills == null || key == null) continue;
 			if (kills > kills(e.getKey())) {
 				obj(root(), "kills").addProperty(key, kills);
 				any = true;
@@ -56,13 +56,13 @@ public final class MyLoadout {
 		if (any) save();
 	}
 
-	/** Where a slot's chosen finish keeps its count ("weapon_ak47/aa_vertigo"): each finish its own, as each CS2 item has. */
+	/** Where a slot keeps its count: the gun type ("weapon_ak47"), one count whichever finish it wears. */
 	private static String killKey(String slot) {
 		JsonObject s = skin(slot);
-		return s == null || !s.has("wrap") || !s.get("wrap").isJsonPrimitive() ? null : slot + "/" + s.get("wrap").getAsString();
+		return s == null || !s.has("wrap") || !s.get("wrap").isJsonPrimitive() ? null : slot;
 	}
 
-	/** The chosen finish's StatTrak count (0 if none yet). */
+	/** The slot's StatTrak count (0 if none yet), shared by every finish of that gun. */
 	public static int kills(String slot) {
 		String key = killKey(slot);
 		JsonObject k = obj(root(), "kills");
@@ -102,6 +102,16 @@ public final class MyLoadout {
 				StrafeMc.LOG.warn("[strafemc] {} unreadable: {}", FILE, e.toString());
 			}
 			if (root == null) root = new JsonObject();
+			// counts kept per finish before ("weapon_ak47/aa_vertigo"): the gun type keeps the highest
+			JsonObject k = obj(root, "kills");
+			for (String key : new java.util.ArrayList<>(k.keySet())) {
+				int at = key.indexOf('/');
+				if (at < 0) continue;
+				String gun = key.substring(0, at);
+				int n = k.get(key).isJsonPrimitive() ? k.get(key).getAsInt() : 0;
+				if (!k.has(gun) || !k.get(gun).isJsonPrimitive() || k.get(gun).getAsInt() < n) k.addProperty(gun, n);
+				k.remove(key);
+			}
 		}
 		return root;
 	}
