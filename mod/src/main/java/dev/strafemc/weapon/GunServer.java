@@ -599,16 +599,19 @@ public final class GunServer {
 	}
 
 	/**
-	 * CS knife numbers. Not in CS2's weapons.vdata (the knife's m_nDamage 50 / m_flCycleTime are unused placeholders); these
-	 * are CS:GO's weapon_knife values, believed unchanged in CS2 (FLAGGED): slash 40 (25 when chained within 0.4 s of being
-	 * ready again), slash backstab 90, stab 65, stab backstab 180; reach 48 / 32 units; backstab when the attacker is behind
-	 * the target (2D attacker-to-target direction dot target forward > 0.475).
+	 * CS2's knife (not in weapons.vdata: the knife's m_nDamage 50 / m_flCycleTime there are unused placeholders): slash 40
+	 * (25 when chained within 0.4 s of being ready again), slash backstab 90, stab 65, stab backstab 180; reach 48 + 18
+	 * units for a slash, 32 + 18 for a stab; backstab when the attacker is behind the target (2D attacker-to-target
+	 * direction dot target forward > 0.475).
 	 */
-	public static final double KNIFE_RANGE_LIGHT = 48, KNIFE_RANGE_HEAVY = 32, BACKSTAB_DOT = 0.475;
+	public static final double KNIFE_RANGE_LIGHT = 48 + 18, KNIFE_RANGE_HEAVY = 32 + 18, BACKSTAB_DOT = 0.475;
 	/** Extra knife reach the server allows for network delay (units; ~0.4 blocks). */
 	public static final double KNIFE_LAG_SLACK = 16;
 
-	/** Seconds until the next {slash, stab} after: light miss, light hit, heavy miss, heavy hit (CS:GO, FLAGGED). */
+	/**
+	 * Seconds until the next {slash, stab} after: light miss, light hit, heavy miss, heavy hit. FLAGGED: CS:GO's; CS2 swings
+	 * on its knife animations' events, so its own timing is in those clips.
+	 */
 	public static final double[][] KNIFE_COOLDOWN = {{0.4, 0.5}, {0.5, 0.5}, {1.0, 1.0}, {1.1, 1.1}};
 
 	/** What a knife attack along the view hits: the entity (or null), else the block (or null); backstab for entities. */

@@ -18,7 +18,8 @@ import net.minecraft.world.phys.Vec3;
  * A thrown CS2 grenade. Minecraft's thrown-item entity is only used for syncing and drawing (the item icon for now);
  * the flight is CS-style, simulated in 1/64 s steps on both sides (the server's position wins): grenade gravity,
  * bounces that keep 45% of the speed, stopping on the floor below 20 units/s. How it goes off depends on the type.
- * FLAGGED (not in CS2's data files; CS:GO's grenade code as we know it): gravity scale 0.4, elasticity 0.45, stop speed.
+ * CS2's projectile: gravity scale 0.4, friction 0.2, elasticity 0.45, an HE timer of 1.5 s checked on its 0.2 s
+ * thinks (so it goes off at about 1.6 s). FLAGGED: the stop speed.
  */
 public class GrenadeEntity extends ThrowableItemProjectile {
 	public static EntityType<GrenadeEntity> TYPE;
@@ -26,7 +27,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	static final double GRAVITY_SCALE = 0.4, ELASTICITY = 0.45, STOP_SPEED = 20, STEP = 1 / 64.0;
 	/** The grenade's collision radius in units: its centre stays this far from surfaces (matches the drawn model). */
 	static final double RADIUS = 3.6;
-	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2: 1.6 s, measured in CS2). */
+	/** Seconds from the throw until an HE grenade or flashbang goes off (CS2's 1.5 s timer, seen on its 0.2 s thinks: 1.6 s). */
 	static final double FUSE = 1.6;
 
 	/** Velocity in blocks per second (Minecraft's delta movement is per tick and only mirrors it for interpolation). */
@@ -126,7 +127,8 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 		vel = st.vel();
 		if (st.normal() != null) {
 			spinScale *= ELASTICITY;
-			if (st.normal().y > 0.7) hitFloor = true;
+			// a molotov bursts only on ground no steeper than CS2's weapon_molotov_maxdetonateslope (30 degrees)
+			if (st.normal().y >= Math.cos(Math.toRadians(molotovSlope()))) hitFloor = true;
 			// CS2 has no Decoy.Bounce: the decoy uses the HE's bounce (FLAGGED)
 			String bounce = grenade() == Grenade.DECOY ? "HEGrenade.Bounce" : grenade().sounds + ".Bounce";
 			if (level() instanceof ServerLevel sl && st.impactSpeed() > 80) GunServer.soundAt(sl, bounce, position(), this);
@@ -137,10 +139,38 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 	/** Smoke: the tick it went off (-1: not yet). */
 	private int smokedAt = -1;
 
-	/** Molotov / incendiary: CS's molotov_throw_detonate_time, after which one still in the air fizzles (FLAGGED: 2 s). */
+	private static double molotovSlope() {
+		try {
+			String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar("weapon_molotov_maxdetonateslope");
+			return v == null ? 30 : Double.parseDouble(v);
+		} catch (NumberFormatException e) {
+			return 30;
+		}
+	}
+
+	/** Molotov / incendiary: CS2's molotov_throw_detonate_time (2 s), after which one still in the air fizzles. */
 	static final double MOLOTOV_AIR_TIME = 2.0;
-	/** Decoy: fake gunfire for this long once it lies still, then it pops (FLAGGED: CS's 15 s). */
-	static final double DECOY_TIME = 15;
+	/** Decoy: fake gunfire for this long once it lies still, then it pops (CS2's 14 s). */
+	static final double DECOY_TIME = 14;
+
+	/**
+	 * CS2's decoy profiles by the faked gun's m_WeaponType: shots per burst (min, max), the most extra time between shots
+	 * of a burst, the pause between bursts (min, max), all on top of the gun's own cycle time.
+	 */
+	private record DecoyProfile(int minShots, int maxShots, double burstExtra, double pauseMin, double pauseMax) {}
+
+	private static DecoyProfile decoyProfile(String cls) {
+		var w = dev.strafemc.data.WeaponData.get(cls);
+		String type = w == null ? "" : String.valueOf(w.get("m_WeaponType"));
+		return switch (type) {
+			case "WEAPONTYPE_PISTOL" -> new DecoyProfile(1, 3, 0.3, 0.5, 4.0);
+			case "WEAPONTYPE_SUBMACHINEGUN" -> new DecoyProfile(1, 5, 0, 0.5, 4.0);
+			case "WEAPONTYPE_SHOTGUN" -> new DecoyProfile(1, 3, 0, 0.5, 4.0);
+			case "WEAPONTYPE_SNIPER_RIFLE" -> new DecoyProfile(1, 3, 0.5, 0.5, 4.0);
+			case "WEAPONTYPE_MACHINEGUN" -> new DecoyProfile(6, 20, 0, 0.5, 4.0);
+			default -> new DecoyProfile(1, 3, 0.5, 0.5, 4.0); // rifles (and anything else)
+		};
+	}
 
 	private void serverTick(ServerLevel level) {
 		ServerPlayer owner = getOwner() instanceof ServerPlayer sp ? sp : null;
@@ -184,14 +214,15 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 					discard();
 					return;
 				}
-				if (restTicks >= decoyNext) {
-					GrenadeEffects.decoyShot(level, this);
+				if (restTicks >= decoyNext) { // CS2: a burst of the profile's size, then a pause, each after the gun's cycle time
+					DecoyProfile pr = decoyProfile(decoyGun);
 					var rnd = level.getRandom();
-					if (decoyShots-- > 0) decoyNext = restTicks + 2 + rnd.nextInt(2); // a burst: shots ~0.1 s apart
-					else {
-						decoyShots = rnd.nextInt(4);
-						decoyNext = restTicks + 10 + rnd.nextInt(30); // pause 0.5..2 s
-					}
+					if (decoyShots <= 0) decoyShots = pr.minShots() + rnd.nextInt(pr.maxShots() - pr.minShots() + 1);
+					GrenadeEffects.decoyShot(level, this);
+					WeaponStats st = WeaponStats.of(decoyGun);
+					double cycle = st == null ? 0.1 : st.cycleTime(), wait = --decoyShots > 0 ? rnd.nextDouble() * pr.burstExtra()
+							: pr.pauseMin() + rnd.nextDouble() * (pr.pauseMax() - pr.pauseMin());
+					decoyNext = restTicks + Math.max(1, (int) Math.round((cycle + wait) * 20));
 				}
 			}
 		}

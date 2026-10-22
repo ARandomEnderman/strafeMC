@@ -14,10 +14,10 @@ import java.util.List;
 /**
  * The throw and the flight of a grenade, shared by the server (the real grenade) and the client (the trajectory
  * preview), so both always agree. Positions in blocks, velocities in blocks per second.
- * FLAGGED (CS:GO's grenade code as we know it; CS2's data files don't have it): throw speed clamp(m_flThrowVelocity x
- * 0.9, 15, 750) x (0.3 + 0.7 x strength), aimed 10 degrees higher at the horizon, from the eyes lowered by 12 units
- * for an underhand throw, plus 1.25 x the thrower's velocity; gravity 0.4 x sv_gravity, bounces keep 45%, stop below
- * 20 units/s on a floor; collision radius 3.6 units.
+ * CS2's projectile: gravity 0.4 x sv_gravity, bounces keep 45%. FLAGGED (CS:GO's throw code as we know it): throw
+ * speed clamp(m_flThrowVelocity x 0.9, 15, 750) x (0.3 + 0.7 x strength), aimed 10 degrees higher at the horizon, from
+ * the eyes lowered by 12 units for an underhand throw, plus 1.25 x the thrower's velocity; stop below 20 units/s on a
+ * floor; collision radius 3.6 units.
  */
 public final class GrenadeFlight {
 	public static final double GRAVITY_SCALE = 0.4, ELASTICITY = 0.45, STOP_SPEED = 20, STEP = 1 / 64.0, RADIUS = 3.6;

@@ -94,11 +94,6 @@ public final class GrenadeEffects {
 	}
 
 	/**
-	 * Flashbang: every player who can see the flash (line of sight to their eyes) is blinded; looking at it and being
-	 * close make it longer. FLAGGED (CS:GO-like, not in CS2's data): up to 4.9 s, x1 within 60 degrees of the view,
-	 * x0.6 to the side, x0.25 behind; full within 800 units, fading out to 2400.
-	 */
-	/**
 	 * CS2's flashbang: strength 3 x (1 - distance / 3000 units) x how much of the flash you can see
 	 * (1 with a clear line to your eyes, else 0.167 for each of three points next to it that you can see: 50 units
 	 * up, 75 units to either side and 10 up). By where you look (dot of your view with the direction to it): >= 0.6

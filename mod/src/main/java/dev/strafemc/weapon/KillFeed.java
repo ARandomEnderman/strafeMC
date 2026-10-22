@@ -17,8 +17,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class KillFeed {
 	public static final int HEADSHOT = 1, PENETRATE = 2, THROUGH_SMOKE = 4, ATTACKER_BLIND = 8, IN_AIR = 16, NOSCOPE = 32, FLASH_ASSIST = 64,
 			SUICIDE = 512, VILLAGER = 1024, SPIN = 2048;
-	/** CS:GO's assist: more than this much damage (FLAGGED: CS2 doesn't publish its own). */
-	static final double ASSIST_DAMAGE = 40;
+	/** The damage an assist takes: CS2's cs_AssistDamageThreshold (25). */
+	static double assistDamage() {
+		return cvar("cs_AssistDamageThreshold", 25);
+	}
+
+	private static double cvar(String name, double def) {
+		try {
+			String v = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(name);
+			return v == null ? def : Double.parseDouble(v);
+		} catch (NumberFormatException e) {
+			return def;
+		}
+	}
 
 	/** CS damage each attacker has done to each target (by entity id), with when it was last hit. */
 	private static final Map<Integer, Map<UUID, Double>> DAMAGE = new ConcurrentHashMap<>();
@@ -26,13 +37,17 @@ public final class KillFeed {
 	/** Who flashed each player last. */
 	private static final Map<UUID, UUID> FLASHED_BY = new ConcurrentHashMap<>();
 
-	/** When each player stops counting as blind (CS:GO's Blind: now + hold + fade / 2, FLAGGED). */
+	/**
+	 * When each player stops counting as blind: while their flash is still at least sv_flashed_amount_for_blind_kill
+	 * (CS2's 0.7) white, i.e. the hold and the first 30 % of the fade (it fades out evenly).
+	 */
 	private static final Map<UUID, Long> BLIND_UNTIL = new ConcurrentHashMap<>();
 
 	private KillFeed() {}
 
 	static void blinded(ServerPlayer p, ServerPlayer by, double hold, double fade) {
-		long until = System.currentTimeMillis() + (long) ((hold + fade / 2) * 1000);
+		double amount = Math.max(0, Math.min(1, cvar("sv_flashed_amount_for_blind_kill", 0.7)));
+		long until = System.currentTimeMillis() + (long) ((hold + fade * (1 - amount)) * 1000);
 		BLIND_UNTIL.merge(p.getUUID(), until, Math::max);
 		if (by != null) FLASHED_BY.put(p.getUUID(), by.getUUID());
 	}
@@ -71,10 +86,11 @@ public final class KillFeed {
 		boolean victimPlayer = victim instanceof ServerPlayer || Bots.isBot(victim); // bots are players in the killfeed
 		// the assist: the most damage over CS's threshold besides the killer's, else whoever flashed the victim (still blind)
 		ServerPlayer assister = null;
-		double most = ASSIST_DAMAGE;
+		double most = -1, threshold = assistDamage();
 		if (dealt != null)
 			for (var e : dealt.entrySet())
-				if (!e.getKey().equals(attacker.getUUID()) && e.getValue() > most && level.getServer().getPlayerList().getPlayer(e.getKey()) instanceof ServerPlayer sp) {
+				if (!e.getKey().equals(attacker.getUUID()) && e.getValue() >= threshold && e.getValue() > most
+						&& level.getServer().getPlayerList().getPlayer(e.getKey()) instanceof ServerPlayer sp) {
 					assister = sp;
 					most = e.getValue();
 				}
