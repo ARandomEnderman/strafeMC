@@ -35,7 +35,7 @@ public final class QuickMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		boolean menuLoadout = dev.strafemc.weapon.MenuLoadout.client, shop = ClientGameplay.rule("shop", true), tradeup = ClientGameplay.rule("tradeup", true),
-				upgrader = ClientGameplay.rule("upgrader", true);
+				upgrader = ClientGameplay.rule("upgrader", true), advancements = ClientGameplay.rule("advancements", true);
 		entries = java.util.List.of(
 				new Entry("loadout", "Loadout", menuLoadout ? "Your main menu skins and buy menu" : "Gloves, knife and gun wraps", () -> {
 					// the wheel stays up until the server's loadout replaces it (closing to the game first re-centres the mouse)
@@ -49,7 +49,8 @@ public final class QuickMenuScreen extends Screen {
 						tradeup),
 				new Entry("upgrader", "Upgrader", upgrader ? "Stake skins for a better one" : "Off on this server", () -> minecraft.setScreen(new UpgraderScreen(this)),
 						upgrader),
-				new Entry("achievements", "Achievements", "The strafeMC advancements", this::advancements, true),
+				new Entry("achievements", "Achievements", advancements ? "The strafeMC advancements" : "Off on this server", this::advancements,
+						advancements),
 				new Entry("settings", "Settings", "strafeMC settings", () -> minecraft.setScreen(new StrafeSettingsScreen(this)), true));
 	}
 

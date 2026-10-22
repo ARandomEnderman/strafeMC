@@ -14,7 +14,7 @@ import java.util.Properties;
  * What a server offers besides the game itself, in strafemc-server.properties (next to server.properties on a dedicated
  * server, in the world folder otherwise). gamemode-server=true sets the server up as a dedicated game mode server:
  * everyone plays with the skins and buy menu loadout they picked in strafeMC's main menu, and the in-game loadout,
- * levels, care packages and CS2 loot in chests, the shop, the upgrader and trade ups are off. Without it each of those
+ * levels, care packages and CS2 loot in chests, the shop, the upgrader, trade ups and advancements are off. Without it each of those
  * is its own switch below. Operators switch it with strafemc_gamemode_server (console) or /strafemode server on|off.
  */
 public final class ServerRules {
@@ -24,13 +24,14 @@ public final class ServerRules {
 	private record Key(String key, String comment, boolean def) {}
 
 	private static final Key[] KEYS = {
-			new Key("gamemode-server", "Dedicated game mode server: menu loadouts for everyone; loadout items, levels, drops, shop, upgrader and trade ups off (overrides the switches below)", false),
+			new Key("gamemode-server", "Dedicated game mode server: menu loadouts for everyone; loadout items, levels, drops, shop, upgrader, trade ups and advancements off (overrides the switches below)", false),
 			new Key("menu-loadout", "Players use the skins and buy menu loadout from strafeMC's main menu instead of loadout items", false),
 			new Key("levels", "CS2 XP and ranks for kills", true),
 			new Key("drops", "Care packages for rank ups, and CS2 cases, keys, capsules, vouchers and skins in structure chests", true),
 			new Key("shop", "The shop (buying and selling skins and cases)", true),
 			new Key("upgrader", "The upgrader", true),
-			new Key("tradeup", "Trade up contracts", true)};
+			new Key("tradeup", "Trade up contracts", true),
+			new Key("advancements", "Advancements (Minecraft's and strafeMC's)", true)};
 
 	private static final Map<String, Boolean> VALUES = new java.util.concurrent.ConcurrentHashMap<>();
 	private static Path file;
@@ -78,6 +79,10 @@ public final class ServerRules {
 		return !modeServer() && get("tradeup");
 	}
 
+	public static boolean advancements() {
+		return !modeServer() && get("advancements");
+	}
+
 	/** For the gameplay sync: every switch as it applies now. */
 	public static Map<String, Boolean> effective() {
 		Map<String, Boolean> m = new LinkedHashMap<>();
@@ -87,6 +92,7 @@ public final class ServerRules {
 		m.put("shop", shop());
 		m.put("upgrader", upgrader());
 		m.put("tradeup", tradeup());
+		m.put("advancements", advancements());
 		return m;
 	}
 
