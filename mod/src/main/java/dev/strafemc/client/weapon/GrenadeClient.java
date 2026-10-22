@@ -132,6 +132,7 @@ public final class GrenadeClient {
 		flashStart = System.nanoTime();
 		flashHold = m.hold();
 		flashSeconds = m.fade();
+		FlashAfterimage.flashed();
 		var p = Minecraft.getInstance().player;
 		if (p != null) CsSounds.play(m.hold() > 3 ? "Flashbang.Ring.Long" : m.hold() > 1.5 ? "Flashbang.Ring.Medium" : "Flashbang.Ring.Short",
 				p.getX(), p.getEyeY(), p.getZ(), 1.0);
@@ -139,10 +140,11 @@ public final class GrenadeClient {
 
 	/**
 	 * The white-out, CS2's client curve: with `left` the time left of the flash duration (the server's fade time), fully
-	 * white while more than 3 s are left, then (left / 3)^2 over the last 3 s. (CS2 also blends a frozen frame from the
-	 * flash moment that fades linearly over the whole duration; not done yet.)
+	 * white while more than 3 s are left, then (left / 3)^2 over the last 3 s. Under it CS2's afterimage: the frame from
+	 * the flash moment, fading linearly over the whole duration (left / duration).
 	 */
 	public static void registerHud() {
+		FlashAfterimage.init();
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "grenade_crosshair"),
 				(g, delta) -> GrenadeCrosshair.render(g));
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "flashbang"), (g, delta) -> {
@@ -150,11 +152,13 @@ public final class GrenadeClient {
 			if (secs <= 0) return;
 			float left = secs - (System.nanoTime() - flashStart) / 1e9f;
 			float a = left >= 3 ? 1 : left > 0 ? (left / 3) * (left / 3) : 0;
-			if (a <= 0) {
+			if (left <= 0) {
 				flashSeconds = 0;
+				FlashAfterimage.clear();
 				return;
 			}
-			g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (Math.min(1, a) * 255) << 24 | 0xFFFFFF);
+			FlashAfterimage.draw(left / secs); // the world is drawn by now; the HUD comes after
+			if (a > 0) g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (Math.min(1, a) * 255) << 24 | 0xFFFFFF);
 		});
 	}
 
@@ -257,5 +261,6 @@ public final class GrenadeClient {
 		dev.strafemc.client.smoke.SmokeVolumes.clear();
 		InfernoClient.clear();
 		flashSeconds = 0;
+		FlashAfterimage.clear();
 	}
 }
