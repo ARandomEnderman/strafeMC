@@ -21,20 +21,60 @@ public final class WrapIcons {
 
 	/** The skin piece (SIZE x SIZE, no shape): pattern is the converted g_tPattern image (null if none). */
 	public static BufferedImage swatch(GloveSkinBaker.Params p, BufferedImage pattern) {
+		return swatchOf(p, pattern == null ? null : piece(pattern));
+	}
+
+	/** The SIZE x SIZE pixels of the pattern a swatch shows: the middle third of the texture (enough to tell the skin). */
+	static int[] piece(BufferedImage pattern) {
+		int side = Math.max(1, Math.min(pattern.getWidth(), pattern.getHeight()) / 3);
+		int ox = (pattern.getWidth() - side) / 2, oy = (pattern.getHeight() - side) / 2;
+		int[] out = new int[SIZE * SIZE];
+		for (int y = 0; y < SIZE; y++)
+			for (int x = 0; x < SIZE; x++) out[y * SIZE + x] = pattern.getRGB(ox + x * side / SIZE, oy + y * side / SIZE);
+		return out;
+	}
+
+	/**
+	 * The same piece read straight from a PNG without decoding all of it: only the middle third, every side / SIZE
+	 * pixels (a pattern texture is usually 2048 px square; the swatch needs 16 x 16 of it). Null if it can't be read.
+	 */
+	public static int[] piece(Path png) {
+		try (javax.imageio.stream.ImageInputStream in = javax.imageio.ImageIO.createImageInputStream(png.toFile())) {
+			var readers = javax.imageio.ImageIO.getImageReaders(in);
+			if (!readers.hasNext()) return null;
+			javax.imageio.ImageReader r = readers.next();
+			try {
+				r.setInput(in, true, true);
+				int w = r.getWidth(0), h = r.getHeight(0), side = Math.max(1, Math.min(w, h) / 3), step = Math.max(1, side / SIZE);
+				javax.imageio.ImageReadParam param = r.getDefaultReadParam();
+				param.setSourceRegion(new java.awt.Rectangle((w - side) / 2, (h - side) / 2, Math.min(side, SIZE * step), Math.min(side, SIZE * step)));
+				param.setSourceSubsampling(step, step, 0, 0);
+				BufferedImage img = r.read(0, param);
+				int[] out = new int[SIZE * SIZE];
+				for (int y = 0; y < SIZE; y++)
+					for (int x = 0; x < SIZE; x++) out[y * SIZE + x] = img.getRGB(Math.min(img.getWidth() - 1, x), Math.min(img.getHeight() - 1, y));
+				return out;
+			} finally {
+				r.dispose();
+			}
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	/** The skin piece from the pattern's sampled pixels (piece(); null: no pattern, the paint's colours only). */
+	public static BufferedImage swatchOf(GloveSkinBaker.Params p, int[] piece) {
 		int style = (int) p.f("F_PAINT_STYLE", 6);
 		double[][] col = new double[4][];
 		for (int i = 0; i < 4; i++) col[i] = p.v("g_vColor" + i, 0.5, 0.5, 0.5);
 		BufferedImage swatch = new BufferedImage(SIZE, SIZE, BufferedImage.TYPE_INT_ARGB);
-		// the middle third of the texture: enough to tell the skin, not the whole sheet
-		int side = pattern == null ? 0 : Math.max(1, Math.min(pattern.getWidth(), pattern.getHeight()) / 3);
-		int ox = pattern == null ? 0 : (pattern.getWidth() - side) / 2, oy = pattern == null ? 0 : (pattern.getHeight() - side) / 2;
 		for (int y = 0; y < SIZE; y++)
 			for (int x = 0; x < SIZE; x++) {
 				double[] c;
-				if (pattern == null || style == 0 || style == 3) {
+				if (piece == null || style == 0 || style == 3) {
 					c = col[Math.min(3, (x + y) * 4 / (2 * SIZE))]; // the paint's colours as diagonal bands
 				} else {
-					int px = pattern.getRGB(ox + x * side / SIZE, oy + y * side / SIZE);
+					int px = piece[y * SIZE + x];
 					double r = (px >> 16 & 255) / 255.0, g = (px >> 8 & 255) / 255.0, b = (px & 255) / 255.0;
 					if (style == 1 || style == 2 || style == 4 || style == 5) {
 						c = col[0];

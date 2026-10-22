@@ -97,39 +97,88 @@ public final class Setup {
 		}
 	}
 
-	/** Runs every step that's missing or outdated (all of them the first time), then writes the marker. */
+	/**
+	 * What a step reads from other steps: effects follows the effects named in weapons.vdata, the surfaces' impact
+	 * effects (scripts) and the animation events (clips); decals reads the decal groups (scripts). The rest stand alone.
+	 */
+	private static final Map<String, List<String>> NEEDS = Map.of("effects", List.of("scripts", "clips"), "decals", List.of("scripts"));
+
+	/** Each running step's own progress (0..1), averaged for the whole. */
+	private final Map<String, Double> stepProgress = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final ThreadLocal<String> STEP = new ThreadLocal<>();
+
+	/**
+	 * Runs every step that's missing or outdated (all of them the first time), side by side where they don't depend on
+	 * each other (the converter runs share the CPU, see Vrf), then writes the marker.
+	 */
 	public void run(boolean all) throws IOException {
 		if (!Files.isRegularFile(vpk)) throw new IOException("Counter-Strike 2 files not found at " + vpk);
 		Status st = status(cache);
 		List<String> todo = all || st.missingFiles() > 0 ? new ArrayList<>(STEPS.keySet()) : st.staleSteps();
 		Map<String, Long> pak = vrf.list(null);
+		vrf.pak(pak);
 		progress(0, "Reading the list of CS2 files");
-		int i = 0;
-		for (String step : todo) {
-			double base = (double) i / todo.size(), span = 1.0 / todo.size();
-			switch (step) {
-				case "scripts" -> scripts(base, span);
-				case "sounds" -> sounds(base, span);
-				case "clips" -> clips(base, span);
-				case "graphs" -> graphs(base, span);
-				case "models" -> models(pak, base, span);
-				case "icons" -> icons(base, span);
-				case "effects" -> effects(pak, base, span);
-				case "decals" -> decals(base, span);
-				case "wraps" -> wraps(pak, base, span);
-				case "smoke" -> smoke(base, span);
-				case "stickers" -> stickers(base, span);
-				default -> {
-				}
+		for (String step : todo) stepProgress.put(step, 0.0);
+		java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(Math.max(1, todo.size()));
+		Map<String, java.util.concurrent.CompletableFuture<Void>> runs = new LinkedHashMap<>();
+		try {
+			for (String step : todo) {
+				var deps = NEEDS.getOrDefault(step, List.of()).stream().filter(runs::containsKey).map(runs::get)
+						.toArray(java.util.concurrent.CompletableFuture[]::new);
+				runs.put(step, java.util.concurrent.CompletableFuture.allOf(deps).thenRunAsync(() -> {
+					STEP.set(step);
+					try {
+						step(step, pak);
+						stepProgress.put(step, 1.0);
+					} catch (IOException e) {
+						throw new java.io.UncheckedIOException(e);
+					} finally {
+						STEP.remove();
+					}
+				}, pool));
 			}
-			i++;
+			java.util.concurrent.CompletableFuture.allOf(runs.values().toArray(java.util.concurrent.CompletableFuture[]::new)).join();
+		} catch (java.util.concurrent.CompletionException e) {
+			Throwable c = e.getCause();
+			if (c instanceof java.io.UncheckedIOException u) throw u.getCause();
+			throw new IOException(c);
+		} finally {
+			pool.shutdownNow();
 		}
 		writeMarker(cs2Build());
 		progress(1, "Done");
 	}
 
+	private void step(String step, Map<String, Long> pak) throws IOException {
+		switch (step) {
+			case "scripts" -> scripts(0, 1);
+			case "sounds" -> sounds(0, 1);
+			case "clips" -> clips(0, 1);
+			case "graphs" -> graphs(0, 1);
+			case "models" -> models(pak, 0, 1);
+			case "icons" -> icons(0, 1);
+			case "effects" -> effects(pak, 0, 1);
+			case "decals" -> decals(0, 1);
+			case "wraps" -> wraps(pak, 0, 1);
+			case "smoke" -> smoke(0, 1);
+			case "stickers" -> stickers(0, 1);
+			default -> {
+			}
+		}
+	}
+
+	/** A step's progress (0..1 of that step, on its own thread) or the whole run's; reported as the steps' average. */
 	private void progress(double f, String what) {
-		if (progress != null) progress.accept(Math.max(0, Math.min(1, f)), what);
+		if (progress == null) return;
+		String step = STEP.get();
+		if (step == null || stepProgress.isEmpty()) {
+			progress.accept(Math.max(0, Math.min(1, f)), what);
+			return;
+		}
+		stepProgress.put(step, Math.max(0, Math.min(1, f)));
+		double sum = 0;
+		for (double v : stepProgress.values()) sum += v;
+		progress.accept(sum / stepProgress.size(), what);
 	}
 
 	// ---------------------------------------------------------------- steps
@@ -355,23 +404,25 @@ public final class Setup {
 		progress(base + span * 0.3, "Skin wraps: textures (" + patterns.size() + ")");
 		patterns.removeIf(t -> Files.exists(cache.resolve(t.substring(0, t.length() - "vtex_c".length()) + "png")));
 		vrf.decompile(patterns, null, cache);
-		int i = 0;
-		for (var w : wraps) {
-			if (i++ % 50 == 0) progress(base + span * (0.6 + 0.4 * i / wraps.size()), "Skin wraps: pictures (" + i + "/" + wraps.size() + ")");
+		progress(base + span * 0.6, "Skin wraps: pictures (" + wraps.size() + ")");
+		// each pattern read once (only the part a swatch shows), the swatches in parallel
+		Map<String, java.util.Optional<int[]>> pieces = new java.util.concurrent.ConcurrentHashMap<>();
+		Files.createDirectories(cache.resolve("wrap_swatches"));
+		wraps.parallelStream().forEach(w -> {
 			var par = params.get(w.id());
-			if (par == null) continue;
+			if (par == null) return;
 			String pat = par.textures.get("g_tPattern");
-			java.awt.image.BufferedImage img = null;
+			int[] piece = null;
 			if (pat != null && !pat.startsWith("materials/default/")) {
 				Path png = cache.resolve(pat.substring(0, pat.length() - ".vtex".length()) + ".png");
-				if (Files.exists(png)) img = javax.imageio.ImageIO.read(png.toFile());
+				piece = pieces.computeIfAbsent(png.toString(), k -> java.util.Optional.ofNullable(Files.exists(png) ? WrapIcons.piece(png) : null)).orElse(null);
 			}
 			try {
-				WrapIcons.write(WrapIcons.swatch(par, img), cache.resolve("wrap_swatches/" + WrapIcons.fileName(w.id()) + ".png"));
+				WrapIcons.write(WrapIcons.swatchOf(par, piece), cache.resolve("wrap_swatches/" + WrapIcons.fileName(w.id()) + ".png"));
 			} catch (Exception e) { // one odd texture shouldn't stop the setup: that wrap keeps the plain picture
 				System.err.println("[strafemc] wrap picture " + w.id() + ": " + e);
 			}
-		}
+		});
 	}
 
 	// ---------------------------------------------------------------- helpers
@@ -392,6 +443,7 @@ public final class Setup {
 	 */
 	private void shrinkTextures(List<String> models) throws IOException {
 		Set<Path> keep = new LinkedHashSet<>(), folders = new LinkedHashSet<>();
+		List<Path[]> work = new ArrayList<>();
 		for (String m : models) {
 			Path glb = cache.resolve("gltf").resolve(m.substring(0, m.lastIndexOf('.')) + ".glb");
 			if (!Files.exists(glb)) continue;
@@ -399,12 +451,21 @@ public final class Setup {
 			for (Path[] mat : materials(glb)) {
 				Path tex = mat[0], small = tex.resolveSibling(tex.getFileName().toString().replace(".png", ".vm1024c.png")),
 						mask = tex.resolveSibling(tex.getFileName().toString().replace(".png", ".vm1024m.png"));
-				if (!Files.exists(small) && Files.exists(tex)) composite(tex, mat[1], small);
-				if (!Files.exists(mask) && mat[2] != null && Files.exists(mat[2])) metalMask(mat[2], tex, mask);
-				keep.add(small);
+				if (keep.add(small)) work.add(new Path[] {tex, mat[1], small, mat[2], mask}); // models share textures: each once
 				keep.add(mask);
 			}
 		}
+		// the textures in parallel (decoding big PNGs is most of the time)
+		java.util.concurrent.atomic.AtomicReference<IOException> failed = new java.util.concurrent.atomic.AtomicReference<>();
+		work.parallelStream().forEach(w -> {
+			try {
+				if (!Files.exists(w[2]) && Files.exists(w[0])) composite(w[0], w[1], w[2]);
+				if (!Files.exists(w[4]) && w[3] != null && Files.exists(w[3])) metalMask(w[3], w[0], w[4]);
+			} catch (IOException e) {
+				failed.compareAndSet(null, e);
+			}
+		});
+		if (failed.get() != null) throw failed.get();
 		for (Path dir : folders)
 			try (Stream<Path> s = Files.list(dir)) {
 				for (Path p : s.toList())
@@ -441,13 +502,15 @@ public final class Setup {
 		if (ao == null || !Files.exists(ao)) return;
 		BufferedImage c = ImageIO.read(out.toFile()), a = ImageIO.read(ao.toFile());
 		if (c == null || a == null) return;
-		int w = c.getWidth(), h = c.getHeight();
+		int w = c.getWidth(), h = c.getHeight(), aw = a.getWidth(), ah = a.getHeight();
+		int[] px = c.getRGB(0, 0, w, h, null, 0, w), occ = a.getRGB(0, 0, aw, ah, null, 0, aw);
 		for (int y = 0; y < h; y++)
 			for (int x = 0; x < w; x++) {
-				int p = c.getRGB(x, y), o = a.getRGB(x * a.getWidth() / w, y * a.getHeight() / h) >> 16 & 255;
+				int i = y * w + x, p = px[i], o = occ[(y * ah / h) * aw + x * aw / w] >> 16 & 255;
 				int r = (p >> 16 & 255) * o / 255, gg = (p >> 8 & 255) * o / 255, bl = (p & 255) * o / 255;
-				c.setRGB(x, y, p & 0xFF000000 | r << 16 | gg << 8 | bl);
+				px[i] = p & 0xFF000000 | r << 16 | gg << 8 | bl;
 			}
+		c.setRGB(0, 0, w, h, px, 0, w);
 		ImageIO.write(c, "png", out.toFile());
 	}
 
@@ -456,25 +519,47 @@ public final class Setup {
 	 * grey 1024 px mask; none if nothing is metal.
 	 */
 	private static void metalMask(Path metal, Path color, Path out) throws IOException {
-		BufferedImage m = ImageIO.read(metal.toFile()), c = ImageIO.read(color.toFile());
+		BufferedImage m = ImageIO.read(metal.toFile());
 		if (m == null) return;
-		int w = Math.min(1024, c != null ? c.getWidth() : 1024), h = Math.min(1024, c != null ? c.getHeight() : 1024);
+		int[] size = size(color);
+		int w = Math.min(1024, size != null ? size[0] : 1024), h = Math.min(1024, size != null ? size[1] : 1024);
+		int mw = m.getWidth(), mh = m.getHeight();
+		int[] src = m.getRGB(0, 0, mw, mh, null, 0, mw);
 		int maxG = 0, maxB = 0;
-		for (int y = 0; y < m.getHeight(); y += 8)
-			for (int x = 0; x < m.getWidth(); x += 8) {
-				int p = m.getRGB(x, y);
+		for (int y = 0; y < mh; y += 8)
+			for (int x = 0; x < mw; x += 8) {
+				int p = src[y * mw + x];
 				maxG = Math.max(maxG, p >> 8 & 255);
 				maxB = Math.max(maxB, p & 255);
 			}
 		int shift = maxB > 0 ? 0 : 8;
 		if ((shift == 0 ? maxB : maxG) == 0) return;
-		BufferedImage o = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		int[] dst = new int[w * h];
 		for (int y = 0; y < h; y++)
 			for (int x = 0; x < w; x++) {
-				int v = m.getRGB(x * m.getWidth() / w, y * m.getHeight() / h) >> shift & 255;
-				o.setRGB(x, y, v << 16 | v << 8 | v);
+				int v = src[(y * mh / h) * mw + x * mw / w] >> shift & 255;
+				dst[y * w + x] = v << 16 | v << 8 | v;
 			}
+		BufferedImage o = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		o.setRGB(0, 0, w, h, dst, 0, w);
 		ImageIO.write(o, "png", out.toFile());
+	}
+
+	/** An image's width and height from its header (no decoding), or null. */
+	private static int[] size(Path png) {
+		try (var in = ImageIO.createImageInputStream(png.toFile())) {
+			var readers = ImageIO.getImageReaders(in);
+			if (!readers.hasNext()) return null;
+			var r = readers.next();
+			try {
+				r.setInput(in, true, true);
+				return new int[] {r.getWidth(0), r.getHeight(0)};
+			} finally {
+				r.dispose();
+			}
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
 	/** Same filter as the viewmodel's own downscale: power-of-two box filter per channel, alpha kept as is. */
