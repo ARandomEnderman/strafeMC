@@ -97,6 +97,9 @@ public final class Bots {
 		double penalty, recoil, recoilYaw;
 		long lastShot;
 		Vec3 aimErr = Vec3.ZERO;
+		/** A sniper's zoom level, the level it goes back to once the bolt is worked (m_bUnzoomsAfterShot), when it went in. */
+		int zoom, resumeZoom;
+		long zoomedAt;
 		/** Someone it knows about without seeing them now (heard, shot by, last seen) and where: it goes there. */
 		LivingEntity aware;
 		Vec3 lastKnown;
@@ -234,7 +237,9 @@ public final class Bots {
 		if (!(e.getMainHandItem().getItem() instanceof GunItem g) || !g.weaponClass.equals(weapon(b))) { // the game mode moved it to another gun
 			e.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
 			b.clip = -1;
+			b.zoom = b.resumeZoom = 0; // CS2 unzooms on a weapon switch
 		}
+		boolean sniper = w.q().zoomLevels() > 0;
 		if (dev.strafemc.mode.GameModes.botFrozen()) { // freeze time: nobody moves
 			e.zza = 0;
 			e.xxa = 0;
@@ -287,6 +292,7 @@ public final class Bots {
 			b.recoilYaw *= 0.8;
 		}
 		float forward = 0, side = 0;
+		if (seen == null && (b.zoom > 0 || b.resumeZoom > 0)) zoom(b, level, w, 0); // nobody to shoot: out of the scope
 		if (seen != null) {
 			if (b.burstLeft <= 0 && now >= b.burstPause) { // a new burst: 3-6 shots, the head one time in four
 				b.burstLeft = 3 + RNG.nextInt(4);
@@ -295,15 +301,27 @@ public final class Bots {
 			Vec3 aim = (b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0)).add(b.aimErr);
 			// it has to notice first: no turning until its reaction time has passed
 			boolean aimed = now - b.seenSince >= reactionMs() && turn(e, aim.subtract(eye));
-			boolean firing = b.burstLeft > 0 && now >= b.burstPause;
-			if (firing && aimed && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
-				// the shot leaves along the view plus the spray's climb the bot didn't pull down
-				shoot(b, level, w, eye, Vec3.directionFromRotation((float) (e.getXRot() - b.recoil), (float) (e.getYRot() + b.recoilYaw)), now,
-						e.getDeltaMovement().horizontalDistanceSqr() > 0.001);
+			boolean firing = b.burstLeft > 0 && now >= b.burstPause, moving = e.getDeltaMovement().horizontalDistanceSqr() > 0.001;
+			// snipers shoot scoped, as CS2's bots do: in (with the zoom sound) once it has stopped to shoot, and only firing
+			// when the zoom has come in (m_flZoomTime1); after a shot back in silently once the bolt is worked
+			boolean ready = !sniper;
+			if (sniper && now >= b.reloadUntil && now >= b.nextShot) {
+				if (b.resumeZoom > 0) {
+					b.zoom = b.resumeZoom;
+					b.resumeZoom = 0;
+					b.zoomedAt = 0; // already in: no zoom time
+				} else if (b.zoom == 0 && firing && !moving) zoom(b, level, w, 1);
+				ready = b.zoom > 0 && now - b.zoomedAt >= w.q().zoomTime()[1] * 1000;
+			}
+			if (firing && aimed && ready && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
+				// the shot leaves along the view plus the spray's climb the bot didn't pull down (scoped: the scoped numbers)
+				shoot(b, level, b.zoom > 0 ? GunServer.stats(weapon(b), 1) : w, eye,
+						Vec3.directionFromRotation((float) (e.getXRot() - b.recoil), (float) (e.getYRot() + b.recoilYaw)), now, moving);
 				if (--b.burstLeft <= 0) b.burstPause = now + 250 + RNG.nextInt(250);
 			}
 			// standing still while shooting (as CS players stop to shoot); between bursts, closing in along a path or strafing
-			if (!firing) {
+			// (a sniper holds its angle while it sees someone)
+			if (!firing && !sniper) {
 				if (Math.sqrt(seenD) > 15) walk(b, level, seen.blockPosition(), now);
 				else {
 					if (now >= b.strafeUntil) {
@@ -404,6 +422,15 @@ public final class Bots {
 		return Math.abs(dy) < 2.5 && Math.abs(dp) < 2.5;
 	}
 
+	/** Into or out of the scope, with CS2's zoom sound. */
+	private static void zoom(Bot b, ServerLevel level, WeaponStats w, int to) {
+		String snd = to > b.zoom ? w.q().zoomInSound() : w.q().zoomOutSound();
+		b.zoom = to;
+		b.resumeZoom = 0;
+		b.zoomedAt = System.currentTimeMillis();
+		sound(level, b.e, snd);
+	}
+
 	private static void shoot(Bot b, ServerLevel level, WeaponStats w, Vec3 eye, Vec3 dir, long now, boolean moving) {
 		Mannequin e = b.e;
 		double units = StrafeConfig.unitsPerBlock;
@@ -437,9 +464,14 @@ public final class Bots {
 					ServerPlayNetworking.send(o, msg);
 		}
 		b.nextShot = now + (long) (w.cycleTime() * 1000);
+		if (w.q().unzoomAfterShot() && b.zoom > 0) { // AWP / SSG 08: unscoped for the bolt, back after it
+			b.resumeZoom = b.zoom;
+			b.zoom = 0;
+		}
 		if (--b.clip <= 0) {
 			b.clip = w.clip();
 			b.reloadUntil = now + RELOAD_MS;
+			b.zoom = b.resumeZoom = 0; // reloading takes the scope off
 		}
 	}
 
@@ -465,7 +497,8 @@ public final class Bots {
 			target.hurtMarked = marked;
 		}
 		if (wasAlive && target.isDeadOrDying())
-			KillFeed.notice(b.e, target, weapon(b).replace("weapon_", ""), group.equals("head") ? KillFeed.HEADSHOT : 0);
+			KillFeed.notice(b.e, target, weapon(b).replace("weapon_", ""), (group.equals("head") ? KillFeed.HEADSHOT : 0)
+					| (w.q().zoomLevels() > 0 && b.zoom == 0 ? KillFeed.NOSCOPE : 0));
 	}
 
 	private static void sound(ServerLevel level, Entity e, String event) {
