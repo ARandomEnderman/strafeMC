@@ -205,15 +205,7 @@ public final class MenuLoadout {
 				StrafeMc.LOG.debug("[strafemc] menu loadout: {} skipped ({})", slot, ex.toString());
 			}
 		}
-		// StatTrak counts made on this visit stay with the same finish
-		Map<String, ItemStack> before = p.getAttachedOrElse(DATA, Map.of());
-		for (var e : built.entrySet()) {
-			ItemStack old = before.get(e.getKey());
-			Integer kills = old == null ? null : old.get(WeaponItems.STATTRAK);
-			if (kills != null && e.getValue().has(WeaponItems.STATTRAK) && SkinWrapItem.finish(old) == SkinWrapItem.finish(e.getValue())
-					&& java.util.Objects.equals(SkinWrapItem.skin(old), SkinWrapItem.skin(e.getValue())))
-				e.getValue().set(WeaponItems.STATTRAK, kills);
-		}
+		// StatTrak counts come with the loadout: the client keeps the kills counted here (MyLoadout.takeKills)
 		p.setAttached(DATA, Map.copyOf(built));
 	}
 
@@ -234,7 +226,9 @@ public final class MenuLoadout {
 		float wear = (float) Math.max(r[0], Math.min(r[1], num(s, "wear", r[0])));
 		int seed = (int) Math.max(0, Math.min(1000, num(s, "seed", 0)));
 		ItemStack stack = SkinWrapItem.stack(knife ? WeaponItems.KNIFE_WRAP : WeaponItems.GUN_WRAP, id, seed, wear);
-		if (s.has("st") && s.get("st").isJsonPrimitive() && s.get("st").getAsBoolean()) stack.set(WeaponItems.STATTRAK, 0);
+		// the count is the player's own (kept in their menu_loadout.json, so it follows them to every server)
+		if (s.has("st") && s.get("st").isJsonPrimitive() && s.get("st").getAsBoolean())
+			stack.set(WeaponItems.STATTRAK, (int) Math.max(0, Math.min(999_999, num(s, "kills", 0))));
 		return stack;
 	}
 

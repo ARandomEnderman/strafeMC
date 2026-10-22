@@ -305,6 +305,7 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 			if (!skinSlot.equals("gloves")) {
 				e.addProperty("seed", old != null && old.has("seed") ? old.get("seed").getAsInt() : 0);
 				if (old != null && old.has("st")) e.add("st", old.get("st"));
+				else if (!skinSlot.equals("knife")) e.addProperty("st", true); // guns: StatTrak on unless turned off
 			}
 			MyLoadout.setSkin(skinSlot, e);
 		}
@@ -369,14 +370,28 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 			});
 			addRenderableWidget(seed);
 		}
-		boolean st = e.has("st") && e.get("st").getAsBoolean();
-		addRenderableWidget(Button.builder(Component.literal("StatTrak: " + (st ? "on" : "off")), b -> {
+		boolean st = MyLoadout.statTrak(skinSlot);
+		int kills = MyLoadout.kills(skinSlot), stW = st && kills > 0 ? (PANEL_W - 4) * 3 / 5 : PANEL_W - 4;
+		addRenderableWidget(Button.builder(Component.literal("StatTrak: " + (st ? "on" + (kills > 0 ? " (" + kills + ")" : "") : "off")), b -> {
 			JsonObject cur = MyLoadout.skin(skinSlot);
 			if (cur == null) return;
-			cur.addProperty("st", !(cur.has("st") && cur.get("st").getAsBoolean()));
+			cur.addProperty("st", !MyLoadout.statTrak(skinSlot));
 			MyLoadout.setSkin(skinSlot, cur);
 			rebuildWidgets();
-		}).bounds(x, y + 58, PANEL_W - 4, 20).build());
+		}).bounds(x, y + 58, stW, 20).build());
+		// the count follows you to every server; reset it here (asked first past 50 kills)
+		if (st && kills > 0) addRenderableWidget(Button.builder(Component.literal("Reset"), b -> {
+			String slot = skinSlot;
+			if (MyLoadout.kills(slot) <= 50) {
+				MyLoadout.resetKills(slot);
+				rebuildWidgets();
+				return;
+			}
+			minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+				if (yes) MyLoadout.resetKills(slot);
+				minecraft.setScreen(this);
+			}, Component.literal("Reset this StatTrak count?"), Component.literal(MyLoadout.kills(slot) + " confirmed kills go back to 0. This can't be undone.")));
+		}).bounds(x + stW + 2, y + 58, PANEL_W - 4 - stW - 2, 20).build());
 	}
 
 	private void renderSkins(GuiGraphicsExtractor g, int mx, int my) {
@@ -431,7 +446,7 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 				: (skinSlot.equals("knife") ? WeaponTable.name(knifeForPictures()) : WeaponTable.name(skinSlot)) + " | " + sel.label;
 		if (sel != null && skinSlot.equals("knife_model")) name = WeaponTable.name(sel.id);
 		JsonObject entry = skinSlot.equals("knife_model") ? null : MyLoadout.skin(skinSlot);
-		if (entry != null && entry.has("st") && entry.get("st").getAsBoolean()) name = "StatTrak™ " + name;
+		if (entry != null && MyLoadout.statTrak(skinSlot)) name = "StatTrak™ " + name;
 		int ty = TOP + 4 + (PANEL_W - 8) * 3 / 4 + 4;
 		for (var line : font.split(Component.literal(name), PANEL_W - 8)) {
 			g.text(font, line, px, ty, 0xFFFFFFFF, false);

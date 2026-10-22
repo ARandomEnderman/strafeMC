@@ -30,11 +30,68 @@ public final class MyLoadout {
 	public static void register() {
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((h, sender, mc) -> send());
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (mc.player != null) takeKills(mc.player);
 			if (sendAt != 0 && System.currentTimeMillis() >= sendAt) {
 				sendAt = 0;
 				send();
 			}
 		});
+	}
+
+	/**
+	 * StatTrak kills a server counted on your finishes (its built wraps, synced back) go into this file, so the counts
+	 * follow you to every server; only for the same finish, and only upwards (a reset here is sent before it counts).
+	 */
+	private static void takeKills(net.minecraft.world.entity.player.Player p) {
+		boolean any = false;
+		for (var e : p.getAttachedOrElse(MenuLoadout.DATA, java.util.Map.<String, net.minecraft.world.item.ItemStack>of()).entrySet()) {
+			Integer kills = e.getValue().get(dev.strafemc.weapon.WeaponItems.STATTRAK);
+			String key = killKey(e.getKey());
+			if (kills == null || key == null || !key.endsWith("/" + dev.strafemc.weapon.SkinWrapItem.skin(e.getValue()))) continue;
+			if (kills > kills(e.getKey())) {
+				obj(root(), "kills").addProperty(key, kills);
+				any = true;
+			}
+		}
+		if (any) save();
+	}
+
+	/** Where a slot's chosen finish keeps its count ("weapon_ak47/aa_vertigo"): each finish its own, as each CS2 item has. */
+	private static String killKey(String slot) {
+		JsonObject s = skin(slot);
+		return s == null || !s.has("wrap") || !s.get("wrap").isJsonPrimitive() ? null : slot + "/" + s.get("wrap").getAsString();
+	}
+
+	/** The chosen finish's StatTrak count (0 if none yet). */
+	public static int kills(String slot) {
+		String key = killKey(slot);
+		JsonObject k = obj(root(), "kills");
+		return key != null && k.has(key) && k.get(key).isJsonPrimitive() ? Math.max(0, k.get(key).getAsInt()) : 0;
+	}
+
+	/** Back to zero (sent to the server too). */
+	public static void resetKills(String slot) {
+		String key = killKey(slot);
+		if (key == null) return;
+		obj(root(), "kills").addProperty(key, 0);
+		changed();
+	}
+
+	/** Whether a finish has StatTrak: its own choice, else on for guns (knives and gloves off). */
+	public static boolean statTrak(String slot) {
+		JsonObject s = skin(slot);
+		if (s == null || slot.equals("gloves")) return false;
+		if (s.has("st") && s.get("st").isJsonPrimitive()) return s.get("st").getAsBoolean();
+		return !slot.equals("knife");
+	}
+
+	private static void save() {
+		try {
+			Files.createDirectories(FILE.getParent());
+			Files.writeString(FILE, GSON.toJson(root()));
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] could not save {}: {}", FILE, e.toString());
+		}
 	}
 
 	private static synchronized JsonObject root() {
@@ -68,6 +125,14 @@ public final class MyLoadout {
 	/** What goes to the server: the loadout and the agents picked (they're settings, so they're added here). */
 	private static JsonObject withAgents() {
 		JsonObject o = root().deepCopy();
+		o.remove("kills");
+		// each finish as the server builds it: its StatTrak (gun default on) and its count
+		JsonObject skins = obj(o, "skins");
+		for (String slot : new java.util.ArrayList<>(skins.keySet())) {
+			if (!skins.get(slot).isJsonObject() || slot.equals("gloves")) continue;
+			skins.getAsJsonObject(slot).addProperty("st", statTrak(slot));
+			skins.getAsJsonObject(slot).addProperty("kills", kills(slot));
+		}
 		o.addProperty("agentT", StrafeConfig.agentT);
 		o.addProperty("agentCT", StrafeConfig.agentCT);
 		return o;
