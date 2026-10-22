@@ -7,7 +7,7 @@
 // Everything here is in CS2 units (40 per block) with CS2's axes (z up), relative to the camera.
 // Differences from CS2: no sun shadow map (the sun term is the light volume's visibility only), no moment-based
 // transparency with particles, no character depth pass. Each 3D texture is a 2D atlas of 1-texel-padded slices.
-// CS2's light volume (ambient light probes + the sun's visibility per voxel) is Minecraft's light here: each voxel holds
+// CS2's light strafeVolume (ambient light probes + the sun's visibility per voxel) is Minecraft's light here: each voxel holds
 // its block and sky light, looked up in the lightmap (day, night, torches), and how open it is to the sky.
 
 uniform sampler2D DepthSampler;
@@ -77,7 +77,7 @@ const float GOLDEN = 0.618034;
 // ---------------------------------------------------------------- atlases
 
 // density / light volume: slot rows of 32 slices, each 34x34 (32 voxels + a 1-texel clamped border)
-vec4 volume(sampler2D tex, float slot, vec3 uvw) {
+vec4 strafeVolume(sampler2D tex, float slot, vec3 uvw) {
     uvw = clamp(uvw, 0.0, 1.0);
     float z = uvw.z * 32.0 - 0.5;
     float z0 = clamp(floor(z), 0.0, 31.0), z1 = min(z0 + 1.0, 31.0), f = clamp(z - z0, 0.0, 1.0);
@@ -88,7 +88,7 @@ vec4 volume(sampler2D tex, float slot, vec3 uvw) {
 }
 
 // the 128^3 noise, wrapping: 16 x 8 slices of 130x130 (128 + a 1-texel wrapped border)
-vec4 smokeNoise(vec3 p) {
+vec4 strafeSmokeNoise(vec3 p) {
     vec3 w = fract(p);
     float z = w.z * 128.0 - 0.5;
     float z0 = mod(floor(z), 128.0), z1 = mod(z0 + 1.0, 128.0), f = z - floor(z);
@@ -99,26 +99,26 @@ vec4 smokeNoise(vec3 p) {
 }
 
 // CS2's noise value: pow, remapped between g_flNoiseMin/Max (or the wispy curve), R + 0.95 G, x 4.6
-float noiseValue(vec3 p) {
-    vec4 n = pow(smokeNoise(p * 0.07), vec4(NOISE_POWER));
+float strafeNoiseValue(vec3 p) {
+    vec4 n = pow(strafeSmokeNoise(p * 0.07), vec4(NOISE_POWER));
     vec4 m = mix(mix(vec4(NOISE_MIN), vec4(NOISE_MAX), n), mix(vec4(0.25), vec4(-1.5), n), WISPY);
     return (m.x + m.y * 0.95) * 4.6;
 }
 
 // the density pair CS2 keeps per voxel: away from the scene the larger, close to a surface the smaller
-float densityAt(float slot, vec3 uvw, float frame, float toEnd) {
-    vec4 t = volume(DensitySampler, slot, uvw);
+float strafeDensityAt(float slot, vec3 uvw, float frame, float toEnd) {
+    vec4 t = strafeVolume(DensitySampler, slot, uvw);
     vec2 v = mix(t.xz, t.yw, frame);
     return v.x > v.y ? mix(v.y, v.x, smoothstep(10.0, 40.0, toEnd)) : v.y;
 }
 
-vec2 boxHit(vec3 ro, vec3 inv, vec3 lo, vec3 hi) {
+vec2 strafeBoxHit(vec3 ro, vec3 inv, vec3 lo, vec3 hi) {
     vec3 a = inv * (lo - ro), b = inv * (hi - ro);
     vec3 n = min(a, b), x = max(a, b);
     return vec2(max(max(n.x, n.y), n.z), min(min(x.x, x.y), x.z));
 }
 
-vec3 saturate3(vec3 c) {
+vec3 strafeSaturate3(vec3 c) {
     // the light volume's colour, saturation x 1.1 (RGB -> HSV -> RGB as CS2 does)
     float mx = max(c.r, max(c.g, c.b)), d = mx - min(c.r, min(c.g, c.b));
     if (d == 0.0) return vec3(mx);
@@ -141,11 +141,11 @@ vec3 saturate3(vec3 c) {
     return vec3(hsv.z, p, q);
 }
 
-vec3 viewToWorld(vec3 v) {
+vec3 strafeViewToWorld(vec3 v) {
     return v.x * ViewRight.xyz + v.y * ViewUp.xyz - v.z * ViewForward.xyz;
 }
 
-vec3 worldToView(vec3 v) {
+vec3 strafeWorldToView(vec3 v) {
     return vec3(dot(v, ViewRight.xyz), dot(v, ViewUp.xyz), -dot(v, ViewForward.xyz));
 }
 
@@ -157,7 +157,7 @@ float sunAccum = 0.0, aoAccum = 0.0;
 float tracerGlow = 0.0, tracerPush = 0.0;
 vec3 tracerDir = vec3(0.0, 0.0, 0.01);
 
-void tracers(vec3 p) {
+void strafeTracers(vec3 p) {
     tracerGlow = 0.0;
     tracerPush = 0.0;
     tracerDir = vec3(0.0, 0.0, 0.01);
@@ -182,20 +182,20 @@ void tracers(vec3 p) {
     }
 }
 
-void sampleSmoke(int i, vec3 p, vec3 dir, vec3 rayEnd, vec3 sceneHit, float weight) {
+void strafeSampleSmoke(int i, vec3 p, vec3 dir, vec3 rayEnd, vec3 sceneHit, float weight) {
     vec3 center = SmokeCenter[i].xyz;
     float slot = SmokeState[i].z, frame = SmokeState[i].y;
     vec3 q = p + normalize(tracerDir) * pow(tracerPush, 3.0) * 20.0;
     vec3 uvw = clamp(((q - center) * 0.05 + 16.0) / 32.0, 0.0, 1.0);
     float toEnd = distance(q, rayEnd);
-    float d = clamp(mix(densityAt(slot, uvw, frame, toEnd), -0.05, tracerPush), 0.0, 1.0);
+    float d = clamp(mix(strafeDensityAt(slot, uvw, frame, toEnd), -0.05, tracerPush), 0.0, 1.0);
     if (d <= 0.01) return;
 
     // the volume's own normal (view space), from the density next to this point
     vec3 volN = vec3(0.0, 0.0, 1.0);
     if (VOLUME_NORMAL_BLEND > 0.0) {
-        float up = densityAt(slot, clamp(uvw - ViewUp.xyz * 0.03, 0.0, 1.0), frame, toEnd);
-        float right = densityAt(slot, clamp(uvw + ViewRight.xyz * 0.03, 0.0, 1.0), frame, toEnd);
+        float up = strafeDensityAt(slot, clamp(uvw - ViewUp.xyz * 0.03, 0.0, 1.0), frame, toEnd);
+        float right = strafeDensityAt(slot, clamp(uvw + ViewRight.xyz * 0.03, 0.0, 1.0), frame, toEnd);
         volN = normalize(vec3(d - right, up - d, 0.06));
     }
     float nearScene = max(0.0, toEnd - min(20.0, abs(sceneHit.z - center.z) * 2.0));
@@ -234,15 +234,15 @@ void sampleSmoke(int i, vec3 p, vec3 dir, vec3 rayEnd, vec3 sceneHit, float weig
     r3.z += (sin(xz.x * 3.0 + time * 0.35) + sin(ry * 2.84 + time * 0.235)) * 0.05;
     vec3 low = r3 * NOISE_SCALE_LOW, scroll = vec3(2.0, 2.0, 4.5) * (time * 0.1);
     vec3 upStep = ViewUp.xyz * 0.2, rightStep = ViewRight.xyz * 0.2;
-    float n0 = noiseValue(abs(low) - scroll);
-    float n1 = noiseValue(abs(low + upStep) - scroll);
-    float n2 = noiseValue(abs(low + rightStep) - scroll);
+    float n0 = strafeNoiseValue(abs(low) - scroll);
+    float n1 = strafeNoiseValue(abs(low + upStep) - scroll);
+    float n2 = strafeNoiseValue(abs(low + rightStep) - scroll);
     float flat0 = 0.8 / NOISE_SCALE_LOW;
     vec3 nLow = normalize(vec3(n0 - n2, n0 - n1, flat0));
-    vec3 hp = (cq + viewToWorld(nLow + volN) * pow(max(n0, 0.0), 0.1) * BOIL * 0.2) + vec3(2.0, 2.0, 4.5) * ((n0 - 1.0) * 0.2 * BOIL * c.z);
+    vec3 hp = (cq + strafeViewToWorld(nLow + volN) * pow(max(n0, 0.0), 0.1) * BOIL * 0.2) + vec3(2.0, 2.0, 4.5) * ((n0 - 1.0) * 0.2 * BOIL * c.z);
     hp.x += sin(r3.z + time * 0.25) * 0.05;
     vec3 high = hp * NOISE_SCALE_HIGH;
-    float h0 = noiseValue(high), h1 = noiseValue(high + upStep), h2 = noiseValue(high + rightStep);
+    float h0 = strafeNoiseValue(high), h1 = strafeNoiseValue(high + upStep), h2 = strafeNoiseValue(high + rightStep);
     float highStrength = NOISE_STRENGTH_HIGH * (dot(dir, ViewForward.xyz) * clamp(length(lp) * 0.005, 0.0, 1.0));
     float noise = mix(0.95, clamp(n0, 0.0, 1.0), NOISE_STRENGTH_LOW) + mix(0.95, clamp(h0, 0.0, 1.0), highStrength) + NOISE_OFFSET;
 
@@ -260,16 +260,16 @@ void sampleSmoke(int i, vec3 p, vec3 dir, vec3 rayEnd, vec3 sceneHit, float weig
     // lighting
     vec3 radial = normalize(c) * (1.0 - clamp(hole, 0.0, 1.0));
     vec3 nHigh = normalize(vec3(h0 - h2, h0 - h1, flat0));
-    vec3 n = viewToWorld(mix(worldToView(radial), volN, VOLUME_NORMAL_BLEND)
+    vec3 n = strafeViewToWorld(mix(strafeWorldToView(radial), volN, VOLUME_NORMAL_BLEND)
             + vec3(nLow.xy * NOISE_STRENGTH_LOW + nHigh.xy * mix(0.5, 1.0, clamp(n0 - 0.5, 0.0, 1.0)) * highStrength, 0.0)
             * NOISE_NORMAL * mix(1.0, 2.0, clamp((200.0 - distance(lp, center)) * 0.005, 0.0, 1.0)));
     vec3 lightPos = lp + n * ((h0 - 1.0) * 8.0);
-    vec4 light = volume(LightSampler, slot, clamp(c + (n * 0.05 - radial * 0.025) + 0.5, 0.03, 0.97));
+    vec4 light = strafeVolume(LightSampler, slot, clamp(c + (n * 0.05 - radial * 0.025) + 0.5, 0.03, 0.97));
     vec4 lpv = vec4(textureLod(LightmapSampler, light.xy * (15.0 / 16.0) + 0.5 / 16.0, 0.0).rgb * LightScale.x, light.w);
     float ndl = dot(mix(radial, n, NOISE_NORMAL_DIRECT), SunDir.xyz);
     float sun = pow(clamp(ndl * 0.8 + 0.2, 0.0, 1.0), 1.5) + pow(clamp(ndl * 1.4 - 0.5, 0.0, 1.0), 3.0);
     if (sun > 0.0) sun *= lpv.w;
-    vec3 amb = saturate3(lpv.rgb);
+    vec3 amb = strafeSaturate3(lpv.rgb);
     vec3 col = normalize(amb + 0.001) * min(length(amb), 4.0) * clamp(1.0 - min(0.25, alpha), 0.0, 1.0)
             * clamp(1.0 - (body * 2.4 - alpha) * INTERIOR_DARKENING, 0.0, 1.0) * noise * (0.75 + sun * 0.25) * (1.0 + n.z * 0.5) * AMBIENT
             + SunColor.rgb * (0.5 * sun * (1.0 - tracerPush)) * DIRECT;
@@ -306,7 +306,7 @@ void main() {
     vec2 hits[MAX_SMOKES];
     for (int i = 0; i < MAX_SMOKES; i++) {
         if (i >= smokes) break;
-        hits[i] = boxHit(vec3(0.0), inv, SmokeMin[i].xyz, SmokeMax[i].xyz);
+        hits[i] = strafeBoxHit(vec3(0.0), inv, SmokeMin[i].xyz, SmokeMax[i].xyz);
         if (hits[i].x <= hits[i].y) span = vec2(min(span.x, hits[i].x), max(span.y, hits[i].y));
     }
     if (span.x > span.y || span.y < 0.0) discard;
@@ -329,11 +329,11 @@ void main() {
     float last = t;
     for (int k = 0; k < 500; k++) {
         if (k >= steps) break;
-        if (haveTracers && ((k & 15) == 0 || k < 16)) tracers(p);
+        if (haveTracers && ((k & 15) == 0 || k < 16)) strafeTracers(p);
         for (int i = 0; i < MAX_SMOKES; i++) {
             if (i >= smokes) break;
             if (t < hits[i].x || t > hits[i].y) continue;
-            sampleSmoke(i, p, dir, rayEnd, sceneHit, RAY_STEP * 0.25);
+            strafeSampleSmoke(i, p, dir, rayEnd, sceneHit, RAY_STEP * 0.25);
         }
         if (accum.w > 0.991) {
             accum.w = 1.0;
@@ -350,7 +350,7 @@ void main() {
         for (int i = 0; i < MAX_SMOKES; i++) {
             if (i >= smokes) break;
             if (tl < hits[i].x || tl > hits[i].y) continue;
-            sampleSmoke(i, rayEnd, dir, rayEnd, sceneHit, (stop - tl) * 0.25);
+            strafeSampleSmoke(i, rayEnd, dir, rayEnd, sceneHit, (stop - tl) * 0.25);
         }
     }
 

@@ -4,7 +4,7 @@
 #moj_import <minecraft:dynamictransforms.glsl>
 
 // strafeMC viewmodel lighting (ours, tuned by eye): the texture's alpha is CS2's metalness. Diffuse from a key light
-// plus ambient; a stand-in environment (bright sky above, dark ground below, a sun highlight) reflected with Fresnel;
+// plus ambient; a stand-in strafeEnvironment (bright sky above, dark ground below, a sun highlight) reflected with Fresnel;
 // metal reflects in its own colour, paint gets a faint clear-coat sheen. Directions are in view space.
 uniform sampler2D Sampler0;
 
@@ -22,7 +22,7 @@ out vec4 fragColor;
 
 const vec3 SUN = normalize(vec3(0.35, 0.85, 0.4));
 
-vec3 environment(vec3 r, float rough, float metal) {
+vec3 strafeEnvironment(vec3 r, float rough, float metal) {
     float up = smoothstep(-0.25, 0.65, r.y);
     // metal mirrors its surroundings in its own colour: a dimmer stand-in (CS2's map reflections are mostly dark), so
     // anodized finishes (Dopplers) read deep instead of pastel
@@ -41,7 +41,7 @@ vec3 environment(vec3 r, float rough, float metal) {
 // mostly dark (CS2's map reflections), with a bright band along the horizon and a sharp sun highlight, so glossy metal
 // reads dark with bright streaks and saturated finishes keep their colour; rough metal sees only a dim blur.
 // The surroundings are ours (FLAGGED, by eye against CS2 renders), the maths CS2's.
-vec3 metalShade(vec3 albedo, vec3 r, float ndv, float rough) {
+vec3 strafeMetalShade(vec3 albedo, vec3 r, float ndv, float rough) {
     vec3 f0 = pow(albedo, vec3(2.2));
     vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * (1.0 - 0.8 * max(0.0, rough - 0.25));
     float band = exp(-pow((r.y - 0.35) * 5.0, 2.0)); // a bright line above eye level (windows, sky line): a blade facing
@@ -82,8 +82,8 @@ void main() {
     vec3 f0 = vec3(0.04);
     vec3 fresnel = f0 + (1.0 - f0) * pow(1.0 - ndv, 5.0) * 0.12 * (1.0 - 0.8 * max(0.0, rough - 0.25));
     float diffuse = 0.42 + 0.68 * max(dot(n, SUN), 0.0);
-    vec3 paint = albedo * diffuse + environment(r, rough, 0.0) * fresnel * 0.6;
-    vec3 color = mix(paint, metalShade(albedo, r, ndv, rough), metal);
+    vec3 paint = albedo * diffuse + strafeEnvironment(r, rough, 0.0) * fresnel * 0.6;
+    vec3 color = mix(paint, strafeMetalShade(albedo, r, ndv, rough), metal);
 
     color = min(color, vec3(1.2)); // no blown-out white
     color = mix(overlayColor.rgb, color, overlayColor.a);

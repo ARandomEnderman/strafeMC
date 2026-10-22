@@ -34,7 +34,9 @@ public final class ShaderCheck {
 					ns = "minecraft";
 					file = file.substring(10);
 				}
-				String src = resolve(read("/assets/" + ns + "/shaders/core/" + file), new java.util.HashSet<>());
+				String raw = read("/assets/" + ns + "/shaders/core/" + file);
+				if (ns.equals("strafemc") && !prefixed(file, raw)) ok = false;
+				String src = resolve(raw, new java.util.HashSet<>());
 				if (!prog[2].isEmpty()) {
 					int eol = src.indexOf('\n') + 1; // after #version
 					src = src.substring(0, eol) + prog[2] + "\n" + src.substring(eol);
@@ -59,6 +61,22 @@ public final class ShaderCheck {
 		GLFW.glfwDestroyWindow(w);
 		GLFW.glfwTerminate();
 		if (failed > 0) System.exit(1);
+	}
+
+	/**
+	 * Our own functions are named strafe...: GLSL keeps old built-ins (noise1..noise4 and others), and some drivers
+	 * (AMD) refuse a function that reuses one, while the driver this check runs on may accept it.
+	 */
+	private static boolean prefixed(String file, String src) {
+		var m = java.util.regex.Pattern.compile("(?m)^\\s*(?:float|[iu]?vec[234]|int|uint|bool|void|mat[234])\\s+([A-Za-z_]\\w*)\\s*\\(").matcher(src);
+		boolean ok = true;
+		while (m.find()) {
+			String name = m.group(1);
+			if (name.equals("main") || name.startsWith("strafe")) continue;
+			System.out.println(file + ": function " + name + " needs the strafe prefix");
+			ok = false;
+		}
+		return ok;
 	}
 
 	private static String read(String path) throws Exception {
