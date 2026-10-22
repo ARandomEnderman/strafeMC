@@ -69,14 +69,20 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 		this.tab = tab;
 	}
 
+	/** In a world (a game mode server, mid-match): skins and agents only; the buy menu loadout is set in the main menu. */
+	private boolean inGame() {
+		return minecraft != null && minecraft.level != null;
+	}
+
 	@Override
 	protected void init() {
-		lastTab = tab;
+		if (inGame() && tab == 0) tab = 1;
+		else lastTab = tab;
 		tabButtons.clear();
 		sideButtons.clear();
 		String[] tabs = {"BUY MENU", "SKINS", "AGENTS"};
-		int tw = 90, tx = width / 2 - tabs.length * tw / 2;
-		for (int i = 0; i < tabs.length; i++) {
+		int first = inGame() ? 1 : 0, tw = 90, tx = width / 2 - (tabs.length - first) * tw / 2;
+		for (int i = first; i < tabs.length; i++) {
 			final int k = i;
 			tabButtons.add(addRenderableWidget(Button.builder(Component.literal(tabs[i]), b -> {
 				if (k == 2) {
@@ -85,7 +91,7 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 				}
 				tab = k;
 				rebuildWidgets();
-			}).bounds(tx + i * tw, 5, tw - 2, 20).build()));
+			}).bounds(tx + (i - first) * tw, 5, tw - 2, 20).build()));
 		}
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(width / 2 - 100, height - 26, 200, 20).build());
 		if (tab == 0) {
@@ -501,7 +507,8 @@ public final class MenuLoadoutScreen extends Screen implements dev.strafemc.clie
 		if (tab == 0) renderBuy(g, mx, my);
 		else renderSkins(g, mx, my);
 		super.extractRenderState(g, mx, my, delta);
-		if (tab < tabButtons.size()) dev.strafemc.client.ui.Style.underline(g, tabButtons.get(tab));
+		int shown = tab - (inGame() ? 1 : 0); // in a world the buy menu tab isn't there
+		if (shown >= 0 && shown < tabButtons.size()) dev.strafemc.client.ui.Style.underline(g, tabButtons.get(shown));
 		if (sideButtons.size() == 2) dev.strafemc.client.ui.Style.underline(g, sideButtons.get(t ? 0 : 1));
 	}
 

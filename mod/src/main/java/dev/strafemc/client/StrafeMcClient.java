@@ -111,6 +111,11 @@ public class StrafeMcClient implements ClientModInitializer {
 				SetupScreen.offer(screen);
 			}
 			if (screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen) loadoutButton(screen);
+			// on a game mode server: the skins (not the buy menu loadout) from the Esc menu, mid-match
+			if (screen instanceof net.minecraft.client.gui.screens.PauseScreen && dev.strafemc.weapon.MenuLoadout.client)
+				net.fabricmc.fabric.api.client.screen.v1.Screens.getWidgets(screen).add(net.minecraft.client.gui.components.Button.builder(
+						net.minecraft.network.chat.Component.literal("Skins"), b -> mc.setScreen(new MenuLoadoutScreen(screen, 1)))
+						.bounds(screen.width / 2 - 50, 6, 100, 20).build());
 		});
 		MyLoadout.register();
 		net.minecraft.client.gui.screens.MenuScreens.register(dev.strafemc.weapon.Loadout.MENU, LoadoutScreen::new);

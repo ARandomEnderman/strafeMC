@@ -47,8 +47,12 @@ public final class MenuLoadout {
 	public static final AttachmentType<String> AGENTS = AttachmentRegistry.create(Identifier.fromNamespaceAndPath("strafemc", "agents"),
 			b -> b.copyOnDeath().initializer(() -> "|").syncWith(ByteBufCodecs.STRING_UTF8, AttachmentSyncPredicate.all()));
 
-	/** The agent id a player picked for a side, or "" for none (CS2's default agent of that side). */
+	/**
+	 * The agent id a player picked for a side, or "" for none (CS2's default agent of that side). Only on a server using
+	 * menu loadouts: elsewhere (a survival world) the main menu's picks don't show.
+	 */
 	public static String agent(Player p, boolean t) {
+		if (!on(p)) return "";
 		String s = p.getAttachedOrElse(AGENTS, "|");
 		int bar = s.indexOf('|');
 		return bar < 0 ? "" : t ? s.substring(0, bar) : s.substring(bar + 1);
