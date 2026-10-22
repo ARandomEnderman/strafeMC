@@ -142,6 +142,12 @@ final class RoundMode extends Mode {
 
 	@Override
 	void reset() {
+		teamDamage.clear();
+		startDamage.clear();
+		teamKills.clear();
+		warned.clear();
+		startWarned.clear();
+		kicked.clear();
 		round = 0;
 		scoreT = scoreCt = 0;
 		lossT = lossCt = c.startingLosses();
@@ -246,6 +252,7 @@ final class RoundMode extends Mode {
 			botBuy(b);
 		}
 		diedThisRound.clear();
+		startDamage.clear(); // each round's start is counted on its own
 		bombBot = null;
 		botPlantStart = -1;
 		List<LivingEntity> ts = new ArrayList<>();
@@ -647,10 +654,80 @@ final class RoundMode extends Mode {
 		sendAll();
 	}
 
+	// ---------------------------------------------------------------- team killing (Competitive)
+	/**
+	 * CS2's punishments for hurting the own side, Competitive only (Casual has no team damage; the others aren't the
+	 * 5v5 match): mp_autokick 1 with mp_td_dmgtowarn 200 / mp_td_dmgtokick 300 team damage in a match, three team kills
+	 * ("Teammate kills: n of 3"), and mp_td_spawndmgthreshold 50 within mp_spawnprotectiontime 5 s of a round's start
+	 * (warned the first time, kicked the next; a team kill then: kicked at once). A kick disconnects the player as CS2
+	 * does; the singleplayer / LAN host is only taken out of the match (FLAGGED ours). Fire's damage has no attacker
+	 * and isn't counted (FLAGGED).
+	 */
+	private final Map<UUID, Double> teamDamage = new HashMap<>(), startDamage = new HashMap<>();
+	private final Map<UUID, Integer> teamKills = new HashMap<>();
+	private final java.util.Set<UUID> warned = new java.util.HashSet<>(), startWarned = new java.util.HashSet<>(), kicked = new java.util.HashSet<>();
+
+	private boolean punishes() {
+		return c == COMPETITIVE && cvar("mp_autokick", 1) >= 1 && !warmup();
+	}
+
+	/** Within mp_spawnprotectiontime of the round's start (its live phase). */
+	private boolean roundStart() {
+		return phase == Phase.LIVE && now() - phaseStart < cvar("mp_spawnprotectiontime", 5) * 20;
+	}
+
+	@Override
+	void damaged(LivingEntity victim, LivingEntity attacker, double cs) {
+		if (!punishes() || !(attacker instanceof ServerPlayer p) || attacker == victim || !inMode(victim) || CsTeam.isT(p) != CsTeam.isT(victim) || cs <= 0) return;
+		UUID id = p.getUUID();
+		double total = teamDamage.merge(id, cs, Double::sum);
+		if (roundStart()) { // this round's start: the threshold crossed once warns, any later round kicks
+			double limit = cvar("mp_td_spawndmgthreshold", 50), start = startDamage.merge(id, cs, Double::sum);
+			if (start >= limit && start - cs < limit) {
+				if (startWarned.add(id)) dev.strafemc.server.Toasts.warn(p, "WARNING: If you damage your team at the start of another round, you will be kicked");
+				else {
+					kick(p, "team damage at the start of a round");
+					return;
+				}
+			}
+		}
+		if (total >= cvar("mp_td_dmgtokick", 300)) kick(p, "too much team damage");
+		else if (total >= cvar("mp_td_dmgtowarn", 200) && warned.add(id))
+			dev.strafemc.server.Toasts.warn(p, "WARNING: Doing more team damage will cause you to be kicked");
+	}
+
+	/** A team kill: CS2's count (three and out), or out at once in the first seconds of a round. */
+	private void teamKill(LivingEntity attacker) {
+		if (!punishes() || !(attacker instanceof ServerPlayer p)) return;
+		int n = teamKills.merge(p.getUUID(), 1, Integer::sum);
+		dev.strafemc.server.Toasts.warn(p, "You killed a teammate. Teammate kills: " + n + " of 3");
+		if (n >= 3 || roundStart()) kick(p, n >= 3 ? "killing too many teammates" : "killing a teammate at the start of a round");
+	}
+
+	private void kick(ServerPlayer p, String why) {
+		if (!kicked.add(p.getUUID())) return;
+		for (ServerPlayer o : server.getPlayerList().getPlayers())
+			if (o != p) dev.strafemc.server.Toasts.info(o, "Kicked " + name(p) + " (" + why + ")");
+		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: kicked {} for {}", name(p), why);
+		if (server.isSingleplayerOwner(p.nameAndId())) { // the host stays in the world, out of the match
+			GameModes.giveBack(p);
+			GameModes.send(p, "{}");
+			dev.strafemc.server.Toasts.warn(p, "You have been kicked from this match (" + why + ")");
+		} else p.connection.disconnect(net.minecraft.network.chat.Component.literal("You have been kicked from this game (" + why + ")"));
+		sendAll();
+	}
+
+	/** Kicked this match: they don't come back into it. */
+	@Override
+	boolean kickedFromMatch(UUID id) {
+		return kicked.contains(id);
+	}
+
 	@Override
 	void scored(LivingEntity attacker, LivingEntity victim, String icon) {
 		if (CsTeam.isT(attacker) == CsTeam.isT(victim)) { // a teammate: cash_player_killed_teammate
 			pay(attacker, -300);
+			teamKill(attacker);
 			return;
 		}
 		pay(attacker, killAward(icon));

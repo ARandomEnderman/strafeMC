@@ -85,6 +85,11 @@ public final class GameModes {
 			}
 			return true;
 		});
+		// damage between participants (CS hit points): the round modes count team damage
+		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DAMAGE.register((e, src, base, taken, blocked) -> {
+			if (race != null && src.getEntity() instanceof net.minecraft.world.entity.LivingEntity a && Mode.inMode(e))
+				race.damaged(e, a, taken / dev.strafemc.config.StrafeConfig.hpScale);
+		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DEATH.register((e, src) -> {
 			if (race != null && e instanceof ServerPlayer p) race.died(p);
 		});

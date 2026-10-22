@@ -289,6 +289,14 @@ abstract class Mode {
 		return o;
 	}
 
+	/** Kicked out of this match (round modes): not put back into it on joining or respawning. */
+	boolean kickedFromMatch(UUID id) {
+		return false;
+	}
+
+	/** Damage (CS hit points) one participant did to another (the round modes count team damage). */
+	void damaged(LivingEntity victim, LivingEntity attacker, double cs) {}
+
 	/** The planted bomb (round modes), or null. */
 	net.minecraft.world.entity.Entity plantedBomb() {
 		return null;
@@ -321,6 +329,7 @@ abstract class Mode {
 	}
 
 	void join(ServerPlayer p) {
+		if (kickedFromMatch(p.getUUID())) return;
 		GameModes.putAway(p);
 		joinOrder(p);
 		if (!ffa() && !picked.contains(p.getUUID())) CsTeam.set(p, smallerSideT()); // balanced until they pick (mp_autoteambalance)
@@ -341,6 +350,7 @@ abstract class Mode {
 
 	/** (Re)spawned: protection, kevlar and helmet, full health, the mode's gear. */
 	void spawned(ServerPlayer p) {
+		if (kickedFromMatch(p.getUUID())) return;
 		GameModes.putAway(p);
 		immuneUntil.put(p.getUUID(), now() + Math.round(cvar("mp_respawn_immunitytime", 4) * 20)); // the modes' configs: 10
 		CsArmor.set(p, 100, true);
