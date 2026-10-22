@@ -534,6 +534,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** CS2's radar for one player (mode/Radar): teammates, spotted enemies, the bomb, the sites, as JSON. */
+	public record RadarState(String json) implements CustomPacketPayload {
+		public static final Type<RadarState> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "radar_state"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, RadarState> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, RadarState::json, RadarState::new);
+
+		@Override
+		public Type<RadarState> type() {
+			return TYPE;
+		}
+	}
+
 	/** A CS2 sound event another player made (shots, reload foley), played at its position with the real distance curve. */
 	public record CsSound(String event, double x, double y, double z, boolean suppressed, int entity) implements CustomPacketPayload {
 		public static final Type<CsSound> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "cs_sound"));

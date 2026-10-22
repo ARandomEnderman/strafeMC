@@ -60,7 +60,10 @@ public final class GameModes {
 			dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(java.util.Map.of());
 		});
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(s -> {
-			if (race != null) race.tick();
+			if (race != null) {
+				race.tick();
+				if (race != null) Radar.tick(race);
+			}
 		});
 		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, s) -> {
 			ServerPlayer p = handler.getPlayer();

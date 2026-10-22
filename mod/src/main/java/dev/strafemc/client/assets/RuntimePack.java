@@ -59,6 +59,25 @@ public final class RuntimePack {
 					StrafeMc.LOG.warn("[strafemc] scope overlay {}: {}", sc[1], e.toString());
 				}
 			}
+			// CS2's radar icons (hudradar): white shapes the radar colours
+			for (String r : new String[] {"icon-on-map", "icon-enemy-on-map", "c4_sml", "icon-bomb-zone-a", "icon-bomb-zone-b", "icon-radar-bomb-above",
+					"icon-radar-bomb-below"}) {
+				Path out = tex.resolve("gui/radar/" + r.replace("icon-radar-bomb-", "").replace("icon-", "") + ".png");
+				try {
+					raw("panorama/images/hud/radar/" + r + "_png.vtex_c", "panorama/images/hud/radar/" + r + "_png.png", out);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] radar icon {}: {}", r, e.toString());
+				}
+			}
+			for (String[] r : new String[][] {{"hud/radar/icon_direction_indicator", "direction", "40"}, {"icons/ui/map_death", "death", "38"},
+					{"icons/ui/map_view_angle", "view_angle", "64"}, {"icons/ui/map_enemy_offmap", "offmap", "44"}}) {
+				Path out = tex.resolve("gui/radar/" + r[1] + ".png");
+				try {
+					svgH("panorama/images/" + r[0] + ".vsvg_c", "panorama/images/" + r[0] + ".svg", out, Integer.parseInt(r[2]));
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] radar icon {}: {}", r[1], e.toString());
+				}
+			}
 			gloveSkins(tex);
 			wraps(tex);
 			safe(() -> cases(tex), tex.resolve("item/case_key.png"), Placeholders.Icon.MAG, 16);

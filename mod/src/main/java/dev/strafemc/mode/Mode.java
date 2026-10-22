@@ -228,6 +228,11 @@ abstract class Mode {
 		return moves > 0;
 	}
 
+	/** The planted bomb (round modes), or null. */
+	net.minecraft.world.entity.Entity plantedBomb() {
+		return null;
+	}
+
 	/** Whether this participant has the bomb (only round modes have one). */
 	boolean carriesBomb(LivingEntity e) {
 		return false;

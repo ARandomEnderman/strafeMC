@@ -332,6 +332,11 @@ final class RoundMode extends Mode {
 	}
 
 	@Override
+	net.minecraft.world.entity.Entity plantedBomb() {
+		return bomb != null && !bomb.isRemoved() && !bomb.defused() ? bomb : null;
+	}
+
+	@Override
 	boolean carriesBomb(LivingEntity e) {
 		if (e instanceof ServerPlayer p) {
 			for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(WeaponItems.C4)) return true;

@@ -217,6 +217,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.TradeUpResult.TYPE, (msg, ctx) -> TradeUpScreen.result(msg));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.DeathInfo.TYPE, (msg, ctx) -> DeathCam.info(msg));
 		DeathCam.register();
+		RadarHud.register();
 		StrafeToasts.register();
 		dev.strafemc.StrafeMc.openUnseal = () -> Minecraft.getInstance().execute(() -> Minecraft.getInstance().setScreen(new UnsealScreen()));
 		ClientPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Toast.TYPE, (msg, ctx) -> StrafeToasts.show(msg.text(), msg.color()));

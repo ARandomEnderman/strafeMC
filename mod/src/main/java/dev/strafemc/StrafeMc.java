@@ -47,6 +47,7 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.mode.Zones.register();
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ZoneList.TYPE, dev.strafemc.net.StrafePayloads.ZoneList.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ModeState.TYPE, dev.strafemc.net.StrafePayloads.ModeState.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.RadarState.TYPE, dev.strafemc.net.StrafePayloads.RadarState.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.server.WorldCvars.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.WorldCvars::tick);
