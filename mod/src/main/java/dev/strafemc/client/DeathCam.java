@@ -59,10 +59,11 @@ public final class DeathCam {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "death_panel"),
 				(g, delta) -> panel(g));
 		DeathFade.init();
-		// before the HUD, after the world: the death camera's colour on the world only
-		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementBefore(
-				net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MISC_OVERLAYS,
-				net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "death_fade"), (g, delta) -> fade());
+	}
+
+	/** After the world is drawn, before the HUD, HUD shown or not (GameRendererLevelEffectsMixin): the death camera's colour. */
+	public static void afterLevel() {
+		fade();
 	}
 
 	/** The death camera's colour now: the red tint and the fade to black, as CS2 weighs them. */

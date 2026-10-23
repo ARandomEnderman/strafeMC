@@ -157,9 +157,24 @@ public final class GrenadeClient {
 				FlashAfterimage.clear();
 				return;
 			}
-			FlashAfterimage.draw(left / secs); // the world is drawn by now; the HUD comes after
-			if (a > 0) g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (Math.min(1, a) * 255) << 24 | 0xFFFFFF);
+			if (a > 0) g.fill(0, 0, g.guiWidth(), g.guiHeight(), (int) (Math.min(1, a) * 255) << 24 | 0xFFFFFF); // over the HUD
 		});
+	}
+
+	/**
+	 * After the world is drawn, before the HUD, HUD shown or not (GameRendererLevelEffectsMixin): the afterimage, and the
+	 * white-out itself while the HUD is hidden (F1 mustn't take a flash away; with the HUD up it's drawn over the HUD).
+	 */
+	public static void afterLevel() {
+		float secs = flashSeconds;
+		if (secs <= 0) return;
+		float left = secs - (System.nanoTime() - flashStart) / 1e9f;
+		if (left <= 0) return;
+		FlashAfterimage.draw(left / secs);
+		if (net.minecraft.client.Minecraft.getInstance().options.hideGui) {
+			float a = left >= 3 ? 1 : (left / 3) * (left / 3);
+			dev.strafemc.client.DeathFade.overlay(1, 1, 1, a);
+		}
 	}
 
 	/** Every client tick: flames over burning areas; finished smokes and fires dropped. */

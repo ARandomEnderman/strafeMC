@@ -9,5 +9,5 @@ layout(std140) uniform FadeInfo {
 out vec4 fragColor;
 
 void main() {
-    fragColor = vec4(Multiply.rgb, 1.0);
+    fragColor = Multiply; // alpha: 1 for the multiply, the overlay's own for the over pipeline
 }
