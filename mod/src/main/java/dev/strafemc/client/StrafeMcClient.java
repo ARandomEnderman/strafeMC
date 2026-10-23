@@ -82,6 +82,7 @@ public class StrafeMcClient implements ClientModInitializer {
 					if (armor <= 0 || mc.options.hideGui || mc.player == null || dev.strafemc.client.ModeHud.active()) return; // a game mode's HUD shows it
 					g.text(mc.font, (helmet ? "\u00a7f\u26e8+ " : "\u00a7f\u26e8 ") + armor, 8, g.guiHeight() - 20, 0xFFFFFFFF, true);
 				});
+		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> dev.strafemc.StallWatch.clientTick()); // where a freeze is
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.weapon.GrenadeClient::tick);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(dev.strafemc.client.ui.UiSweep::tick);
 		net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc -> {

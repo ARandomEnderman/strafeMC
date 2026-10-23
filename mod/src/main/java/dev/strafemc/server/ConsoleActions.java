@@ -517,6 +517,14 @@ public final class ConsoleActions {
 				dev.strafemc.mode.GameModes.setCvar(cmd, v.equalsIgnoreCase("default") ? "" : v);
 				ConsoleRelay.reply(p, cmd + " = " + (v.equalsIgnoreCase("default") ? "the game mode's" : v));
 			}
+			case "strafemc_infinite_pearl" -> { // your own Strafe Pearl never runs out (in every game mode too); operators
+				if (!op) {
+					ConsoleRelay.reply(p, ("Only operators can do that."));
+					break;
+				}
+				if (!arg.isBlank()) dev.strafemc.weapon.InfinitePearl.set(p, !arg.trim().equals("0"));
+				ConsoleRelay.reply(p, "strafemc_infinite_pearl = " + (dev.strafemc.weapon.InfinitePearl.on(p) ? 1 : 0));
+			}
 			case "strafemc_gamemode_server" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change that."));

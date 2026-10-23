@@ -27,7 +27,8 @@ public class StrafePearlItem extends Item {
 			sl.addFreshEntity(e);
 		}
 		player.getCooldowns().addCooldown(stack, 20);
-		stack.consume(1, player);
+		// strafemc_infinite_pearl: not used up (decided on the server; the client shows what it sends)
+		if (!level.isClientSide() && !InfinitePearl.on(player)) stack.consume(1, player);
 		return InteractionResult.SUCCESS;
 	}
 }

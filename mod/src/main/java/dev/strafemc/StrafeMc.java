@@ -49,6 +49,7 @@ public class StrafeMc implements ModInitializer {
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ModeState.TYPE, dev.strafemc.net.StrafePayloads.ModeState.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.RadarState.TYPE, dev.strafemc.net.StrafePayloads.RadarState.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.StallWatch.serverStopped());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.server.WorldCvars.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(dev.strafemc.server.WorldCvars::tick);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeOps.unload());
@@ -78,8 +79,9 @@ public class StrafeMc implements ModInitializer {
 		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
 			dev.strafemc.weapon.BuyMenu.spawned(newP);
-			// a random spawn block, if the world has any and they're on
-			if (!alive && dev.strafemc.server.StrafeSettings.spawnBlocks()) dev.strafemc.world.SpawnPoints.respawn(newP);
+			// a random spawn block, if the world has any and they're on (a running game mode places them itself, by side)
+			if (!alive && dev.strafemc.server.StrafeSettings.spawnBlocks() && dev.strafemc.mode.GameModes.mode().equals("none"))
+				dev.strafemc.world.SpawnPoints.respawn(newP);
 			// CS2: you come back with full magazines (the guns you kept), a charged Zeus
 			if (!alive) {
 				var inv = newP.getInventory();
@@ -161,6 +163,8 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(dev.strafemc.net.StrafePayloads.Throw.TYPE,
 				(msg, ctx) -> { if (dev.strafemc.server.RateLimit.allow(ctx.player(), "throw", 5)) dev.strafemc.weapon.GunServer.throwGrenade(ctx.player(), msg); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
+			dev.strafemc.StallWatch.serverTick();
+			dev.strafemc.weapon.InfinitePearl.tick(server);
 			dev.strafemc.server.LagHistory.tick(server);
 			var msg = new dev.strafemc.net.StrafePayloads.ServerTick(server.getTickCount());
 			for (var pl : server.getPlayerList().getPlayers())

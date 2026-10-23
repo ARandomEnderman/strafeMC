@@ -167,9 +167,11 @@ public final class BuyMenu {
 					if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
 					paid = price(gun.cls(), 0);
 					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);
-					WeaponStats st = WeaponStats.of(gun.cls());
-					int mags = st == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
-					if (mags > 0 && dev.strafemc.mode.GameModes.buyRefusal(p, what) == null) give(p, new ItemStack(WeaponItems.MAGS.get(gun.cls()), mags), given);
+					// buyRefusal is "" (allowed) in a game mode, null outside one: comparing with null alone gave no
+					// magazines in any game mode
+					String no2 = dev.strafemc.mode.GameModes.buyRefusal(p, what);
+					ItemStack mags = reserve(gun.cls());
+					if (!mags.isEmpty() && (no2 == null || no2.isEmpty())) give(p, mags, given);
 					bought(p, what, given, null);
 					dev.strafemc.mode.GameModes.bought(p, gun.cls());
 					return;
@@ -191,6 +193,14 @@ public final class BuyMenu {
 				bought(p, what, given, null);
 			}
 		}
+	}
+
+	/** A gun's CS2 reserve as magazines: m_nPrimaryReserveAmmoMax rounds in clips (shells for shotguns); empty if none. */
+	public static ItemStack reserve(String cls) {
+		WeaponStats st = WeaponStats.of(cls);
+		var mag = WeaponItems.MAGS.get(cls);
+		int mags = st == null || mag == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
+		return mags > 0 ? new ItemStack(mag, mags) : ItemStack.EMPTY;
 	}
 
 	public static int count(ServerPlayer p, Grenade g) {

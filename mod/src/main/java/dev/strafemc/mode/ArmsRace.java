@@ -170,8 +170,11 @@ final class ArmsRace extends Mode {
 	@Override
 	List<LivingEntity> ranking() {
 		List<LivingEntity> all = participants();
+		// level, then kills toward the next level, then who got there first. Without the kills, players on the first
+		// gun tied and one with no kill could come first: "no leader", and time running out restarted the match
 		all.sort((x, y) -> {
 			int c = Integer.compare(level(key(y)), level(key(x)));
+			if (c == 0) c = Integer.compare(kills.getOrDefault(key(y), 0), kills.getOrDefault(key(x), 0));
 			return c != 0 ? c : Long.compare(reached.getOrDefault(key(x), Long.MAX_VALUE), reached.getOrDefault(key(y), Long.MAX_VALUE));
 		});
 		return all;

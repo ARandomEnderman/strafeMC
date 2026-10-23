@@ -111,6 +111,7 @@ public final class ServerRules {
 	public static void setModeServer(boolean on) {
 		VALUES.put("gamemode-server", on);
 		save();
+		if (!on) dev.strafemc.mode.GameModes.set("none"); // no longer a game mode server: back to plain strafeMC
 		GameplaySync.resendAll();
 		dev.strafemc.weapon.MenuLoadout.refreshAll();
 	}

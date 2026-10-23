@@ -354,9 +354,15 @@ abstract class Mode {
 		respawnAt.remove(p.getUUID());
 	}
 
-	/** On a random spawn block, when the world has any and they're on (strafemc_spawnblocks). */
+	/**
+	 * On a random spawn block, when the world has any and they're on (strafemc_spawnblocks): team modes their side's
+	 * (else "anyone" blocks), everyone-against-everyone modes the "anyone" blocks (else any block).
+	 */
 	void toSpawn(ServerPlayer p) {
-		if (dev.strafemc.server.StrafeSettings.spawnBlocks()) dev.strafemc.world.SpawnPoints.respawn(p);
+		if (!dev.strafemc.server.StrafeSettings.spawnBlocks()) return;
+		if (ffa()) {
+			if (!dev.strafemc.world.SpawnPoints.respawn(p, dev.strafemc.world.SpawnBlock.Side.ANY)) dev.strafemc.world.SpawnPoints.respawn(p);
+		} else dev.strafemc.world.SpawnPoints.respawn(p, CsTeam.isT(p) ? dev.strafemc.world.SpawnBlock.Side.T : dev.strafemc.world.SpawnBlock.Side.CT);
 	}
 
 	/** (Re)spawned: protection, kevlar and helmet, full health, the mode's gear. */
@@ -382,6 +388,13 @@ abstract class Mode {
 	static void give(ServerPlayer p, int slot, String cls) {
 		var item = WeaponItems.GUNS.get(cls);
 		if (item != null) p.getInventory().setItem(slot, new ItemStack(item));
+	}
+
+	/** The gun in a slot with CS2's reserve magazines beside it (round modes have no infinite ammo). */
+	static void giveWithReserve(ServerPlayer p, int slot, String cls) {
+		give(p, slot, cls);
+		ItemStack mags = dev.strafemc.weapon.BuyMenu.reserve(cls);
+		if (!mags.isEmpty()) p.getInventory().add(mags);
 	}
 
 	static void knife(ServerPlayer p) {

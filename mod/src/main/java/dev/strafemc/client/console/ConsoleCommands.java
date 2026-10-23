@@ -384,7 +384,9 @@ public final class ConsoleCommands {
 				a -> action("mp_autoteambalance", a.length > 0 ? a[0] : "", false));
 		local("mp_limitteams", "How many players one side may have over the other when joining (0: no limit; default 2). Operators.",
 				a -> action("mp_limitteams", a.length > 0 ? a[0] : "", false));
-		local("strafemc_gamemode_server", "Game mode server (1): everyone's main menu loadout; no loadout items, levels, drops, shop, upgrader, trade ups. Operators.",
+		local("strafemc_infinite_pearl", "A Strafe Pearl that never runs out, in every game mode too (1) or not (0). Operators.",
+				a -> action("strafemc_infinite_pearl", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
+		local("strafemc_gamemode_server","Game mode server (1): everyone's main menu loadout; no loadout items, levels, drops, shop, upgrader, trade ups. Operators.",
 				a -> action("strafemc_gamemode_server", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
 		local("strafemc_loadout_keep", "Keep loadout on death (1) or drop it (0). Operators.",
 				a -> action("strafemc_loadout_keep", bool(a, !dev.strafemc.client.ClientGameplay.loadoutKeep()) ? "1" : "0", false));

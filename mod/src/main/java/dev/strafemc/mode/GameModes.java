@@ -75,7 +75,10 @@ public final class GameModes {
 			if (race != null) race.leave(handler.getPlayer());
 		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
-			if (race != null && !alive) race.spawned(newP);
+			if (race != null && !alive) { // the mode places them (their side's spawn blocks; StrafeMc's any-block spawn stays out)
+				if (!race.kickedFromMatch(newP.getUUID())) race.toSpawn(newP);
+				race.spawned(newP);
+			}
 		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DAMAGE.register((e, src, amount) -> race == null || race.allowDamage(e, src));
 		net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.ALLOW_DEATH.register((e, src, amount) -> {
