@@ -162,8 +162,11 @@ public final class Bots {
 			}
 			// the ground under a bot stays loaded (a pearl's ticket, renewed each second): with nobody else near, a
 			// player's death unloads their chunks a second later, which took every bot with it
-			if (b.e.tickCount % 20 == 0)
-				((ServerLevel) b.e.level()).getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.ENDER_PEARL, b.e.chunkPosition(), 2);
+			ServerLevel bl = (ServerLevel) b.e.level();
+			if (b.e.tickCount % 20 == 0) bl.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.ENDER_PEARL, b.e.chunkPosition(), 2);
+			// not running where it stands (its ground not loaded yet): Minecraft neither moves it nor shows it to
+			// anyone, so it waits rather than shoot as an unseen ghost
+			if (!bl.isPositionEntityTicking(b.e.blockPosition())) continue;
 			try {
 				think(b, (ServerLevel) b.e.level(), now);
 			} catch (RuntimeException ex) {
@@ -213,6 +216,11 @@ public final class Bots {
 		m.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(WeaponItems.GUNS.get(weapon(b))));
 		CsTeam.set(m, b.t);
 		b.e = m; // before it's added: adding fires the load event, which removes bots that aren't ours
+		// its ground loaded first: a bot added to an unloaded chunk exists for this code but isn't ticked, sent to
+		// players or found by commands (seen: invisible, shooting)
+		var cp = net.minecraft.world.level.ChunkPos.containing(net.minecraft.core.BlockPos.containing(at));
+		level.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.ENDER_PEARL, cp, 2);
+		level.getChunk(cp.x(), cp.z());
 		level.addFreshEntity(m);
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] bot {} spawned {} at {}", b.label, pick != null ? "on a spawn block" : "at the world spawn", m.blockPosition().toShortString());
 		b.deadSince = 0;
