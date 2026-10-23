@@ -29,12 +29,14 @@ import java.util.UUID;
  * always (their side's colour, a cross where they died until they're back); enemies only while spotted: in sight of the
  * player or a living teammate (in Deathmatch and Arms Race, of the player alone); the bomb to Terrorists wherever it is,
  * to CTs once one of them has it in sight; the bomb sites. Nobody else's position reaches a client's radar.
- * FLAGGED ours: CS2 spots from the server's visibility checks; here a line of sight within SPOT_RANGE and SPOT_COS of
- * where the spotter looks. In Competitive and Wingman each player has a teammate colour (CS2's cl_teammate_color_1-5:
+ * Spotted = on the spotter's screen: inside the view (CS2's default 90 deg field of view on a 16:9 screen, about 53
+ * deg either side; Minecraft's default 70 deg up and down, 35 either way), within SPOT_RANGE, with a clear line from
+ * their eyes that no smoke crosses. FLAGGED ours: CS2 spots from its own visibility checks; the real players' own
+ * field of view and screen shape aren't known to the server. In Competitive and Wingman each player has a teammate colour (CS2's cl_teammate_color_1-5:
  * blue, green, yellow, orange, purple), handed out in each side's order (by name: FLAGGED, CS2 by lobby slot).
  */
 final class Radar {
-	private static final double SPOT_RANGE = 96, SPOT_COS = Math.cos(Math.toRadians(75));
+	private static final double SPOT_RANGE = 96, HALF_W = Math.tan(Math.toRadians(53.13)), HALF_H = Math.tan(Math.toRadians(35));
 	private static final int EVERY = 4;
 	/** Where participants died (by their key), until they live again. */
 	private static final Map<UUID, Vec3> DIED = new HashMap<>();
@@ -132,11 +134,18 @@ final class Radar {
 	private static boolean sees(LivingEntity s, Entity o) {
 		if (s.level() != o.level() || s.distanceToSqr(o) > SPOT_RANGE * SPOT_RANGE) return false;
 		Vec3 eye = s.getEyePosition();
-		Vec3 look = s.getLookAngle();
+		// the spotter's view: forward, right and up
+		Vec3 f = s.getLookAngle(), r = f.cross(new Vec3(0, 1, 0));
+		if (r.lengthSqr() < 1e-6) r = new Vec3(1, 0, 0);
+		r = r.normalize();
+		Vec3 up = r.cross(f).normalize();
 		for (Vec3 to : new Vec3[] {o.getEyePosition(), o.getBoundingBox().getCenter()}) {
 			Vec3 d = to.subtract(eye);
-			if (d.lengthSqr() > 1e-4 && d.normalize().dot(look) < SPOT_COS) continue;
-			if (s.level().clip(new ClipContext(eye, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, s)).getType() == HitResult.Type.MISS) return true;
+			double z = d.dot(f);
+			if (z <= 0.05 || Math.abs(d.dot(r)) / z > HALF_W || Math.abs(d.dot(up)) / z > HALF_H) continue; // off the screen
+			if (s.level().clip(new ClipContext(eye, to, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, s)).getType() != HitResult.Type.MISS) continue;
+			if (dev.strafemc.weapon.GrenadeZones.throughSmoke(s.level(), eye, to)) continue; // smoke hides them, as in CS2
+			return true;
 		}
 		return false;
 	}

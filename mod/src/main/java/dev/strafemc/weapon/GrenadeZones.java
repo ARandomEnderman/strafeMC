@@ -68,7 +68,7 @@ public final class GrenadeZones {
 	}
 
 	/** Does the line from -> to pass through a smoke (CS2's through-smoke kill)? Checked every quarter block. */
-	static boolean throughSmoke(net.minecraft.world.level.Level level, Vec3 from, Vec3 to) {
+	public static boolean throughSmoke(net.minecraft.world.level.Level level, Vec3 from, Vec3 to) {
 		if (SMOKES.isEmpty()) return false;
 		double len = from.distanceTo(to);
 		for (Smoke s : SMOKES) {

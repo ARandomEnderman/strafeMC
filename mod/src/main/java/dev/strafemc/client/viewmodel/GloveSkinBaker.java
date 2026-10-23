@@ -215,6 +215,7 @@ public final class GloveSkinBaker {
 				for (int i = 0; i < 4; i++) {
 					if (w[i] <= 0.004) continue;
 					double[] s = surf[i] == null ? new double[] {0.5, 0.5, 0.5} : unpack(sampleBilinear(surf[i], u * uvScale[i][0], v * uvScale[i][uvScale[i].length > 1 ? 1 : 0]));
+					if (LINEAR) s = toLinear(s);
 					s = adjust(s, bright[i], contrast[i], sat[i]);
 					for (int k = 0; k < 3; k++) c[k] += w[i] * s[k] * tintC[i][k];
 				}
@@ -226,7 +227,7 @@ public final class GloveSkinBaker {
 						double ru = cu * Math.cos(pRot) - cv * Math.sin(pRot) + pCenter[0] + pOff[0], rv = cu * Math.sin(pRot) + cv * Math.cos(pRot) + pCenter[1] + pOff[1];
 						int pc = sampleBilinear(pattern, ru, rv);
 						double a = Math.min(1, (pc >>> 24) / 255.0 / Math.max(0.05, threshold)); // "translucency threshold": solid above it
-						c = lerp(c, unpack(pc), a);
+						c = lerp(c, LINEAR ? toLinear(unpack(pc)) : unpack(pc), a);
 					}
 				}
 				double occ = props == null ? 1 : (sample(props, u, v) >> 16 & 255) / 255.0; // occlusion in red here
@@ -236,9 +237,27 @@ public final class GloveSkinBaker {
 					c = scale(c, 1 - 0.25 * wear * (1 - occ));
 				}
 				if (props != null) c = scale(c, 0.25 + 0.75 * occ);
-				out.setRGB(x, y, rgb(c));
+				out.setRGB(x, y, rgb(LINEAR ? toSrgb(c) : c));
 			}
 		return out;
+	}
+
+	/** Newer finishes in linear light: textures sRGB to linear, the material's colours taken as linear, back to sRGB at the end. */
+	static boolean LINEAR = "1".equals(System.getProperty("strafemc.gloveLinear")); // off until the shader is decoded (an experiment: not CS2's look yet)
+
+	static double[] toLinear(double[] c) {
+		double[] o = new double[3];
+		for (int k = 0; k < 3; k++) o[k] = c[k] <= 0.04045 ? c[k] / 12.92 : Math.pow((c[k] + 0.055) / 1.055, 2.4);
+		return o;
+	}
+
+	static double[] toSrgb(double[] c) {
+		double[] o = new double[3];
+		for (int k = 0; k < 3; k++) {
+			double x = Math.max(0, c[k]);
+			o[k] = x <= 0.0031308 ? x * 12.92 : 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+		}
+		return o;
 	}
 
 	private static BufferedImage load(Function<String, BufferedImage> tex, Params p, String name) {
