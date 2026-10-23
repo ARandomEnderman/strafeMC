@@ -264,6 +264,12 @@ public final class SourceMovement {
 			timed = true;
 		}
 		if (!want) return;
+		double impulse = p.legacyJump ? p.jumpImpulse : jumpMul * (p.jumpImpulse - p.gravity / 256);
+		// After a hard landing the multiplier is near 0 (1 - fall speed x 0.0005: 0 from 2000 u/s). A take-off that slow
+		// (not over NON_JUMP_VELOCITY) is put straight back on the ground by CategorizePosition, but it skipped that tick's
+		// friction and counted as a jump (sound): holding space slid you along frictionless with jump sounds every tick.
+		// Too weak to leave the ground: stay on it until the multiplier recovers.
+		if (impulse <= Unexposed.NON_JUMP_VELOCITY) return;
 
 		if (!p.enableBhop) {
 			// sv_enablebunnyhopping 0: "jump speed may not exceed 1.1x max speed"
@@ -273,7 +279,6 @@ public final class SourceMovement {
 				vz *= cap / hs;
 			}
 		}
-		double impulse = p.legacyJump ? p.jumpImpulse : jumpMul * (p.jumpImpulse - p.gravity / 256);
 		vy = impulse * surf[2]; // honey: MC jump factor
 		vy -= p.gravity * 0.5 * dt; // FinishGravity inside CheckJumpButton
 		onGround = false;
