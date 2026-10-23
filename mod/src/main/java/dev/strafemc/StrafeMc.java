@@ -63,6 +63,16 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.BuyMenu.spawned(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.DamageReport.forget(handler.getPlayer()));
+		// PlayerList.respawn leaves the connection on the dead player (vanilla's caller, handleClientCommand, points it at
+		// the new one afterwards). Game modes call respawn directly: the client's moves, shots and teleports then went to
+		// the removed body while the new one stood where it spawned, unticked (invisible "ghost", hits only took armor,
+		// saved under the spawn). Done first, before any respawn listener teleports the new player.
+		var connectionPhase = net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "connection");
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.addPhaseOrdering(connectionPhase, net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE);
+		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register(connectionPhase, (oldP, newP, alive) -> {
+			newP.connection.player = newP;
+			newP.connection.resetPosition();
+		});
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> {
 			dev.strafemc.weapon.BuyMenu.spawned(newP);
 			// a random spawn block, if the world has any and they're on

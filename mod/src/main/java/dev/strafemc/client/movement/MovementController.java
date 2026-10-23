@@ -43,6 +43,8 @@ public final class MovementController {
 	private double acc;
 	private double px, py, pz; // previous sim position (units) for interpolation
 	private Vec3 lastWritten;
+	/** The LocalPlayer the sim last ran for (a respawn makes a new one). */
+	private LocalPlayer simPlayer;
 	/** Velocity (blocks/tick) we last handed to Minecraft; anything MC adds on top is an outside push. */
 	private Vec3 lastVelWritten;
 	private String inactiveReason = "";
@@ -131,8 +133,10 @@ public final class MovementController {
 					p.getPose(), p.onGround());
 			// a correction by Minecraft (or the server) only moves you: keep your Source velocity, and don't read the
 			// velocity it cleared as an outside push (that used to throw players backwards at their own speed)
-			boolean wasActive = active;
-			resync(p, s, !active, wasActive);
+			// a respawn (or dimension change) is a new player: it starts still, not with the speed you died with
+			boolean wasActive = active, samePlayer = p == simPlayer;
+			simPlayer = p;
+			resync(p, s, !active, wasActive && samePlayer);
 			if (wasActive) lastVelWritten = p.getDeltaMovement();
 			if (!active) StrafeMc.LOG.info("[strafemc] Source movement ACTIVE (unitsPerBlock={})", s);
 			active = true;
