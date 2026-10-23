@@ -52,6 +52,25 @@ public final class SideView {
 		this.slots = slots;
 	}
 
+	private double metresPerU = -1;
+
+	/**
+	 * How many metres of the gun one unit of sticker space across covers: the distance between the model points under
+	 * the view's leftmost and rightmost covered pixels over the width between them (the view runs along the gun).
+	 */
+	public double metresPerU() {
+		if (metresPerU >= 0) return metresPerU;
+		int lo = -1, hi = -1;
+		for (int i = 0; i < W * h; i++) {
+			if (Float.isNaN(pos[3 * i])) continue;
+			if (lo < 0 || i % W < lo % W) lo = i;
+			if (hi < 0 || i % W > hi % W) hi = i;
+		}
+		if (lo < 0 || hi % W == lo % W) return metresPerU = 0;
+		double dx = pos[3 * hi] - pos[3 * lo], dy = pos[3 * hi + 1] - pos[3 * lo + 1], dz = pos[3 * hi + 2] - pos[3 * lo + 2];
+		return metresPerU = Math.sqrt(dx * dx + dy * dy + dz * dz) / ((double) (hi % W - lo % W) / W);
+	}
+
 	/** The model-space point under sticker-space (u, v), the nearest covered one within a few pixels; null if none. */
 	public float[] pointAt(double u, double v) {
 		int px = (int) Math.round(u * W), py = (int) Math.round((v - v0) / (v1 - v0) * h);

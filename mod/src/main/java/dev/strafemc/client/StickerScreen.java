@@ -248,9 +248,19 @@ public final class StickerScreen extends Screen implements dev.strafemc.client.u
 		return null;
 	}
 
-	/** A sticker's size on the view: 1 / its slot's scale of sticker space (a charm: a small fixed size). */
+	/**
+	 * The charm picture's box in metres: CS2's charm models are 5.0 - 5.6 cm tall with their ring (kc_missinglink_*,
+	 * kc_db_occult, kc_wpn_awp_spoon); their 512 x 384 pictures show the charm over 95% of their height, and a 4:3
+	 * picture fills 3/4 of the square box's height: 0.055 / (0.95 x 0.75).
+	 */
+	private static final double CHARM_PICTURE_M = 0.055 / (0.95 * 0.75);
+
+	/** A sticker's size on the view: 1 / its slot's scale of sticker space (a charm: its real size on this gun). */
 	private double sizeOf(SideView v, int slot, int[] box) {
-		if (charmMode()) return box[2] * 0.16; // the charm's picture, big enough to see (it has a margin round it)
+		if (charmMode()) {
+			double mpu = v.metresPerU();
+			return mpu > 0 ? box[2] * CHARM_PICTURE_M / mpu : box[2] * 0.06; // the charm as big as it is next to the gun
+		}
 		double sc = slot < v.slots.size() ? v.slots.get(slot).scale() : 10;
 		return box[2] / Math.max(1, sc);
 	}
