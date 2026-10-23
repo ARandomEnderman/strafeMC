@@ -528,7 +528,11 @@ public final class Bots {
 		boolean marked = target.hurtMarked, wasAlive = target.isAlive();
 		target.invulnerableTime = 0;
 		DamageReport.hit(b.e, target, Math.min(dmg, target.getHealth() / StrafeConfig.hpScale));
-		target.hurtServer(level, level.damageSources().mobAttack(b.e), (float) (dmg * StrafeConfig.hpScale));
+		// the players' own bullet damage (strafemc:bullet): never scaled by the world's difficulty (a mob attack does nothing
+		// on Peaceful and is halved on Easy) and past vanilla armor, as CsArmor has already taken its part
+		var src = new net.minecraft.world.damagesource.DamageSource(level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+				.getOrThrow(GunServer.BULLET), b.e, b.e);
+		target.hurtServer(level, src, (float) (dmg * StrafeConfig.hpScale));
 		if (!StrafeSettings.mcKnockback()) {
 			target.setDeltaMovement(motion);
 			target.hurtMarked = marked;
