@@ -39,6 +39,28 @@ public class StrafePearlEntity extends ThrowableItemProjectile {
 		from = owner.position();
 	}
 
+	/** Ticks until the chunk ticket around the pearl is renewed (as vanilla's ThrownEnderpearl). */
+	private long ticketTimer;
+
+	/**
+	 * Keeps the chunks around the pearl loaded while it flies, as an ender pearl does (ENDER_PEARL ticket, radius 2,
+	 * renewed when it runs out or the pearl enters a new chunk): without it a long throw stopped where the server no
+	 * longer ran entities (past the simulation distance) and never landed, so no push.
+	 */
+	@Override
+	public void tick() {
+		int cx = net.minecraft.core.SectionPos.blockToSectionCoord(getX()), cz = net.minecraft.core.SectionPos.blockToSectionCoord(getZ());
+		super.tick();
+		if (!(level() instanceof ServerLevel level) || !isAlive() || !(getOwner() instanceof ServerPlayer)) return;
+		var pos = net.minecraft.core.BlockPos.containing(position());
+		if (--ticketTimer <= 0 || cx != net.minecraft.core.SectionPos.blockToSectionCoord(pos.getX())
+				|| cz != net.minecraft.core.SectionPos.blockToSectionCoord(pos.getZ())) {
+			level.resetEmptyTime();
+			level.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.ENDER_PEARL, chunkPosition(), 2);
+			ticketTimer = net.minecraft.server.level.TicketType.ENDER_PEARL.timeout();
+		}
+	}
+
 	@Override
 	protected Item getDefaultItem() {
 		return WeaponItems.STRAFE_PEARL;
