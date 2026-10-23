@@ -15,19 +15,21 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * A thrown Strafe Pearl (ours): where it lands it doesn't teleport its thrower like an ender pearl, it pushes them along
- * the line it flew (from where it was thrown to where it landed) with a little lift, so the Source movement carries it
- * like a rocket jump. FLAGGED ours: the push's strength.
+ * A thrown Strafe Pearl (ours): where it lands it doesn't teleport its thrower like an ender pearl, it pushes them toward
+ * where it landed (from where they are by then, so a pearl stasis launches you at it) with a little lift, so the Source
+ * movement carries it like a rocket jump. FLAGGED ours: the push's strength.
  */
 public class StrafePearlEntity extends ThrowableItemProjectile {
 	public static EntityType<StrafePearlEntity> TYPE;
-	/** The push along the flight at REACH blocks (blocks per tick: about 650 u/s) and the lift on top (about 280 u/s). */
+	/** The push toward the pearl at REACH blocks (blocks per tick: about 650 u/s) and the lift on top (about 280 u/s). */
 	static final double PUSH = 0.8, LIFT = 0.35;
 	/**
-	 * The push grows in proportion to how far the pearl flew (PUSH at REACH blocks, never under half of PUSH). The lift
-	 * stays whole: half of it would be 140 u/s, not over Source's NON_JUMP_VELOCITY, and ground friction would eat the push.
+	 * The push grows in proportion to how far the thrower is from where it landed (PUSH at REACH blocks, never under half
+	 * of PUSH). The lift stays whole: half of it would be 140 u/s, not over Source's NON_JUMP_VELOCITY, and ground
+	 * friction would eat the push.
 	 */
 	static final double REACH = 16, MIN_SCALE = 0.5;
+	/** Where it was thrown from (saved with the pearl): the push's direction when the thrower stands on the landing spot. */
 	private Vec3 from;
 
 	public StrafePearlEntity(EntityType<? extends StrafePearlEntity> type, Level level) {
@@ -62,6 +64,18 @@ public class StrafePearlEntity extends ThrowableItemProjectile {
 	}
 
 	@Override
+	protected void addAdditionalSaveData(net.minecraft.world.level.storage.ValueOutput out) {
+		super.addAdditionalSaveData(out);
+		out.storeNullable("strafemc_from", Vec3.CODEC, from);
+	}
+
+	@Override
+	protected void readAdditionalSaveData(net.minecraft.world.level.storage.ValueInput in) {
+		super.readAdditionalSaveData(in);
+		from = in.read("strafemc_from", Vec3.CODEC).orElse(null);
+	}
+
+	@Override
 	protected Item getDefaultItem() {
 		return WeaponItems.STRAFE_PEARL;
 	}
@@ -74,9 +88,9 @@ public class StrafePearlEntity extends ThrowableItemProjectile {
 		level.playSound(null, getX(), getY(), getZ(), SoundEvents.WIND_CHARGE_BURST, SoundSource.PLAYERS, 1f, 1.2f);
 		Entity owner = getOwner();
 		if (owner instanceof LivingEntity who && who.isAlive() && who.level() == level) {
-			Vec3 start = from != null ? from : who.position();
-			Vec3 dir = hit.getLocation().subtract(start);
+			Vec3 dir = hit.getLocation().subtract(who.position());
 			double push = PUSH * Math.max(MIN_SCALE, dir.length() / REACH);
+			if (dir.lengthSqr() < 1e-4 && from != null) dir = hit.getLocation().subtract(from); // on the spot: along its flight
 			if (dir.lengthSqr() < 1e-4) dir = getDeltaMovement();
 			if (dir.lengthSqr() > 1e-6) {
 				dir = dir.normalize();
