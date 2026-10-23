@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * The world's spawn blocks (SpawnBlock) and bomb sites (BombSiteBlock), saved in <world>/strafemc_spawns.txt as
+ * The world's spawn blocks (SpawnBlock), bomb sites (BombSiteBlock) and end of match cameras (EndOfMatchBlock), saved in <world>/strafemc_spawns.txt as
  * "dimension x y z" lines. Entries are checked when used, so a block removed while its chunk was unloaded simply drops
  * out; whose spawn it is or which site lives in the block's state.
  */
@@ -139,7 +139,7 @@ public final class SpawnPoints {
 			BlockPos pos = new BlockPos(Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]));
 			if (level == null) continue;
 			var state = level.getBlockState(pos);
-			if (!(state.getBlock() instanceof SpawnBlock) && !(state.getBlock() instanceof BombSiteBlock)) {
+			if (!(state.getBlock() instanceof SpawnBlock) && !(state.getBlock() instanceof BombSiteBlock) && !(state.getBlock() instanceof EndOfMatchBlock)) {
 				POINTS.remove(k);
 				changed = true;
 				continue;

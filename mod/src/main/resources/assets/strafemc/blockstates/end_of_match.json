@@ -1,0 +1,19 @@
+{
+ "variants": {
+  "facing=north": {
+   "model": "strafemc:block/end_of_match"
+  },
+  "facing=east": {
+   "model": "strafemc:block/end_of_match",
+   "y": 90
+  },
+  "facing=south": {
+   "model": "strafemc:block/end_of_match",
+   "y": 180
+  },
+  "facing=west": {
+   "model": "strafemc:block/end_of_match",
+   "y": 270
+  }
+ }
+}

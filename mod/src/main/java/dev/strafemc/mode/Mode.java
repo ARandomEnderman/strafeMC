@@ -264,14 +264,25 @@ abstract class Mode {
 
 	/**
 	 * Where CS2's end_of_match prefab goes for a player: its origin and facing (MC degrees), so that the camera's middle
-	 * spot (prefab 32, -300) is where the operator stood for strafemc_eom_spot (same dimension), else where the player
+	 * spot (prefab 32, -300) is over the nearest End of Match Camera block (looking the way it faces), else where the
+	 * operator stood for strafemc_eom_spot (same dimension), else where the player
 	 * stands, looking the way they look: the team lines up about 5 blocks ahead.
 	 */
 	JsonObject eomSpot(ServerPlayer p) {
 		double x = p.getX(), y = p.getY(), z = p.getZ();
 		float yaw = p.getYRot();
 		String[] s = dev.strafemc.server.StrafeSettings.eomSpot().split("\\|");
-		if (s.length == 5 && s[0].equals(p.level().dimension().identifier().toString())) {
+		dev.strafemc.world.SpawnPoints.Marker cam = null;
+		for (var m : dev.strafemc.world.SpawnPoints.markers())
+			if (m.state().getBlock() instanceof dev.strafemc.world.EndOfMatchBlock && m.level() == p.level()
+					&& (cam == null || m.pos().distSqr(p.blockPosition()) < cam.pos().distSqr(p.blockPosition()))) cam = m;
+		if (cam != null) { // an End of Match Camera block: the camera over it, looking the way it faces
+			var floor = dev.strafemc.world.SpawnPoints.standOn(cam.level(), cam.pos());
+			x = floor.x;
+			y = floor.y;
+			z = floor.z;
+			yaw = cam.state().getValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING).toYRot();
+		} else if (s.length == 5 && s[0].equals(p.level().dimension().identifier().toString())) {
 			try {
 				x = Double.parseDouble(s[1]);
 				y = Double.parseDouble(s[2]);
