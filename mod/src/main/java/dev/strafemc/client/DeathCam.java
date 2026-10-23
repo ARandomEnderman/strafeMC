@@ -36,7 +36,7 @@ public final class DeathCam {
 	private static long diedAt;
 	/** The death screen held back (null: Minecraft makes it when it's let through); holding: the camera is on. */
 	private static Screen pending;
-	private static boolean holding, released;
+	private static boolean holding, released, stuckLogged;
 	/** The killfeed said the shot that killed us was a headshot (CS2's m_bKilledByHeadshot). */
 	private static boolean headshot;
 	/** The server's death panel details (who, with what skin, their health, damage both ways). */
@@ -144,6 +144,9 @@ public final class DeathCam {
 			holding = true;
 			pending = deathScreen;
 			diedAt = System.nanoTime();
+			stuckLogged = false;
+			dev.strafemc.StrafeMc.LOG.info("[strafemc] died (client): entity {} health {} removed {}; death camera for {} s", mc.player.getId(), mc.player.getHealth(),
+					mc.player.isRemoved(), String.format("%.1f", length()));
 		}
 		return true;
 	}
@@ -158,6 +161,9 @@ public final class DeathCam {
 	public static void frame(Minecraft mc) {
 		if (!holding && !released && mc.player != null && mc.level != null && mc.player.isDeadOrDying()) hold(null);
 		if (mc.player != null && mc.player.isAlive()) { // alive again (respawned, or a mode's respawn cut it short)
+			if (holding || released)
+				dev.strafemc.StrafeMc.LOG.info("[strafemc] alive again (client) after {} s: entity {}", String.format("%.1f", (System.nanoTime() - diedAt) / 1e9),
+						mc.player.getId());
 			holding = false;
 			pending = null;
 			released = false;
@@ -165,8 +171,16 @@ public final class DeathCam {
 			headshot = false;
 			return;
 		}
+		// still dead long after the camera (a respawn that never came): logged once, for the multiplayer "ghost" reports
+		if (released && !stuckLogged && mc.player != null && (System.nanoTime() - diedAt) / 1e9 > length() + 10) {
+			stuckLogged = true;
+			dev.strafemc.StrafeMc.LOG.warn("[strafemc] still dead (client) after {} s: entity {} health {} removed {} screen {}",
+					String.format("%.1f", (System.nanoTime() - diedAt) / 1e9), mc.player.getId(), mc.player.getHealth(), mc.player.isRemoved(),
+					mc.screen == null ? "none" : mc.screen.getClass().getSimpleName());
+		}
 		if (!holding) return;
 		if ((System.nanoTime() - diedAt) / 1e9 >= length()) {
+			dev.strafemc.StrafeMc.LOG.info("[strafemc] death screen let through (client) after {} s", String.format("%.1f", (System.nanoTime() - diedAt) / 1e9));
 			Screen s = pending;
 			pending = null;
 			holding = false;
