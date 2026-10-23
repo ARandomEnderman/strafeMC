@@ -8,7 +8,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -21,10 +20,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The Zone Tool: draws a game mode's zones (Zones). Right-click a block for the first corner and another for the
- * second: the box between them (floor up to Zones.HEADROOM above) becomes a zone of the tool's kind. Sneak and
- * right-click the air to switch the kind (bomb site A / B, T / CT buy zone); sneak and right-click a block inside a zone
- * to remove it. Held, it shows every zone. Operators (or players in creative) only.
+ * The Zone Tool: draws a game mode's zones (Zones). Left-click switches the kind (bomb site A / B, T / CT buy zone).
+ * Right-click a block for the first corner and another for the second: each corner is the space in front of the
+ * clicked face (the floor's top: where you stand), and the box between the two, both included, becomes a zone, so
+ * its height is where you click. Sneak and right-click inside a zone to remove it. Held, it shows every zone.
+ * Operators (or players in creative) only.
  */
 public class ZoneToolItem extends Item {
 	public static DataComponentType<String> KIND;
@@ -50,17 +50,23 @@ public class ZoneToolItem extends Item {
 				&& (sp.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER) || dev.strafemc.server.StrafeOps.contains(sp));
 	}
 
+	/**
+	 * Left-click with the tool in hand (sent by the client: a click in the air reaches the server as nothing): the next
+	 * kind. It used to be sneak + right-click in the air, one slip from sneak + right-click on a block (remove).
+	 */
+	public static void next(ServerPlayer p) {
+		ItemStack s = p.getMainHandItem();
+		if (!(s.getItem() instanceof ZoneToolItem) || !allowed(p)) return;
+		Zones.Type next = Zones.Type.values()[(kind(s).ordinal() + 1) % Zones.Type.values().length];
+		s.set(KIND, next.id);
+		FIRST.remove(p.getUUID());
+		p.sendOverlayMessage(Component.literal("Zone Tool: " + next.label));
+	}
+
 	@Override
-	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (!player.isShiftKeyDown()) return InteractionResult.PASS;
-		ItemStack s = player.getItemInHand(hand);
-		if (!level.isClientSide() && allowed(player)) {
-			Zones.Type next = Zones.Type.values()[(kind(s).ordinal() + 1) % Zones.Type.values().length];
-			s.set(KIND, next.id);
-			FIRST.remove(player.getUUID());
-			player.sendOverlayMessage(Component.literal("Zone Tool: " + next.label));
-		}
-		return InteractionResult.SUCCESS;
+	public boolean canDestroyBlock(ItemStack stack, net.minecraft.world.level.block.state.BlockState state, Level level, BlockPos pos,
+			net.minecraft.world.entity.LivingEntity user) {
+		return false; // left-click switches the kind, it never breaks the map
 	}
 
 	@Override
@@ -72,9 +78,9 @@ public class ZoneToolItem extends Item {
 			player.sendOverlayMessage(Component.literal("Only operators can draw zones."));
 			return InteractionResult.FAIL;
 		}
-		BlockPos pos = ctx.getClickedPos();
+		BlockPos pos = ctx.getClickedPos().relative(ctx.getClickedFace()); // the space in front of the clicked face
 		if (player.isShiftKeyDown()) { // remove the zones here
-			int n = Zones.removeAt(sp, pos.getCenter().add(0, 1, 0));
+			int n = Zones.removeAt(sp, pos.getCenter());
 			sp.sendOverlayMessage(Component.literal(n > 0 ? "Removed " + n + " zone" + (n > 1 ? "s" : "") : "No zone here"));
 			return InteractionResult.SUCCESS;
 		}
@@ -82,10 +88,11 @@ public class ZoneToolItem extends Item {
 		BlockPos first = FIRST.remove(sp.getUUID());
 		if (first == null) {
 			FIRST.put(sp.getUUID(), pos);
-			sp.sendOverlayMessage(Component.literal(type.label + ": first corner set, now right-click the opposite corner"));
+			sp.sendOverlayMessage(Component.literal(type.label + ": first corner set, now right-click the opposite corner (left-click: another kind)"));
 		} else {
 			Zones.Zone z = Zones.add(sp, type, first, pos);
-			sp.sendOverlayMessage(Component.literal(type.label + " added (" + (z.x1() - z.x0() + 1) + " x " + (z.z1() - z.z0() + 1) + " blocks)"));
+			sp.sendOverlayMessage(Component.literal(type.label + " added (" + (z.x1() - z.x0() + 1) + " x " + (z.y1() - z.y0() + 1) + " x "
+					+ (z.z1() - z.z0() + 1) + " blocks)"));
 		}
 		return InteractionResult.SUCCESS;
 	}

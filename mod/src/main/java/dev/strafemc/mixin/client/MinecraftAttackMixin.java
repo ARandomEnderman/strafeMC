@@ -14,7 +14,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MinecraftAttackMixin {
 	@Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
 	private void strafemc$gunStart(CallbackInfoReturnable<Boolean> cir) {
-		if (GunClient.holdingGun(((Minecraft) (Object) this).player)) cir.setReturnValue(false);
+		var p = ((Minecraft) (Object) this).player;
+		if (GunClient.holdingGun(p)) cir.setReturnValue(false);
+		else if (zoneTool(p)) { // the Zone Tool: left-click switches the zone kind (the server does it; air clicks send nothing else)
+			if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(dev.strafemc.net.StrafePayloads.Action.TYPE))
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(new dev.strafemc.net.StrafePayloads.Action("zone_next", ""));
+			cir.setReturnValue(false);
+		}
+	}
+
+	private static boolean zoneTool(net.minecraft.client.player.LocalPlayer p) {
+		return p != null && p.getMainHandItem().getItem() instanceof dev.strafemc.mode.ZoneToolItem;
 	}
 
 	@Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
@@ -26,6 +36,7 @@ public abstract class MinecraftAttackMixin {
 
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void strafemc$gunContinue(boolean attacking, CallbackInfo ci) {
-		if (GunClient.holdingGun(((Minecraft) (Object) this).player)) ci.cancel();
+		var p = ((Minecraft) (Object) this).player;
+		if (GunClient.holdingGun(p) || zoneTool(p)) ci.cancel(); // holding left-click with the Zone Tool doesn't mine
 	}
 }

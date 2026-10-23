@@ -63,9 +63,6 @@ public final class Zones {
 		}
 	}
 
-	/** How far above the higher corner a zone reaches, so a player standing on the marked floor is inside (ours). */
-	public static final int HEADROOM = 3;
-
 	private static final Gson GSON = new Gson();
 	private static final List<Zone> ALL = new ArrayList<>();
 	private static MinecraftServer server;
@@ -144,10 +141,10 @@ public final class Zones {
 		}
 	}
 
-	/** A box between two blocks (the floor's top up HEADROOM blocks above the higher one). */
+	/** The box between two corner blocks, both included (the Zone Tool's corners are the spaces in front of what was clicked). */
 	public static Zone add(ServerPlayer by, Type type, BlockPos a, BlockPos b) {
-		Zone z = new Zone(by.level().dimension().identifier().toString(), type, Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()) + 1,
-				Math.min(a.getZ(), b.getZ()), Math.max(a.getX(), b.getX()), Math.max(a.getY(), b.getY()) + HEADROOM, Math.max(a.getZ(), b.getZ()));
+		Zone z = new Zone(by.level().dimension().identifier().toString(), type, Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()),
+				Math.min(a.getZ(), b.getZ()), Math.max(a.getX(), b.getX()), Math.max(a.getY(), b.getY()), Math.max(a.getZ(), b.getZ()));
 		synchronized (ALL) {
 			ALL.add(z);
 		}

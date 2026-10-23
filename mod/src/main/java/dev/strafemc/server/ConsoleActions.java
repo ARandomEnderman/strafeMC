@@ -517,6 +517,7 @@ public final class ConsoleActions {
 				dev.strafemc.mode.GameModes.setCvar(cmd, v.equalsIgnoreCase("default") ? "" : v);
 				ConsoleRelay.reply(p, cmd + " = " + (v.equalsIgnoreCase("default") ? "the game mode's" : v));
 			}
+			case "zone_next" -> dev.strafemc.mode.ZoneToolItem.next(p); // left-click with the Zone Tool (it checks who may)
 			case "strafemc_infinite_pearl" -> { // your own Strafe Pearl never runs out (in every game mode too); operators
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can do that."));
