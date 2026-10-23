@@ -21,8 +21,13 @@ import net.minecraft.world.phys.Vec3;
  */
 public class StrafePearlEntity extends ThrowableItemProjectile {
 	public static EntityType<StrafePearlEntity> TYPE;
-	/** The push along the flight (blocks per tick: about 650 u/s) and the lift on top (about 280 u/s). */
+	/** The push along the flight at REACH blocks (blocks per tick: about 650 u/s) and the lift on top (about 280 u/s). */
 	static final double PUSH = 0.8, LIFT = 0.35;
+	/**
+	 * The push grows in proportion to how far the pearl flew (PUSH at REACH blocks, never under half of PUSH). The lift
+	 * stays whole: half of it would be 140 u/s, not over Source's NON_JUMP_VELOCITY, and ground friction would eat the push.
+	 */
+	static final double REACH = 16, MIN_SCALE = 0.5;
 	private Vec3 from;
 
 	public StrafePearlEntity(EntityType<? extends StrafePearlEntity> type, Level level) {
@@ -49,10 +54,11 @@ public class StrafePearlEntity extends ThrowableItemProjectile {
 		if (owner instanceof LivingEntity who && who.isAlive() && who.level() == level) {
 			Vec3 start = from != null ? from : who.position();
 			Vec3 dir = hit.getLocation().subtract(start);
+			double push = PUSH * Math.max(MIN_SCALE, dir.length() / REACH);
 			if (dir.lengthSqr() < 1e-4) dir = getDeltaMovement();
 			if (dir.lengthSqr() > 1e-6) {
 				dir = dir.normalize();
-				who.push(dir.x * PUSH, dir.y * PUSH + LIFT, dir.z * PUSH);
+				who.push(dir.x * push, dir.y * push + LIFT, dir.z * push);
 				who.hurtMarked = true; // sends the push to the player's client (their movement adds it to their speed)
 				who.resetFallDistance();
 				level.playSound(null, who.getX(), who.getY(), who.getZ(), SoundEvents.BREEZE_JUMP, SoundSource.PLAYERS, 0.8f, 1.1f);
