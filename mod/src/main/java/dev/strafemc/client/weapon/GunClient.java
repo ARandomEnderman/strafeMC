@@ -452,6 +452,12 @@ public final class GunClient {
 		}
 		zoom = level;
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("zoom", String.valueOf(level)));
+		if (level > 0 && p.getMainHandItem().getItem() instanceof GunItem g) { // why a scope shows or not (user report: snipers only zoom)
+			var vd = dev.strafemc.client.ClientGameplay.weapon(g.weaponClass);
+			dev.strafemc.StrafeMc.LOG.info("[strafemc] zoom {} {}: overlay {} (hide flag {}, merged data {}, local data {}, synced {})", level, g.weaponClass,
+					scopeOverlay(), vd == null ? "-" : vd.get("m_bHideViewModelWhenZoomed"), vd != null, dev.strafemc.data.WeaponData.get(g.weaponClass) != null,
+					dev.strafemc.client.ClientGameplay.synced());
+		}
 	}
 
 	/** Unzoomed at once (weapon switch). */

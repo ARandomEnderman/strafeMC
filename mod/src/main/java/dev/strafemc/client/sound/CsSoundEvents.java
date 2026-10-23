@@ -103,7 +103,9 @@ public final class CsSoundEvents {
 			double mix = MIX_GAIN.getOrDefault(String.valueOf(r.get("mixgroup")), 1.0);
 			out.put(name, new Event(name, fl, num(r.get("volume"), 1) * mix, num(r.get("pitch"), 1), num(r.get("pitch_random_min"), 0),
 					num(r.get("pitch_random_max"), 0),
-					Boolean.TRUE.equals(r.get("use_distance_volume_mapping_curve")) ? curve(r.get("distance_volume_mapping_curve")) : null,
+					// a curve without use_distance_volume_mapping_curve still counts (52 events: the FAMAS's Mech click, dropped
+					// guns' impacts...); dropping it made them full volume at any distance. No event sets the flag false.
+					!Boolean.FALSE.equals(r.get("use_distance_volume_mapping_curve")) ? curve(r.get("distance_volume_mapping_curve")) : null,
 					r.get("position_offset") instanceof List<?> po && po.size() == 3 ? num(po.get(2), 0) : 0,
 					Boolean.TRUE.equals(r.get("suppression_enable")), num(r.get("suppression_volume_multiplier"), 1),
 					num(r.get("suppression_falloff_multiplier"), 1), List.copyOf(children)));
