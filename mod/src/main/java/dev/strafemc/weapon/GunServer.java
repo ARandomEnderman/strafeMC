@@ -380,6 +380,9 @@ public final class GunServer {
 		return clip <= 0 && empty != null && !empty.equals(clipPath(cls, "reload")) ? "reload_empty" : "reload";
 	}
 
+	/** When a dropped shot was last logged, per player. */
+	private static final java.util.Map<java.util.UUID, Long> DROPPED_LOG = new java.util.concurrent.ConcurrentHashMap<>();
+
 	public static void fire(ServerPlayer p, dev.strafemc.net.StrafePayloads.Fire f) {
 		dev.strafemc.mode.GameModes.fired(p);
 		ItemStack held = p.getMainHandItem();
@@ -394,6 +397,13 @@ public final class GunServer {
 			w = GunItem.statsOf(gi.weaponClass, gi.modeOf(held, zoom, alt));
 		}
 		if (w == null) {
+			// a shot the server can't take (dead here, or no gun in hand here): logged, at most once a second each
+			long now = System.currentTimeMillis();
+			if (now - DROPPED_LOG.getOrDefault(p.getUUID(), 0L) > 1000) {
+				DROPPED_LOG.put(p.getUUID(), now);
+				dev.strafemc.StrafeMc.LOG.warn("[strafemc] shot from {} dropped: alive {} removed {} {} health {} holding {}", p.getScoreboardName(), p.isAlive(),
+						p.isRemoved(), p.getRemovalReason(), p.getHealth(), held.isEmpty() ? "nothing" : held.getItem().toString());
+			}
 			ServerShots.skip(p, f.shot());
 			return;
 		}

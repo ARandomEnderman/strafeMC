@@ -49,21 +49,29 @@ public final class ModeHud {
 
 	/** Players on each side now: [CT, T]. */
 	public static int[] teamCounts() {
-		int[] n = new int[2];
-		JsonObject s = state;
-		if (s.has("players")) for (JsonElement el : s.getAsJsonArray("players")) n[el.getAsJsonObject().get("t").getAsBoolean() ? 1 : 0]++;
-		return n;
+		return new int[] {teamNames(false).size(), teamNames(true).size()};
 	}
 
-	/** The names on a side (T or CT) as the mode's state lists them. */
+	/**
+	 * The names on a side (T or CT): as the running mode's state lists them; with no mode, every player and bot this
+	 * client knows of, by the side the server gave them (CsTeam.SIDE, sent with every entity).
+	 */
 	public static java.util.List<String> teamNames(boolean t) {
 		java.util.List<String> out = new java.util.ArrayList<>();
 		JsonObject s = state;
-		if (s.has("players"))
+		if (s.has("players")) {
 			for (JsonElement el : s.getAsJsonArray("players")) {
 				JsonObject p = el.getAsJsonObject();
 				if (p.get("t").getAsBoolean() == t) out.add(p.get("name").getAsString());
 			}
+			return out;
+		}
+		var mc = Minecraft.getInstance();
+		if (mc.level == null) return out;
+		for (var p : mc.level.players()) if (dev.strafemc.weapon.CsTeam.isT(p) == t) out.add(p.getScoreboardName());
+		for (var e : mc.level.entitiesForRendering())
+			if (e instanceof net.minecraft.world.entity.decoration.Mannequin && e.hasAttached(dev.strafemc.weapon.CsTeam.SIDE) && dev.strafemc.weapon.CsTeam.isT(e) == t)
+				out.add(e.getName().getString());
 		return out;
 	}
 

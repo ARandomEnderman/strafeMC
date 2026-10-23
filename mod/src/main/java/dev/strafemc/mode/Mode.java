@@ -449,7 +449,11 @@ abstract class Mode {
 			if (e.getValue() > t) continue;
 			respawnAt.remove(e.getKey());
 			ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
-			if (p != null && p.isDeadOrDying()) server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
+			if (p != null && p.isDeadOrDying()) {
+				ServerPlayer n = server.getPlayerList().respawn(p, false, net.minecraft.world.entity.Entity.RemovalReason.KILLED);
+				dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: respawned {} at {} in {} (alive {})", name(n), n.blockPosition().toShortString(),
+						n.level().dimension().identifier(), n.isAlive());
+			} else dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: respawn of {} skipped: {}", e.getKey(), p == null ? "not online" : "not dead");
 		}
 		for (ServerPlayer p : players()) {
 			p.getFoodData().setFoodLevel(20);
