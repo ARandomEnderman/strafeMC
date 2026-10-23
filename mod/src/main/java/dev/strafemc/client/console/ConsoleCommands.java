@@ -366,8 +366,6 @@ public final class ConsoleCommands {
 				a -> action("strafemc_shop_refresh", a.length > 0 ? a[0] : "", false));
 		local("strafemc_buyzone", "Round modes: how far a side's buy zone reaches from its spawn blocks (blocks). Operators.",
 				a -> action("strafemc_buyzone", a.length > 0 ? a[0] : "", false));
-		local("strafemc_bombsite", "Round modes: how wide and deep a Bomb Site block's plant area is (blocks; 6 tall from the block's top). Operators.",
-				a -> action("strafemc_bombsite", a.length > 0 ? a[0] : "", false));
 		local("strafemc_overtime", "Round modes: a tie on the last round goes to overtime (1) or is a draw (0, CS2 Competitive). Operators.",
 				a -> action("strafemc_overtime", a.length > 0 ? (bool(a, true) ? "1" : "0") : "", false));
 		local("strafemc_gamemode", "The game mode: none (strafeMC survival), armsrace, deathmatch or teamdeathmatch. Operators.",

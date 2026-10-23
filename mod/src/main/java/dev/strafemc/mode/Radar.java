@@ -5,8 +5,6 @@ import com.google.gson.JsonObject;
 import dev.strafemc.net.StrafePayloads;
 import dev.strafemc.weapon.CsTeam;
 import dev.strafemc.weapon.WeaponItems;
-import dev.strafemc.world.BombSiteBlock;
-import dev.strafemc.world.SpawnPoints;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -156,15 +154,11 @@ final class Radar {
 		return out;
 	}
 
-	/** The bomb sites: drawn zones' middles, else the site blocks' floors, with their letters. */
+	/** The bomb sites: the drawn zones' middles, with their letters. */
 	private static JsonArray sites() {
 		JsonArray out = new JsonArray();
 		for (Zones.Zone z : Zones.all())
 			if (z.type().site()) out.add(site(z.type() == Zones.Type.SITE_A ? "A" : "B", z.floorCentre()));
-		if (out.isEmpty())
-			for (SpawnPoints.Marker m : SpawnPoints.markers())
-				if (m.state().getBlock() instanceof BombSiteBlock)
-					out.add(site(m.state().getValue(BombSiteBlock.SITE) == BombSiteBlock.Site.A ? "A" : "B", SpawnPoints.standOn(m.level(), m.pos())));
 		return out;
 	}
 

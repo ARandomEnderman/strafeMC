@@ -302,7 +302,7 @@ public final class PerfBench {
 					var sp = dev.strafemc.weapon.WeaponItems.SPAWN_POINT.defaultBlockState();
 					level.setBlockAndUpdate(g.offset(0, 0, 3), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.T));
 					level.setBlockAndUpdate(g.offset(12, 0, 3), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.CT));
-					level.setBlockAndUpdate(g.offset(6, 0, 8), dev.strafemc.weapon.WeaponItems.BOMB_SITE.defaultBlockState());
+					dev.strafemc.mode.Zones.add(p, dev.strafemc.mode.Zones.Type.SITE_A, g.offset(4, 1, 6), g.offset(8, 3, 10));
 					dev.strafemc.weapon.CsTeam.set(p, true);
 					dev.strafemc.mode.GameModes.set("competitive");
 					dev.strafemc.weapon.Bots.add(false);
@@ -368,7 +368,7 @@ public final class PerfBench {
 					botBase = g;
 					var sp = dev.strafemc.weapon.WeaponItems.SPAWN_POINT.defaultBlockState();
 					level.setBlockAndUpdate(g.offset(0, 0, 0), sp.setValue(dev.strafemc.world.SpawnBlock.SIDE, dev.strafemc.world.SpawnBlock.Side.T));
-					level.setBlockAndUpdate(g.offset(6, 0, 0), dev.strafemc.weapon.WeaponItems.BOMB_SITE.defaultBlockState());
+					dev.strafemc.mode.Zones.add(p, dev.strafemc.mode.Zones.Type.SITE_A, g.offset(4, 1, -2), g.offset(8, 3, 2));
 					BlockPos ct = g.offset(40, 0, 0);
 					for (int x = -2; x <= 2; x++)
 						for (int z = -2; z <= 2; z++)

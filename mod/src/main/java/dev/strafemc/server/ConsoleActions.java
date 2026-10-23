@@ -455,7 +455,7 @@ public final class ConsoleActions {
 				} catch (NumberFormatException ignored) {
 				}
 			}
-			case "strafemc_buyzone", "strafemc_bombsite", "strafemc_overtime" -> {
+			case "strafemc_buyzone", "strafemc_overtime" -> {
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can change the game mode's settings."));
 					break;
@@ -464,12 +464,11 @@ public final class ConsoleActions {
 					String v = arg.trim();
 					switch (cmd) {
 						case "strafemc_buyzone" -> { if (!v.isEmpty()) StrafeSettings.setBuyZone(Integer.parseInt(v)); }
-						case "strafemc_bombsite" -> { if (!v.isEmpty()) StrafeSettings.setBombSite(Integer.parseInt(v)); }
 						default -> { if (!v.isEmpty()) StrafeSettings.setOvertime(!v.equals("0")); }
 					}
 				} catch (NumberFormatException ignored) {
 				}
-				ConsoleRelay.reply(p, "buy zone " + StrafeSettings.buyZone() + " blocks, bomb sites " + StrafeSettings.bombSite() + " blocks, overtime "
+				ConsoleRelay.reply(p, "buy zone " + StrafeSettings.buyZone() + " blocks, overtime "
 						+ (StrafeSettings.overtime() ? "on" : "off"));
 			}
 			case "strafemc_shop_refresh" -> { // "[player]": that player's shop (default yours) to new offers now

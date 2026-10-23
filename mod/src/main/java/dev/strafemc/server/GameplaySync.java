@@ -125,7 +125,6 @@ public final class GameplaySync {
 		st.put("strafemc_wear", StrafeSettings.wear() ? 1 : 0);
 		st.put("strafemc_spawnblocks", StrafeSettings.spawnBlocks() ? 1 : 0);
 		st.put("strafemc_buyzone", StrafeSettings.buyZone());
-		st.put("strafemc_bombsite", StrafeSettings.bombSite());
 		st.put("strafemc_overtime", StrafeSettings.overtime() ? 1 : 0);
 		st.put("strafemc_gamemode_server", ServerRules.modeServer() ? 1 : 0);
 		st.put("strafemc_gamemode", dev.strafemc.mode.GameModes.MODES.indexOf(StrafeSettings.gameMode()));

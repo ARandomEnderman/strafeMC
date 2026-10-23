@@ -57,11 +57,11 @@ public final class StrafeSettings {
 	/** strafemc_gamemode: the game mode running in this world ("none": plain strafeMC survival; "armsrace"). */
 	private static volatile String gameMode = "none";
 	/**
-	 * Round modes: how far from a side's spawn blocks its buy zone reaches, and from a bomb site block its plant area
-	 * (blocks; CS2 maps draw both by hand), and whether a tie on the last round goes to overtime (CS2's
+	 * Round modes: how far from a side's spawn blocks its buy zone reaches when no buy zones are drawn
+	 * (blocks), and whether a tie on the last round goes to overtime (CS2's
 	 * mp_overtime_enable, off in its Competitive config).
 	 */
-	private static volatile int buyZone = 12, bombSite = 5;
+	private static volatile int buyZone = 12;
 	private static volatile boolean overtime = false;
 	/** CS2 cvars operators set over the game modes' configs (mp_forcecamera, spec_freeze_time, team balance), kept with the world. */
 	private static final java.util.Map<String, String> MODE_CVARS = new java.util.concurrent.ConcurrentHashMap<>();
@@ -138,14 +138,7 @@ public final class StrafeSettings {
 		save();
 	}
 
-	public static int bombSite() {
-		return bombSite;
-	}
 
-	public static void setBombSite(int blocks) {
-		bombSite = Math.max(1, Math.min(64, blocks));
-		save();
-	}
 
 	public static java.util.Map<String, String> modeCvars() {
 		return java.util.Map.copyOf(MODE_CVARS);
@@ -370,7 +363,6 @@ public final class StrafeSettings {
 		PERSONAL.clear();
 		gameMode = "none";
 		buyZone = 12;
-		bombSite = 5;
 		overtime = false;
 		MODE_CVARS.clear();
 		try {
@@ -402,7 +394,6 @@ public final class StrafeSettings {
 				if (o != null && o.has("maxUnlagMs")) maxUnlagMs = o.get("maxUnlagMs").getAsInt();
 				if (o != null && o.has("gameMode")) gameMode = o.get("gameMode").getAsString();
 				if (o != null && o.has("buyZone")) buyZone = o.get("buyZone").getAsInt();
-				if (o != null && o.has("bombSite")) bombSite = o.get("bombSite").getAsInt();
 				if (o != null && o.has("overtime")) overtime = o.get("overtime").getAsBoolean();
 				if (o != null && o.has("modeCvars"))
 					for (var e : o.getAsJsonObject("modeCvars").entrySet()) if (MODE_CVAR_NAMES.contains(e.getKey())) MODE_CVARS.put(e.getKey(), e.getValue().getAsString());
@@ -445,7 +436,6 @@ public final class StrafeSettings {
 		o.addProperty("playerChoice", playerChoice);
 		o.addProperty("gameMode", gameMode);
 		o.addProperty("buyZone", buyZone);
-		o.addProperty("bombSite", bombSite);
 		o.addProperty("overtime", overtime);
 		JsonObject mc = new JsonObject();
 		MODE_CVARS.forEach(mc::addProperty);

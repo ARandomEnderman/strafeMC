@@ -21,8 +21,8 @@ import java.util.List;
 /**
  * Map zones drawn with the Zone Tool: bomb sites A and B and each side's buy zone, as boxes of blocks, saved in
  * <world>/strafemc_zones.json and sent to every player (the tool shows them). Round modes use them where the world
- * has any: the C4 plants inside a site, players buy inside their side's buy zone; without them, the Bomb Site and
- * Spawn Point blocks' ranges (strafemc_bombsite, strafemc_buyzone) stand in.
+ * has any: the C4 plants only inside a site, players buy inside their side's buy zone; without buy zones the Spawn
+ * Point blocks' range (strafemc_buyzone) stands in.
  */
 public final class Zones {
 	public enum Type {

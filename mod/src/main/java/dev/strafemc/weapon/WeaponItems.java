@@ -41,7 +41,7 @@ public final class WeaponItems {
 	/** Rounds left in a magazine item. Absent = full. */
 	public static DataComponentType<Integer> ROUNDS;
 
-	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, BOMB_SITE_ITEM, END_OF_MATCH_ITEM, HEGRENADE;
+	public static Item AK47, MAG_AK47, KNIFE_FALCHION, SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, END_OF_MATCH_ITEM, HEGRENADE;
 	/** Every grenade item, by type. */
 	public static final java.util.Map<Grenade, Item> GRENADES = new java.util.EnumMap<>(Grenade.class);
 	public static Item STRAFE_PEARL;
@@ -50,7 +50,7 @@ public final class WeaponItems {
 	/** Every gun, its magazine item and every knife, by weapon class (WeaponTable). */
 	public static final java.util.Map<String, Item> GUNS = new java.util.LinkedHashMap<>(), MAGS = new java.util.LinkedHashMap<>(),
 			KNIVES = new java.util.LinkedHashMap<>();
-	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING, SPAWN_POINT, BOMB_SITE, END_OF_MATCH;
+	public static net.minecraft.world.level.block.Block SURF_RAMP, SURF_SLOPE, SURF_RAMP_LYING, SPAWN_POINT, END_OF_MATCH;
 
 	private WeaponItems() {}
 
@@ -150,13 +150,6 @@ public final class WeaponItems {
 		ResourceKey<Item> spawnItem = ResourceKey.create(Registries.ITEM, id("spawn_point"));
 		SPAWN_POINT_ITEM = Registry.register(BuiltInRegistries.ITEM, spawnItem,
 				new net.minecraft.world.item.BlockItem(SPAWN_POINT, new Item.Properties().setId(spawnItem).useBlockDescriptionPrefix()));
-		ResourceKey<net.minecraft.world.level.block.Block> siteKey = ResourceKey.create(Registries.BLOCK, id("bomb_site"));
-		BOMB_SITE = Registry.register(BuiltInRegistries.BLOCK, siteKey, new dev.strafemc.world.BombSiteBlock(
-				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(siteKey).strength(1.5f)
-						.sound(net.minecraft.world.level.block.SoundType.STONE)));
-		ResourceKey<Item> siteItem = ResourceKey.create(Registries.ITEM, id("bomb_site"));
-		BOMB_SITE_ITEM = Registry.register(BuiltInRegistries.ITEM, siteItem,
-				new net.minecraft.world.item.BlockItem(BOMB_SITE, new Item.Properties().setId(siteItem).useBlockDescriptionPrefix()));
 		ResourceKey<net.minecraft.world.level.block.Block> eomKey = ResourceKey.create(Registries.BLOCK, id("end_of_match"));
 		END_OF_MATCH = Registry.register(BuiltInRegistries.BLOCK, eomKey, new dev.strafemc.world.EndOfMatchBlock(
 				net.minecraft.world.level.block.state.BlockBehaviour.Properties.of().setId(eomKey).strength(1.5f)
@@ -189,7 +182,7 @@ public final class WeaponItems {
 				new CreativeSections.Section("grenades", "Grenades", l -> { for (Item g : GRENADES.values()) l.add(new ItemStack(g)); }),
 				new CreativeSections.Section("other", "Other", l -> {
 					for (Item i : new Item[] {C4, DEFUSE_KIT, KEVLAR, ASSAULTSUIT, HEALTHSHOT, STRAFE_PEARL, STORAGE_UNIT, NAME_TAG, CHARM_DETACHMENT, STATTRAK_SWAP, BULK_OPENER, SHOP_REFRESH,
-							SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, BOMB_SITE_ITEM, END_OF_MATCH_ITEM, ZONE_TOOL})
+							SURF_RAMP_ITEM, SURF_SLOPE_ITEM, SURF_RAMP_LYING_ITEM, SPAWN_POINT_ITEM, END_OF_MATCH_ITEM, ZONE_TOOL})
 						l.add(new ItemStack(i));
 					for (int d : new int[] {10, 50, 100, 500, 1000}) l.add(VoucherItem.stack(VOUCHER_ITEM, d));
 				})));

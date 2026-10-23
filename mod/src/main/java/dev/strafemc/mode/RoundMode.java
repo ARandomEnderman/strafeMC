@@ -35,7 +35,7 @@ import java.util.UUID;
  * the player, the winners get the reward for how they won, the losers the loss bonus that grows with each loss in a
  * row (cash_team_loser_bonus + _consecutive_rounds, up to four steps, CS2's counter going down one on a win), capped at
  * mp_maxmoney. Survivors keep their gear; the dead come back with the side's pistol. A T gets the C4 each round, which
- * plants only at a bomb site (BombSiteBlock). Halftime swaps the sides and resets money; the first to win more than
+ * plants only at a bomb site (a zone drawn with the Zone Tool). Halftime swaps the sides and resets money; the first to win more than
  * half the rounds wins the match, a tie on the last round is a draw.
  */
 final class RoundMode extends Mode {
