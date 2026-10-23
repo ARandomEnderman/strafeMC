@@ -388,14 +388,14 @@ public final class MovementController {
 
 	private void readInput(Minecraft mc, LocalPlayer p) {
 		var o = mc.options;
-		boolean ui = mc.screen == null;
+		boolean ui = mc.screen == null && !p.isDeadOrDying(); // dead: no keys (CS2's death camera holds you still)
 		input.forward = ui ? (o.keyUp.isDown() ? 1 : 0) - (o.keyDown.isDown() ? 1 : 0) : 0;
 		input.side = ui ? (o.keyRight.isDown() ? 1 : 0) - (o.keyLeft.isDown() ? 1 : 0) : 0;
 		dev.strafemc.client.console.Binds.poll(mc);
 		input.jumpHeld = ui && (o.keyJump.isDown() || dev.strafemc.client.console.Binds.holdJump);
 		input.duck = ui && (o.keyShift.isDown() || dev.strafemc.client.console.Binds.holdDuck);
 		input.walk = ui && (o.keySprint.isDown() || dev.strafemc.client.console.Binds.holdSpeed);
-		if (wheelJumps.getAndSet(0) > 0) input.jumpImpulse = true;
+		if (wheelJumps.getAndSet(0) > 0 && ui) input.jumpImpulse = true;
 	}
 
 	private void hud(Minecraft mc, LocalPlayer p) {
