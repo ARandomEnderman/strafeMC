@@ -11,6 +11,11 @@ import net.minecraft.world.entity.Entity;
  * spec_freeze_traveltime and spec_freeze_time; the game modes set CS2's gamemode configs' spec_freeze_time:
  * competitive 2.0, casual 3.0, deathmatch / arms race 2; else CS2's defaults 0.8 / 0.3 / 3.0) before the death screen
  * shows. CS2's death panel stays up the whole time you're dead.
+ * <p>
+ * The view's colour (CS2's client, the death camera's post-processing weights, t = seconds since the death): the red
+ * tint (death_cam_phase1) at clamp(4t), in over a quarter second; the fade to black (death_cam_phase2) at clamp(2t)
+ * when it was a headshot (m_bKilledByHeadshot: black half a second after), else clamp(2 (t - (spec_freeze_time -
+ * 0.5))): black over the freeze time's last half second.
  */
 public final class DeathCam {
 	/** A spec_freeze_ cvar (seconds, 0-10) as the server has it, else CS2's default. */
@@ -32,13 +37,19 @@ public final class DeathCam {
 	/** The death screen held back (null: Minecraft makes it when it's let through); holding: the camera is on. */
 	private static Screen pending;
 	private static boolean holding, released;
+	/** The killfeed said the shot that killed us was a headshot (CS2's m_bKilledByHeadshot). */
+	private static boolean headshot;
 	/** The server's death panel details (who, with what skin, their health, damage both ways). */
 	private static StrafePayloads.DeathInfo info;
 
 	private DeathCam() {}
 
-	/** A killfeed line (kept for callers; the camera no longer needs the killer). */
-	public static void notice(StrafePayloads.KillNotice m) {}
+	/** A killfeed line: whether the shot that killed us was a headshot (the fade to black comes sooner then). */
+	public static void notice(StrafePayloads.KillNotice m) {
+		var p = Minecraft.getInstance().player;
+		if (p == null || m.victimId() != p.getId()) return;
+		headshot = (m.flags() & dev.strafemc.weapon.KillFeed.HEADSHOT) != 0;
+	}
 
 	public static void info(StrafePayloads.DeathInfo m) {
 		Minecraft.getInstance().execute(() -> info = m);
@@ -47,6 +58,24 @@ public final class DeathCam {
 	public static void register() {
 		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "death_panel"),
 				(g, delta) -> panel(g));
+		DeathFade.init();
+		// before the HUD, after the world: the death camera's colour on the world only
+		net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementBefore(
+				net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MISC_OVERLAYS,
+				net.minecraft.resources.Identifier.fromNamespaceAndPath("strafemc", "death_fade"), (g, delta) -> fade());
+	}
+
+	/** The death camera's colour now: the red tint and the fade to black, as CS2 weighs them. */
+	private static void fade() {
+		if (!holding) return;
+		double t = (System.nanoTime() - diedAt) / 1e9;
+		double tint = clamp(4 * t), black = headshot ? clamp(2 * t) : clamp(2 * (t - (cvar("spec_freeze_time", 3.0) - 0.5)));
+		float keep = (float) (1 - black), gb = (float) (1 - tint * (1 - 0.58));
+		DeathFade.draw(keep, gb * keep, gb * keep);
+	}
+
+	private static double clamp(double v) {
+		return Math.max(0, Math.min(1, v));
 	}
 
 	/**
@@ -121,6 +150,7 @@ public final class DeathCam {
 			pending = null;
 			released = false;
 			info = null;
+			headshot = false;
 			return;
 		}
 		if (!holding) return;
