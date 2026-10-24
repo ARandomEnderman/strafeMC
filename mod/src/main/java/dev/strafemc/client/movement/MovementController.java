@@ -329,6 +329,7 @@ public final class MovementController {
 		params.weaponMaxSpeed = Double.isNaN(gun) ? dev.strafemc.client.ClientGameplay.maxSpeed("weapon_knife", false) : gun; // held weapon's m_flMaxSpeed
 		params.weaponMaxSpeed *= velocityModifier; // CS2 tagging: being hit caps your speed for a moment
 		if (dev.strafemc.client.C4Client.frozen()) params.weaponMaxSpeed = 0; // planting or defusing the C4 holds you still
+		params.scoped = dev.strafemc.client.weapon.GunClient.INSTANCE.scoped();
 	}
 
 	private static double cv(String n) {

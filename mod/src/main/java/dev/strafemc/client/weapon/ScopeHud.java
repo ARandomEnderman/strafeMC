@@ -27,8 +27,9 @@ import java.util.OptionalInt;
  * (materials/effects/legacy_sniper_scope.vmat, shader legacy_sniper_scope.vfx), ported in core/sniper_scope.fsh: the
  * round lens with its warp, fringes and black outside, and the reticle lines that blur wider and lighten with the gun's
  * inaccuracy. Drawn after the world (under the HUD, kept with F1 like CS2's), the Minecraft crosshair hidden.
- * FLAGGED ours: the shader's inputs (inaccuracy = the gun's current inaccuracy here, line width 1 as
- * cl_crosshair_sniper_width's CS:GO default, spread gap and bob 0).
+ * Inputs as CS2 fills them: line width cl_crosshair_sniper_width (1: the single-pixel hairline), the spread gap only
+ * with cl_sniper_show_inaccuracy (off here), the hurt blur (inaccuracy()). FLAGGED ours: the scope inaccuracy itself
+ * (the gun's current inaccuracy) and no scope bob (CS2: two weapon values x 77.14).
  */
 public final class ScopeHud {
 	private ScopeHud() {}
@@ -39,7 +40,7 @@ public final class ScopeHud {
 			.withColorTargetState(ColorTargetState.DEFAULT) // replaces the frame (the scope's view is the whole picture)
 			.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES).build());
 	private static final ByteBuffer UPLOAD = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
-	/** cl_crosshair_sniper_width (pixels; FLAGGED: CS:GO's default, CS2's not read). */
+	/** cl_crosshair_sniper_width: "1 for single-pixel hairline" (CS2's help text). */
 	private static final float LINE_WIDTH = 1;
 
 	private static TextureTarget frame;
@@ -49,6 +50,17 @@ public final class ScopeHud {
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, old -> (g, delta) -> {
 			if (!GunClient.INSTANCE.scopeOverlay() && !Crosshair.render(g)) old.extractRenderState(g, delta); // CS2's crosshair with a CS weapon
 		});
+	}
+
+	/**
+	 * The scope's inaccuracy input as CS2 makes it: the scope inaccuracy (here the gun's current inaccuracy) plus 0.05
+	 * right after you're hurt, gone 0.5 s later (time since m_flTimeOfLastInjury x 2, clamped), the sum clamped to 0..1.
+	 * Minecraft's hurt animation lasts 10 ticks, the same 0.5 s.
+	 */
+	private static double inaccuracy(net.minecraft.client.player.LocalPlayer p) {
+		double since = p.hurtTime > 0 ? (p.hurtDuration - p.hurtTime) / 20.0 : 1;
+		double hurt = 0.05 - 0.05 * Math.max(0, Math.min(1, since * 2));
+		return Math.max(0, Math.min(1, GunClient.INSTANCE.inaccuracy() + hurt));
 	}
 
 	/** After the world each frame: the scope over it while scoped. */
@@ -63,7 +75,7 @@ public final class ScopeHud {
 		enc.copyTextureToTexture(main.getColorTexture(), frame.getColorTexture(), 0, 0, 0, 0, 0, main.width, main.height);
 		if (ubo == null) ubo = device.createBuffer(() -> "strafemc scope info", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32);
 		UPLOAD.clear();
-		Std140Builder.intoBuffer(UPLOAD).putVec4(main.width, main.height, (float) GunClient.INSTANCE.inaccuracy(), LINE_WIDTH).putVec4(0, 0, 0, 0);
+		Std140Builder.intoBuffer(UPLOAD).putVec4(main.width, main.height, (float) inaccuracy(mc.player), LINE_WIDTH).putVec4(0, 0, 0, 0);
 		UPLOAD.position(0);
 		UPLOAD.limit(32);
 		enc.writeToBuffer(ubo.slice(), UPLOAD);

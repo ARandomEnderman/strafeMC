@@ -368,6 +368,34 @@ public final class GameModes {
 		if (!(race instanceof RoundMode) || !(p instanceof ServerPlayer sp) || !Mode.inMode(sp)) return true;
 		if (s.is(dev.strafemc.weapon.WeaponItems.C4)) return dev.strafemc.weapon.CsTeam.isT(p);
 		if (s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return !dev.strafemc.weapon.CsTeam.isT(p);
+		// CS2 carries one primary and one pistol: walking over a gun of a kind you have doesn't pick it up (any side's gun)
+		if (s.getItem() instanceof dev.strafemc.weapon.GunItem g) return Mode.carriedGun(sp, Deathmatch.pistol(g.weaponClass)) < 0;
+		return true;
+	}
+
+	/**
+	 * A gun bought in the running mode: CS2 drops the one of the same kind you carry (primary or pistol). The slot the
+	 * new gun goes in (the dropped one's, else the kind's own: 0 primary, 1 pistol), or -1 for anywhere (no mode).
+	 */
+	public static int dropSameKind(ServerPlayer p, String cls) {
+		if (race == null || !Mode.inMode(p)) return -1;
+		boolean pistol = Deathmatch.pistol(cls);
+		var inv = p.getInventory();
+		int at = Mode.carriedGun(p, pistol);
+		if (at >= 0) {
+			ItemStack old = inv.getItem(at);
+			inv.setItem(at, ItemStack.EMPTY);
+			p.drop(old, false);
+			return at;
+		}
+		int own = pistol ? 1 : 0;
+		return inv.getItem(own).isEmpty() ? own : -1;
+	}
+
+	/** A bought gun's reserve into the round mode's mag pouch; false when no round mode holds the player (loose magazines). */
+	public static boolean pouchMags(ServerPlayer p, String cls) {
+		if (!(race instanceof RoundMode) || !Mode.inMode(p)) return false;
+		Mode.pouchMags(p, cls);
 		return true;
 	}
 

@@ -165,6 +165,7 @@ public class StrafeMc implements ModInitializer {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> {
 			dev.strafemc.StallWatch.serverTick();
 			dev.strafemc.weapon.InfinitePearl.tick(server);
+			dev.strafemc.weapon.C4Item.tick(server); // the plant's sounds for the players around the planter
 			dev.strafemc.server.LagHistory.tick(server);
 			var msg = new dev.strafemc.net.StrafePayloads.ServerTick(server.getTickCount());
 			for (var pl : server.getPlayerList().getPlayers())

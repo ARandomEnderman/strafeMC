@@ -49,6 +49,40 @@ public class C4Item extends GunItem {
 			return;
 		}
 		PLANTING.put(p.getUUID(), now(p));
+		queuePlantSounds(p);
+	}
+
+	/** The plant clip's sounds still due for the players around the planter: {player, server tick, event}. */
+	private static final java.util.List<Object[]> PLANT_SOUNDS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+	/**
+	 * The planter's own game plays the plant clip's sounds (the keypad beeps); everyone else heard nothing until it was
+	 * armed. The same events, at the clip's times, from the planter to the players near them while the plant goes on.
+	 */
+	private static void queuePlantSounds(ServerPlayer p) {
+		String path = GunServer.clipPath(CLS, "plant");
+		dev.strafemc.data.AnimClip c = path == null ? null : dev.strafemc.data.AnimClip.load(path);
+		if (c == null) return;
+		long t0 = p.level().getGameTime();
+		for (dev.strafemc.data.AnimClip.Event e : c.events())
+			if (e.isSound() && !e.name().isEmpty()) PLANT_SOUNDS.add(new Object[] {p.getUUID(), t0 + Math.round(e.time() * 20), e.name()});
+	}
+
+	public static void tick(net.minecraft.server.MinecraftServer server) {
+		for (Object[] s : PLANT_SOUNDS) {
+			UUID id = (UUID) s[0];
+			ServerPlayer p = server.getPlayerList().getPlayer(id);
+			if (p == null || !PLANTING.containsKey(id)) { // cancelled, planted or gone
+				PLANT_SOUNDS.remove(s);
+				continue;
+			}
+			if (p.level().getGameTime() < (Long) s[1]) continue;
+			PLANT_SOUNDS.remove(s);
+			var msg = new dev.strafemc.net.StrafePayloads.CsSound((String) s[2], p.getX(), p.getY(), p.getZ(), false, p.getId());
+			for (ServerPlayer o : p.level().players())
+				if (o != p && o.distanceToSqr(p) < 96 * 96 && net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(o, dev.strafemc.net.StrafePayloads.CsSound.TYPE))
+					net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(o, msg);
+		}
 	}
 
 	public static void cancel(ServerPlayer p) {

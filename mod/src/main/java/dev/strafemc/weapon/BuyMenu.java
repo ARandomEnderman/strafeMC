@@ -166,12 +166,21 @@ public final class BuyMenu {
 					}
 					if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
 					paid = price(gun.cls(), 0);
-					give(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())), given);
-					// buyRefusal is "" (allowed) in a game mode, null outside one: comparing with null alone gave no
-					// magazines in any game mode
-					String no2 = dev.strafemc.mode.GameModes.buyRefusal(p, what);
-					ItemStack mags = reserve(gun.cls());
-					if (!mags.isEmpty() && (no2 == null || no2.isEmpty())) give(p, mags, given);
+					int slot = dev.strafemc.mode.GameModes.dropSameKind(p, gun.cls()); // CS2: the gun of that kind you had drops
+					ItemStack bought = new ItemStack(WeaponItems.GUNS.get(gun.cls()));
+					if (dev.strafemc.mode.GameModes.buyRefusal(p, what) != null) ModeWrap.stamp(bought, p); // in a game mode the gun keeps its buyer's finish
+					if (slot >= 0 && p.getInventory().getItem(slot).isEmpty()) {
+						given.add(bought.copy());
+						p.getInventory().setItem(slot, bought);
+						GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+					} else give(p, bought, given);
+					// a round mode keeps the reserve in its mag pouch; elsewhere loose magazines (buyRefusal is "" when
+					// allowed in a game mode, null outside one)
+					if (!dev.strafemc.mode.GameModes.pouchMags(p, gun.cls())) {
+						String no2 = dev.strafemc.mode.GameModes.buyRefusal(p, what);
+						ItemStack mags = reserve(gun.cls());
+						if (!mags.isEmpty() && (no2 == null || no2.isEmpty())) give(p, mags, given);
+					}
 					bought(p, what, given, null);
 					dev.strafemc.mode.GameModes.bought(p, gun.cls());
 					return;

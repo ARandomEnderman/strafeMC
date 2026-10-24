@@ -27,6 +27,11 @@ public final class C4Client {
 				(g, delta) -> render(g));
 	}
 
+	/** Holding use on the bomb (or its keypad): no attacking meanwhile (the knife's right-click stab is the use button). */
+	public static boolean defusing() {
+		return defusing;
+	}
+
 	/** Planting or defusing: movement is held still, as in CS2. */
 	public static boolean frozen() {
 		return defusing || dev.strafemc.client.weapon.GunClient.INSTANCE.planting() || dev.strafemc.client.ModeHud.frozen();

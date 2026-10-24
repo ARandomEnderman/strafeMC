@@ -104,6 +104,7 @@ public final class WeaponItems {
 		BULK_OPENER = item("bulk_opener", p -> new NameTagItem(p.stacksTo(64), 2));
 		SHOP_REFRESH = item("shop_refresh", p -> new ShopRefreshItem(p.stacksTo(64)));
 		dev.strafemc.mode.ZoneToolItem.registerComponent();
+		ModeWrap.register();
 		ZONE_TOOL = item("zone_tool", p -> new dev.strafemc.mode.ZoneToolItem(p.stacksTo(1)));
 		C4 = item(C4Item.CLS, p -> new C4Item(p.stacksTo(1)));
 		DEFUSE_KIT = item("defuse_kit", p -> new Item(p.stacksTo(1)));

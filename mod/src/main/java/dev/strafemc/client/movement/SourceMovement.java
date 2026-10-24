@@ -48,6 +48,8 @@ public final class SourceMovement {
 		public boolean legacyJump;
 		/** Active weapon m_flMaxSpeed (knife when nothing is held). */
 		public double weaponMaxSpeed;
+		/** Scoped in (a scoped gun's slow speed decides its acceleration even while walking or crouching). */
+		public boolean scoped;
 	}
 
 	public static final class Input {
@@ -100,6 +102,8 @@ public final class SourceMovement {
 	public double time;
 	/** Events from the last step, for logging/sounds. */
 	public boolean jumpedThisStep, landedThisStep;
+	/** The walk key this step (CS2's ground acceleration has its own walk factor). */
+	private boolean walkHeld;
 	public double landSpeed;
 	/**
 	 * CS2's 2026 jump ("jump impulse mul" in cl_showpos): landing sets it to 1 - fall speed x LAND_PENALTY, it recovers
@@ -131,6 +135,7 @@ public final class SourceMovement {
 	public void step(Input in, Params p, World w, double dt) {
 		time += dt;
 		jumpedThisStep = landedThisStep = false;
+		walkHeld = in.walk;
 
 		if (noclip) {
 			noclipMove(in, p, dt);
@@ -299,10 +304,15 @@ public final class SourceMovement {
 	}
 
 	private void accelerate(double wx, double wy, double wz, double wishSpeed, double accel, double dt) {
+		accelerate(wx, wy, wz, wishSpeed, accel, dt, wishSpeed);
+	}
+
+	/** accelSpeed: what the acceleration is proportional to (Source: the wish speed; CS2 ground: accelerationSpeed). */
+	private void accelerate(double wx, double wy, double wz, double wishSpeed, double accel, double dt, double accelSpeed) {
 		double cur = vx * wx + vy * wy + vz * wz;
 		double add = wishSpeed - cur;
 		if (add <= 0) return;
-		double as = Math.min(accel * dt * wishSpeed * surf[0], add);
+		double as = Math.min(accel * dt * accelSpeed * surf[0], add);
 		vx += as * wx;
 		vy += as * wy;
 		vz += as * wz;
@@ -341,9 +351,25 @@ public final class SourceMovement {
 
 	// ---------------------------------------------------------------- ground / air
 
+	/**
+	 * CS2's ground acceleration amount (instead of the wish speed): max(250, wishspeed) scaled by min(1, weapon speed /
+	 * 250) (sv_accelerate_use_weapon_speed), while crouching or walking by the crouch / walk factor instead; scoped
+	 * guns slow enough to walk under 110 keep their weapon factor then too, capped by the crouch factor. Classic Source
+	 * accelerated with the wish speed itself, so a crouched scoped AWP (34 u/s) never got past friction.
+	 */
+	private double accelerationSpeed(double wishSpeed, Params p, boolean walk) {
+		double base = Math.max(250, wishSpeed);
+		double weapon = Math.min(1, p.weaponMaxSpeed / 250);
+		boolean slowScoped = p.scoped && 110 > p.weaponMaxSpeed * Unexposed.WALK_SPEED_MODIFIER;
+		double f = !ducked && !walk ? weapon : slowScoped ? weapon : 1;
+		if (ducked && onGround) f = Math.min(Unexposed.DUCK_SPEED_MODIFIER, f);
+		else if (walk) f = Math.min(Unexposed.WALK_SPEED_MODIFIER, f); // FLAGGED: the walk branch's own cap, as the crouch one
+		return base * f;
+	}
+
 	private void walkMove(double wx, double wz, double wishSpeed, Params p, World w, double dt) {
 		vy = 0;
-		accelerate(wx, 0, wz, wishSpeed, p.accelerate, dt);
+		accelerate(wx, 0, wz, wishSpeed, p.accelerate, dt, accelerationSpeed(wishSpeed, p, walkHeld));
 		vy = 0;
 		if (horizontalSpeed() < 1.0) {
 			vx = vz = 0;

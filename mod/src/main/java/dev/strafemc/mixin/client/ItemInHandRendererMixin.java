@@ -16,7 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemInHandRendererMixin {
 	@Inject(method = "renderHandsWithItems", at = @At("HEAD"), cancellable = true)
 	private void strafemc$viewmodel(float partial, PoseStack ps, SubmitNodeCollector out, LocalPlayer player, int light, CallbackInfo ci) {
-		if (dev.strafemc.client.weapon.GrenadeCam.following()) { // riding a grenade: no hands in its view
+		// riding a grenade, or the end of match camera flying along the line-up (victory / defeat): no hands in that view
+		if (dev.strafemc.client.weapon.GrenadeCam.following() || dev.strafemc.client.viewmodel.EomScene.active()) {
 			ci.cancel();
 			return;
 		}

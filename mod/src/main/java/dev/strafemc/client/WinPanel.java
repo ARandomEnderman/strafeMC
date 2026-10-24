@@ -49,9 +49,11 @@ final class WinPanel {
 			g.fill(cx + w / 2 - b, y, cx + w / 2, y + h, colour);
 			if (open >= 1) {
 				String up = title.toUpperCase(java.util.Locale.ROOT);
-				float k = (float) Math.min(44 * px / 9.0, 340 * px / Math.max(1, font.width(up)));
-				drawText(g, "§l" + up, cx, y + (int) Math.round(30 * px), k, colour, true);
 				float ak = (float) (16 * px / 7.0);
+				// the title fits between the arrows (each 22 px in from the box's side) with a 10 px gap each side
+				double room = 2 * (400 * px / 2 - 22 * px - font.width("§l»") * ak / 2 - 10 * px);
+				float k = (float) Math.min(44 * px / 9.0, room / Math.max(1, font.width("§l" + up)));
+				drawText(g, "§l" + up, cx, y + (int) Math.round(30 * px), k, colour, true);
 				drawText(g, "§l»", cx + (int) Math.round(400 * px / 2 - 22 * px), y + (int) Math.round(30 * px), ak, colour, true);
 				drawText(g, "§l«", cx - (int) Math.round(400 * px / 2 - 22 * px), y + (int) Math.round(30 * px), ak, colour, true);
 				String end = matchOver ? "" : s.has("endReason") ? s.get("endReason").getAsString() : "";

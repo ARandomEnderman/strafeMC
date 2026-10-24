@@ -110,6 +110,11 @@ public final class BuyMenuScreen extends Screen {
 
 	/** Seconds of buy time left (Integer.MAX_VALUE without a limit). */
 	private static int timeLeft() {
+		var mode = ModeHud.state();
+		if (mode != null && mode.has("phase")) { // a game mode keeps its own buy time (round modes send what's left)
+			int left = mode.has("buyLeft") ? mode.get("buyLeft").getAsInt() : -1;
+			return left < 0 ? Integer.MAX_VALUE : left;
+		}
 		int limit = ClientGameplay.buyTime();
 		if (limit <= 0) return Integer.MAX_VALUE;
 		return (int) Math.max(0, Math.ceil(limit - (System.nanoTime() - spawnedAt) / 1e9));
@@ -118,6 +123,12 @@ public final class BuyMenuScreen extends Screen {
 	/** Why buying won't work right now, as far as this client can tell (the server has the last word). */
 	private String refusal() {
 		var p = Minecraft.getInstance().player;
+		var mode = ModeHud.state();
+		if (mode != null && mode.has("phase")) { // a game mode decides for its players (the server's buy menu switch doesn't apply)
+			if (timeLeft() <= 0) return "You cannot buy now";
+			if (mode.has("buyZone") && !mode.get("buyZone").getAsBoolean()) return "You are not in a buy zone"; // the server's own answer
+			return null;
+		}
 		if (ClientGameplay.buyMode() == 0) return "You cannot buy (the buy menu is off on this server)";
 		if (ClientGameplay.buyMode() == 1 && (p == null || !p.isCreative())) return "You cannot buy (creative only on this server)";
 		if (timeLeft() <= 0) return "The " + ClientGameplay.buyTime() + " second buy period has expired";
@@ -178,7 +189,8 @@ public final class BuyMenuScreen extends Screen {
 				boolean hover = s != null && mx >= rc[0] && mx < rc[2] && my >= rc[1] && my < rc[3];
 				g.fill(rc[0], rc[1], rc[2], rc[3], s == null ? TILE_EMPTY : hover ? TILE_HOVER : TILE);
 				if (s != null) {
-					boolean can = no == null && s.buy != null && canCarry(s.buy);
+					int price = price(s.priceOf);
+					boolean can = no == null && s.buy != null && canCarry(s.buy) && affordable(price);
 					int textCol = can ? 0xFFFFFFFF : 0xFF808080;
 					text(g, String.valueOf(r + 1), rc[0] + 5 * u, (rc[1] + rc[3]) / 2.0, 18 * u, 0x66FFFFFF, -1);
 					// the name right-aligned, shrunk to stay clear of the key number on the left
@@ -191,7 +203,6 @@ public final class BuyMenuScreen extends Screen {
 						if (overUndo) g.fill(ur[0], ur[1], ur[2], ur[3], 0x60FFFFFF);
 						icon(g, "undo", (ur[0] + ur[2]) / 2.0, (ur[1] + ur[3]) / 2.0, 16 * u, 0xFFFFFFFF);
 					}
-					int price = price(s.priceOf);
 					text(g, s.buy == null ? "Not in strafeMC" : price > 0 ? "$" + price : "", rc[2] - 10 * u, rc[3] - 4 * u - 7 * u, 14 * u, textCol, 1);
 				}
 				if (dim != 0) g.fill(rc[0], rc[1], rc[2], rc[3], dim);
@@ -249,6 +260,12 @@ public final class BuyMenuScreen extends Screen {
 		}
 		int limit = g == dev.strafemc.weapon.Grenade.FLASHBANG ? cvarInt("ammo_grenade_limit_flashbang", 2) : cvarInt("ammo_grenade_limit_default", 1);
 		return have < limit && total < cvarInt("ammo_grenade_limit_total", 4);
+	}
+
+	/** CS2 greys out what costs more than you have (only where there's money: the round modes' state carries it). */
+	private static boolean affordable(int price) {
+		var s = dev.strafemc.client.ModeHud.state();
+		return s == null || !s.has("money") || s.get("money").getAsInt() >= price;
 	}
 
 	private static int cvarInt(String name, int fallback) {

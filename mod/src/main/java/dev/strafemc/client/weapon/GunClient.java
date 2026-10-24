@@ -209,6 +209,7 @@ public final class GunClient {
 		// dead (the death camera) or watching: no shots, stabs, throws or plants (they played here and the server
 		// dropped them: "shot from X dropped: alive false")
 		if (p.isDeadOrDying() || p.isSpectator()) return;
+		if (dev.strafemc.client.C4Client.defusing()) return; // defusing is holding use: no knife stabs or shots meanwhile (CS2)
 		if (held.getItem() instanceof dev.strafemc.weapon.KnifeItem k) {
 			knifeFrame(mc, p, k, now);
 			return;
@@ -426,6 +427,11 @@ public final class GunClient {
 	/** Mouse turning while scoped: zoom_sensitivity_ratio x zoomed FOV / 90, like CS2. */
 	public double zoomSensitivity() {
 		return zoom > 0 ? StrafeConfig.zoomSensitivityRatio * zoomToFov / 90.0 : 1;
+	}
+
+	/** Zoomed in with any scoped gun (movement's acceleration and the iron sight follow it). */
+	public boolean scoped() {
+		return zoom > 0;
 	}
 
 	/** Scoped with a sniper: the scope overlay instead of the viewmodel (m_bHideViewModelWhenZoomed). */

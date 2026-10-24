@@ -89,6 +89,8 @@ public final class DeathCam {
 		var mc = Minecraft.getInstance();
 		StrafePayloads.DeathInfo m = info;
 		if (m == null || mc.player == null || !mc.player.isDeadOrDying()) return;
+		var mode = ModeHud.state(); // the round's win panel takes the middle of the screen once the round is decided
+		if (mode != null && mode.has("phase") && (mode.get("phase").getAsString().equals("roundover") || mode.get("phase").getAsString().equals("over"))) return;
 		var font = mc.font;
 		float u = g.guiHeight() / 1080f * 2; // our GUI units are 2 screen px at the usual scale
 		int w = Math.round(410 * u / 2), pic = Math.round(128 * u / 2), x = g.guiWidth() / 2 - (w + pic) / 2;

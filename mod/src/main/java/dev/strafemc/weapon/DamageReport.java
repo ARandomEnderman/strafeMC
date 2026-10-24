@@ -101,7 +101,7 @@ public final class DamageReport {
 		String kit = "";
 		if (k.who() instanceof ServerPlayer kp) { // the skin they had on it: their loadout's wrap for that gun (or the knife)
 			boolean knife = cls.contains("knife") || cls.equals("weapon_bayonet");
-			var wrap = Loadout.worn(kp, knife ? "knife" : cls);
+			var wrap = ModeWrap.wrapOf(kp, knife ? "knife" : cls); // a picked-up gun shows its owner's finish (game modes)
 			if (wrap.getItem() instanceof SkinWrapItem) {
 				String id = SkinWrapItem.skin(wrap), kitFor = SkinWraps.kitFor(id, cls);
 				if (kitFor != null) {

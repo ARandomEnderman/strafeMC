@@ -32,7 +32,7 @@ public final class WrapChoice {
 
 	private static ItemStack gunWrap(String cls) {
 		var p = dev.strafemc.client.viewmodel.Viewmodel.holder();
-		return p == null ? ItemStack.EMPTY : Loadout.worn(p, cls);
+		return p == null ? ItemStack.EMPTY : dev.strafemc.weapon.ModeWrap.wrapOf(p, cls); // a game mode's gun wears its owner's finish
 	}
 
 	/** The paint kit of the wrap in this gun's loadout slot, or null for none. */

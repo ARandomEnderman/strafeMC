@@ -199,6 +199,19 @@ final class RoundMode extends Mode {
 		super.begin(); // warmup: respawning like Deathmatch until the clock runs out
 	}
 
+	/**
+	 * CS2 clears the map's dropped weapons when a round starts: strafeMC's own dropped items (guns, magazines,
+	 * grenades, the bomb, kits) go in every level the mode's players are in; other dropped items stay.
+	 */
+	private void clearDrops() {
+		java.util.Set<net.minecraft.server.level.ServerLevel> levels = new java.util.HashSet<>();
+		for (ServerPlayer p : players()) levels.add(p.level());
+		for (var level : levels)
+			for (var item : level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(net.minecraft.world.entity.item.ItemEntity.class),
+					e -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(e.getItem().getItem()).getNamespace().equals("strafemc")))
+				item.discard();
+	}
+
 	private void startRound() {
 		round++;
 		phase = Phase.FREEZE;
@@ -237,8 +250,10 @@ final class RoundMode extends Mode {
 				if (!has) p.getInventory().add(new ItemStack(WeaponItems.DEFUSE_KIT));
 			}
 			removeC4(p);
+			refillPouch(p); // every round starts with each carried gun's full reserve
 			p.inventoryMenu.broadcastChanges();
 		}
+		clearDrops();
 		for (LivingEntity b : Bots.living(server)) { // bots back to their side's spawn, buying with their money
 			var pick = SpawnPoints.pick(CsTeam.isT(b) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
 			if (pick != null && b.isAlive()) b.teleportTo(pick.pos().x, pick.pos().y, pick.pos().z);
@@ -886,6 +901,14 @@ final class RoundMode extends Mode {
 
 	// ---------------------------------------------------------------- buying
 
+	/** Seconds of buying left this round (freeze time + mp_buytime, as buyRefusal counts it), -1 in the warmup (no limit). */
+	int buyLeft() {
+		if (warmup()) return -1;
+		if (phase == Phase.OVER) return 0;
+		long since = now() - phaseStart + (phase == Phase.LIVE ? c.freeze() * 20L : 0);
+		return (int) Math.max(0, Math.ceil(((c.freeze() + c.buy()) * 20L - since) / 20.0));
+	}
+
 	@Override
 	String buyRefusal(ServerPlayer p) {
 		if (!warmup()) {
@@ -990,6 +1013,7 @@ final class RoundMode extends Mode {
 		o.addProperty("waiting", warmup() && now() - start >= warmupTicks() - 40 && !bothSides());
 		// CS2's money panel cart: you can buy here and now; the bomb icon: you carry it inside a bomb site
 		o.addProperty("buyZone", p.isAlive() && !p.isSpectator() && buyRefusal(p).isEmpty());
+		o.addProperty("buyLeft", buyLeft()); // the buy menu's clock (its own strafemc_buytime doesn't apply in a mode)
 		boolean carrying = false;
 		for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(WeaponItems.C4)) carrying = true;
 		o.addProperty("bombZone", carrying && BombSites.near(p));
