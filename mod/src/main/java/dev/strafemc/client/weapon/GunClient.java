@@ -206,6 +206,9 @@ public final class GunClient {
 		playDue(p, now);
 		inspectHold(now);
 		updateReload(p, now, dt);
+		// dead (the death camera) or watching: no shots, stabs, throws or plants (they played here and the server
+		// dropped them: "shot from X dropped: alive false")
+		if (p.isDeadOrDying() || p.isSpectator()) return;
 		if (held.getItem() instanceof dev.strafemc.weapon.KnifeItem k) {
 			knifeFrame(mc, p, k, now);
 			return;
