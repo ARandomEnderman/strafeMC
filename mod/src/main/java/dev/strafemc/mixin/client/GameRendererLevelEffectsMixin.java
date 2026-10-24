@@ -9,12 +9,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Screen effects on the world, after it's drawn and before the HUD, every frame whether the HUD shows or not (F1 must
- * not take them away): the death camera's colour and the flashbang's afterimage and white-out.
+ * not take them away): the sniper scope, the death camera's colour and the flashbang's afterimage and white-out.
  */
 @Mixin(GameRenderer.class)
 public abstract class GameRendererLevelEffectsMixin {
 	@Inject(method = "renderLevel", at = @At("TAIL"))
 	private void strafemc$afterLevel(DeltaTracker delta, CallbackInfo ci) {
+		dev.strafemc.client.weapon.ScopeHud.afterLevel(); // the sniper scope first: the death colour and the flash go over it
 		dev.strafemc.client.DeathCam.afterLevel();
 		dev.strafemc.client.weapon.GrenadeClient.afterLevel();
 	}

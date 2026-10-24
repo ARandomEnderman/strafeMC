@@ -1,64 +1,78 @@
 package dev.strafemc.client.weapon;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.OptionalInt;
+
 /**
- * CS2's sniper scope (panorama hud/scope) while scoped with an AWP, SSG 08, SCAR-20 or G3SG1: the round view (scope_circle,
- * as high as the screen) in black, the lens tint over it, and the reticle as thin black lines across the screen, blurred
- * wider (scope_line_blur) the less accurate the gun is right now. The Minecraft crosshair is hidden meanwhile.
- * How wide the blur gets per unit of inaccuracy is our own choice (FLAGGED: CS2 does this in panorama code).
+ * CS2's sniper scope while scoped with an AWP, SSG 08, SCAR-20 or G3SG1: CS2 draws it as one pass over the frame
+ * (materials/effects/legacy_sniper_scope.vmat, shader legacy_sniper_scope.vfx), ported in core/sniper_scope.fsh: the
+ * round lens with its warp, fringes and black outside, and the reticle lines that blur wider and lighten with the gun's
+ * inaccuracy. Drawn after the world (under the HUD, kept with F1 like CS2's), the Minecraft crosshair hidden.
+ * FLAGGED ours: the shader's inputs (inaccuracy = the gun's current inaccuracy here, line width 1 as
+ * cl_crosshair_sniper_width's CS:GO default, spread gap and bob 0).
  */
 public final class ScopeHud {
-	private static final Identifier CIRCLE = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/scope/circle.png");
-	private static final Identifier LENS = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/scope/lens.png");
-	private static final Identifier BLUR = Identifier.fromNamespaceAndPath("strafemc", "textures/gui/scope/line_blur.png");
-	/** Blur width in screen heights per unit of inaccuracy. */
-	private static final double BLUR_PER_INACCURACY = 0.5;
-	/** The lens dirt at a quarter of its strength (FLAGGED: by eye). */
-	private static final int LENS_TINT = 0x40FFFFFF;
-
 	private ScopeHud() {}
+
+	private static final RenderPipeline PIPELINE = RenderPipelines.register(RenderPipeline.builder().withLocation("pipeline/strafemc_sniper_scope")
+			.withVertexShader("core/screenquad").withFragmentShader(Identifier.fromNamespaceAndPath("strafemc", "core/sniper_scope"))
+			.withSampler("InSampler").withUniform("ScopeInfo", UniformType.UNIFORM_BUFFER)
+			.withColorTargetState(ColorTargetState.DEFAULT) // replaces the frame (the scope's view is the whole picture)
+			.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES).build());
+	private static final ByteBuffer UPLOAD = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder());
+	/** cl_crosshair_sniper_width (pixels; FLAGGED: CS:GO's default, CS2's not read). */
+	private static final float LINE_WIDTH = 1;
+
+	private static TextureTarget frame;
+	private static GpuBuffer ubo;
 
 	public static void register() {
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, old -> (g, delta) -> {
 			if (!GunClient.INSTANCE.scopeOverlay() && !Crosshair.render(g)) old.extractRenderState(g, delta); // CS2's crosshair with a CS weapon
 		});
-		HudElementRegistry.attachElementBefore(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "scope"), (g, delta) -> {
-			Minecraft mc = Minecraft.getInstance();
-			if (mc.player == null || !GunClient.INSTANCE.scopeOverlay()) return;
-			// drawn in real pixels so the reticle stays one pixel thin at any GUI scale
-			float k = (float) mc.getWindow().getGuiScale();
-			int w = mc.getWindow().getWidth(), h = mc.getWindow().getHeight();
-			var pose = g.pose();
-			pose.pushMatrix();
-			pose.scale(1 / k, 1 / k);
-			int x0 = (w - h) / 2;
-			boolean tex = dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/circle.png");
-			if (tex) { // the lens tint under the round mask, so the mask's edge stays black
-				if (dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/lens.png")) // faint: CS2's lens is barely there
-					g.blit(RenderPipelines.GUI_TEXTURED, LENS, x0, 0, 0, 0, h, h, h, h, h, h, LENS_TINT);
-				g.blit(RenderPipelines.GUI_TEXTURED, CIRCLE, x0, 0, 0, 0, h, h, h, h);
-			}
-			g.fill(0, 0, x0, h, 0xFF000000); // the sides past the round view
-			g.fill(x0 + h, 0, w, h, 0xFF000000);
-			int cx = w / 2, cy = h / 2;
-			g.fill(0, cy, w, cy + 1, 0xFF000000);
-			g.fill(cx, 0, cx + 1, h, 0xFF000000);
-			int blur = (int) Math.round(GunClient.INSTANCE.inaccuracy() * h * BLUR_PER_INACCURACY);
-			if (blur > 2 && dev.strafemc.client.assets.RuntimePack.hasTexture("gui/scope/line_blur.png")) {
-				// the blur texture is a vertical line: as is for the vertical one, its columns stretched for the horizontal one
-				g.blit(RenderPipelines.GUI_TEXTURED, BLUR, cx - blur / 2, 0, 0, 0, blur, h, 64, 64, 64, 64);
-				pose.pushMatrix();
-				pose.translate(0, cy + blur / 2f);
-				pose.rotate((float) (-Math.PI / 2));
-				g.blit(RenderPipelines.GUI_TEXTURED, BLUR, 0, 0, 0, 0, blur, w, 64, 64, 64, 64);
-				pose.popMatrix();
-			}
-			pose.popMatrix();
-		});
+	}
+
+	/** After the world each frame: the scope over it while scoped. */
+	public static void afterLevel() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null || !GunClient.INSTANCE.scopeOverlay()) return;
+		var main = mc.getMainRenderTarget();
+		var device = RenderSystem.getDevice();
+		var enc = device.createCommandEncoder();
+		if (frame == null) frame = new TextureTarget("strafemc sniper scope", main.width, main.height, false);
+		else if (frame.width != main.width || frame.height != main.height) frame.resize(main.width, main.height);
+		enc.copyTextureToTexture(main.getColorTexture(), frame.getColorTexture(), 0, 0, 0, 0, 0, main.width, main.height);
+		if (ubo == null) ubo = device.createBuffer(() -> "strafemc scope info", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_COPY_DST, 32);
+		UPLOAD.clear();
+		Std140Builder.intoBuffer(UPLOAD).putVec4(main.width, main.height, (float) GunClient.INSTANCE.inaccuracy(), LINE_WIDTH).putVec4(0, 0, 0, 0);
+		UPLOAD.position(0);
+		UPLOAD.limit(32);
+		enc.writeToBuffer(ubo.slice(), UPLOAD);
+		GpuTextureView out = RenderSystem.outputColorTextureOverride != null ? RenderSystem.outputColorTextureOverride : main.getColorTextureView();
+		try (RenderPass pass = enc.createRenderPass(() -> "strafemc sniper scope", out, OptionalInt.empty())) {
+			pass.setPipeline(PIPELINE);
+			pass.setUniform("ScopeInfo", ubo);
+			pass.bindTexture("InSampler", frame.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+			pass.draw(0, 3);
+		}
 	}
 }

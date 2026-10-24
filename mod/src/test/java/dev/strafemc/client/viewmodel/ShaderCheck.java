@@ -26,7 +26,8 @@ public final class ShaderCheck {
 				{"minecraft:screenquad.vsh", "smoke_volume.fsh", ""}, {"minecraft:screenquad.vsh", "smoke_composite.fsh", ""},
 				{"minecraft:screenquad.vsh", "bloom_down.fsh", ""}, {"minecraft:screenquad.vsh", "bloom_down.fsh", "#define FIRST"},
 				{"minecraft:screenquad.vsh", "bloom_up.fsh", ""}, {"minecraft:screenquad.vsh", "bloom_composite.fsh", ""},
-				{"minecraft:screenquad.vsh", "flash_afterimage.fsh", ""}};
+				{"minecraft:screenquad.vsh", "flash_afterimage.fsh", ""}, {"minecraft:screenquad.vsh", "death_fade.fsh", ""},
+				{"minecraft:screenquad.vsh", "sniper_scope.fsh", ""}};
 		for (String[] prog : programs) {
 			int program = GL20.glCreateProgram();
 			boolean ok = true;
