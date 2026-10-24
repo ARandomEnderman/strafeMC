@@ -122,6 +122,9 @@ public class MagPouchItem extends Item {
 			ItemStack s = inv.getItem(i);
 			out.add(s);
 			if (s.getItem() instanceof MagPouchItem) out.addAll(contents(s));
+			// a round mode's gun carries its spare magazines itself: counted as that many full ones
+			if (s.getItem() instanceof GunItem g && s.getOrDefault(WeaponItems.SPARE, 0) > 0 && WeaponItems.MAGS.get(g.weaponClass) != null)
+				out.add(new ItemStack(WeaponItems.MAGS.get(g.weaponClass), s.getOrDefault(WeaponItems.SPARE, 0)));
 		}
 		return out;
 	}

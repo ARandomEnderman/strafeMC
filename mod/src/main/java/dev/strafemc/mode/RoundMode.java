@@ -250,7 +250,7 @@ final class RoundMode extends Mode {
 				if (!has) p.getInventory().add(new ItemStack(WeaponItems.DEFUSE_KIT));
 			}
 			removeC4(p);
-			refillPouch(p); // every round starts with each carried gun's full reserve
+			refillSpares(p); // every round starts with each carried gun's full reserve (its spare magazines)
 			p.inventoryMenu.broadcastChanges();
 		}
 		clearDrops();

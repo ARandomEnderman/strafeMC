@@ -20,6 +20,8 @@ import java.util.function.Function;
 public final class WeaponItems {
 	/** Rounds currently loaded in a gun. Absent = a fresh gun with a full magazine. */
 	public static DataComponentType<Integer> CLIP, REFILL_AT;
+	/** Round modes: the gun's spare magazines (full ones; shells for shotguns), refilled at every round start. */
+	public static DataComponentType<Integer> SPARE;
 	/** Zeus x27: the game tick it's charged again (ZeusRecharge). */
 	public static DataComponentType<Integer> RECHARGE;
 	/** USP-S / M4A1-S: 0 = silencer off (absent: on, as CS2 hands them out). */
@@ -56,6 +58,7 @@ public final class WeaponItems {
 
 	public static void register() {
 		CLIP = component("clip");
+		SPARE = component("spare_mags");
 		ROUNDS = component("rounds");
 		REFILL_AT = component("refill_at"); // a mag pouch's pending gunpowder refill (game tick)
 		RECHARGE = component("recharge");

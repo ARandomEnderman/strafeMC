@@ -41,7 +41,7 @@ public final class C4Client {
 	private static PlantedC4 target(Minecraft mc) {
 		if (mc.player == null) return null;
 		if (mc.screen instanceof C4KeypadScreen k) return k.bomb();
-		if (mc.screen != null || !mc.options.keyUse.isDown()) return null;
+		if (mc.screen != null || !ModeServerClient.useDown(mc)) return null; // E on a game mode server, as CS2
 		if (mc.hitResult instanceof EntityHitResult eh && eh.getEntity() instanceof PlantedC4 b && !b.defused() && b.distanceTo(mc.player) <= REACH) return b;
 		return null;
 	}

@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class DeathNotices {
 	public static final String[] WEAPON_ICONS = java.util.stream.Stream.concat(
-			java.util.stream.Stream.of("knife", "knifegg", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade"),
+			java.util.stream.Stream.of("knife", "knifegg", "hegrenade", "inferno", "decoy", "flashbang", "smokegrenade", "molotov", "incgrenade", "c4"),
 			java.util.stream.Stream.concat(dev.strafemc.weapon.WeaponTable.guns().stream(), dev.strafemc.weapon.WeaponTable.knives().stream())
 					.map(dev.strafemc.weapon.WeaponTable.Entry::shortName)).distinct().toArray(String[]::new);
 	public static final String[] MODIFIER_ICONS = {"icon_headshot", "penetrate", "smoke_kill", "blind_kill", "inairkill", "noscope", "icon_suicide"};

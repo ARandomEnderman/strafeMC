@@ -390,60 +390,31 @@ abstract class Mode {
 		if (item != null) p.getInventory().setItem(slot, dev.strafemc.weapon.ModeWrap.stamp(new ItemStack(item), p)); // the gun keeps its owner's finish
 	}
 
-	/** The gun in a slot with CS2's reserve magazines (round modes have no infinite ammo): in the mode's mag pouch. */
+	/** The gun in a slot with CS2's reserve magazines (round modes have no infinite ammo): carried by the gun itself. */
 	static void giveWithReserve(ServerPlayer p, int slot, String cls) {
 		give(p, slot, cls);
-		refillPouch(p);
+		refillSpares(p);
 	}
-
-	/** The hotbar slot the mode's mag pouch sits in (the last). */
-	static final int POUCH_SLOT = 8;
 
 	/**
-	 * The mode's mag pouch: every carried gun's CS2 reserve as full magazines, rebuilt on each spawn and round start.
-	 * Loose magazines go (a gun bought into their slot used to push them out of the inventory).
+	 * Every carried gun's spare magazines back to CS2's full reserve (WeaponItems.SPARE, carried by the gun itself; a
+	 * dropped gun keeps what it has left), on each spawn and round start. Loose magazines and mag pouches go.
 	 */
-	static void refillPouch(ServerPlayer p) {
-		var inv = p.getInventory();
-		var list = net.minecraft.core.NonNullList.withSize(dev.strafemc.weapon.MagPouchItem.SIZE, ItemStack.EMPTY);
-		ItemStack pouch = null;
-		for (int i = 0; i < inv.getContainerSize(); i++) {
-			ItemStack s = inv.getItem(i);
-			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem) inv.setItem(i, ItemStack.EMPTY);
-			else if (s.getItem() instanceof dev.strafemc.weapon.MagPouchItem && pouch == null) pouch = s;
-			else if (s.getItem() instanceof GunItem g) addMags(list, dev.strafemc.weapon.BuyMenu.reserve(g.weaponClass));
-		}
-		if (pouch == null) {
-			pouch = new ItemStack(dev.strafemc.weapon.WeaponItems.MAG_POUCH);
-			if (inv.getItem(POUCH_SLOT).isEmpty()) inv.setItem(POUCH_SLOT, pouch);
-			else if (!inv.add(pouch)) return;
-		}
-		dev.strafemc.weapon.MagPouchItem.store(pouch, list);
-	}
-
-	/** A bought gun's reserve into the pouch (the others' magazines stay as they are until the next round). */
-	static void pouchMags(ServerPlayer p, String cls) {
+	static void refillSpares(ServerPlayer p) {
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
-			if (!(s.getItem() instanceof dev.strafemc.weapon.MagPouchItem)) continue;
-			var list = dev.strafemc.weapon.MagPouchItem.contents(s);
-			addMags(list, dev.strafemc.weapon.BuyMenu.reserve(cls));
-			dev.strafemc.weapon.MagPouchItem.store(s, list);
-			return;
+			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem || s.getItem() instanceof dev.strafemc.weapon.MagPouchItem) inv.setItem(i, ItemStack.EMPTY);
+			else if (s.getItem() instanceof GunItem g) s.set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(g.weaponClass).getCount());
 		}
-		refillPouch(p); // no pouch yet: one with every carried gun's reserve
 	}
 
-	/** Magazines into the pouch's free slots (not the gunpowder slot), split to their stack size. */
-	private static void addMags(net.minecraft.core.NonNullList<ItemStack> list, ItemStack mags) {
-		int left = mags.getCount();
-		for (int i = 0; i < dev.strafemc.weapon.MagPouchItem.POWDER_SLOT && left > 0; i++) {
-			if (!list.get(i).isEmpty()) continue;
-			int n = Math.min(left, mags.getMaxStackSize());
-			list.set(i, mags.copyWithCount(n));
-			left -= n;
-		}
+	/** A bought gun's spare magazines: its full reserve (the others keep theirs until the next round). */
+	static void spareMags(ServerPlayer p, String cls) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++)
+			if (inv.getItem(i).getItem() instanceof GunItem g && g.weaponClass.equals(cls) && !inv.getItem(i).has(dev.strafemc.weapon.WeaponItems.SPARE))
+				inv.getItem(i).set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(cls).getCount());
 	}
 
 	/** The inventory slot of the carried gun of a kind (CS2 carries one primary and one pistol), or -1. */

@@ -174,9 +174,9 @@ public final class BuyMenu {
 						p.getInventory().setItem(slot, bought);
 						GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
 					} else give(p, bought, given);
-					// a round mode keeps the reserve in its mag pouch; elsewhere loose magazines (buyRefusal is "" when
+					// a round mode's gun carries its spare magazines itself; elsewhere loose magazines (buyRefusal is "" when
 					// allowed in a game mode, null outside one)
-					if (!dev.strafemc.mode.GameModes.pouchMags(p, gun.cls())) {
+					if (!dev.strafemc.mode.GameModes.spareMags(p, gun.cls())) {
 						String no2 = dev.strafemc.mode.GameModes.buyRefusal(p, what);
 						ItemStack mags = reserve(gun.cls());
 						if (!mags.isEmpty() && (no2 == null || no2.isEmpty())) give(p, mags, given);
@@ -208,7 +208,9 @@ public final class BuyMenu {
 	public static ItemStack reserve(String cls) {
 		WeaponStats st = WeaponStats.of(cls);
 		var mag = WeaponItems.MAGS.get(cls);
-		int mags = st == null || mag == null ? 0 : st.reserveAsClips() ? st.reserveMags() : (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
+		// in clips (m_bReserveAmmoAsClips), else rounds: one item per shell for shell-by-shell shotguns (it was rounds / clip)
+		int mags = st == null || mag == null ? 0 : st.reserveAsClips() || st.q().singleShells() ? st.reserveMags()
+				: (int) Math.ceil(st.reserveMags() / (double) Math.max(1, st.clip()));
 		return mags > 0 ? new ItemStack(mag, mags) : ItemStack.EMPTY;
 	}
 

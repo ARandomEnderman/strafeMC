@@ -309,6 +309,25 @@ public final class BuyMenuScreen extends Screen {
 		pose.popMatrix();
 	}
 
+	private static final Map<String, int[]> FILE_SIZES = new java.util.concurrent.ConcurrentHashMap<>();
+
+	/** A runtime pack picture's size (path under assets/strafemc/textures), {0, 0} if it's missing. */
+	static int[] iconSize(String rel) {
+		return FILE_SIZES.computeIfAbsent(rel, n -> {
+			Path png = dev.strafemc.client.assets.RuntimePack.DIR.resolve("assets/strafemc/textures/" + n);
+			if (!Files.exists(png)) return new int[] {0, 0};
+			try (ImageInputStream in = ImageIO.createImageInputStream(png.toFile())) {
+				var readers = ImageIO.getImageReaders(in);
+				if (!readers.hasNext()) return new int[] {0, 0};
+				var r = readers.next();
+				r.setInput(in);
+				return new int[] {r.getWidth(0), r.getHeight(0)};
+			} catch (Exception e) {
+				return new int[] {0, 0};
+			}
+		});
+	}
+
 	static void icon(GuiGraphicsExtractor g, String name, double cx, double cy, double h, int color) {
 		int[] sz = SIZES.computeIfAbsent(name, n -> {
 			Path png = dev.strafemc.client.assets.RuntimePack.DIR.resolve("assets/strafemc/textures/gui/buymenu/" + n + ".png");

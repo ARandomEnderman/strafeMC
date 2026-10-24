@@ -353,7 +353,7 @@ public final class GunServer {
 				used = MagazineItem.withRounds(new ItemStack(mag.getItem()), rounds);
 			} else MagazineItem.withRounds(mag, rounds);
 			ref.done().run();
-			if (used != null) giveBack(p, used);
+			if (used != null && !ref.spare()) giveBack(p, used);
 			p.getInventory().setChanged();
 		}
 		gun.set(WeaponItems.CLIP, clip + 1);
@@ -364,6 +364,11 @@ public final class GunServer {
 	static int roundsAvailable(ServerPlayer p, GunItem g) {
 		int n = 0;
 		var inv = p.getInventory();
+		ItemStack held = p.getMainHandItem();
+		if (held.getItem() == g && held.has(WeaponItems.SPARE)) { // a round mode's gun: its own spares only
+			var magItem = WeaponItems.MAGS.get(g.weaponClass);
+			return magItem instanceof MagazineItem m ? held.getOrDefault(WeaponItems.SPARE, 0) * m.capacity() : 0;
+		}
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			if (s.getItem() instanceof MagazineItem m && m.weaponClass.equals(g.weaponClass)) n += m.rounds(s) * s.getCount();
@@ -944,16 +949,30 @@ public final class GunServer {
 		ref.done().run();
 		// mag-by-mag: the magazine that was in the gun comes back empty, its rounds wasted (red X; refill by crafting)
 		var oldItem = WeaponItems.MAGS.get(g.weaponClass);
-		if (oldItem != null) giveBack(p, MagazineItem.withRounds(new ItemStack(oldItem), 0));
+		if (oldItem != null && !ref.spare()) giveBack(p, MagazineItem.withRounds(new ItemStack(oldItem), 0)); // spares: the old one is just gone
 		p.getInventory().setChanged();
 		gun.set(WeaponItems.CLIP, rounds);
 	}
 
 	/** A magazine to load from, and what saves the change (a pouch's contents are a copy until written back). */
-	private record MagRef(ItemStack stack, Runnable done) {}
+	private record MagRef(ItemStack stack, Runnable done, boolean spare) {
+		MagRef(ItemStack stack, Runnable done) {
+			this(stack, done, false);
+		}
+	}
 
-	/** Fullest matching magazine in the inventory, else in a mag pouch there; null if none has rounds. */
+	/**
+	 * Fullest matching magazine in the inventory, else in a mag pouch there; null if none has rounds. A round mode's gun
+	 * carries its own spares (WeaponItems.SPARE): one full magazine (or shell) off its count, nothing else.
+	 */
 	private static MagRef findMagazine(ServerPlayer p, GunItem g) {
+		ItemStack held = p.getMainHandItem();
+		Integer spare = held.getItem() == g ? held.get(WeaponItems.SPARE) : null;
+		if (spare != null) {
+			var magItem = WeaponItems.MAGS.get(g.weaponClass);
+			if (spare <= 0 || magItem == null) return null;
+			return new MagRef(new ItemStack(magItem), () -> held.set(WeaponItems.SPARE, spare - 1), true);
+		}
 		int best = -1, bestRounds = 0;
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) {

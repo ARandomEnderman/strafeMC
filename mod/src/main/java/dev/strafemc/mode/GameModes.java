@@ -394,10 +394,10 @@ public final class GameModes {
 		return inv.getItem(own).isEmpty() ? own : -1;
 	}
 
-	/** A bought gun's reserve into the round mode's mag pouch; false when no round mode holds the player (loose magazines). */
-	public static boolean pouchMags(ServerPlayer p, String cls) {
+	/** A bought gun's spare magazines (carried by the gun); false when no round mode holds the player (loose magazines). */
+	public static boolean spareMags(ServerPlayer p, String cls) {
 		if (!(race instanceof RoundMode) || !Mode.inMode(p)) return false;
-		Mode.pouchMags(p, cls);
+		Mode.spareMags(p, cls);
 		return true;
 	}
 
