@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * CS2's weapon selection (panorama hudweaponselection) in place of Minecraft's hotbar on a game mode server: a column
- * at the bottom right, one row per gear slot (1 primary, 2 pistol, 3 knife, 4 grenades side by side, 5 bomb) with its
+ * at the bottom right, one row per gear slot, top to bottom (1 primary, 2 pistol, 3 knife, 4 grenades side by side, 5 bomb) with its
  * key number, rows 300 px wide 6 px in from the edge, above the always-on strip (84 px); icons 61.5 px tall at 0.7 and
  * 80% opacity in the team's colour, the selected one at 0.9 and brighter with its name (16 px) under it. Keys 1-5 pick
  * the slots as in CS2 (4 again: the next grenade). FLAGGED ours: shown 3 s after a change then faded over 0.5 s (CS2
@@ -81,7 +81,7 @@ public final class WeaponSelectHud {
 		var font = mc.font;
 		int team = dev.strafemc.weapon.CsTeam.isT(p) ? T : CT;
 		double right = g.guiWidth() - 6 * u - 10 * u, y = g.guiHeight() - 84 * u;
-		for (int r = 0; r < 5; r++) {
+		for (int r = 4; r >= 0; r--) { // stacked upward from the bottom: slot 5 lowest, slot 1 (the primary) on top, as CS2 lists them
 			var row = rows.get(r);
 			if (row.isEmpty()) continue;
 			boolean rowSelected = row.stream().anyMatch(it -> it.slot == sel);
