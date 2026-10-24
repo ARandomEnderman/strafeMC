@@ -47,7 +47,7 @@ public final class ModeServerClient {
 		hitboxesBefore = null;
 	}
 
-	/** How far E reaches a weapon on the ground (blocks; CS2's use reach, FLAGGED ours). */
+	/** How far E reaches a weapon on the ground (blocks; FLAGGED ours: CS2 has its own use reach). */
 	private static final double PICKUP_REACH = 2.5;
 
 	/** E on a weapon on the ground: the server takes it into its slot, or swaps it for what's there (GameModes.usePickup). */
@@ -56,6 +56,10 @@ public final class ModeServerClient {
 		if (p == null || mc.level == null || mc.screen != null) return;
 		var eye = p.getEyePosition();
 		var end = eye.add(p.getViewVector(1).scale(PICKUP_REACH));
+		// the view ray stops at the first block: nothing behind a wall or under the floor
+		var block = mc.level.clip(new net.minecraft.world.level.ClipContext(eye, end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+				net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+		if (block.getType() != net.minecraft.world.phys.HitResult.Type.MISS) end = block.getLocation();
 		net.minecraft.world.entity.item.ItemEntity best = null;
 		double bestD = Double.MAX_VALUE;
 		for (var e : mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, p.getBoundingBox().inflate(PICKUP_REACH + 1))) {

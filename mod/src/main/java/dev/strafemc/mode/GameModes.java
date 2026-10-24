@@ -411,6 +411,10 @@ public final class GameModes {
 		if (race == null || !Mode.inMode(p) || !p.isAlive() || p.isSpectator()) return;
 		if (!(p.level().getEntity(entityId) instanceof net.minecraft.world.entity.item.ItemEntity ie) || ie.isRemoved()
 				|| ie.distanceToSqr(p.getEyePosition()) > 3.5 * 3.5) return;
+		// and in sight: no block between the eyes and the item (the client's ray already stops at walls)
+		var los = p.level().clip(new net.minecraft.world.level.ClipContext(p.getEyePosition(), ie.getBoundingBox().getCenter(),
+				net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, p));
+		if (los.getType() != net.minecraft.world.phys.HitResult.Type.MISS) return;
 		ItemStack s = ie.getItem();
 		int gear = Mode.gearSlot(s);
 		if (gear == 0) return;
