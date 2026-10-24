@@ -365,11 +365,13 @@ public final class GameModes {
 	/** A bot standing at its objective: planting or defusing. */
 	/** In a round mode the bomb is the Terrorists' and the defuse kit the Counter-Terrorists' to pick up. */
 	public static boolean mayPickUp(net.minecraft.world.entity.player.Player p, net.minecraft.world.item.ItemStack s) {
-		if (!(race instanceof RoundMode) || !(p instanceof ServerPlayer sp) || !Mode.inMode(sp)) return true;
+		if (race == null || !(p instanceof ServerPlayer sp) || !Mode.inMode(sp)) return true;
+		// every game mode, as CS2: one primary and one pistol; walking over a gun only picks it up while that slot is
+		// empty (any side's gun)
+		if (s.getItem() instanceof dev.strafemc.weapon.GunItem g) return Mode.carriedGun(sp, Deathmatch.pistol(g.weaponClass)) < 0;
+		if (!(race instanceof RoundMode)) return true;
 		if (s.is(dev.strafemc.weapon.WeaponItems.C4)) return dev.strafemc.weapon.CsTeam.isT(p);
 		if (s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return !dev.strafemc.weapon.CsTeam.isT(p);
-		// CS2 carries one primary and one pistol: walking over a gun of a kind you have doesn't pick it up (any side's gun)
-		if (s.getItem() instanceof dev.strafemc.weapon.GunItem g) return Mode.carriedGun(sp, Deathmatch.pistol(g.weaponClass)) < 0;
 		return true;
 	}
 

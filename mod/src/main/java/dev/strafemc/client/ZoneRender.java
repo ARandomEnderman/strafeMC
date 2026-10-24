@@ -27,6 +27,24 @@ public final class ZoneRender {
 
 	private ZoneRender() {}
 
+	/** Whether a player stands in their side's drawn buy zone; null when that side has none drawn (spawn blocks decide). */
+	public static Boolean inBuyZone(net.minecraft.world.entity.player.Player p) {
+		Zones.Type own = dev.strafemc.weapon.CsTeam.isT(p) ? Zones.Type.BUY_T : Zones.Type.BUY_CT;
+		boolean any = false;
+		for (Zones.Zone z : zones) {
+			if (z.type() != own) continue;
+			any = true;
+			if (z.contains(p)) return true;
+		}
+		return any ? Boolean.FALSE : null;
+	}
+
+	/** Whether an entity stands in a drawn bomb site (the server's zones as last sent; bomb sites exist only as zones). */
+	public static boolean inSite(net.minecraft.world.entity.Entity e) {
+		for (Zones.Zone z : zones) if (z.type().site() && z.contains(e)) return true;
+		return false;
+	}
+
 	public static void register() {
 		ClientPlayNetworking.registerGlobalReceiver(StrafePayloads.ZoneList.TYPE, (msg, ctx) -> {
 			try {

@@ -15,6 +15,9 @@ public abstract class GameRendererHandFovMixin {
 	@ModifyExpressionValue(method = "renderLevel", at = @At(value = "FIELD",
 			target = "Lnet/minecraft/client/renderer/state/level/CameraRenderState;hudFov:F"))
 	private float strafemc$viewmodelFov(float original) {
-		return dev.strafemc.client.ClientGameplay.sourceMovement() ? (float) StrafeConfig.viewmodelFov : original;
+		if (!dev.strafemc.client.ClientGameplay.sourceMovement()) return original;
+		// aiming an iron sight (AUG / SG 553) moves the viewmodel FOV toward 54, as CS2's does while scoped
+		double aim = dev.strafemc.client.weapon.GunClient.INSTANCE.ironsight();
+		return (float) (StrafeConfig.viewmodelFov + (54 - StrafeConfig.viewmodelFov) * aim);
 	}
 }

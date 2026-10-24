@@ -79,7 +79,15 @@ public final class BuyMenuScreen extends Screen {
 	}
 
 	public static void open(Minecraft mc) {
-		if (ClientGameplay.buyMode() == 0) {
+		var mode = ModeHud.state();
+		// a round mode: CS2 opens it only where and while you can buy (the drawn zones checked here at once, else the server's answer)
+		Boolean zone = mode != null && mode.has("buyZone") && mc.player != null ? ZoneRender.inBuyZone(mc.player) : null;
+		boolean late = mode != null && mode.has("buyLeft") && mode.get("buyLeft").getAsInt() == 0;
+		if (mode != null && mode.has("buyZone") && (late || (zone != null ? !zone : !mode.get("buyZone").getAsBoolean()))) {
+			StrafeToasts.show(late ? "You can't buy anything now" : "You are not in a buy zone", dev.strafemc.server.Toasts.WARN);
+			return;
+		}
+		if ((mode == null || !mode.has("phase")) && ClientGameplay.buyMode() == 0) {
 			StrafeToasts.show("You cannot buy (the buy menu is off on this server)", dev.strafemc.server.Toasts.WARN);
 			return;
 		}

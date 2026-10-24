@@ -204,6 +204,7 @@ public final class GunClient {
 		viewPunch[0] *= vd;
 		viewPunch[1] *= vd;
 		playDue(p, now);
+		updateIronSight(held, dt);
 		inspectHold(now);
 		updateReload(p, now, dt);
 		// dead (the death camera) or watching: no shots, stabs, throws or plants (they played here and the server
@@ -434,6 +435,27 @@ public final class GunClient {
 		return zoom > 0;
 	}
 
+	/** How far an AUG / SG 553's iron sight is up: 0..1, rising at m_flIronSightPullUpSpeed, falling at PutDownSpeed (/s). */
+	private double ironsight;
+
+	public double ironsight() {
+		return ironsight;
+	}
+
+	/** Whether the gun aims down its own sight when zoomed (CS2's iron sight: m_flIronSightPullUpSpeed in its vdata). */
+	static boolean ironSightGun(String cls) {
+		var vd = dev.strafemc.client.ClientGameplay.weapon(cls);
+		return vd != null && vd.get("m_flIronSightPullUpSpeed") instanceof Number;
+	}
+
+	private void updateIronSight(ItemStack held, double dt) {
+		boolean on = zoom > 0 && held.getItem() instanceof GunItem g && ironSightGun(g.weaponClass);
+		var vd = held.getItem() instanceof GunItem g ? dev.strafemc.client.ClientGameplay.weapon(g.weaponClass) : null;
+		double up = vd != null && vd.get("m_flIronSightPullUpSpeed") instanceof Number n ? n.doubleValue() : 10;
+		double down = vd != null && vd.get("m_flIronSightPutDownSpeed") instanceof Number n ? n.doubleValue() : 8;
+		ironsight = on ? Math.min(1, ironsight + up * dt) : Math.max(0, ironsight - down * dt);
+	}
+
 	/** Scoped with a sniper: the scope overlay instead of the viewmodel (m_bHideViewModelWhenZoomed). */
 	public boolean scopeOverlay() {
 		if (zoom <= 0) return false;
@@ -461,6 +483,10 @@ public final class GunClient {
 		}
 		zoom = level;
 		if (ClientPlayNetworking.canSend(StrafePayloads.Action.TYPE)) ClientPlayNetworking.send(new StrafePayloads.Action("zoom", String.valueOf(level)));
+		if (p.getMainHandItem().getItem() instanceof GunItem ig && ironSightGun(ig.weaponClass)) { // AUG / SG 553: up the sight, or down
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.rest = level > 0 ? "ironsight_idle" : "idle";
+			dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.toRest();
+		}
 		if (level > 0 && p.getMainHandItem().getItem() instanceof GunItem g) { // why a scope shows or not (user report: snipers only zoom)
 			var vd = dev.strafemc.client.ClientGameplay.weapon(g.weaponClass);
 			dev.strafemc.StrafeMc.LOG.info("[strafemc] zoom {} {}: overlay {} (hide flag {}, merged data {}, local data {}, synced {})", level, g.weaponClass,
@@ -472,6 +498,7 @@ public final class GunClient {
 	/** Unzoomed at once (weapon switch). */
 	private void resetZoom() {
 		zoom = resumeZoom = 0;
+		dev.strafemc.client.viewmodel.Viewmodel.INSTANCE.rest = "idle";
 		zoomFromFov = zoomToFov = 90;
 		zoomTime = 0;
 	}
@@ -639,6 +666,13 @@ public final class GunClient {
 			return;
 		}
 		if (now < deployUntil || mc.screen != null || !mc.options.keyAttack.isDown() || !p.onGround()) return;
+		// a round mode plants only at a bomb site: CS2 doesn't start the plant (no animation, no beeps) anywhere else
+		var mode = dev.strafemc.client.ModeHud.state();
+		if (mode != null && mode.has("bombZone") && !dev.strafemc.client.ZoneRender.inSite(p)) {
+			dev.strafemc.client.movement.MovementController.notice(dev.strafemc.client.CsText.get("Cstrike_TitlesTXT_C4_Plant_At_Bomb_Spot",
+					"C4 must be planted at a bomb site"));
+			return;
+		}
 		planting = true;
 		plantTyped = false;
 		plantStart = now;
@@ -824,6 +858,7 @@ public final class GunClient {
 	 */
 	private static String shootAnim(WeaponStats w, int roundsLeft, boolean alt) {
 		if (alt) return "shoot_alt";
+		if (INSTANCE.zoom > 0 && ironSightGun(w.cls())) return "ironsight_shoot"; // the AUG / SG 553 fired down its sight
 		boolean left = w.cls().equals("weapon_elite") && roundsLeft % 2 == 0;
 		if (roundsLeft <= 0) return left ? "shoot_left_last" : "shoot_last";
 		return left ? "shoot_left" : "shoot1";

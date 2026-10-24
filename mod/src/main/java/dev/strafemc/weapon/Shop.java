@@ -101,7 +101,8 @@ public final class Shop {
 			if (progress >= ROTATION) {
 				p.setAttached(PROGRESS, 0);
 				p.setAttached(DATA, new State(s.cents(), s.rotation() + 1, 0, 0));
-				dev.strafemc.server.Toasts.info(p, "The shop has new items.");
+				// no notice where the shop is off (game mode servers, the shop switch): there's nothing to open
+				if (dev.strafemc.server.ServerRules.shop()) dev.strafemc.server.Toasts.info(p, "The shop has new items.");
 			} else {
 				p.setAttached(PROGRESS, progress);
 				if (progress % 1200 == 0) sync(p);

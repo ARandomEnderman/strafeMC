@@ -906,8 +906,11 @@ public final class Viewmodel {
 	 * after a draw) and out to idle over 0.3 s; a shot settles to idle over 0.1 s; everything else 0.2 s.
 	 */
 	private static float blendTime(String from, String to, boolean knife) {
-		boolean toAttack = to.startsWith("shoot") || to.startsWith("light_") || to.startsWith("heavy_");
-		boolean fromAttack = from.startsWith("shoot") || from.startsWith("light_") || from.startsWith("heavy_");
+		boolean toAttack = to.startsWith("shoot") || to.startsWith("ironsight_shoot") || to.startsWith("light_") || to.startsWith("heavy_");
+		boolean fromAttack = from.startsWith("shoot") || from.startsWith("ironsight_shoot") || from.startsWith("light_") || from.startsWith("heavy_");
+		// the iron sight comes up at m_flIronSightPullUpSpeed 10/s and goes down at PutDownSpeed 8/s (AUG / SG 553)
+		if (to.equals("ironsight_idle")) return 0.1f;
+		if (from.startsWith("ironsight_") && to.equals("idle")) return 0.125f;
 		if (to.equals("draw")) return 0;
 		if (from.equals("pullpin") && to.startsWith("throwcharge")) return 0.1f;
 		if (to.startsWith("throw_")) return 0; // a quick throw cuts in from the pin pull (a blend swung the hand backwards)
@@ -918,6 +921,19 @@ public final class Viewmodel {
 			if (fromAttack) return knife ? 0.2f : 0.1f;
 		}
 		return 0.2f;
+	}
+
+	/** The clip a finished animation returns to: "idle", or "ironsight_idle" while an AUG / SG 553 is aimed (GunClient). */
+	public volatile String rest = "idle";
+
+	/** A held pose that loops (idle, or the iron sight's). */
+	private static boolean isRest(String name) {
+		return name.equals("idle") || name.equals("ironsight_idle");
+	}
+
+	/** Back to the rest clip if nothing else is playing (aiming in or out between other animations). */
+	public void toRest() {
+		if (clip == null || isRest(clip.name)) play(rest);
 	}
 
 	/** Starts an animation ("draw", "idle", "shoot1", "reload", "lookat01"), blending from the current one like CS2. */
@@ -932,12 +948,12 @@ public final class Viewmodel {
 					if (path.equals(dev.strafemc.weapon.GunServer.clipPath(l.cls, e.getKey()))) c = e.getValue();
 		}
 		if (c == null) return;
-		if (clip != null && clip != c || clip == c && !anim.equals("idle")) {
+		if (clip != null && clip != c || clip == c && !isRest(anim)) {
 			float d = clip == null ? 0 : blendTime(clip.name, anim, l.cls.contains("knife"));
 			if (d > 0) {
 				// freeze exactly what's on screen (mid-crossfade too), so every new clip blends from it
 				float t = Math.min(clipTime(), clip.duration);
-				if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
+				if (isRest(clip.name) && clip.duration > 0) t %= clip.duration;
 				float w = blendDuration <= 0 ? 1 : (System.nanoTime() - blendStart) / 1e9f / blendDuration;
 				fromPose = clip.snapshot(t, fromPose != null && w < 1 ? fromPose : null, Math.max(0, Math.min(1, w)));
 			} else fromPose = null;
@@ -995,11 +1011,11 @@ public final class Viewmodel {
 		float t = clipTime();
 		// clips that end in a held pose (a grenade's charged throw: single-frame poses) stay until the next animation
 		// (and pulling the pin, which hands over to the charged pose without dropping to idle in between)
-		if (t > clip.duration && !clip.name.equals("idle") && !clip.name.startsWith("throwcharge") && !clip.name.equals("pullpin")) {
-			play("idle");
+		if (t > clip.duration && !isRest(clip.name) && !clip.name.startsWith("throwcharge") && !clip.name.equals("pullpin")) {
+			play(rest);
 			t = 0;
 		}
-		if (clip.name.equals("idle") && clip.duration > 0) t %= clip.duration;
+		if (isRest(clip.name) && clip.duration > 0) t %= clip.duration;
 		Matrix4f[] pose;
 		float w = blendDuration <= 0 ? 1 : (System.nanoTime() - blendStart) / 1e9f / blendDuration;
 		if (fromPose != null && w < 1) pose = clip.pose(t, fromPose, Math.max(0, w)); // from the pose frozen when this clip began
@@ -1016,8 +1032,10 @@ public final class Viewmodel {
 		var player = watching() ? null : net.minecraft.client.Minecraft.getInstance().player; // a watched player's view: no bob / sway of yours
 		// CS2's viewmodel_offset_x/y/z (units right / forward / up), then bob + sway, then the model
 		float upb = (float) StrafeConfig.unitsPerBlock;
-		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb, (float) StrafeConfig.viewmodelOffsetZ / upb,
-				(float) -StrafeConfig.viewmodelOffsetY / upb);
+		// aiming an iron sight fades the offsets out (CS2: offsets x (1 - the scope amount)), the sight lines up with the eye
+		float aim = (float) (1 - dev.strafemc.client.weapon.GunClient.INSTANCE.ironsight());
+		Matrix4f offsets = new Matrix4f().translate((float) StrafeConfig.viewmodelOffsetX / upb * aim, (float) StrafeConfig.viewmodelOffsetZ / upb * aim,
+				(float) -StrafeConfig.viewmodelOffsetY / upb * aim);
 		Matrix4f sway = player != null ? motion.offset(player) : new Matrix4f();
 		// cl_righthand 0: mirrored into the left hand; bob and sway are the camera's, so they're mirrored back and still
 		// lag the same way as you turn

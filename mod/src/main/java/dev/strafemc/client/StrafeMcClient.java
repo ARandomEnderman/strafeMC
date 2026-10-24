@@ -189,6 +189,7 @@ public class StrafeMcClient implements ClientModInitializer {
 		dev.strafemc.client.ZoneRender.register();
 		dev.strafemc.client.ModeScoreboard.register();
 		dev.strafemc.client.weapon.ScopeHud.register();
+		dev.strafemc.client.weapon.IronSightHud.register();
 		ShowPosHud.register();
 		JumpStats.register();
 		Cs2Bridge.onConnectionChange = c -> Minecraft.getInstance().execute(() -> net.minecraft.client.gui.components.toasts.SystemToast.addOrUpdate(

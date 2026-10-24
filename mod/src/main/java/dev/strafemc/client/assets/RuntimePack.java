@@ -50,13 +50,13 @@ public final class RuntimePack {
 				safe(() -> icon(icon + ".vtex_c", icon + ".png", tex.resolve("item/" + k.id + ".png"), 128), tex.resolve("item/" + k.id + ".png"),
 						Placeholders.Icon.ARMOR, 32);
 			}
-			// CS2's sniper scope overlay (panorama hud/scope): the round mask, the lens tint, the blurred reticle line
-			for (String[] sc : new String[][] {{"scope_circle_png", "circle"}, {"scope_lens_tga", "lens"}, {"scope_line_blur_tga", "line_blur"}}) {
-				Path out = tex.resolve("gui/scope/" + sc[1] + ".png");
+			// CS2's iron sight (AUG / SG 553): the glowing dot (scope.vmat) and the round filter around the sight (scope_filter.vmat)
+			for (String[] sc : new String[][] {{"scope_dot_white_color_tga_be26db34", "dot"}, {"scope_filter_tga_1b50f18e", "filter"}}) {
+				Path out = tex.resolve("gui/ironsight/" + sc[1] + ".png");
 				try {
-					raw("panorama/images/hud/scope/" + sc[0] + ".vtex_c", "panorama/images/hud/scope/" + sc[0] + ".png", out);
+					raw("materials/models/weapons/shared/scope/" + sc[0] + ".vtex_c", "materials/models/weapons/shared/scope/" + sc[0] + ".png", out);
 				} catch (Exception e) {
-					StrafeMc.LOG.warn("[strafemc] scope overlay {}: {}", sc[1], e.toString());
+					StrafeMc.LOG.warn("[strafemc] iron sight {}: {}", sc[1], e.toString());
 				}
 			}
 			// CS2's radar icons (hudradar): white shapes the radar colours
