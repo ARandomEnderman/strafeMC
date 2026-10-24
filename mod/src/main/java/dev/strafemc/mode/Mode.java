@@ -405,7 +405,8 @@ abstract class Mode {
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem || s.getItem() instanceof dev.strafemc.weapon.MagPouchItem) inv.setItem(i, ItemStack.EMPTY);
-			else if (s.getItem() instanceof GunItem g) s.set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(g.weaponClass).getCount());
+			else if ((gearSlot(s) == 1 || gearSlot(s) == 2) && s.getItem() instanceof GunItem g) // guns only (not knives, grenades...)
+				s.set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(g.weaponClass).getCount());
 		}
 	}
 
@@ -417,12 +418,50 @@ abstract class Mode {
 				inv.getItem(i).set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(cls).getCount());
 	}
 
+	/**
+	 * CS2's gear slot of an item: 1 primary, 2 pistol, 3 knife or Zeus, 4 grenades, 5 the bomb, 0 anything else (the
+	 * Medi-Shot, non-CS items). Knives, grenades and the bomb are GunItems too, so a plain GunItem test isn't a gun.
+	 */
+	static int gearSlot(ItemStack s) {
+		if (!(s.getItem() instanceof GunItem g) || s.getItem() instanceof dev.strafemc.weapon.HealthshotItem) return 0;
+		if (s.getItem() instanceof dev.strafemc.weapon.C4Item) return 5;
+		if (s.getItem() instanceof dev.strafemc.weapon.GrenadeItem) return 4;
+		if (s.getItem() instanceof dev.strafemc.weapon.KnifeItem || g.weaponClass.equals(dev.strafemc.weapon.ZeusRecharge.CLS)) return 3;
+		return Deathmatch.pistol(g.weaponClass) ? 2 : 1;
+	}
+
 	/** The inventory slot of the carried gun of a kind (CS2 carries one primary and one pistol), or -1. */
 	static int carriedGun(ServerPlayer p, boolean pistol) {
 		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++)
-			if (inv.getItem(i).getItem() instanceof GunItem g && Deathmatch.pistol(g.weaponClass) == pistol) return i;
+		for (int i = 0; i < inv.getContainerSize(); i++) if (gearSlot(inv.getItem(i)) == (pistol ? 2 : 1)) return i;
 		return -1;
+	}
+
+	/**
+	 * Whether a player may pick this up, as CS2 carries gear: one primary, one pistol, one knife and one Zeus (slot 3),
+	 * grenades up to their limits (ammo_grenade_limit_flashbang / _default each, ammo_grenade_limit_total in all), one
+	 * bomb.
+	 */
+	static boolean roomFor(ServerPlayer p, ItemStack s) {
+		int slot = gearSlot(s);
+		if (slot == 0) return true;
+		var inv = p.getInventory();
+		if (slot == 1 || slot == 2) return carriedGun(p, slot == 2) < 0;
+		boolean knife = s.getItem() instanceof dev.strafemc.weapon.KnifeItem;
+		int same = 0, total = 0;
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack t = inv.getItem(i);
+			if (gearSlot(t) != slot) continue;
+			if (slot == 3 && (t.getItem() instanceof dev.strafemc.weapon.KnifeItem) == knife) return false; // a knife (or a Zeus) already
+			if (slot == 5) return false;
+			if (slot == 4) {
+				total += t.getCount();
+				if (t.getItem() == s.getItem()) same += t.getCount();
+			}
+		}
+		if (slot != 4) return true;
+		boolean flash = s.getItem() instanceof dev.strafemc.weapon.GrenadeItem gi && gi.type == dev.strafemc.weapon.Grenade.FLASHBANG;
+		return same < cvar(flash ? "ammo_grenade_limit_flashbang" : "ammo_grenade_limit_default", flash ? 2 : 1) && total < cvar("ammo_grenade_limit_total", 4);
 	}
 
 	static void knife(ServerPlayer p) {

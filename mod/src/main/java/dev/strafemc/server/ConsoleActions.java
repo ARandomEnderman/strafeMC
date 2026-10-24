@@ -517,6 +517,12 @@ public final class ConsoleActions {
 				ConsoleRelay.reply(p, cmd + " = " + (v.equalsIgnoreCase("default") ? "the game mode's" : v));
 			}
 			case "zone_next" -> dev.strafemc.mode.ZoneToolItem.next(p); // left-click with the Zone Tool (it checks who may)
+			case "use_pickup" -> { // E on a weapon on the ground (game mode servers): take it or swap it in
+				try {
+					dev.strafemc.mode.GameModes.usePickup(p, Integer.parseInt(arg.trim()));
+				} catch (NumberFormatException ignored) {
+				}
+			}
 			case "strafemc_infinite_pearl" -> { // your own Strafe Pearl never runs out (in every game mode too); operators
 				if (!op) {
 					ConsoleRelay.reply(p, ("Only operators can do that."));

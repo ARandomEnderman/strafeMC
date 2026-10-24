@@ -366,9 +366,9 @@ public final class GameModes {
 	/** In a round mode the bomb is the Terrorists' and the defuse kit the Counter-Terrorists' to pick up. */
 	public static boolean mayPickUp(net.minecraft.world.entity.player.Player p, net.minecraft.world.item.ItemStack s) {
 		if (race == null || !(p instanceof ServerPlayer sp) || !Mode.inMode(sp)) return true;
-		// every game mode, as CS2: one primary and one pistol; walking over a gun only picks it up while that slot is
-		// empty (any side's gun)
-		if (s.getItem() instanceof dev.strafemc.weapon.GunItem g) return Mode.carriedGun(sp, Deathmatch.pistol(g.weaponClass)) < 0;
+		// every game mode, as CS2: one primary, one pistol, a knife and a Zeus, grenades to their limits, one bomb;
+		// walking over something only picks it up while there's room for it (any side's gun)
+		if (!Mode.roomFor(sp, s)) return false;
 		if (!(race instanceof RoundMode)) return true;
 		if (s.is(dev.strafemc.weapon.WeaponItems.C4)) return dev.strafemc.weapon.CsTeam.isT(p);
 		if (s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return !dev.strafemc.weapon.CsTeam.isT(p);
@@ -381,7 +381,10 @@ public final class GameModes {
 	 */
 	public static int dropSameKind(ServerPlayer p, String cls) {
 		if (race == null || !Mode.inMode(p)) return -1;
-		boolean pistol = Deathmatch.pistol(cls);
+		var item = dev.strafemc.weapon.WeaponItems.GUNS.get(cls);
+		int gear = item == null ? 0 : Mode.gearSlot(new ItemStack(item));
+		if (gear != 1 && gear != 2) return -1; // only a primary or a pistol takes another's place (the Zeus is slot 3)
+		boolean pistol = gear == 2;
 		var inv = p.getInventory();
 		int at = Mode.carriedGun(p, pistol);
 		if (at >= 0) {
@@ -392,6 +395,53 @@ public final class GameModes {
 		}
 		int own = pistol ? 1 : 0;
 		return inv.getItem(own).isEmpty() ? own : -1;
+	}
+
+	/** Whether a player in the running mode has room for this (CS2's gear slots); true when no mode holds them. */
+	public static boolean roomFor(ServerPlayer p, ItemStack s) {
+		return race == null || !Mode.inMode(p) || Mode.gearSlot(s) == 1 || Mode.gearSlot(s) == 2 || Mode.roomFor(p, s);
+	}
+
+	/**
+	 * CS2's use key on a weapon on the ground (E on a game mode server, sent by the client with the item's id): picked
+	 * up if there's room, else swapped for what holds its place (the primary or pistol, the knife or the Zeus), which drops;
+	 * grenades and the bomb only come when there's room. The new one is in hand afterwards.
+	 */
+	public static void usePickup(ServerPlayer p, int entityId) {
+		if (race == null || !Mode.inMode(p) || !p.isAlive() || p.isSpectator()) return;
+		if (!(p.level().getEntity(entityId) instanceof net.minecraft.world.entity.item.ItemEntity ie) || ie.isRemoved()
+				|| ie.distanceToSqr(p.getEyePosition()) > 3.5 * 3.5) return;
+		ItemStack s = ie.getItem();
+		int gear = Mode.gearSlot(s);
+		if (gear == 0) return;
+		if (race instanceof RoundMode && (s.is(dev.strafemc.weapon.WeaponItems.C4) && !dev.strafemc.weapon.CsTeam.isT(p)
+				|| s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT) && dev.strafemc.weapon.CsTeam.isT(p))) return;
+		var inv = p.getInventory();
+		int at = -1;
+		if (!Mode.roomFor(p, s)) {
+			if (gear == 1 || gear == 2) at = Mode.carriedGun(p, gear == 2);
+			else if (gear == 3) { // the knife for a knife, the Zeus for a Zeus
+				boolean knife = s.getItem() instanceof dev.strafemc.weapon.KnifeItem;
+				for (int i = 0; i < inv.getContainerSize() && at < 0; i++)
+					if (Mode.gearSlot(inv.getItem(i)) == 3 && (inv.getItem(i).getItem() instanceof dev.strafemc.weapon.KnifeItem) == knife) at = i;
+			}
+			if (at < 0) return; // grenades or the bomb at their limit: nothing to swap
+			ItemStack old = inv.getItem(at);
+			inv.setItem(at, ItemStack.EMPTY);
+			p.drop(old, false);
+			inv.setItem(at, s.copy());
+		} else {
+			int own = gear == 1 ? 0 : gear == 2 ? 1 : -1;
+			if (own >= 0 && inv.getItem(own).isEmpty()) inv.setItem(at = own, s.copy());
+			else {
+				ItemStack copy = s.copy();
+				if (!inv.add(copy)) return;
+				for (int i = 0; i < inv.getContainerSize() && at < 0; i++) if (ItemStack.isSameItemSameComponents(inv.getItem(i), s)) at = i;
+			}
+		}
+		ie.discard();
+		dev.strafemc.weapon.GunServer.soundAt((net.minecraft.server.level.ServerLevel) p.level(), "Player.PickupWeapon", p.position(), p);
+		if (at >= 0 && at < 9) Mode.select(p, at);
 	}
 
 	/** A bought gun's spare magazines (carried by the gun); false when no round mode holds the player (loose magazines). */

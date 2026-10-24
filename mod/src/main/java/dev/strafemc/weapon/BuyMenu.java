@@ -164,6 +164,10 @@ public final class BuyMenu {
 						dev.strafemc.server.Toasts.warn(p, WeaponTable.name(gun.cls()) + " isn't in your loadout");
 						return;
 					}
+					if (!dev.strafemc.mode.GameModes.roomFor(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())))) { // a second Zeus (slot 3)
+						dev.strafemc.server.Toasts.warn(p, "You cannot carry any more");
+						return;
+					}
 					if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
 					paid = price(gun.cls(), 0);
 					int slot = dev.strafemc.mode.GameModes.dropSameKind(p, gun.cls()); // CS2: the gun of that kind you had drops
