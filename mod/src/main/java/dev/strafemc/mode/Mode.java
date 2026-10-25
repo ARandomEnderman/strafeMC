@@ -523,6 +523,9 @@ abstract class Mode {
 	/** A new match: the mode's own reset, then everyone back to a spawn. */
 	abstract void reset();
 
+	/** The operators' settings over the mode's config changed (StrafeSettings.modeCvars). */
+	void cvarsChanged() {}
+
 	void tick() {
 		long t = now();
 		for (var e : new ArrayList<>(respawnAt.entrySet())) {

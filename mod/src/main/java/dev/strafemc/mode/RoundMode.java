@@ -44,6 +44,28 @@ final class RoundMode extends Mode {
 			double killFactor, int teamElimination, int teamBomb, int teamDefuse, int teamTime, int loserBonus, int loserConsecutive, int plantedDefused,
 			int playerPlant, int playerDefuse, boolean freeArmor, int warmup, int restartDelay, int startingLosses, double ffBullets, double ffGrenade,
 			double ffOther, int flashLimit, int grenadeLimit) {
+		/**
+		 * This config with an operator's CS2 settings over it (mp_freezetime / mp_buytime / mp_warmuptime s, mp_roundtime
+		 * minutes, mp_maxrounds, mp_startmoney, mp_maxmoney, mp_halftime, ammo_grenade_limit_total / _flashbang).
+		 */
+		Config with(Map<String, String> o) {
+			return new Config(id, (int) num(o, "mp_maxrounds", maxRounds), num(o, "mp_halftime", halftime ? 1 : 0) != 0, (int) num(o, "mp_freezetime", freeze),
+					(int) num(o, "mp_buytime", buy), (int) Math.round(o.containsKey("mp_roundtime") ? num(o, "mp_roundtime", 0) * 60 : roundTime),
+					(int) num(o, "mp_startmoney", startMoney), (int) num(o, "mp_maxmoney", maxMoney), killDefault, killFactor, teamElimination, teamBomb,
+					teamDefuse, teamTime, loserBonus, loserConsecutive, plantedDefused, playerPlant, playerDefuse, freeArmor, (int) num(o, "mp_warmuptime", warmup),
+					restartDelay, startingLosses, ffBullets, ffGrenade, ffOther, (int) num(o, "ammo_grenade_limit_flashbang", flashLimit),
+					(int) num(o, "ammo_grenade_limit_total", grenadeLimit));
+		}
+
+		private static double num(Map<String, String> o, String key, double def) {
+			try {
+				String v = o.get(key);
+				return v == null || v.isEmpty() ? def : Double.parseDouble(v);
+			} catch (NumberFormatException e) {
+				return def;
+			}
+		}
+
 		/** gamemode_casual.cfg's mp_defuser_allocation 2 (competitive and wingman: 0). */
 		boolean freeDefuser() {
 			return id.equals("casual");
@@ -63,7 +85,9 @@ final class RoundMode extends Mode {
 
 	enum Phase { FREEZE, LIVE, OVER }
 
-	private final Config c;
+	/** The mode's own config (CS2's gamemode_*.cfg numbers) and what plays: it with the operators' settings over it. */
+	private final Config base;
+	private Config c;
 	private int round, scoreT, scoreCt, lossT, lossCt;
 	private Phase phase = Phase.FREEZE;
 	private long phaseStart;
@@ -93,7 +117,8 @@ final class RoundMode extends Mode {
 
 	RoundMode(MinecraftServer server, Config c) {
 		super(server);
-		this.c = c;
+		this.base = c;
+		this.c = c.with(dev.strafemc.server.StrafeSettings.modeCvars());
 		reset();
 	}
 
@@ -103,12 +128,22 @@ final class RoundMode extends Mode {
 	}
 
 	@Override
+	void cvarsChanged() {
+		c = base.with(dev.strafemc.server.StrafeSettings.modeCvars()); // the freeze, buy and round times from the next round on
+	}
+
+	@Override
 	Map<String, String> cvars() {
 		Map<String, String> m = new HashMap<>();
 		m.put("sv_infinite_ammo", "0");
 		m.put("mp_free_armor", c.freeArmor() ? "2" : "0");
 		m.put("mp_buy_anywhere", "0");
 		m.put("mp_buytime", String.valueOf(c.buy()));
+		m.put("mp_freezetime", String.valueOf(c.freeze()));
+		m.put("mp_roundtime", String.valueOf(c.roundTime() / 60.0));
+		m.put("mp_maxrounds", String.valueOf(c.maxRounds()));
+		m.put("mp_warmuptime", String.valueOf(c.warmup()));
+		m.put("mp_halftime", c.halftime() ? "1" : "0");
 		m.put("mp_teammates_are_enemies", "0");
 		m.put("mp_startmoney", String.valueOf(c.startMoney()));
 		m.put("mp_maxmoney", String.valueOf(c.maxMoney()));
@@ -347,6 +382,27 @@ final class RoundMode extends Mode {
 		} else mvpReason = "";
 		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: round {} to {} ({}), {}-{}", round, tWins ? "T" : "CT", why, scoreCt, scoreT);
 		sendAll();
+	}
+
+	/**
+	 * What CS2's alert bar says now ({localization key, %s1}), or null: WARMUP m:ss (WARMUP ENDING in its last 10 s,
+	 * FLAGGED ours), WAITING FOR PLAYERS once the warmup is held for a missing side, and in a round's freeze time
+	 * FINAL ROUND / MATCH POINT / LAST ROUND OF FIRST HALF.
+	 */
+	String[] alert() {
+		if (over >= 0) return null;
+		long t = now() - start;
+		if (warmup() || round == 0) {
+			if (t >= warmupTicks() - 40 && !bothSides()) return new String[] {"SFUI_Notice_Alert_Waiting_For_Players", ""};
+			long left = Math.max(0, (warmupTicks() - t + 19) / 20);
+			return new String[] {left <= 10 ? "SFUI_Notice_Alert_Warmup_Period_Ending" : "SFUI_Notice_Alert_Warmup_Period", left / 60 + ":" + String.format("%02d", left % 60)};
+		}
+		if (phase != Phase.FREEZE) return null;
+		int half = c.maxRounds() / 2, toWin = half + 1 + ot * OT_ROUNDS / 2, last = c.maxRounds() + ot * OT_ROUNDS;
+		if (round == last) return new String[] {"SFUI_Notice_Alert_Final_Round", ""};
+		if (scoreT == toWin - 1 || scoreCt == toWin - 1) return new String[] {"SFUI_Notice_Alert_Match_Point", ""};
+		if (c.halftime() && ot == 0 && round == half) return new String[] {"SFUI_Notice_Alert_Last_Round_Half", ""};
+		return null;
 	}
 
 	/**
@@ -1011,6 +1067,11 @@ final class RoundMode extends Mode {
 		o.addProperty("ot", ot);
 		o.addProperty("site", site);
 		o.addProperty("waiting", warmup() && now() - start >= warmupTicks() - 40 && !bothSides());
+		String[] alert = alert();
+		if (alert != null) { // CS2's alert bar (hudalerts): its localization key and %s1
+			o.addProperty("alert", alert[0]);
+			o.addProperty("alertArg", alert[1]);
+		}
 		// CS2's money panel cart: you can buy here and now; the bomb icon: you carry it inside a bomb site
 		o.addProperty("buyZone", p.isAlive() && !p.isSpectator() && buyRefusal(p).isEmpty());
 		o.addProperty("buyLeft", buyLeft()); // the buy menu's clock (its own strafemc_buytime doesn't apply in a mode)

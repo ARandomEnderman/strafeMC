@@ -186,6 +186,9 @@ public final class GameModes {
 		if (race == null) return;
 		java.util.Map<String, String> m = new java.util.HashMap<>(race.cvars());
 		m.putAll(StrafeSettings.modeCvars());
+		race.cvarsChanged(); // a round mode takes its match settings from them
+		m.putAll(race.cvars());
+		m.putAll(StrafeSettings.modeCvars());
 		dev.strafemc.bridge.Cs2Bridge.INSTANCE.setModeCvars(m);
 		dev.strafemc.server.GameplaySync.resendAll();
 	}
@@ -199,6 +202,15 @@ public final class GameModes {
 			if (name.equals("spec_freeze_time") && (d < 0 || d > 10)) return "spec_freeze_time: 0 to 10 seconds";
 			if (name.equals("mp_autoteambalance") && d != 0 && d != 1) return "mp_autoteambalance: 0 or 1";
 			if (name.equals("mp_limitteams") && (d != Math.floor(d) || d < 0 || d > 10)) return "mp_limitteams: 0 (no limit) to 10";
+			boolean whole = d == Math.floor(d);
+			if (name.equals("mp_freezetime") && (d < 0 || d > 60)) return "mp_freezetime: 0 to 60 seconds";
+			if (name.equals("mp_buytime") && (d < 0 || d > 600)) return "mp_buytime: 0 to 600 seconds";
+			if (name.equals("mp_roundtime") && (d < 0.1 || d > 60)) return "mp_roundtime: 0.1 to 60 minutes";
+			if (name.equals("mp_maxrounds") && (!whole || d < 1 || d > 99)) return "mp_maxrounds: 1 to 99";
+			if ((name.equals("mp_startmoney") || name.equals("mp_maxmoney")) && (!whole || d < 0 || d > 65535)) return name + ": 0 to 65535";
+			if (name.equals("mp_warmuptime") && (d < 0 || d > 3600)) return "mp_warmuptime: 0 to 3600 seconds";
+			if (name.equals("mp_halftime") && d != 0 && d != 1) return "mp_halftime: 0 or 1";
+			if (name.startsWith("ammo_grenade_limit_") && (!whole || d < 0 || d > 10)) return name + ": 0 to 10";
 			return null;
 		} catch (NumberFormatException e) {
 			return name + ": a number, or default";
@@ -395,6 +407,11 @@ public final class GameModes {
 		}
 		int own = pistol ? 1 : 0;
 		return inv.getItem(own).isEmpty() ? own : -1;
+	}
+
+	/** Whether the drop key may drop this: not a weapon during a round mode's warmup (CS2). */
+	public static boolean mayDrop(ServerPlayer p, ItemStack s) {
+		return !(race instanceof RoundMode r) || !Mode.inMode(p) || !r.warmup() || Mode.gearSlot(s) == 0;
 	}
 
 	/** Whether a player in the running mode has room for this (CS2's gear slots); true when no mode holds them. */

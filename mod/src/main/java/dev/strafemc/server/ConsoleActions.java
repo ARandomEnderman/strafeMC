@@ -497,7 +497,7 @@ public final class ConsoleActions {
 				}
 				dev.strafemc.mode.GameModes.set(m);
 			}
-			case "mp_forcecamera", "spec_freeze_time", "mp_autoteambalance", "mp_limitteams" -> { // over the game modes' configs, kept with the world
+			case "mp_forcecamera", "spec_freeze_time", "mp_autoteambalance", "mp_limitteams", "mp_freezetime", "mp_buytime", "mp_roundtime", "mp_maxrounds", "mp_startmoney", "mp_maxmoney", "mp_warmuptime", "mp_halftime", "ammo_grenade_limit_total", "ammo_grenade_limit_flashbang" -> { // over the game modes' configs, kept with the world
 				String v = arg.trim();
 				if (v.isEmpty()) {
 					String now = dev.strafemc.bridge.Cs2Bridge.INSTANCE.cvar(cmd);

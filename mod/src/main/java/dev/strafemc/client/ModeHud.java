@@ -177,8 +177,7 @@ public final class ModeHud {
 					: "[Mouse 1] Next     [Mouse 2] Previous";
 			text(g, hint, cx, py + (int) Math.round(42 * px), 16 * px, 0xFFB0B0B0);
 		}
-		if (s.has("waiting") && s.get("waiting").getAsBoolean()) // a side has nobody: the round can't start
-			text(g, "Waiting for players on both teams", cx, top + bh + (int) Math.round(80 * px), 20 * px, 0xFFB0B0B0);
+		// a side with nobody (the round can't start): the alert bar says WAITING FOR PLAYERS (AlertBar)
 		if (teams) {
 			g.fill(cx - bw / 2 - sw, top, cx - bw / 2, top + bh, 0xF0000000);
 			g.fill(cx + bw / 2, top, cx + bw / 2 + sw, top + bh, 0xF0000000);

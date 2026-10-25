@@ -163,6 +163,9 @@ public final class ConsoleCommands {
 				Minecraft.getInstance().setScreen(dev.strafemc.client.StrafeSettingsScreen.at(Minecraft.getInstance().screen, "crosshair"))));
 		local("strafemc_eom_spot", "End of match camera: stand here looking where the team should line up (clear: in front of each player). Operators.",
 				a -> action("strafemc_eom_spot", a.length == 0 ? "" : a[0], false));
+		// round modes: end the warmup now / restart the match (they went to the CS2 process, which runs no strafeGM mode)
+		local("mp_warmup_end", "End the game mode's warmup now. Operators.", a -> action("mp_warmup_end", "", false));
+		local("mp_restartgame", "Restart the game mode's match. Operators.", a -> action("mp_restartgame", a.length > 0 ? a[0] : "", false));
 		local("bot_add", "Add a bot. Operators.", a -> action("bot_add", "", false));
 		local("bot_add_t", "Add a T bot. Operators.", a -> action("bot_add_t", "", false));
 		local("bot_add_ct", "Add a CT bot. Operators.", a -> action("bot_add_ct", "", false));
@@ -380,6 +383,26 @@ public final class ConsoleCommands {
 				a -> action("spec_freeze_time", a.length > 0 ? a[0] : "", false));
 		local("mp_autoteambalance", "Round modes: move players to the smaller side when the next round starts (1) or not (0, default). Operators.",
 				a -> action("mp_autoteambalance", a.length > 0 ? a[0] : "", false));
+		local("mp_freezetime", "Round modes: seconds of freeze time at a round's start; default: the mode's. Operators.",
+				a -> action("mp_freezetime", a.length > 0 ? a[0] : "", false));
+		local("mp_buytime", "Round modes: seconds you may buy after the freeze time; default: the mode's. Operators.",
+				a -> action("mp_buytime", a.length > 0 ? a[0] : "", false));
+		local("mp_roundtime", "Round modes: minutes a round lasts; default: the mode's. Operators.",
+				a -> action("mp_roundtime", a.length > 0 ? a[0] : "", false));
+		local("mp_maxrounds", "Round modes: rounds in a match; default: the mode's. Operators.",
+				a -> action("mp_maxrounds", a.length > 0 ? a[0] : "", false));
+		local("mp_startmoney", "Round modes: money at the start (and after halftime); default: the mode's. Operators.",
+				a -> action("mp_startmoney", a.length > 0 ? a[0] : "", false));
+		local("mp_maxmoney", "Round modes: most money you can have; default: the mode's. Operators.",
+				a -> action("mp_maxmoney", a.length > 0 ? a[0] : "", false));
+		local("mp_warmuptime", "Round modes: seconds of warmup; default: the mode's. Operators.",
+				a -> action("mp_warmuptime", a.length > 0 ? a[0] : "", false));
+		local("mp_halftime", "Round modes: switch sides at halftime (1) or not (0); default: the mode's. Operators.",
+				a -> action("mp_halftime", a.length > 0 ? a[0] : "", false));
+		local("ammo_grenade_limit_total", "Round modes: grenades you can carry in all; default: the mode's. Operators.",
+				a -> action("ammo_grenade_limit_total", a.length > 0 ? a[0] : "", false));
+		local("ammo_grenade_limit_flashbang", "Round modes: flashbangs you can carry; default: the mode's. Operators.",
+				a -> action("ammo_grenade_limit_flashbang", a.length > 0 ? a[0] : "", false));
 		local("mp_limitteams", "How many players one side may have over the other when joining (0: no limit; default 2). Operators.",
 				a -> action("mp_limitteams", a.length > 0 ? a[0] : "", false));
 		local("strafemc_infinite_pearl", "A Strafe Pearl that never runs out, in every game mode too (1) or not (0). Operators.",

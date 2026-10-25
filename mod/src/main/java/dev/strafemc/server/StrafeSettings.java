@@ -65,7 +65,10 @@ public final class StrafeSettings {
 	private static volatile boolean overtime = false;
 	/** CS2 cvars operators set over the game modes' configs (mp_forcecamera, spec_freeze_time, team balance), kept with the world. */
 	private static final java.util.Map<String, String> MODE_CVARS = new java.util.concurrent.ConcurrentHashMap<>();
-	public static final java.util.List<String> MODE_CVAR_NAMES = java.util.List.of("mp_forcecamera", "spec_freeze_time", "mp_autoteambalance", "mp_limitteams");
+	// CS2's own commands over the game modes' configs; the round modes' match settings too (RoundMode.Config.with)
+	public static final java.util.List<String> MODE_CVAR_NAMES = java.util.List.of("mp_forcecamera", "spec_freeze_time", "mp_autoteambalance", "mp_limitteams",
+			"mp_freezetime", "mp_buytime", "mp_roundtime", "mp_maxrounds", "mp_startmoney", "mp_maxmoney", "mp_warmuptime", "mp_halftime",
+			"ammo_grenade_limit_total", "ammo_grenade_limit_flashbang");
 	private static Path file;
 
 	private StrafeSettings() {}
