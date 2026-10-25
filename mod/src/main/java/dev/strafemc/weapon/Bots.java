@@ -66,6 +66,8 @@ public final class Bots {
 	private static final double HEARING = 50;
 	/** An enemy this close is noticed whichever way the bot faces (it'd hear them move). */
 	private static final double SENSE = 3;
+	/** On its way somewhere with the team, it only goes to check what it heard this close; farther off it keeps going. */
+	private static final double CHASE = 20;
 
 	/** A shot: bots within earshot know where the shooter is (even behind them). */
 	public static void noise(LivingEntity source) {
@@ -402,7 +404,8 @@ public final class Bots {
 			}
 		} else if (b.lastKnown != null && now - b.heardAt < 900) { // just heard something: it stops and turns that way
 			turn(e, b.lastKnown.add(0, 1.4, 0).subtract(eye));
-		} else if (b.lastKnown != null) { // where it last saw or heard an enemy (no knowing where anyone is through walls)
+		} else if (b.lastKnown != null && (seen != null || e.position().distanceToSqr(b.lastKnown) < CHASE * CHASE
+				|| dev.strafemc.mode.GameModes.botRoam(e) == null)) { // where it last saw or heard an enemy (no knowing where anyone is through walls)
 			walk(b, level, net.minecraft.core.BlockPos.containing(b.lastKnown), now);
 			if (b.move == null && e.position().distanceToSqr(b.lastKnown) < 4) b.awareUntil = 0; // got there: nobody
 			faceMove(e);

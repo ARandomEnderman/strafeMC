@@ -114,6 +114,7 @@ final class RoundMode extends Mode {
 	 * lurk at the other), where each bot goes when it has nothing else to do, and when it sets off.
 	 */
 	private Zones.Zone tSite;
+	private UUID lurker;
 	private final Map<UUID, net.minecraft.world.phys.Vec3> botPlan = new HashMap<>();
 	private final Map<UUID, Long> botLeave = new HashMap<>();
 	private static final java.util.Random PLAN_RNG = new java.util.Random();
@@ -321,6 +322,7 @@ final class RoundMode extends Mode {
 		botPlan.clear();
 		botLeave.clear();
 		tSite = null;
+		lurker = null;
 		giveBomb();
 		sendAll();
 	}
@@ -979,7 +981,7 @@ final class RoundMode extends Mode {
 
 	/**
 	 * Where a bot goes this round when it has no objective, no one seen or heard (null: not yet / nowhere): Ts to the
-	 * round's site (one in three of them lurks at another), CTs spread over the sites; a random spot inside the site so no
+	 * round's site together (with four or more, one may lurk at another), CTs spread over the sites; a random spot inside the site so no
 	 * round looks the same; without drawn sites, toward the other side's spawn. Once the bomb is down, the Ts go and
 	 * guard it. Each sets off 0-3 s after the freeze time. FLAGGED ours.
 	 */
@@ -997,10 +999,13 @@ final class RoundMode extends Mode {
 			List<Zones.Zone> sites = sites(bot);
 			Zones.Zone go = null;
 			if (!sites.isEmpty()) {
-				if (CsTeam.isT(bot)) {
+				if (CsTeam.isT(bot)) { // the Ts hit one site together; with four or more, one of them (not the carrier) lurks at another
 					go = roundSite(bot);
-					if (sites.size() > 1 && PLAN_RNG.nextInt(3) == 0 && !k.equals(bombBot)) // a lurker
+					long ts = participants().stream().filter(CsTeam::isT).count();
+					if (sites.size() > 1 && ts >= 4 && lurker == null && !k.equals(bombBot) && PLAN_RNG.nextInt(3) == 0) {
+						lurker = k;
 						while (go == tSite) go = sites.get(PLAN_RNG.nextInt(sites.size()));
+					}
 				} else go = sites.get(PLAN_RNG.nextInt(sites.size()));
 			}
 			if (go != null)
