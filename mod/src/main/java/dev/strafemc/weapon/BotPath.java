@@ -44,7 +44,9 @@ final class BotPath {
 				for (int dz = -1; dz <= 1; dz++) {
 					if (dx == 0 && dz == 0) continue;
 					boolean diag = dx != 0 && dz != 0;
-					if (diag && (!free(level, c.pos.offset(dx, 0, 0)) || !free(level, c.pos.offset(0, 0, dz)))) continue;
+					// a diagonal only past two open sides, at the feet and the head (else it catches on the corner)
+					if (diag && (!free(level, c.pos.offset(dx, 0, 0)) || !free(level, c.pos.offset(0, 0, dz)) || !free(level, c.pos.offset(dx, 1, 0))
+							|| !free(level, c.pos.offset(0, 1, dz)))) continue;
 					BlockPos next = step(level, c.pos, dx, dz);
 					if (next == null) continue;
 					double g = c.g + (diag ? 1.414 : 1) + (next.getY() > c.pos.getY() ? 0.6 : 0) + (next.getY() < c.pos.getY() ? 0.2 : 0);

@@ -17,7 +17,7 @@ import net.minecraft.resources.Identifier;
  * (84 x 34, #000000f0, 28 px bold). Arms Race and Deathmatch put every player in one row under it, first place first;
  * Team Deathmatch puts the team scores (42 px boxes, CT #B5D4EE, T #EAD18A) beside the clock with each side's
  * players outward from them. A player is a 54 px column: their face (Minecraft's skin for CS2's avatar) edged in their
- * side's colour, a 4 px red health bar, a 32 px #0000006f box with their level or score (22 px bold; gold and pulsing
+ * side's colour, a 4 px health bar (white health over a red fade), a 32 px #0000006f box with their level or score (22 px bold; gold and pulsing
  * on the knife level; bots dimmed) and in Arms Race the weapon they're on, CS2's white icon 16 px high with its
  * shadow. Sizes are CS2's 1080p pixels.
  */
@@ -101,6 +101,11 @@ public final class ModeHud {
 				state = new JsonObject();
 			}
 			JsonObject s = state;
+			// the side the server has you on (halftime swaps it): the buy menu, agents and the rest follow it
+			if (s.has("mode") && s.has("t")) {
+				String side = s.get("t").getAsBoolean() ? "t" : "ct";
+				if (!side.equals(dev.strafemc.config.StrafeConfig.team)) ctx.client().execute(() -> dev.strafemc.config.StrafeConfig.team = side);
+			}
 			int round = s.has("round") ? s.get("round").getAsInt() : -1;
 			if (round != lastRound) { // a new round: CS2's kill flags start empty again
 				if (round >= 0 && lastRound >= 0) ctx.client().execute(KillCards::clear);
@@ -286,8 +291,16 @@ public final class ModeHud {
 		double hp = p.get("hp").getAsDouble();
 		if (hp <= 0) g.fill(x + edge, y + edge, x + col - edge, y + col - edge, 0xA0000000); // dead
 		int hy = y + col + (int) Math.round(2 * px), hh = Math.max(1, (int) Math.round(4 * px)), hw = (int) Math.round(52 * px);
-		if (!p.has("ally") || p.get("ally").getAsBoolean()) // enemies' health isn't sent
-			g.fill(x + (col - hw) / 2, hy, x + (col - hw) / 2 + (int) Math.round(hw * Math.max(0, Math.min(1, hp))), hy + hh, 0xFFFF0000);
+		if ((!p.has("ally") || p.get("ally").getAsBoolean()) && hp > 0) { // enemies' health isn't sent; the dead have no bar
+			// CS2's healthbar__bg: red from the left, fading out over the right half; the health over it in white
+			int bx = x + (col - hw) / 2;
+			for (int i = 0; i < hw; i++) {
+				double f = (i + 0.5) / hw;
+				int a = f <= 0.5 ? 255 : (int) Math.round(255 * (1 - (f - 0.5) / 0.5));
+				g.fill(bx + i, hy, bx + i + 1, hy + hh, a << 24 | 0xFF0000);
+			}
+			g.fill(bx, hy, bx + (int) Math.round(hw * Math.max(0, Math.min(1, hp))), hy + hh, 0xFFFFFFFF);
+		}
 		int ly = hy + hh + (int) Math.round(2 * px), lh = (int) Math.round(32 * px);
 		if (p.get("value").getAsString().isEmpty()) return;
 		g.fill(x, ly, x + col, ly + lh, 0x6F000000);

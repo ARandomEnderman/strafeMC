@@ -109,6 +109,14 @@ final class RoundMode extends Mode {
 	private final java.util.Set<UUID> botKit = new java.util.HashSet<>();
 	private UUID bombBot;
 	private long botPlantStart = -1;
+	/**
+	 * The bots' plan this round (FLAGGED ours: CS2's bot AI isn't data): the site the Ts hit (most of them go there, some
+	 * lurk at the other), where each bot goes when it has nothing else to do, and when it sets off.
+	 */
+	private Zones.Zone tSite;
+	private final Map<UUID, net.minecraft.world.phys.Vec3> botPlan = new HashMap<>();
+	private final Map<UUID, Long> botLeave = new HashMap<>();
+	private static final java.util.Random PLAN_RNG = new java.util.Random();
 	/** This round: kills per participant (for the MVP), who defused, whether the ten-second cues played. */
 	private final Map<UUID, Integer> roundKills = new HashMap<>();
 	private UUID defuser;
@@ -310,6 +318,9 @@ final class RoundMode extends Mode {
 		startDamage.clear(); // each round's start is counted on its own
 		bombBot = null;
 		botPlantStart = -1;
+		botPlan.clear();
+		botLeave.clear();
+		tSite = null;
 		giveBomb();
 		sendAll();
 	}
@@ -485,7 +496,8 @@ final class RoundMode extends Mode {
 	/** Halftime: everyone to the other side, money back to the start, the scores go with the teams. */
 	private void swapIfHalf(boolean swap) {
 		if (!swap) return;
-		for (LivingEntity e : participants()) CsTeam.set(e, !CsTeam.isT(e));
+		for (ServerPlayer p : players()) CsTeam.set(p, !CsTeam.isT(p));
+		Bots.swapSides(); // the bots, the dead ones too
 		int s = scoreT;
 		scoreT = scoreCt;
 		scoreCt = s;
@@ -941,12 +953,62 @@ final class RoundMode extends Mode {
 			}
 		}
 		if (CsTeam.isT(bot) && !planted && key(bot).equals(bombBot)) {
-			var site = BombSites.nearest(bot);
+			Zones.Zone hit = roundSite(bot);
+			var site = hit != null ? hit.floorCentre() : BombSites.nearest(bot);
 			if (site != null && bot.position().distanceToSqr(site) > 2.25) botPlantStart = -1; // walked off: start again
 			return site;
 		}
 		if (!CsTeam.isT(bot) && planted) return bomb.position();
 		return null;
+	}
+
+	/** The site the Ts hit this round, picked at random once (null: no sites drawn in the bot's level). */
+	private Zones.Zone roundSite(LivingEntity bot) {
+		List<Zones.Zone> sites = sites(bot);
+		if (sites.isEmpty()) return null;
+		if (tSite == null || !sites.contains(tSite)) tSite = sites.get(PLAN_RNG.nextInt(sites.size()));
+		return tSite;
+	}
+
+	private static List<Zones.Zone> sites(LivingEntity bot) {
+		String dim = bot.level().dimension().identifier().toString();
+		List<Zones.Zone> out = new ArrayList<>();
+		for (Zones.Zone z : Zones.all()) if (z.type().site() && z.dim().equals(dim)) out.add(z);
+		return out;
+	}
+
+	/**
+	 * Where a bot goes this round when it has no objective, no one seen or heard (null: not yet / nowhere): Ts to the
+	 * round's site (one in three of them lurks at another), CTs spread over the sites; a random spot inside the site so no
+	 * round looks the same; without drawn sites, toward the other side's spawn. Once the bomb is down, the Ts go and
+	 * guard it. Each sets off 0-3 s after the freeze time. FLAGGED ours.
+	 */
+	net.minecraft.world.phys.Vec3 botRoam(LivingEntity bot) {
+		if (warmup() || over >= 0 || phase != Phase.LIVE) return null;
+		UUID k = key(bot);
+		long leave = botLeave.computeIfAbsent(k, x -> now() + PLAN_RNG.nextInt(60));
+		if (now() < leave) return null;
+		boolean planted = bomb != null && !bomb.isRemoved() && !bomb.defused();
+		if (planted && CsTeam.isT(bot)) {
+			var at = bomb.position();
+			return at.add(PLAN_RNG.nextGaussian() * 3, 0, PLAN_RNG.nextGaussian() * 3);
+		}
+		return botPlan.computeIfAbsent(k, x -> {
+			List<Zones.Zone> sites = sites(bot);
+			Zones.Zone go = null;
+			if (!sites.isEmpty()) {
+				if (CsTeam.isT(bot)) {
+					go = roundSite(bot);
+					if (sites.size() > 1 && PLAN_RNG.nextInt(3) == 0 && !k.equals(bombBot)) // a lurker
+						while (go == tSite) go = sites.get(PLAN_RNG.nextInt(sites.size()));
+				} else go = sites.get(PLAN_RNG.nextInt(sites.size()));
+			}
+			if (go != null)
+				return new net.minecraft.world.phys.Vec3(go.x0() + PLAN_RNG.nextDouble() * (go.x1() - go.x0() + 1), go.y0(),
+						go.z0() + PLAN_RNG.nextDouble() * (go.z1() - go.z0() + 1));
+			var enemy = dev.strafemc.world.SpawnPoints.pick(CsTeam.isT(bot) ? dev.strafemc.world.SpawnBlock.Side.CT : dev.strafemc.world.SpawnBlock.Side.T);
+			return enemy == null ? null : enemy.pos();
+		});
 	}
 
 	/** At its objective: the carrier plants after CS2's arming time; a CT defuses (the bomb's own timing). */

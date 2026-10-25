@@ -375,6 +375,11 @@ public final class GameModes {
 	}
 
 	/** Where a bot's objective is (the bomb site for the bomb carrier, the planted bomb for a CT), or null. */
+	/** Where a round mode sends a bot with nothing else to do this round, or null. */
+	public static net.minecraft.world.phys.Vec3 botRoam(net.minecraft.world.entity.LivingEntity bot) {
+		return race instanceof RoundMode r ? r.botRoam(bot) : null;
+	}
+
 	public static net.minecraft.world.phys.Vec3 botGoal(net.minecraft.world.entity.LivingEntity bot) {
 		return race instanceof RoundMode r ? r.botGoal(bot) : null;
 	}

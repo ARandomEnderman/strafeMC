@@ -45,10 +45,10 @@ public final class Bots {
 		return (StrafeSettings.botDifficulty() - 1) / 9.0;
 	}
 
-	// what the difficulty changes (FLAGGED: ours): reaction 700 -> 120 ms, turning 8 -> 35 deg a tick, spread x1.8 -> x0.4,
-	// headshot tries 5% -> 50% of bursts
+	// what the difficulty changes (FLAGGED: ours): reaction 650 -> 250 ms (+ up to 200 ms each time), turning 6 -> 24 deg a
+	// tick, spread x2.0 -> x0.8, headshot tries 3% -> 30% of bursts, the aim's wobble 0.45 -> 0.15 blocks
 	private static long reactionMs() {
-		return Math.round(700 - 580 * skill());
+		return Math.round(650 - 400 * skill());
 	}
 
 	private static float turnDeg() {
@@ -62,22 +62,26 @@ public final class Bots {
 
 	/** Half its field of view: enemies further off where it looks go unseen unless heard (FLAGGED: ours). */
 	private static final double FOV_COS = Math.cos(Math.toRadians(65));
-	private static final double HEARING = 25;
+	/** Gunfire carries far (CS2's shots are heard across most of a map): 50 blocks (FLAGGED: ours). */
+	private static final double HEARING = 50;
+	/** An enemy this close is noticed whichever way the bot faces (it'd hear them move). */
+	private static final double SENSE = 3;
 
 	/** A shot: bots within earshot know where the shooter is (even behind them). */
 	public static void noise(LivingEntity source) {
 		noise(source, HEARING);
 	}
 
-	/** Footsteps, a jump or a landing: heard closer than shots, 8 blocks at difficulty 1 to 16 at 10 (FLAGGED: ours). */
+	/** Footsteps, a jump or a landing: heard closer than shots, 14 blocks at difficulty 1 to 24 at 10 (FLAGGED: ours). */
 	public static void step(LivingEntity source) {
-		noise(source, 8 + 8 * skill());
+		noise(source, 14 + 10 * skill());
 	}
 
 	private static synchronized void noise(LivingEntity source, double range) {
 		long now = System.currentTimeMillis();
 		for (Bot b : BOTS)
 			if (b.e != null && b.e.isAlive() && b.e.level() == source.level() && enemy(b, source) && b.e.distanceToSqr(source) < range * range) {
+				if (b.aware != source || now - b.heardAt > 3000) b.heardAt = now; // a new sound: it stops to look that way first
 				b.aware = source;
 				b.lastKnown = source.position();
 				b.awareUntil = now + 8000;
@@ -85,14 +89,20 @@ public final class Bots {
 	}
 
 	private static double spreadScale() {
-		return 1.8 - 1.4 * skill();
+		return 2.0 - 1.2 * skill();
+	}
+
+	/** How far off the aim keeps wobbling once it has settled: 0.45 blocks at difficulty 1 to 0.15 at 10 (FLAGGED: ours). */
+	private static double wobble() {
+		return 0.45 - 0.3 * skill();
 	}
 
 
 	private static final class Bot {
 		/** Whose skin it wears, and the name it shows (the skin's owner, numbered when several bots share a skin). */
 		final String name, label;
-		final boolean t;
+		/** Its side: the entity's own once it has one (halftime swaps that), carried over to its next life. */
+		boolean t;
 		Mannequin e;
 		long deadSince, seenSince, nextShot, reloadUntil, burstPause, strafeUntil, wanderUntil;
 		LivingEntity target;
@@ -118,6 +128,14 @@ public final class Bots {
 		int pathIdx;
 		net.minecraft.core.BlockPos pathGoal;
 		long pathAt;
+		/** This sighting's reaction time, when it last heard something new, the aim's wobble it settles toward. */
+		long reaction, heardAt;
+		Vec3 wobbleTo = Vec3.ZERO;
+		/** Getting stuck: where it last made headway and when, how often in a row, a sidestep's direction and end. */
+		Vec3 lastPos;
+		long lastProgress, sidestepUntil, lookAroundAt;
+		int stuck;
+		float sidestep;
 
 		Bot(String name, boolean t) {
 			this.name = name;
@@ -182,6 +200,14 @@ public final class Bots {
 		BOTS.add(new Bot(BotNames.next(names()), t != null ? t : ts * 2 < BOTS.size() + 1));
 	}
 
+	/** Halftime: every bot to the other side, the dead too (their entity may be gone already). */
+	public static synchronized void swapSides() {
+		for (Bot b : BOTS) {
+			b.t = !b.t;
+			if (b.e != null) CsTeam.set(b.e, b.t);
+		}
+	}
+
 	/** bot_kick: all of them, and the quota to 0. */
 	public static synchronized void kickAll() {
 		StrafeSettings.setBotQuota(0);
@@ -197,6 +223,7 @@ public final class Bots {
 	}
 
 	private static void spawn(MinecraftServer server, Bot b) {
+		if (b.e != null) b.t = CsTeam.isT(b.e); // the side its last life ended on (halftime swaps the dead too)
 		var pick = StrafeSettings.spawnBlocks() || b.e != null && dev.strafemc.mode.GameModes.botSide(b.e) != null // like players: spawn blocks when they're on
 				? dev.strafemc.world.SpawnPoints.pick(b.e == null ? null : dev.strafemc.mode.GameModes.botSide(b.e)) : null;
 		ServerLevel level = pick != null ? pick.level() : server.overworld();
@@ -259,6 +286,7 @@ public final class Bots {
 
 	private static void think(Bot b, ServerLevel level, long now) {
 		Mannequin e = b.e;
+		b.t = CsTeam.isT(e); // halftime swaps the entity's side
 		WeaponStats w = GunServer.stats(weapon(b));
 		if (w == null) return;
 		if (!(e.getMainHandItem().getItem() instanceof GunItem g) || !g.weaponClass.equals(weapon(b))) { // the game mode moved it to another gun
@@ -276,6 +304,7 @@ public final class Bots {
 		Vec3 eye = e.getEyePosition();
 		// hit by someone: it knows where they are
 		if (e.getLastHurtByMob() != null && e.tickCount - e.getLastHurtByMobTimestamp() < 40 && enemy(b, e.getLastHurtByMob())) {
+			if (b.aware != e.getLastHurtByMob() || now - b.heardAt > 3000) b.heardAt = now; // shot: it turns that way first
 			b.aware = e.getLastHurtByMob();
 			b.lastKnown = b.aware.position();
 			b.awareUntil = now + 8000;
@@ -287,7 +316,7 @@ public final class Bots {
 		for (LivingEntity o : level.getEntitiesOfClass(LivingEntity.class, e.getBoundingBox().inflate(range), o -> enemy(b, o))) {
 			double d = o.distanceToSqr(e);
 			if (d >= seenD) continue;
-			boolean known = o == b.target || (o == b.aware && now < b.awareUntil);
+			boolean known = o == b.target || (o == b.aware && now < b.awareUntil) || d < SENSE * SENSE;
 			if (!known && o.getEyePosition().subtract(eye).normalize().dot(look) < FOV_COS) continue;
 			if (visible(level, e, eye, o)) {
 				seenD = d;
@@ -306,11 +335,15 @@ public final class Bots {
 			b.target = seen;
 			b.seenSince = now;
 			b.burstLeft = 0;
-			// first sight: off by up to ~1.6 blocks at difficulty 1, ~0.2 at 10, corrected over time (FLAGGED: ours)
-			double err = 0.2 + 1.4 * (1 - skill());
+			b.reaction = reactionMs() + RNG.nextInt(200);
+			// first sight: off by up to ~1.6 blocks at difficulty 1, ~0.3 at 10, corrected over time (FLAGGED: ours)
+			double err = 0.3 + 1.3 * (1 - skill());
 			b.aimErr = new Vec3(RNG.nextGaussian(), RNG.nextGaussian() * 0.6, RNG.nextGaussian()).normalize().scale(err * (0.5 + RNG.nextDouble()));
+			b.wobbleTo = randomWobble();
 		}
-		b.aimErr = b.aimErr.scale(1 - (0.02 + 0.08 * skill())); // tracking: the error shrinks every tick
+		// tracking: the error eases toward a wobble that never quite settles (a new one now and then), not to a perfect aim
+		if (RNG.nextInt(15) == 0) b.wobbleTo = randomWobble();
+		b.aimErr = b.aimErr.add(b.wobbleTo.subtract(b.aimErr).scale(0.03 + 0.05 * skill()));
 		// recoil and the fire penalty recover between shots (CS2: back to 10% over the stand recovery time)
 		double recover = Math.pow(0.1, 0.05 / Math.max(0.05, w.recoveryTimeStand()));
 		b.penalty *= recover;
@@ -323,11 +356,13 @@ public final class Bots {
 		if (seen != null) {
 			if (b.burstLeft <= 0 && now >= b.burstPause) { // a new burst: 3-6 shots, the head one time in four
 				b.burstLeft = 3 + RNG.nextInt(4);
-				b.aimHead = !sniper && RNG.nextDouble() < 0.05 + 0.45 * skill(); // a sniper goes for the body, as CS2's bots do
+				b.aimHead = !sniper && RNG.nextDouble() < 0.03 + 0.27 * skill(); // a sniper goes for the body, as CS2's bots do
 			}
 			Vec3 aim = (b.aimHead ? seen.getEyePosition() : seen.getBoundingBox().getCenter().add(0, seen.getBbHeight() * 0.1, 0)).add(b.aimErr);
+			// it follows a moving target a little late (0.3 s at difficulty 1 to 0.1 s at 10): strafing makes it miss
+			aim = aim.subtract(seen.getDeltaMovement().multiply(1, 0, 1).scale(20 * (0.3 - 0.2 * skill())));
 			// it has to notice first: no turning until its reaction time has passed
-			boolean aimed = now - b.seenSince >= reactionMs() && turn(e, aim.subtract(eye));
+			boolean aimed = now - b.seenSince >= b.reaction && turn(e, aim.subtract(eye));
 			boolean firing = b.burstLeft > 0 && now >= b.burstPause, moving = e.getDeltaMovement().horizontalDistanceSqr() > 0.001;
 			// snipers shoot scoped, as CS2's bots do: in (with the zoom sound) once it has stopped to shoot, and only firing
 			// when the zoom has come in (m_flZoomTime1); after a shot back in silently once the bolt is worked
@@ -341,7 +376,7 @@ public final class Bots {
 				// then the crosshair settles on the target: 900 ms at difficulty 1 to 300 ms at 10 (FLAGGED: ours)
 				ready = b.zoom > 0 && now - b.zoomedAt >= w.q().zoomTime()[1] * 1000 + (b.zoomedAt == 0 ? 0 : Math.round(900 - 600 * skill()));
 			}
-			if (firing && aimed && ready && now - b.seenSince >= reactionMs() && now >= b.nextShot && now >= b.reloadUntil) {
+			if (firing && aimed && ready && now - b.seenSince >= b.reaction && now >= b.nextShot && now >= b.reloadUntil) {
 				// the shot leaves along the view plus the spray's climb the bot didn't pull down (scoped: the scoped numbers)
 				shoot(b, level, b.zoom > 0 ? GunServer.stats(weapon(b), 1) : w, eye,
 						Vec3.directionFromRotation((float) (e.getXRot() - b.recoil), (float) (e.getYRot() + b.recoilYaw)), now, moving);
@@ -350,7 +385,7 @@ public final class Bots {
 			// standing still while shooting (as CS players stop to shoot); between bursts, closing in along a path or strafing
 			// (a sniper holds its angle while it sees someone)
 			if (!firing && !sniper) {
-				if (Math.sqrt(seenD) > 15) walk(b, level, seen.blockPosition(), now);
+				if (Math.sqrt(seenD) > 25) walk(b, level, seen.blockPosition(), now);
 				else {
 					if (now >= b.strafeUntil) {
 						b.strafe = RNG.nextBoolean() ? 1 : -1;
@@ -365,22 +400,32 @@ public final class Bots {
 				walk(b, level, net.minecraft.core.BlockPos.containing(goal), now);
 				faceMove(e);
 			}
+		} else if (b.lastKnown != null && now - b.heardAt < 900) { // just heard something: it stops and turns that way
+			turn(e, b.lastKnown.add(0, 1.4, 0).subtract(eye));
 		} else if (b.lastKnown != null) { // where it last saw or heard an enemy (no knowing where anyone is through walls)
 			walk(b, level, net.minecraft.core.BlockPos.containing(b.lastKnown), now);
 			if (b.move == null && e.position().distanceToSqr(b.lastKnown) < 4) b.awareUntil = 0; // got there: nobody
 			faceMove(e);
+		} else if (dev.strafemc.mode.GameModes.botRoam(e) instanceof Vec3 plan) { // the round's plan: a site to hit or hold
+			if (e.position().distanceToSqr(plan) > 2.5 * 2.5) {
+				walk(b, level, net.minecraft.core.BlockPos.containing(plan), now);
+				if (b.move != null) faceMove(e);
+				else lookAround(b, e, now); // as near as it gets
+			} else lookAround(b, e, now); // there: holding the spot, checking the angles
 		} else { // wander to random spots
 			// a new one when it's been a while or it got as far as it can (an unreachable spot leaves it at the nearest wall)
 			boolean there = b.pathGoal != null && !b.path.isEmpty() && b.pathIdx >= b.path.size();
 			if (now >= b.wanderUntil || b.pathGoal == null || there) {
-				b.pathGoal = wanderGoal(level, e.blockPosition());
-				b.wanderUntil = now + 4000 + RNG.nextInt(4000);
+				b.pathGoal = huntGoal(b, level);
+				if (b.pathGoal == null) b.pathGoal = wanderGoal(level, e.blockPosition());
+				b.wanderUntil = now + 6000 + RNG.nextInt(8000);
 				b.pathAt = 0;
 			}
 			walk(b, level, b.pathGoal, now);
 			faceMove(e);
 		}
 		e.setSpeed(SPEED);
+		unstick(b, e, now);
 		if (b.move != null) { // the path's direction, as forward / sideways input for where the bot faces
 			double yaw = Math.toRadians(e.getYRot()), c = Math.cos(yaw), sn = Math.sin(yaw);
 			forward = (float) (-b.move.x * sn + b.move.z * c);
@@ -389,7 +434,7 @@ public final class Bots {
 		e.zza = forward;
 		e.xxa = side;
 		// a jump only where the path climbs (or when stuck against something low); the mannequin has no jump of its own
-		boolean climb = b.move != null && b.climb;
+		boolean climb = b.move != null && (b.climb || now < b.sidestepUntil && b.stuck == 1); // stuck the first time: a jump
 		if (e.onGround() && (climb || (e.horizontalCollision && b.move != null))) {
 			Vec3 v = e.getDeltaMovement();
 			e.setDeltaMovement(v.x, 0.42, v.z);
@@ -422,11 +467,63 @@ public final class Bots {
 		b.climb = p.getY() > e.getBlockY() && d.lengthSqr() < 1.6 * 1.6;
 	}
 
-	/** Somewhere 6-16 blocks off it can stand (a few tries, then any spot that far). */
+	/**
+	 * Not getting anywhere for 0.7 s while it means to walk: it jumps (the first time), then steps sideways for half a
+	 * second and works its path out again; three times in a row and it gives up on where it was going.
+	 */
+	private static void unstick(Bot b, Mannequin e, long now) {
+		if (b.move == null) {
+			b.lastPos = null;
+			return;
+		}
+		if (b.lastPos == null || e.position().distanceToSqr(b.lastPos) > 0.3 * 0.3) {
+			b.lastPos = e.position();
+			b.lastProgress = now;
+			if (now >= b.sidestepUntil) b.stuck = 0;
+		} else if (now - b.lastProgress > 700) {
+			b.stuck++;
+			b.lastProgress = now;
+			b.pathAt = 0; // a new path from here
+			b.sidestep = RNG.nextBoolean() ? 1 : -1;
+			b.sidestepUntil = now + 500;
+			if (b.stuck >= 3) {
+				b.stuck = 0;
+				b.pathGoal = null;
+				b.wanderUntil = 0;
+				b.awareUntil = Math.min(b.awareUntil, now); // where it heard someone can't be reached from here
+			}
+		}
+		if (now < b.sidestepUntil) b.move = new Vec3(-b.move.z * b.sidestep, 0, b.move.x * b.sidestep).add(b.move.scale(0.3)).normalize();
+	}
+
+	/** Standing at its spot: every 1.5-3 s it turns to look somewhere else nearby (FLAGGED ours). */
+	private static void lookAround(Bot b, Mannequin e, long now) {
+		if (now >= b.lookAroundAt) {
+			b.wanderYaw = e.getYRot() + (float) (RNG.nextGaussian() * 70);
+			b.lookAroundAt = now + 1500 + RNG.nextInt(1500);
+		}
+		turnYaw(e, b.wanderYaw, 0);
+	}
+
+	/** Nothing better to do: off toward an enemy (where they roughly are, give or take 8 blocks), as CS2's bots hunt. */
+	private static net.minecraft.core.BlockPos huntGoal(Bot b, ServerLevel level) {
+		List<LivingEntity> foes = level.getEntitiesOfClass(LivingEntity.class, b.e.getBoundingBox().inflate(120), o -> enemy(b, o));
+		if (foes.isEmpty() || RNG.nextInt(4) == 0) return null; // now and then just somewhere else
+		LivingEntity f = foes.get(RNG.nextInt(foes.size()));
+		var p = f.blockPosition().offset(RNG.nextInt(17) - 8, 0, RNG.nextInt(17) - 8);
+		var g = BotPath.ground(level, p);
+		return g != null ? g : f.blockPosition();
+	}
+
+	private static Vec3 randomWobble() {
+		return new Vec3(RNG.nextGaussian(), RNG.nextGaussian() * 0.7, RNG.nextGaussian()).normalize().scale(wobble() * (0.4 + RNG.nextDouble() * 0.8));
+	}
+
+	/** Somewhere 10-30 blocks off it can stand (a few tries, then any spot that far). */
 	private static net.minecraft.core.BlockPos wanderGoal(ServerLevel level, net.minecraft.core.BlockPos from) {
 		net.minecraft.core.BlockPos any = null;
 		for (int i = 0; i < 8; i++) {
-			double a = RNG.nextDouble() * Math.PI * 2, r = 6 + RNG.nextDouble() * 10;
+			double a = RNG.nextDouble() * Math.PI * 2, r = 10 + RNG.nextDouble() * 20;
 			var p = from.offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r));
 			if (any == null) any = p;
 			var g = BotPath.ground(level, p);
