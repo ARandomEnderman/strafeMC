@@ -471,6 +471,11 @@ public final class GameModes {
 	}
 
 	/** A bought gun's spare magazines (carried by the gun); false when no round mode holds the player (loose magazines). */
+	/** Guns carry their own spare magazines for this player (a round mode they're in). */
+	public static boolean usesSpares(ServerPlayer p) {
+		return race instanceof RoundMode && Mode.inMode(p);
+	}
+
 	public static boolean spareMags(ServerPlayer p, String cls) {
 		if (!(race instanceof RoundMode) || !Mode.inMode(p)) return false;
 		Mode.spareMags(p, cls);

@@ -41,6 +41,10 @@ public final class WeaponSelectHud {
 		var inv = p.getInventory();
 		for (int i = 0; i < 36; i++) { // the hotbar and the main inventory (not armour or the offhand)
 			ItemStack s = inv.getItem(i);
+			if (s.is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) { // CS2 lists the defuse kit at the bottom too (it can't be held)
+				rows.get(4).add(new Item(i, "defuser", s));
+				continue;
+			}
 			if (s.isEmpty() || !(s.getItem() instanceof GunItem g)) continue;
 			int row;
 			if (g instanceof C4Item) row = 4;
@@ -150,7 +154,9 @@ public final class WeaponSelectHud {
 		for (int k = 0; k < 9; k++)
 			while (mc.options.keyHotbarSlots[k].consumeClick()) {
 				if (k >= 5 || rows.get(k).isEmpty()) continue;
-				var row = rows.get(k);
+				var row = new ArrayList<>(rows.get(k));
+				row.removeIf(it -> it.stack().is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)); // shown, not taken in hand
+				if (row.isEmpty()) continue;
 				int sel = p.getInventory().getSelectedSlot(), pick = row.get(0).slot;
 				for (int i = 0; i < row.size(); i++) if (row.get(i).slot == sel) pick = row.get((i + 1) % row.size()).slot; // the next grenade
 				if (Inventory.isHotbarSlot(pick)) p.getInventory().setSelectedSlot(pick);

@@ -588,6 +588,7 @@ public final class GunServer {
 		boolean player = target instanceof net.minecraft.world.entity.player.Player || Bots.isBot(target);
 		String group = rewound != null ? group(rewound.box(), rewound.eyeHeight(), at, claimed, player)
 				: group(target.getBoundingBox(), target.getEyeY() - target.getBoundingBox().minY, at, claimed, player);
+		double arriving = dmg; // after range falloff and walls, before the body part and armor (for the debug line)
 		dmg *= switch (group) {
 			case "head" -> w.headshotMultiplier();
 			case "stomach" -> STOMACH_MULT;
@@ -609,8 +610,9 @@ public final class GunServer {
 			StatTrak.kill(p, w.cls());
 		}
 		if (StrafeConfig.debug)
-			StrafeMc.LOG.info("[strafemc] {} hit {} ({}{}) at {}u: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
-					claimed != null ? ", model said " + claimed : "", String.format("%.0f", at.distanceTo(eye) * units), String.format("%.1f", dmg), String.format("%.2f", mc));
+			StrafeMc.LOG.info("[strafemc] {} hit {} ({}{}) at {}u, {} walls, {} arriving: {} CS dmg -> {} MC HP", w.cls(), target.getType().toShortString(), group,
+					claimed != null ? ", model said " + claimed : "", String.format("%.0f", at.distanceTo(eye) * units), walls, String.format("%.1f", arriving),
+					String.format("%.1f", dmg), String.format("%.2f", mc));
 	}
 
 	/**

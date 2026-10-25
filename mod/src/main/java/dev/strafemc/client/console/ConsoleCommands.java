@@ -562,6 +562,11 @@ public final class ConsoleCommands {
 		action("buy", item, false);
 	}
 
+	/** Buys a gun and drops it in front of you, for a teammate (Ctrl in the buy menu). */
+	public static void buyDrop(String item) {
+		action("buy_drop", item, false);
+	}
+
 	/** Undoes a purchase made since spawning ("all": every one; CS2's refund / sellbackall). */
 	public static void refund(String item) {
 		action("refund", item, false);

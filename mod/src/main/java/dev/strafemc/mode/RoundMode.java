@@ -1012,13 +1012,15 @@ final class RoundMode extends Mode {
 
 	@Override
 	void bought(ServerPlayer p, String cls) {
-		boolean sec = Deathmatch.pistol(cls);
+		var item = WeaponItems.GUNS.get(cls);
+		int gear = item == null ? 0 : gearSlot(new ItemStack(item));
+		if (gear != 1 && gear != 2) return; // the Zeus (slot 3) takes nobody's place
+		boolean sec = gear == 2;
 		var inv = p.getInventory();
 		int keep = -1;
 		for (int i = inv.getContainerSize() - 1; i >= 0; i--) { // one primary and one pistol: the old one drops, as in CS
 			ItemStack s = inv.getItem(i);
-			if (s.getItem() instanceof GunItem g && !(s.getItem() instanceof KnifeItem) && !(s.getItem() instanceof dev.strafemc.weapon.GrenadeItem)
-					&& !s.is(WeaponItems.C4) && dev.strafemc.weapon.WeaponTable.get(g.weaponClass) != null && Deathmatch.pistol(g.weaponClass) == sec) {
+			if (s.getItem() instanceof GunItem g && gearSlot(s) == gear) {
 				if (keep < 0 && g.weaponClass.equals(cls)) {
 					keep = i;
 					continue;

@@ -43,8 +43,26 @@ public final class C4Client {
 		if (mc.screen instanceof C4KeypadScreen k) return k.bomb();
 		if (mc.screen != null || !ModeServerClient.useDown(mc)) return null; // E on a game mode server, as CS2
 		if (mc.hitResult instanceof EntityHitResult eh && eh.getEntity() instanceof PlantedC4 b && !b.defused() && b.distanceTo(mc.player) <= REACH) return b;
-		return null;
+		// as CS2's use key finds what to use: the bomb near where you look (a cone, not the crosshair on its small box), in sight
+		net.minecraft.world.phys.Vec3 eye = mc.player.getEyePosition(), look = mc.player.getViewVector(1);
+		PlantedC4 best = null;
+		double bestDot = USE_CONE;
+		for (PlantedC4 b : mc.level.getEntitiesOfClass(PlantedC4.class, mc.player.getBoundingBox().inflate(REACH))) {
+			if (b.defused() || b.distanceTo(mc.player) > REACH) continue;
+			net.minecraft.world.phys.Vec3 to = b.getBoundingBox().getCenter().subtract(eye);
+			double dot = to.normalize().dot(look);
+			if (dot < bestDot) continue;
+			var hit = mc.level.clip(new net.minecraft.world.level.ClipContext(eye, b.getBoundingBox().getCenter(), net.minecraft.world.level.ClipContext.Block.COLLIDER,
+					net.minecraft.world.level.ClipContext.Fluid.NONE, mc.player));
+			if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) continue;
+			best = b;
+			bestDot = dot;
+		}
+		return best;
 	}
+
+	/** How far off your look the bomb may be for the use key: cos 30 deg (FLAGGED ours). */
+	private static final double USE_CONE = Math.cos(Math.toRadians(30));
 
 	private static void tick(Minecraft mc) {
 		PlantedC4 b = target(mc);

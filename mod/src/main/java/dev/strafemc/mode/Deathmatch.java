@@ -109,12 +109,13 @@ final class Deathmatch extends Mode {
 
 	@Override
 	void bought(ServerPlayer p, String cls) {
-		boolean sec = pistol(cls);
+		var item = dev.strafemc.weapon.WeaponItems.GUNS.get(cls);
+		int gear = item == null ? 0 : gearSlot(new net.minecraft.world.item.ItemStack(item));
+		if (gear != 1 && gear != 2) return; // the Zeus (slot 3) takes nobody's place
+		boolean sec = gear == 2;
 		var inv = p.getInventory();
 		for (int i = 0; i < inv.getContainerSize(); i++) // one primary and one pistol, as in CS
-			if (inv.getItem(i).getItem() instanceof dev.strafemc.weapon.GunItem g && !(inv.getItem(i).getItem() instanceof dev.strafemc.weapon.KnifeItem)
-					&& WeaponTable.get(g.weaponClass) != null && pistol(g.weaponClass) == sec)
-				inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+			if (gearSlot(inv.getItem(i)) == gear) inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
 		give(p, sec ? 1 : 0, cls);
 		select(p, sec ? 1 : 0);
 		loadout.computeIfAbsent(p.getUUID(), k -> new String[2])[sec ? 1 : 0] = cls;

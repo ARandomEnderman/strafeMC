@@ -225,7 +225,7 @@ public final class BuyMenuScreen extends Screen {
 			g.fill(left, fy, left + Math.max(1, (int) Math.round(3 * u)), fy + (int) Math.round(30 * u), ACCENT);
 			text(g, shown, (left + right) / 2.0, fy + 15 * u, 22 * u, 0xFFFFFFFF, 0);
 		}
-		text(g, "[1-5] Choose    Right click: refund    [ESC] Back", (left + right) / 2.0, height - 24 * u, 20 * u, 0xFFA1A1A1, 0);
+		text(g, "[1-5] Choose    Right click: refund    Ctrl: buy to drop    [ESC] Back", (left + right) / 2.0, height - 24 * u, 20 * u, 0xFFA1A1A1, 0);
 		// CS2's Refund All, when there's something to refund
 		int[] ra = refundAllRect();
 		boolean overRa = mx >= ra[0] && mx < ra[2] && my >= ra[1] && my < ra[3];
@@ -255,6 +255,12 @@ public final class BuyMenuScreen extends Screen {
 			for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(dev.strafemc.weapon.WeaponItems.DEFUSE_KIT)) return false;
 			return true;
 		}
+		if (gun(buy)) { // a gun you have greys out; Ctrl lights it up again to buy one and drop it for a teammate
+			if (Minecraft.getInstance().hasControlDown()) return true;
+			for (int i = 0; i < p.getInventory().getContainerSize(); i++)
+				if (p.getInventory().getItem(i).getItem() instanceof dev.strafemc.weapon.GunItem gi && gi.weaponClass.equals("weapon_" + buy)) return false;
+			return true;
+		}
 		dev.strafemc.weapon.Grenade g = null;
 		for (var x : dev.strafemc.weapon.Grenade.values()) if (x.cls.equals("weapon_" + buy)) g = x;
 		if (g == null) return true;
@@ -268,6 +274,12 @@ public final class BuyMenuScreen extends Screen {
 		}
 		int limit = g == dev.strafemc.weapon.Grenade.FLASHBANG ? cvarInt("ammo_grenade_limit_flashbang", 2) : cvarInt("ammo_grenade_limit_default", 1);
 		return have < limit && total < cvarInt("ammo_grenade_limit_total", 4);
+	}
+
+	/** A buy menu entry that is a gun (not gear, a grenade or a knife). */
+	private static boolean gun(String buy) {
+		var e = dev.strafemc.weapon.WeaponTable.get("weapon_" + buy);
+		return e != null && !e.knife();
 	}
 
 	/** CS2 greys out what costs more than you have (only where there's money: the round modes' state carries it). */
@@ -356,7 +368,11 @@ public final class BuyMenuScreen extends Screen {
 			failureAt = System.nanoTime();
 			return;
 		}
-		ConsoleCommands.buy(s.buy);
+		if (gun(s.buy) && Minecraft.getInstance().hasControlDown()) ConsoleCommands.buyDrop(s.buy);
+		else if (!canCarry(s.buy)) {
+			failure = gun(s.buy) ? "You already have that weapon (Ctrl: buy one to drop)" : "You cannot carry any more";
+			failureAt = System.nanoTime();
+		} else ConsoleCommands.buy(s.buy);
 	}
 
 	/** The undo button on a bought tile: its bottom left corner. */

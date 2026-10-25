@@ -246,6 +246,7 @@ public final class ConsoleActions {
 						+ (StrafeSettings.mcKnockback() ? "Minecraft knockback" : "CS2 tagging (no knockback)"));
 			}
 			case "buy" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim());
+			case "buy_drop" -> dev.strafemc.weapon.BuyMenu.buy(p, arg.trim(), true); // Ctrl in the buy menu: for a teammate
 			case "refund" -> dev.strafemc.weapon.BuyMenu.refund(p, arg.trim().isEmpty() ? "all" : arg.trim());
 			case "loadout" -> dev.strafemc.weapon.Loadout.open(p);
 			case "drop_claim" -> dev.strafemc.weapon.CarePackage.claim(p, arg);

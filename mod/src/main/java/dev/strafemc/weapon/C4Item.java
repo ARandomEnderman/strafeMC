@@ -56,8 +56,9 @@ public class C4Item extends GunItem {
 	private static final java.util.List<Object[]> PLANT_SOUNDS = new java.util.concurrent.CopyOnWriteArrayList<>();
 
 	/**
-	 * The planter's own game plays the plant clip's sounds (the keypad beeps); everyone else heard nothing until it was
-	 * armed. The same events, at the clip's times, from the planter to the players near them while the plant goes on.
+	 * The planter's own game plays the plant clip's sounds (c4.initiate, then the quiet keypad presses meant for their own
+	 * ears). The players near them get what CS2's server plays for a plant: c4.initiate, at the clip's time; the
+	 * keypresses stay the planter's (relaying them made a plant sound like a pile of clicks from across the map).
 	 */
 	private static void queuePlantSounds(ServerPlayer p) {
 		String path = GunServer.clipPath(CLS, "plant");
@@ -65,7 +66,7 @@ public class C4Item extends GunItem {
 		if (c == null) return;
 		long t0 = p.level().getGameTime();
 		for (dev.strafemc.data.AnimClip.Event e : c.events())
-			if (e.isSound() && !e.name().isEmpty()) PLANT_SOUNDS.add(new Object[] {p.getUUID(), t0 + Math.round(e.time() * 20), e.name()});
+			if (e.isSound() && e.name().equalsIgnoreCase("c4.initiate")) PLANT_SOUNDS.add(new Object[] {p.getUUID(), t0 + Math.round(e.time() * 20), e.name()});
 	}
 
 	public static void tick(net.minecraft.server.MinecraftServer server) {

@@ -405,8 +405,10 @@ abstract class Mode {
 		for (int i = 0; i < inv.getContainerSize(); i++) {
 			ItemStack s = inv.getItem(i);
 			if (s.getItem() instanceof dev.strafemc.weapon.MagazineItem || s.getItem() instanceof dev.strafemc.weapon.MagPouchItem) inv.setItem(i, ItemStack.EMPTY);
-			else if ((gearSlot(s) == 1 || gearSlot(s) == 2) && s.getItem() instanceof GunItem g) // guns only (not knives, grenades...)
+			else if ((gearSlot(s) == 1 || gearSlot(s) == 2) && s.getItem() instanceof GunItem g) { // guns only (not knives, grenades...)
 				s.set(dev.strafemc.weapon.WeaponItems.SPARE, dev.strafemc.weapon.BuyMenu.reserve(g.weaponClass).getCount());
+				s.remove(dev.strafemc.weapon.WeaponItems.CLIP); // and a full magazine loaded
+			}
 		}
 	}
 

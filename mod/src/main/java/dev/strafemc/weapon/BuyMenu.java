@@ -77,6 +77,13 @@ public final class BuyMenu {
 		sendRefundable(p);
 	}
 
+	/** Whether the player carries a gun of this class. */
+	private static boolean carries(ServerPlayer p, String cls) {
+		var inv = p.getInventory();
+		for (int i = 0; i < inv.getContainerSize(); i++) if (inv.getItem(i).getItem() instanceof GunItem g && g.weaponClass.equals(cls)) return true;
+		return false;
+	}
+
 	/** Takes up to count of an item back from the inventory. */
 	private static void take(ServerPlayer p, Item item, int count) {
 		var inv = p.getInventory();
@@ -119,6 +126,11 @@ public final class BuyMenu {
 	}
 
 	public static void buy(ServerPlayer p, String what) {
+		buy(p, what, false);
+	}
+
+	/** drop: a gun bought for a teammate (Ctrl in the buy menu): it goes on the ground in front of you; yours stays. */
+	public static void buy(ServerPlayer p, String what, boolean drop) {
 		String no = refusal(p, what);
 		if (no != null) {
 			dev.strafemc.server.Toasts.warn(p, no);
@@ -162,6 +174,23 @@ public final class BuyMenu {
 				if (gun != null && !gun.knife()) { // a gun with CS2's reserve: m_nPrimaryReserveAmmoMax magazines (shells for shotguns)
 					if (!MenuLoadout.inBuyMenu(p, gun.cls())) { // CS2 sells only what your loadout puts in the buy menu
 						dev.strafemc.server.Toasts.warn(p, WeaponTable.name(gun.cls()) + " isn't in your loadout");
+						return;
+					}
+					if (drop) {
+						if (!dev.strafemc.mode.GameModes.charge(p, price(gun.cls(), 0))) return;
+						ItemStack forMate = new ItemStack(WeaponItems.GUNS.get(gun.cls()));
+						if (dev.strafemc.mode.GameModes.buyRefusal(p, what) != null) ModeWrap.stamp(forMate, p); // the buyer's finish, as on their own
+						if (dev.strafemc.mode.GameModes.usesSpares(p)) forMate.set(WeaponItems.SPARE, reserve(gun.cls()).getCount());
+						p.drop(forMate, false, true);
+						if (!dev.strafemc.mode.GameModes.usesSpares(p)) {
+							ItemStack mags = reserve(gun.cls());
+							if (!mags.isEmpty()) p.drop(mags, false, true);
+						}
+						GunServer.soundAt(p.level(), "Player.PickupWeapon", p.position(), p);
+						return; // not refundable: it's on the ground for someone else
+					}
+					if (carries(p, gun.cls())) { // CS2 greys out the gun you already have
+						dev.strafemc.server.Toasts.warn(p, "You already have that weapon");
 						return;
 					}
 					if (!dev.strafemc.mode.GameModes.roomFor(p, new ItemStack(WeaponItems.GUNS.get(gun.cls())))) { // a second Zeus (slot 3)
