@@ -19,7 +19,7 @@ public final class AlertBar {
 	private AlertBar() {}
 
 	public static void register() {
-		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "alert_bar"), (g, delta) -> {
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "alert_bar"), (g, delta) -> {
 			Minecraft mc = Minecraft.getInstance();
 			var s = ModeHud.state();
 			if (mc.player == null || mc.options.hideGui || s == null || !s.has("alert")) {

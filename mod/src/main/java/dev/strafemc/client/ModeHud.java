@@ -136,7 +136,8 @@ public final class ModeHud {
 			while (mc.options.keyUse.consumeClick()) spectate("spec_prev");
 		});
 		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> state = new JsonObject());
-		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "game_mode"), ModeHud::draw);
+		// last, not after the hotbar: a spectator (the dead, watching) has no hotbar, and its attachments are skipped with it
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "game_mode"), ModeHud::draw);
 		for (Identifier vanilla : new Identifier[] {VanillaHudElements.HEALTH_BAR, VanillaHudElements.FOOD_BAR, VanillaHudElements.ARMOR_BAR,
 				VanillaHudElements.EXPERIENCE_LEVEL, VanillaHudElements.INFO_BAR})
 			HudElementRegistry.replaceElement(vanilla, old -> (g, delta) -> {

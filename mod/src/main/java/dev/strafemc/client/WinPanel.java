@@ -34,7 +34,9 @@ final class WinPanel {
 		boolean teams = s.has("scoreT"), winT = s.has("winT") && s.get("winT").getAsBoolean();
 		boolean ffa = s.has("ffa") && s.get("ffa").getAsBoolean();
 		boolean meT = s.has("t") && s.get("t").getAsBoolean();
-		boolean lost = teams && !ffa && !matchOver && mc.player != null && !mc.player.isSpectator() && meT != winT;
+		// the dead watch as spectators but are still on their side; only someone outside the match sees just the winner
+		boolean inMatch = mc.player != null && (!mc.player.isSpectator() || s.has("watching") || s.has("freeCam"));
+		boolean lost = teams && !ffa && !matchOver && inMatch && meT != winT;
 		String title = matchOver ? s.get("winner").getAsString() + " wins the match" : s.has("roundWinner") ? s.get("roundWinner").getAsString() : "";
 		if (title.isEmpty()) return;
 		int side = !teams || ffa ? 0xFFFFFFFF : winT ? T : CT;

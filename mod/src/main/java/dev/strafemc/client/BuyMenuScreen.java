@@ -198,6 +198,7 @@ public final class BuyMenuScreen extends Screen {
 				g.fill(rc[0], rc[1], rc[2], rc[3], s == null ? TILE_EMPTY : hover ? TILE_HOVER : TILE);
 				if (s != null) {
 					int price = price(s.priceOf);
+					if ("assaultsuit".equals(s.buy) && StrafeMcClient.armor >= 100) price -= price("item_kevlar"); // with Kevlar on, only the helmet is paid for
 					boolean can = no == null && s.buy != null && canCarry(s.buy) && affordable(price);
 					int textCol = can ? 0xFFFFFFFF : 0xFF808080;
 					text(g, String.valueOf(r + 1), rc[0] + 5 * u, (rc[1] + rc[3]) / 2.0, 18 * u, 0x66FFFFFF, -1);

@@ -36,6 +36,9 @@ public final class WeaponData {
 				for (String k : root.keySet()) {
 					if (root.get(k) instanceof Map) out.put(k, resolve(root, k, 0));
 				}
+				// gear (item_kevlar, item_assaultsuit, item_defuser) is keyed by its item number: findable by its name too
+				for (var e : new java.util.ArrayList<>(out.values()))
+					if (e.get("m_szName") instanceof String n && !n.isEmpty()) out.putIfAbsent(n, e);
 				resolved = out;
 				loaded = true;
 				long weapons = out.keySet().stream().filter(k -> k.startsWith("weapon_")).count();

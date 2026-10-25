@@ -24,7 +24,7 @@ public final class DmBonusPanel {
 	private DmBonusPanel() {}
 
 	public static void register() {
-		HudElementRegistry.attachElementAfter(VanillaHudElements.HOTBAR, Identifier.fromNamespaceAndPath("strafemc", "dm_bonus"), (g, delta) -> draw(g));
+		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("strafemc", "dm_bonus"), (g, delta) -> draw(g));
 	}
 
 	private static void draw(net.minecraft.client.gui.GuiGraphicsExtractor g) {
