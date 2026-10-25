@@ -115,6 +115,12 @@ public final class DamageReport {
 	}
 
 
+	/** A new round: CS2's damage report counts this round only (survivors carried the last one's). */
+	public static void newRound() {
+		GIVEN.clear();
+		TAKEN.clear();
+	}
+
 	public static void forget(ServerPlayer p) {
 		GIVEN.remove(p.getUUID());
 		TAKEN.remove(p.getUUID());

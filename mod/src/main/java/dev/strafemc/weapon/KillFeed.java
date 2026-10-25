@@ -45,6 +45,14 @@ public final class KillFeed {
 
 	private KillFeed() {}
 
+	/** A new round: assists count this round's damage and flashes only (survivors kept theirs from the last one). */
+	public static void newRound() {
+		DAMAGE.clear();
+		LAST_HIT.clear();
+		FLASHED_BY.clear();
+		DamageReport.newRound();
+	}
+
 	static void blinded(ServerPlayer p, ServerPlayer by, double hold, double fade) {
 		double amount = Math.max(0, Math.min(1, cvar("sv_flashed_amount_for_blind_kill", 0.7)));
 		long until = System.currentTimeMillis() + (long) ((hold + fade * (1 - amount)) * 1000);
