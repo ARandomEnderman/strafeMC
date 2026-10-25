@@ -294,7 +294,7 @@ final class RoundMode extends Mode {
 		}
 		clearDrops();
 		for (LivingEntity b : Bots.living(server)) { // bots back to their side's spawn, buying with their money
-			var pick = SpawnPoints.pick(CsTeam.isT(b) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
+			var pick = SpawnPoints.pick(CsTeam.isT(b) ? SpawnBlock.Side.T : SpawnBlock.Side.CT, b);
 			if (pick != null && b.isAlive()) b.teleportTo(pick.pos().x, pick.pos().y, pick.pos().z);
 			if (b.isAlive()) b.setHealth(b.getMaxHealth());
 			if (diedThisRound.contains(key(b)) || round == 1) {

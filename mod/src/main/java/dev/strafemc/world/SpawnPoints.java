@@ -75,7 +75,7 @@ public final class SpawnPoints {
 
 	/** On one of a side's spawn blocks (null: any spawn block). */
 	public static synchronized boolean respawn(ServerPlayer p, SpawnBlock.Side side) {
-		Pick at = pick(side);
+		Pick at = pick(side, p);
 		return at != null && p.teleportTo(at.level(), at.pos().x, at.pos().y, at.pos().z, Set.of(), p.getYRot(), p.getXRot(), true);
 	}
 
@@ -108,16 +108,35 @@ public final class SpawnPoints {
 	 * its own), or any spawn block for null; null if there's none.
 	 */
 	public static synchronized Pick pick(SpawnBlock.Side side) {
+		return pick(side, null);
+	}
+
+	/**
+	 * As pick(side), but a free one first: a spawn block someone (a living player or bot other than `self`) already
+	 * stands on is only used when all of that side's are taken, so two players don't start inside each other.
+	 */
+	public static synchronized Pick pick(SpawnBlock.Side side, net.minecraft.world.entity.Entity self) {
 		List<Marker> all = markers();
 		java.util.Collections.shuffle(all);
-		for (int pass = 0; pass < 2; pass++)
+		Pick taken = null;
+		for (int pass = 0; pass < 2; pass++) {
 			for (Marker m : all) {
 				if (!(m.state().getBlock() instanceof SpawnBlock)) continue;
 				SpawnBlock.Side s = m.state().getValue(SpawnBlock.SIDE);
 				if (side != null && s != (pass == 0 ? side : SpawnBlock.Side.ANY)) continue;
-				return new Pick(m.level(), standOn(m.level(), m.pos()));
+				Pick at = new Pick(m.level(), standOn(m.level(), m.pos()));
+				if (!occupied(at, self)) return at;
+				if (taken == null) taken = at;
 			}
+			if (taken != null) return taken; // the side's own blocks, all in use: share one rather than fall back to "anyone" blocks
+		}
 		return null;
+	}
+
+	private static boolean occupied(Pick at, net.minecraft.world.entity.Entity self) {
+		var box = new net.minecraft.world.phys.AABB(at.pos().x - 0.6, at.pos().y, at.pos().z - 0.6, at.pos().x + 0.6, at.pos().y + 1.8, at.pos().z + 0.6);
+		return !at.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, box,
+				e -> e != self && e.isAlive() && !e.isSpectator() && (e instanceof ServerPlayer || dev.strafemc.weapon.Bots.isBot(e))).isEmpty();
 	}
 
 	/** A spawn block or bomb site in the world. */
