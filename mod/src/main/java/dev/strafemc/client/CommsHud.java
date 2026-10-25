@@ -49,6 +49,8 @@ public final class CommsHud {
 	private CommsHud() {}
 
 	public static void register() {
+		ClientPlayNetworking.registerGlobalReceiver(StrafePayloads.Halt.TYPE,
+				(msg, ctx) -> ctx.client().execute(dev.strafemc.client.movement.MovementController.INSTANCE::halt));
 		ClientPlayNetworking.registerGlobalReceiver(StrafePayloads.Comms.TYPE, (msg, ctx) -> ctx.client().execute(() -> receive(msg.json())));
 		ClientPlayConnectionEvents.DISCONNECT.register((h, mc) -> {
 			PINGS.clear();

@@ -545,6 +545,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Server -> client: you were placed to start from still (a round's spawn): no velocity carried over. */
+	public record Halt(boolean unused) implements CustomPacketPayload {
+		public static final Type<Halt> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "halt"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Halt> CODEC = StreamCodec.composite(ByteBufCodecs.BOOL, Halt::unused, Halt::new);
+
+		@Override
+		public Type<Halt> type() {
+			return TYPE;
+		}
+	}
+
 	/** Team comms (mode/Comms): a chat wheel message or a ping, as JSON ("k": "radio" / "ping"). */
 	public record Comms(String json) implements CustomPacketPayload {
 		public static final Type<Comms> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "comms"));

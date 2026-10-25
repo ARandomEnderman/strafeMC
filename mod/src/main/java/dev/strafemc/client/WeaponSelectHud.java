@@ -54,6 +54,8 @@ public final class WeaponSelectHud {
 			String icon = g instanceof C4Item ? "c4" : e != null ? e.shortName() : g.weaponClass.replace("weapon_", "");
 			rows.get(row).add(new Item(i, icon, s));
 		}
+		// slot 3: the knife first, the Zeus on the next press (CS2)
+		rows.get(2).sort(java.util.Comparator.comparingInt(it -> it.stack().getItem() instanceof KnifeItem ? 0 : 1));
 		return rows;
 	}
 

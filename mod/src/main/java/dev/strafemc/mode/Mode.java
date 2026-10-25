@@ -442,6 +442,12 @@ abstract class Mode {
 	 * grenades up to their limits (ammo_grenade_limit_flashbang / _default each, ammo_grenade_limit_total in all), one
 	 * bomb.
 	 */
+	/** The grenade's kind for the carry limits: the Molotov and the incendiary are one (CS2 carries one fire grenade). */
+	private static Object grenadeKind(ItemStack s) {
+		if (!(s.getItem() instanceof dev.strafemc.weapon.GrenadeItem g)) return s.getItem();
+		return g.type == dev.strafemc.weapon.Grenade.INCENDIARY ? dev.strafemc.weapon.Grenade.MOLOTOV : g.type;
+	}
+
 	static boolean roomFor(ServerPlayer p, ItemStack s) {
 		int slot = gearSlot(s);
 		if (slot == 0) return true;
@@ -456,7 +462,7 @@ abstract class Mode {
 			if (slot == 5) return false;
 			if (slot == 4) {
 				total += t.getCount();
-				if (t.getItem() == s.getItem()) same += t.getCount();
+				if (grenadeKind(t) == grenadeKind(s)) same += t.getCount();
 			}
 		}
 		if (slot != 4) return true;

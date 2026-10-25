@@ -271,6 +271,9 @@ final class RoundMode extends Mode {
 			p.setGameMode(GameType.ADVENTURE);
 			p.setCamera(p);
 			SpawnPoints.respawn(p, CsTeam.isT(p) ? SpawnBlock.Side.T : SpawnBlock.Side.CT);
+			p.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO); // a jump at the round's end doesn't carry into the next
+			if (net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.canSend(p, dev.strafemc.net.StrafePayloads.Halt.TYPE))
+				net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.send(p, new dev.strafemc.net.StrafePayloads.Halt(true));
 			p.setHealth(p.getMaxHealth());
 			if (diedThisRound.contains(p.getUUID()) || round == 1) {
 				var inv = p.getInventory();
@@ -306,18 +309,33 @@ final class RoundMode extends Mode {
 		startDamage.clear(); // each round's start is counted on its own
 		bombBot = null;
 		botPlantStart = -1;
-		List<LivingEntity> ts = new ArrayList<>();
-		for (LivingEntity e : participants()) if (CsTeam.isT(e) && e.isAlive()) ts.add(e);
-		List<LivingEntity> humans = ts.stream().filter(e -> e instanceof ServerPlayer).toList();
-		if (!ts.isEmpty()) { // one T carries the bomb: a player when there is one, else a bot
-			List<LivingEntity> from = humans.isEmpty() ? ts : humans;
-			LivingEntity carrier = from.get(new java.util.Random().nextInt(from.size()));
-			if (carrier instanceof ServerPlayer cp) {
-				ItemStack c4 = new ItemStack(WeaponItems.C4);
-				if (!cp.getInventory().add(c4)) cp.drop(c4, false);
-			} else bombBot = key(carrier);
-		}
+		giveBomb();
 		sendAll();
+	}
+
+	/** One T carries the bomb: a player when there is one, else a bot. */
+	private void giveBomb() {
+		List<LivingEntity> ts = new ArrayList<>();
+		for (LivingEntity e : participants()) if (CsTeam.isT(e) && e.isAlive() && !e.isSpectator()) ts.add(e);
+		List<LivingEntity> humans = ts.stream().filter(e -> e instanceof ServerPlayer).toList();
+		if (ts.isEmpty()) return;
+		List<LivingEntity> from = humans.isEmpty() ? ts : humans;
+		LivingEntity carrier = from.get(new java.util.Random().nextInt(from.size()));
+		if (carrier instanceof ServerPlayer cp) {
+			ItemStack c4 = new ItemStack(WeaponItems.C4);
+			if (!cp.getInventory().add(c4)) cp.drop(c4, false);
+			cp.inventoryMenu.broadcastChanges();
+		} else bombBot = key(carrier);
+		dev.strafemc.StrafeMc.LOG.info("[strafemc] strafeGM: round {} bomb to {}", round, name(carrier));
+	}
+
+	/** Freeze time with no bomb anywhere (nobody carries it, it isn't lying or planted): hand it out again. */
+	private void checkBomb() {
+		if (warmup() || phase != Phase.FREEZE || plantedBomb() != null || bombBot != null) return;
+		for (LivingEntity e : participants()) if (carriesBomb(e)) return;
+		for (ServerPlayer p : players()) if (droppedBomb(p) != null) return;
+		dev.strafemc.StrafeMc.LOG.warn("[strafemc] strafeGM: round {} started without a bomb carrier, handing it out again", round);
+		giveBomb();
 	}
 
 	private static void removeC4(ServerPlayer p) {
@@ -610,6 +628,7 @@ final class RoundMode extends Mode {
 			else if (ta == 0 && cta == 0 && !planted) endRound(false, c.teamTime(), "everyone eliminated");
 			else if (!planted && t - phaseStart >= c.roundTime() * 20L) endRound(false, c.teamTime(), "time ran out");
 		} else if (phase == Phase.OVER && t - phaseStart >= c.restartDelay() * 20L) afterRound();
+		if (t % 20 == 10) checkBomb();
 		if (t % 20 == 0) sendAll();
 	}
 

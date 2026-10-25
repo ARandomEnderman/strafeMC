@@ -193,7 +193,8 @@ public final class BuyMenu {
 				for (Grenade x : Grenade.values()) if (x.cls.equals("weapon_" + what) || x.cls.equals(what)) g = x;
 				if (g == null) return;
 				if (g == Grenade.MOLOTOV || g == Grenade.INCENDIARY) g = CsTeam.isT(p) ? Grenade.MOLOTOV : Grenade.INCENDIARY;
-				int have = count(p, g), total = 0;
+				boolean fire = g == Grenade.MOLOTOV || g == Grenade.INCENDIARY; // one fire grenade: a Molotov or an incendiary (CS2)
+				int have = fire ? count(p, Grenade.MOLOTOV) + count(p, Grenade.INCENDIARY) : count(p, g), total = 0;
 				for (Grenade x : Grenade.values()) total += count(p, x);
 				int limit = g == Grenade.FLASHBANG ? cvar("ammo_grenade_limit_flashbang", 2) : cvar("ammo_grenade_limit_default", 1);
 				if (have >= limit || total >= cvar("ammo_grenade_limit_total", 4)) {

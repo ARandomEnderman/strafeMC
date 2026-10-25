@@ -244,6 +244,13 @@ public final class MovementController {
 	}
 
 	/** keepMomentum: take MC's velocity (just turned on); keepSim: keep the Source velocity (a position correction). */
+	/** The server put you somewhere new to start from still (a round's spawn): drop the Source velocity. */
+	public void halt() {
+		sim.vx = sim.vy = sim.vz = 0;
+		var p = Minecraft.getInstance().player;
+		if (p != null) p.setDeltaMovement(Vec3.ZERO);
+	}
+
 	private void resync(LocalPlayer p, double s, boolean keepMomentum, boolean keepSim) {
 		sim.x = px = p.getX() * s;
 		sim.y = py = p.getY() * s;
