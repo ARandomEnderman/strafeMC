@@ -16,6 +16,11 @@ public abstract class MouseHandlerScrollMixin {
 	private void strafemc$wheelJump(long window, double dx, double dy, CallbackInfo ci) {
 		if (dy == 0) return;
 		Minecraft mc = Minecraft.getInstance();
+		if (dev.strafemc.client.RadioWheel.open()) { // the chat wheel: a notch is the next wheel
+			dev.strafemc.client.RadioWheel.next();
+			ci.cancel();
+			return;
+		}
 		if (mc.screen == null && mc.player != null && dev.strafemc.client.console.Binds.wheel(dy > 0)) {
 			ci.cancel(); // an explicit "bind mwheelup/mwheeldown ..." wins
 			return;

@@ -210,6 +210,7 @@ public final class GunClient {
 		// dead (the death camera) or watching: no shots, stabs, throws or plants (they played here and the server
 		// dropped them: "shot from X dropped: alive false")
 		if (p.isDeadOrDying() || p.isSpectator()) return;
+		if (dev.strafemc.client.RadioWheel.open()) return; // left click sends the chat wheel's phrase
 		if (dev.strafemc.client.C4Client.defusing()) return; // defusing is holding use: no knife stabs or shots meanwhile (CS2)
 		if (held.getItem() instanceof dev.strafemc.weapon.KnifeItem k) {
 			knifeFrame(mc, p, k, now);

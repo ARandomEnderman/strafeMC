@@ -43,6 +43,8 @@ public final class ModeHud {
 	/** The lowest point of the top of the HUD this frame (GUI units; 0 when it isn't drawn): panels go under it. */
 	public static volatile int topBottom;
 
+	private static int lastRound = -1;
+
 	public static JsonObject state() {
 		return state;
 	}
@@ -99,6 +101,11 @@ public final class ModeHud {
 				state = new JsonObject();
 			}
 			JsonObject s = state;
+			int round = s.has("round") ? s.get("round").getAsInt() : -1;
+			if (round != lastRound) { // a new round: CS2's kill flags start empty again
+				if (round >= 0 && lastRound >= 0) ctx.client().execute(KillCards::clear);
+				lastRound = round;
+			}
 			if (s.has("money")) { // what was added or taken, shown by the money for a moment
 				int m = s.get("money").getAsInt();
 				if (lastMoney != Integer.MIN_VALUE && m != lastMoney) {
@@ -208,13 +215,7 @@ public final class ModeHud {
 		}
 		// how far down the top of the HUD reaches (a card: face, health, value, weapon), for what goes under it
 		int bottom = players.isEmpty() ? top + bh : cardY + col + (int) Math.round(62 * px);
-		// Deathmatch's bonus weapon of the moment, under the clock
-		if (s.has("bonus") && !s.get("bonus").getAsString().isEmpty()) {
-			int by = teams ? top + bh + (int) Math.round(6 * px) : top + bh + (int) Math.round(130 * px);
-			bottom = Math.max(bottom, by + (int) Math.round(36 * px));
-			text(g, "BONUS", cx, by + (int) Math.round(6 * px), 14 * px, GOLD);
-			icon(g, s.get("bonus").getAsString().replace("weapon_", ""), cx, by + (int) Math.round(14 * px), (int) Math.round(20 * px), GOLD);
-		}
+		// Deathmatch's bonus weapon: CS2's own panel at the top left (DmBonusPanel)
 		topBottom = bottom;
 		if (s.has("money")) { // your money (hudmoney: lower left, 38 px bold white), above health and armor
 			String m = "$" + s.get("money").getAsInt();

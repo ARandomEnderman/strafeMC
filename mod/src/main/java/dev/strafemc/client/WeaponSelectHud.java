@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ public final class WeaponSelectHud {
 		List<List<Item>> rows = new ArrayList<>();
 		for (int i = 0; i < 5; i++) rows.add(new ArrayList<>());
 		var inv = p.getInventory();
-		for (int i = 0; i < inv.getContainerSize(); i++) {
+		for (int i = 0; i < 36; i++) { // the hotbar and the main inventory (not armour or the offhand)
 			ItemStack s = inv.getItem(i);
 			if (s.isEmpty() || !(s.getItem() instanceof GunItem g)) continue;
 			int row;
@@ -150,7 +151,9 @@ public final class WeaponSelectHud {
 				var row = rows.get(k);
 				int sel = p.getInventory().getSelectedSlot(), pick = row.get(0).slot;
 				for (int i = 0; i < row.size(); i++) if (row.get(i).slot == sel) pick = row.get((i + 1) % row.size()).slot; // the next grenade
-				p.getInventory().setSelectedSlot(pick);
+				if (Inventory.isHotbarSlot(pick)) p.getInventory().setSelectedSlot(pick);
+				else if (mc.gameMode != null) // in the main inventory (carried in from survival): swapped into your hand, as a number key does in the inventory
+					mc.gameMode.handleContainerInput(p.inventoryMenu.containerId, pick, sel, net.minecraft.world.inventory.ContainerInput.SWAP, p);
 			}
 	}
 }

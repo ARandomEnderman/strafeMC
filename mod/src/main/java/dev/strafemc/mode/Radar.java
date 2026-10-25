@@ -72,14 +72,7 @@ final class Radar {
 		if (bombAt != null && !mode.ffa())
 			for (LivingEntity s : alive) if (!CsTeam.isT(s) && sees(s, bombAt)) ctSeesBomb = true;
 		JsonArray sites = sites();
-		boolean colours = mode.id().equals("competitive") || mode.id().equals("wingman");
-		Map<LivingEntity, Integer> colour = new HashMap<>();
-		if (colours)
-			for (boolean t : new boolean[] {true, false}) {
-				List<LivingEntity> side = new java.util.ArrayList<>(all.stream().filter(e -> CsTeam.isT(e) == t).toList());
-				side.sort(java.util.Comparator.comparing(Mode::name));
-				for (int i = 0; i < side.size(); i++) colour.put(side.get(i), i % 5);
-			}
+		Map<LivingEntity, Integer> colour = colours(mode, all);
 		for (ServerPlayer p : mode.players()) {
 			if (!ServerPlayNetworking.canSend(p, StrafePayloads.RadarState.TYPE)) continue;
 			boolean t = CsTeam.isT(p);
@@ -112,6 +105,18 @@ final class Radar {
 			if (!mode.ffa()) o.add("sites", sites);
 			ServerPlayNetworking.send(p, new StrafePayloads.RadarState(o.toString()));
 		}
+	}
+
+	/** Each participant's teammate colour (0-4) in Competitive and Wingman; empty in the other modes (side colours). */
+	static Map<LivingEntity, Integer> colours(Mode mode, List<LivingEntity> all) {
+		Map<LivingEntity, Integer> colour = new HashMap<>();
+		if (mode.id().equals("competitive") || mode.id().equals("wingman"))
+			for (boolean t : new boolean[] {true, false}) {
+				List<LivingEntity> side = new java.util.ArrayList<>(all.stream().filter(e -> CsTeam.isT(e) == t).toList());
+				side.sort(java.util.Comparator.comparing(Mode::name));
+				for (int i = 0; i < side.size(); i++) colour.put(side.get(i), i % 5);
+			}
+		return colour;
 	}
 
 	private static JsonObject entry(LivingEntity e, Vec3 at, boolean alive, boolean enemy, boolean bomb) {

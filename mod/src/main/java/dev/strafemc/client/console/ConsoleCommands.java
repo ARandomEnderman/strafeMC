@@ -354,6 +354,18 @@ public final class ConsoleCommands {
 			else ServerLauncher.stop();
 		});
 		local("kill", "Kill yourself.", a -> action("kill", "", false));
+		local("player_ping", "Ping what you look at for your team.", a -> dev.strafemc.client.RadioWheel.ping());
+		local("playerchatwheel", "Send a chat wheel phrase to your team (CW.NeedDrop or #Chatwheel_requestweapon).", a -> {
+			var ph = a.length == 0 ? null : a[0].startsWith("#") ? dev.strafemc.data.RadioTable.byText(a[0]) : dev.strafemc.data.RadioTable.phrase(a[0]);
+			if (ph == null) ConsoleLog.error("playerchatwheel <CW.name | #Chatwheel_text>");
+			else action("playerchatwheel", ph.radio(), false);
+		});
+		for (int w = 0; w < 3; w++) { // +radialradio, +radialradio2, +radialradio3: hold for chat wheel 1-3
+			int which = w;
+			String n = "radialradio" + (w == 0 ? "" : String.valueOf(w + 1));
+			local("+" + n, "Hold to open chat wheel " + (w + 1) + ".", a -> dev.strafemc.client.RadioWheel.press(which));
+			local("-" + n, "Let go of the chat wheel: send the picked phrase.", a -> dev.strafemc.client.RadioWheel.release());
+		}
 		local("buy", "Buy an item.",
 				a -> { if (a.length > 0) buy(a[0]); else ConsoleLog.error("buy <item>"); });
 		local("sellbackall", "Refund everything you bought.",

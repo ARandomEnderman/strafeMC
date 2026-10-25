@@ -47,6 +47,7 @@ public class StrafeMc implements ModInitializer {
 		dev.strafemc.mode.Zones.register();
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ZoneList.TYPE, dev.strafemc.net.StrafePayloads.ZoneList.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.ModeState.TYPE, dev.strafemc.net.StrafePayloads.ModeState.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.Comms.TYPE, dev.strafemc.net.StrafePayloads.Comms.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(dev.strafemc.net.StrafePayloads.RadarState.TYPE, dev.strafemc.net.StrafePayloads.RadarState.CODEC);
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED.register(s -> dev.strafemc.server.StrafeSettings.unload());
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(s -> dev.strafemc.StallWatch.serverStopped());
@@ -64,6 +65,7 @@ public class StrafeMc implements ModInitializer {
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> dev.strafemc.weapon.BuyMenu.spawned(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.BuyMenu.forget(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.weapon.DamageReport.forget(handler.getPlayer()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> dev.strafemc.mode.Comms.forget(handler.getPlayer()));
 		// PlayerList.respawn leaves the connection on the dead player (vanilla's caller, handleClientCommand, points it at
 		// the new one afterwards). Game modes call respawn directly: the client's moves, shots and teleports then went to
 		// the removed body while the new one stood where it spawned, unticked (invisible "ghost", hits only took armor,

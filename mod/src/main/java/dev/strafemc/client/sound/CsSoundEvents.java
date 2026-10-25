@@ -88,6 +88,24 @@ public final class CsSoundEvents {
 				StrafeMc.LOG.warn("[strafemc] sound events {}: {}", f, e.toString());
 			}
 		}
+		// the agents' voices (chat wheel lines): the whole folder converted once, in one run
+		try {
+			java.nio.file.Path dir = dev.strafemc.config.StrafeConfig.cacheDir().resolve("soundevents/vo/agents");
+			java.nio.file.Path marker = dir.resolve(".extracted");
+			if (!Files.exists(marker) && AssetCache.available()) {
+				AssetCache.extractFolder("soundevents/vo/agents/");
+				Files.createDirectories(dir);
+				Files.writeString(marker, "ok");
+			}
+			if (Files.isDirectory(dir)) try (var files = Files.list(dir)) {
+				for (var f : files.filter(f -> f.toString().endsWith(".vsndevts")).toList()) {
+					Map<String, Object> root = Kv3.parseObject(Files.readString(f));
+					for (var e : root.entrySet()) if (e.getValue() instanceof Map) raw.put(e.getKey(), (Map<String, Object>) e.getValue());
+				}
+			}
+		} catch (Exception e) {
+			StrafeMc.LOG.warn("[strafemc] agent voices: {}", e.toString());
+		}
 		Map<String, Event> out = new HashMap<>();
 		for (String name : raw.keySet()) {
 			Map<String, Object> r = resolve(raw, name, 0);

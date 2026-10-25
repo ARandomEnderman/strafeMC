@@ -34,6 +34,8 @@ final class Deathmatch extends Mode {
 	/** The bonus weapon and when it changes (none between bonuses). */
 	private String bonus = "";
 	private long bonusUntil, nextBonus;
+	/** Each player's bonus weapon kills so far and the points of the last (CS2's bonus panel pops them). */
+	private final java.util.Map<java.util.UUID, int[]> bonusKills = new java.util.HashMap<>();
 
 	Deathmatch(MinecraftServer server, boolean teams) {
 		super(server);
@@ -73,6 +75,7 @@ final class Deathmatch extends Mode {
 	void reset() {
 		score.clear();
 		scoreT = scoreCt = 0;
+		bonusKills.clear();
 		stats.clear();
 		bonus = "";
 		nextBonus = now() + warmupTicks() + between();
@@ -129,7 +132,15 @@ final class Deathmatch extends Mode {
 			if (CsTeam.isT(attacker)) scoreT += team;
 			else scoreCt += team;
 		}
-		if (attacker instanceof ServerPlayer a) a.sendSystemMessage(net.minecraft.network.chat.Component.literal("+" + pts + " points"), true);
+		if (attacker instanceof ServerPlayer a) {
+			a.sendSystemMessage(net.minecraft.network.chat.Component.literal("+" + pts + " points"), true);
+			if (isBonus) { // the bonus panel's "+N" for this kill, with its sound
+				int[] k = bonusKills.computeIfAbsent(a.getUUID(), x -> new int[2]);
+				k[0]++;
+				k[1] = pts;
+				GameModes.send(a, state(a)); // now, not with the next second's update: the pop goes with the kill
+			}
+		}
 	}
 
 	/** CS2's points for a cheap weapon, by its price. */
@@ -187,6 +198,17 @@ final class Deathmatch extends Mode {
 	void state(ServerPlayer p, JsonObject o) {
 		o.addProperty("score", score.getOrDefault(p.getUUID(), 0));
 		o.addProperty("bonus", bonus);
+		if (!bonus.isEmpty()) { // CS2's bonus panel (huddmbonus): its clock and what a kill with it gives
+			o.addProperty("bonusLeft", Math.max(0, (bonusUntil - now()) / 20.0));
+			o.addProperty("bonusLength", 30);
+			int base = 8 + priceBonus(price(bonus));
+			o.addProperty("bonusPoints", base + base * 50 / 100);
+		}
+		int[] k = bonusKills.get(p.getUUID());
+		if (k != null) {
+			o.addProperty("bonusKills", k[0]);
+			o.addProperty("bonusKillPoints", k[1]);
+		}
 		if (teams) {
 			o.addProperty("scoreT", scoreT);
 			o.addProperty("scoreCT", scoreCt);

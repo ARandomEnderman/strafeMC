@@ -49,6 +49,11 @@ public final class GameModes {
 
 	private GameModes() {}
 
+	/** The running mode, or null. */
+	static Mode running() {
+		return race;
+	}
+
 	public static void register() {
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(s -> {
 			server = s;

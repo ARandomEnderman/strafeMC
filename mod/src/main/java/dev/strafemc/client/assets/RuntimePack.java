@@ -78,6 +78,39 @@ public final class RuntimePack {
 					StrafeMc.LOG.warn("[strafemc] radar icon {}: {}", r[1], e.toString());
 				}
 			}
+			// CS2's chat wheel: its phrases' icons and the heading's mouse button (white, 64 px), all converted in one run
+			java.util.List<String> wheel = new java.util.ArrayList<>();
+			for (String icon : dev.strafemc.client.RadioWheel.icons()) wheel.add(icon);
+			wheel.add("icons/ui/middle_mouse_button");
+			java.util.List<String> wheelSvgs = new java.util.ArrayList<>();
+			for (String icon : wheel)
+				if (!Files.exists(tex.resolve("gui/radio/" + dev.strafemc.client.RadioWheel.iconName(icon) + ".png"))
+						&& !Files.exists(StrafeConfig.cacheDir().resolve("panorama/images/" + icon + ".svg")))
+					wheelSvgs.add("panorama/images/" + icon + ".vsvg_c");
+			if (!wheelSvgs.isEmpty() && AssetCache.available())
+				try {
+					AssetCache.decompileAll(wheelSvgs);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] chat wheel icons: {}", e.toString());
+				}
+			for (String icon : wheel) {
+				Path out = tex.resolve("gui/radio/" + dev.strafemc.client.RadioWheel.iconName(icon) + ".png");
+				try {
+					svgH("panorama/images/" + icon + ".vsvg_c", "panorama/images/" + icon + ".svg", out, 64);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] chat wheel icon {}: {}", icon, e.toString());
+				}
+			}
+			// the ping (player_ping.vpcf's arrow, its outline, the ring) and the radio icon over a talking teammate (radio_voice.vpcf)
+			for (String[] r : new String[][] {{"materials/particle/playerping/playerping_arrow", "arrow"}, {"materials/particle/playerping/playerping_arrow_outline", "arrow_outline"},
+					{"materials/particle/playerping/playerping_ring", "ring"}, {"materials/particle/radio_icon_particle", "radio"}}) {
+				Path out = tex.resolve("gui/ping/" + r[1] + ".png");
+				try {
+					raw(r[0] + ".vtex_c", r[0] + ".png", out);
+				} catch (Exception e) {
+					StrafeMc.LOG.warn("[strafemc] ping image {}: {}", r[1], e.toString());
+				}
+			}
 			gloveSkins(tex);
 			wraps(tex);
 			safe(() -> cases(tex), tex.resolve("item/case_key.png"), Placeholders.Icon.MAG, 16);

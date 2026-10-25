@@ -193,6 +193,9 @@ public class StrafeMcClient implements ClientModInitializer {
 		ModeServerClient.register();
 		WeaponSelectHud.register();
 		AlertBar.register();
+		DmBonusPanel.register();
+		RadioWheel.register();
+		CommsHud.register();
 		ShowPosHud.register();
 		JumpStats.register();
 		Cs2Bridge.onConnectionChange = c -> Minecraft.getInstance().execute(() -> net.minecraft.client.gui.components.toasts.SystemToast.addOrUpdate(

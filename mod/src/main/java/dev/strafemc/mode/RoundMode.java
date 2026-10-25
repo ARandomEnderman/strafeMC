@@ -258,6 +258,7 @@ final class RoundMode extends Mode {
 		planter = null;
 		defuser = null;
 		roundKills.clear();
+		for (ServerPlayer p : players()) dev.strafemc.weapon.BuyMenu.spawned(p); // only this round's buys can be sold back (CS2)
 		tenSecPlayed = bombTenPlayed = false;
 		site = "";
 		soundAll("Music.StartRound.valve_cs2_01");

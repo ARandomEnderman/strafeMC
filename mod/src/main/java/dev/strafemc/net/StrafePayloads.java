@@ -545,6 +545,17 @@ public final class StrafePayloads {
 		}
 	}
 
+	/** Team comms (mode/Comms): a chat wheel message or a ping, as JSON ("k": "radio" / "ping"). */
+	public record Comms(String json) implements CustomPacketPayload {
+		public static final Type<Comms> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "comms"));
+		public static final StreamCodec<RegistryFriendlyByteBuf, Comms> CODEC = StreamCodec.composite(ByteBufCodecs.STRING_UTF8, Comms::json, Comms::new);
+
+		@Override
+		public Type<Comms> type() {
+			return TYPE;
+		}
+	}
+
 	/** A CS2 sound event another player made (shots, reload foley), played at its position with the real distance curve. */
 	public record CsSound(String event, double x, double y, double z, boolean suppressed, int entity) implements CustomPacketPayload {
 		public static final Type<CsSound> TYPE = new Type<>(Identifier.fromNamespaceAndPath("strafemc", "cs_sound"));
